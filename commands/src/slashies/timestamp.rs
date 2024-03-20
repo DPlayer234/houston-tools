@@ -58,16 +58,18 @@ async fn timestamp_at(
 }
 
 async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz>) -> HResult {
+    fn format_time(timestamp: i64, f: char) -> String {
+        format!("<t:{timestamp}:{f}>\n```\n<t:{timestamp}:{f}>\n```")
+    }
+    
     let timestamp = timestamp.timestamp();
-    let content = format!(r#"
-`<t:{timestamp}:t>`: <t:{timestamp}:t>
-`<t:{timestamp}:T>`: <t:{timestamp}:T>
-`<t:{timestamp}:f>`: <t:{timestamp}:f>
-`<t:{timestamp}:F>`: <t:{timestamp}:F>
-`<t:{timestamp}:R>`: <t:{timestamp}:R>
-"#);
+    let embed = CreateEmbed::default()
+        .field("Date & Time", format_time(timestamp, 'f'), true)
+        .field("Time Only", format_time(timestamp, 't'), true)
+        .field("Relative", format_time(timestamp, 'R'), true)
+        .color(DEFAULT_EMBED_COLOR);
 
-    ctx.send(ctx.create_reply().content(content)).await?;
+    ctx.send(ctx.create_reply().embed(embed)).await?;
     Ok(())
 }
 

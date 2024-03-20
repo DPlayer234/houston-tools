@@ -19,8 +19,10 @@ async fn main() {
             Box::pin(async move {
                 let cmds = poise_command_builder::build_commands(&framework.options().commands);
                 let res = ctx.http().create_global_commands(&cmds).await;
-                println!("{res:?}");
+                if res.is_err() { println!("{res:?}"); }
                 res?;
+
+                println!("Started!");
                 Ok(HBotData::default())
             })
         })
@@ -31,8 +33,6 @@ async fn main() {
     let mut client = Client::builder(token, intents)
         .framework(framework)
         .await.unwrap();
-
-    println!("Started!");
 
     client.start().await.unwrap();
 }
