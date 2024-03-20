@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use crate::internal::prelude::*;
 use chrono::prelude::*;
 use chrono::TimeDelta;
@@ -50,10 +49,16 @@ async fn timestamp_in(
 #[poise::command(slash_command, rename = "at")]
 async fn timestamp_at(
     ctx: HContext<'_>,
-    #[description = "Format is 'YYYY-MM-DD HH:mm:ss Z', f.e.: '2024-03-20 15:28:00 +01:00'"]
-    timestamp: String
+    #[description = "Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'"]
+    date_time: String
 ) -> HResult {
-    let timestamp: DateTime<FixedOffset> = DateTime::from_str(&timestamp).map_err(|_| DATETIME_INVALID)?;
+    let timestamp: DateTime<FixedOffset> = DateTime::parse_from_str(&date_time, "%Y-%m-%d %H:%M %#z")
+        .or_else(|_| DateTime::parse_from_str(&date_time, "%B %d, %Y %H:%M %#z"))
+        .or_else(|_| NaiveDateTime::parse_from_str(&date_time, "%Y-%m-%d %H:%M")
+            .or_else(|_| NaiveDateTime::parse_from_str(&date_time, "%B %d, %Y %H:%M"))
+            .map(|f| f.and_utc().fixed_offset()))
+        .map_err(|_| DATETIME_INVALID)?;
+
     show_timestamp(&ctx, timestamp).await
 }
 
