@@ -9,6 +9,8 @@ async fn main() {
     let token = std::env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN env var expected.");
     let intents = GatewayIntents::empty();
 
+    unsafe { utils::time::mark_startup_time(); }
+
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: commands::slashies::get_commands(),
@@ -27,8 +29,6 @@ async fn main() {
             })
         })
         .build();
-
-    commands::time::mark_startup_time();
 
     let mut client = Client::builder(token, intents)
         .framework(framework)

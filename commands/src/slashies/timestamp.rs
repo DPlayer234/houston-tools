@@ -1,18 +1,20 @@
+use std::str::FromStr;
 use crate::internal::prelude::*;
+use utils::time::{parse_date_time, get_creation_time};
 use chrono::prelude::*;
 use chrono::TimeDelta;
 
 /// Provides methods to help with timestamps.
 #[poise::command(
     slash_command,
-    subcommands("timestamp_in", "timestamp_at"),
+    subcommands("timestamp_in", "timestamp_at", "timestamp_of"),
     subcommand_required
 )]
 pub async fn timestamp(_: HContext<'_>) -> HResult {
     Ok(())
 }
 
-/// Returns a timestamp offset from the current time.
+/// Gets a timestamp offset from the current time.
 #[poise::command(slash_command, rename = "in")]
 async fn timestamp_in(
     ctx: HContext<'_>,
@@ -45,20 +47,30 @@ async fn timestamp_in(
     show_timestamp(&ctx, timestamp).await
 }
 
-/// Returns a timestamp at the specified time.
+/// Gets a timestamp at the specified time.
 #[poise::command(slash_command, rename = "at")]
 async fn timestamp_at(
     ctx: HContext<'_>,
     #[description = "Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'"]
     date_time: String
 ) -> HResult {
-    let timestamp: DateTime<FixedOffset> = DateTime::parse_from_str(&date_time, "%Y-%m-%d %H:%M %#z")
-        .or_else(|_| DateTime::parse_from_str(&date_time, "%B %d, %Y %H:%M %#z"))
-        .or_else(|_| NaiveDateTime::parse_from_str(&date_time, "%Y-%m-%d %H:%M")
-            .or_else(|_| NaiveDateTime::parse_from_str(&date_time, "%B %d, %Y %H:%M"))
-            .map(|f| f.and_utc().fixed_offset()))
-        .map_err(|_| DATETIME_INVALID)?;
+    let timestamp = parse_date_time(&date_time, Utc)
+        .ok_or_else(|| DATE_TIME_INVALID)?;
 
+    show_timestamp(&ctx, timestamp).await
+}
+
+/// Gets the creation timestamp from a Discord snowflake.
+#[poise::command(slash_command, rename = "of")]
+async fn timestamp_of(
+    ctx: HContext<'_>,
+    #[description = "The Discord snowflake."]
+    snowflake: String
+) -> HResult {
+    let timestamp = u64::from_str(&snowflake).ok()
+        .and_then(|u| get_creation_time(u))
+        .ok_or_else(|| SNOWFLAKE_INVALID)?;
+    
     show_timestamp(&ctx, timestamp).await
 }
 
@@ -78,5 +90,6 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
     Ok(())
 }
 
-const DATETIME_INVALID: HArgError = HArgError("The time format is invalid. Did you include seconds?");
+const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
 const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
+const SNOWFLAKE_INVALID: HArgError = HArgError("The Discord snowflake is invalid.");

@@ -2,7 +2,7 @@
 members = [
     "app",
     "commands"
-]
+, "utils"]
 resolver = "1"
 
 [profile.release]

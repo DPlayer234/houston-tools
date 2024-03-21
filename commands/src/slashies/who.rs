@@ -1,8 +1,9 @@
 use crate::internal::prelude::*;
-use crate::time::*;
+use utils::time::*;
+use utils::humanize;
 
 /// Returns basic information about the provided user.
-#[poise::command(slash_command)]
+#[poise::command(slash_command, context_menu_command = "User Info")]
 pub async fn who(
     ctx: HContext<'_>,
     #[description = "The user to get info about."]
@@ -15,8 +16,31 @@ pub async fn who(
 
 /* Format the embeds */
 
+type EmbedField = (&'static str, String, bool);
+
 fn who_user_embed(user: &User) -> CreateEmbed {
+    CreateEmbed::new()
+		.author(CreateEmbedAuthor::new(who_user_account_name(user)))
+		.thumbnail(user.face())
+		.description(who_user_info(user))
+		.fields(who_user_public_flags(user))
+        .color(DEFAULT_EMBED_COLOR)
+}
+
+fn who_user_account_name(user: &User) -> String {
+	user.discriminator
+		.map(|d| format!("{}#{:04}", user.name, d))
+		.unwrap_or_else(|| user.name.to_owned())
+}
+
+fn who_user_info(user: &User) -> String {
 	let mut builder = MessageBuilder::new();
+
+	if let Some(ref global_name) = user.global_name {
+		builder.push_bold("Display Name:")
+			.push(' ')
+			.push_mono_line(global_name);
+	}
 
 	builder.push_bold("Snowflake:")
 		.push(' ')
@@ -33,6 +57,7 @@ fn who_user_embed(user: &User) -> CreateEmbed {
 			.push('\n');
 	}
 
+	// Bots don't actually get this as far as I can tell
 	if let Some(banner_url) = user.banner_url() {
 		builder.push_bold("Banner:")
 			.push(' ')
@@ -44,60 +69,71 @@ fn who_user_embed(user: &User) -> CreateEmbed {
 			.push_line(accent_color.hex());
 	}
 
-	if let Some(public_flags) = user.public_flags.and_then(to_string_public_flags) {
-		builder.push_bold("Public Flags:")
-			.push(' ')
-			.push_mono_line(public_flags);
+	if user.bot {
+		builder.push_bold("Bot Account");
+	} else if user.system {
+		builder.push_bold("System Account");
+	} else {
+		builder.push_bold("User Account");
+
+		// Apparently bots don't get this either
+		match user.premium_type {
+			PremiumType::None => (),
+			PremiumType::NitroClassic => { builder.push(" w/ Nitro Classic"); },
+			PremiumType::Nitro => { builder.push(" w/ Nitro"); },
+			PremiumType::NitroBasic => { builder.push(" w/ Nitro Basic"); },
+			_ => { builder.push(format!(" w/ Premium Type {}", u8::from(user.premium_type))); },
+		}
 	}
 
-	builder.push_bold(if user.bot { "Bot Account:" } else { "User Account:" })
-		.push(' ')
-		.user(user);
+	builder.build()
+}
 
-    CreateEmbed::new()
-	    .author(CreateEmbedAuthor::new(user.name.clone()))
-		.thumbnail(user.face())
-		.description(builder.build())
-        .color(DEFAULT_EMBED_COLOR)
+fn who_user_public_flags(user: &User) -> Option<EmbedField> {
+	user.public_flags
+		.filter(|s| !s.is_empty())
+		.map(|f| ("Public Flags", to_string_public_flags(f), true))
 }
 
 /* Local utilities */
 
-macro_rules! append_flag {
-	($type:ident, $buffer:expr, $value:expr, $flag:ident) => {
-		if $value.contains($type::$flag) {
-			if !$buffer.is_empty() {
-				$buffer.push_str(", ");
-			}
-
-			$buffer.push_str(stringify!($flag));
-		}
-	};
-}
-
-fn to_string_public_flags(public_flags: UserPublicFlags) -> Option<String> {
+fn to_string_public_flags(public_flags: UserPublicFlags) -> String {
 	let mut buffer = String::new();
 
-	append_flag!(UserPublicFlags, buffer, public_flags, DISCORD_EMPLOYEE);
-	append_flag!(UserPublicFlags, buffer, public_flags, PARTNERED_SERVER_OWNER);
-	append_flag!(UserPublicFlags, buffer, public_flags, HYPESQUAD_EVENTS);
-	append_flag!(UserPublicFlags, buffer, public_flags, BUG_HUNTER_LEVEL_1);
-	append_flag!(UserPublicFlags, buffer, public_flags, HOUSE_BRAVERY);
-	append_flag!(UserPublicFlags, buffer, public_flags, HOUSE_BRILLIANCE);
-	append_flag!(UserPublicFlags, buffer, public_flags, HOUSE_BALANCE);
-	append_flag!(UserPublicFlags, buffer, public_flags, EARLY_SUPPORTER);
-	append_flag!(UserPublicFlags, buffer, public_flags, TEAM_USER);
-	append_flag!(UserPublicFlags, buffer, public_flags, SYSTEM);
-	append_flag!(UserPublicFlags, buffer, public_flags, BUG_HUNTER_LEVEL_2);
-	append_flag!(UserPublicFlags, buffer, public_flags, VERIFIED_BOT);
-	append_flag!(UserPublicFlags, buffer, public_flags, EARLY_VERIFIED_BOT_DEVELOPER);
-	append_flag!(UserPublicFlags, buffer, public_flags, DISCORD_CERTIFIED_MODERATOR);
-	append_flag!(UserPublicFlags, buffer, public_flags, BOT_HTTP_INTERACTIONS);
-	append_flag!(UserPublicFlags, buffer, public_flags, ACTIVE_DEVELOPER);
+	macro_rules! append_flag {
+		($flag:ident) => {
+			if public_flags.contains(UserPublicFlags::$flag) {
+				if !buffer.is_empty() {
+					buffer.push('\n');
+				}
+
+				buffer.push('`');
+				buffer.push_str(humanize!(stringify!($flag)));
+				buffer.push('`');
+			}
+		};
+	}
+
+	append_flag!(DISCORD_EMPLOYEE);
+	append_flag!(PARTNERED_SERVER_OWNER);
+	append_flag!(HYPESQUAD_EVENTS);
+	append_flag!(BUG_HUNTER_LEVEL_1);
+	append_flag!(HOUSE_BRAVERY);
+	append_flag!(HOUSE_BRILLIANCE);
+	append_flag!(HOUSE_BALANCE);
+	append_flag!(EARLY_SUPPORTER);
+	append_flag!(TEAM_USER);
+	append_flag!(SYSTEM);
+	append_flag!(BUG_HUNTER_LEVEL_2);
+	append_flag!(VERIFIED_BOT);
+	append_flag!(EARLY_VERIFIED_BOT_DEVELOPER);
+	append_flag!(DISCORD_CERTIFIED_MODERATOR);
+	append_flag!(BOT_HTTP_INTERACTIONS);
+	append_flag!(ACTIVE_DEVELOPER);
 
 	if buffer.is_empty() {
-		None
-	} else {
-		Some(buffer)
+		buffer.push_str("None")
 	}
+
+	buffer
 }

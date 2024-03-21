@@ -82,7 +82,7 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
 
     Some(CustomCreateCommand {
         name: cmd.context_menu_name.clone().unwrap_or_else(|| cmd.name.clone()),
-        description: cmd.description.clone().unwrap_or_else(|| "---".to_string()),
+        description: String::new(),
         options: Vec::new(),
         kind,
         contexts: vec![0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
