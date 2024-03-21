@@ -14,7 +14,13 @@ pub fn get_commands() -> Vec<poise::Command<HBotData, HError>> {
 pub async fn pre_command(ctx: HContext<'_>) {
     println!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
         // TODO: Context menu commands don't hold their args here
-        HContext::Application(ctx) => format_resolved_options(ctx.args),
+        HContext::Application(ctx) => {
+            if let Some(target) = ctx.interaction.data.target() {
+                format_resolved_target(&target)
+            } else {
+                format_resolved_options(ctx.args)
+            }
+        },
         HContext::Prefix(ctx) => ctx.args.to_owned()
     })
 }
@@ -35,27 +41,37 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HBotData, HError>) {
     }
 }
 
-fn format_resolved_options(option: &[ResolvedOption<'_>]) -> String {
+fn format_resolved_options(options: &[ResolvedOption<'_>]) -> String {
     let mut str = String::new();
-    for o in option {
+    for o in options {
         str.push('<');
         str.push_str(o.name);
         str.push(':');
-
-        match o.value {
-            ResolvedValue::Boolean(v) => { str.push_str(&v.to_string()) },
-            ResolvedValue::Integer(v) => { str.push_str(&v.to_string()) },
-            ResolvedValue::Number(v) => { str.push_str(&v.to_string()) },
-            ResolvedValue::String(v) => { str.push_str(v) },
-            ResolvedValue::Attachment(v) => { str.push_str(&v.filename) },
-            ResolvedValue::Channel(v) => { if let Some(ref name) = v.name { str.push_str(name) } else { str.push_str(&v.id.to_string()) } },
-            ResolvedValue::Role(v) => { str.push_str(&v.name) },
-            ResolvedValue::User(v, _) => { str.push_str(&v.name) },
-            _ => { str.push_str("<unknown>") },
-        }
-
+        append_resolve_option(&mut str, o);
         str.push_str("> ");
     }
 
     str
+}
+
+fn append_resolve_option(str: &mut String, option: &ResolvedOption<'_>) {
+    match option.value {
+        ResolvedValue::Boolean(v) => { str.push_str(&v.to_string()) },
+        ResolvedValue::Integer(v) => { str.push_str(&v.to_string()) },
+        ResolvedValue::Number(v) => { str.push_str(&v.to_string()) },
+        ResolvedValue::String(v) => { str.push_str(v) },
+        ResolvedValue::Attachment(v) => { str.push_str(&v.filename) },
+        ResolvedValue::Channel(v) => { if let Some(ref name) = v.name { str.push_str(name) } else { str.push_str(&v.id.to_string()) } },
+        ResolvedValue::Role(v) => { str.push_str(&v.name) },
+        ResolvedValue::User(v, _) => { str.push_str(&v.name) },
+        _ => { str.push_str("<unknown>") },
+    }
+}
+
+fn format_resolved_target(target: &ResolvedTarget<'_>) -> String {
+    match target {
+        ResolvedTarget::User(v, _) => v.name.clone(),
+        ResolvedTarget::Message(v) => v.id.to_string(),
+        _ => "unknown".to_owned(),
+    }
 }
