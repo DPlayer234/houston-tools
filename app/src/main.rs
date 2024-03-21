@@ -14,6 +14,7 @@ async fn main() {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: commands::slashies::get_commands(),
+            pre_command: |ctx| Box::pin(commands::slashies::pre_command(ctx)),
             on_error: |err| Box::pin(commands::slashies::error_handler(err)),
             ..Default::default()
         })
