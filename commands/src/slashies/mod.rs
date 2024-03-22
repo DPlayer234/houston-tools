@@ -1,11 +1,18 @@
+use std::fmt::Write;
 use crate::internal::prelude::*;
+use utils::Discard;
+
+mod coin;
 mod config;
+mod dice;
 mod timestamp;
 mod who;
 
 pub fn get_commands() -> Vec<poise::Command<HBotData, HError>> {
     vec![
+        coin::coin(),
         config::config(),
+        dice::dice(),
         timestamp::timestamp(),
         who::who(),
     ]
@@ -13,7 +20,6 @@ pub fn get_commands() -> Vec<poise::Command<HBotData, HError>> {
 
 pub async fn pre_command(ctx: HContext<'_>) {
     println!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
-        // TODO: Context menu commands don't hold their args here
         HContext::Application(ctx) => {
             if let Some(target) = ctx.interaction.data.target() {
                 format_resolved_target(&target)
@@ -27,13 +33,20 @@ pub async fn pre_command(ctx: HContext<'_>) {
 
 pub async fn error_handler(error: poise::FrameworkError<'_, HBotData, HError>) {
     match &error {
-        poise::FrameworkError::Command { error, ctx, .. } => context_error(ctx, format_error(error)).await,
-        poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => context_error(ctx, format!("Argument error: {error:?}\nCaused by input: '{input:?}'")).await,
-        _ => println!("Oh noes, we got an error: {:?}", error),
+        poise::FrameworkError::Command { error, ctx, .. } => {
+            context_error(ctx, format_error(error)).await
+        },
+        poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
+            context_error(ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.as_deref().unwrap_or_default())).await
+        },
+        _ => println!("Oh noes, we got an error: {error:?}"),
     }
 
     async fn context_error(ctx: &HContext<'_>, feedback: String) {
-        let _ = ctx.send(ctx.create_ephemeral_reply().embed(CreateEmbed::default().description(feedback).color(ERROR_EMBED_COLOR))).await;
+        match ctx.send(ctx.create_ephemeral_reply().embed(CreateEmbed::new().description(feedback).color(ERROR_EMBED_COLOR))).await {
+            Err(err) => println!("Error in error handler: {err:?}"),
+            _ => () // All good here!
+        };
     }
 
     fn format_error(err: &HError) -> String {
@@ -44,11 +57,10 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HBotData, HError>) {
 fn format_resolved_options(options: &[ResolvedOption<'_>]) -> String {
     let mut str = String::new();
     for o in options {
-        str.push('<');
         str.push_str(o.name);
         str.push(':');
         append_resolve_option(&mut str, o);
-        str.push_str("> ");
+        str.push(' ');
     }
 
     str
@@ -56,12 +68,12 @@ fn format_resolved_options(options: &[ResolvedOption<'_>]) -> String {
 
 fn append_resolve_option(str: &mut String, option: &ResolvedOption<'_>) {
     match option.value {
-        ResolvedValue::Boolean(v) => { str.push_str(&v.to_string()) },
-        ResolvedValue::Integer(v) => { str.push_str(&v.to_string()) },
-        ResolvedValue::Number(v) => { str.push_str(&v.to_string()) },
-        ResolvedValue::String(v) => { str.push_str(v) },
+        ResolvedValue::Boolean(v) => { write!(str, "{}", v).discard() },
+        ResolvedValue::Integer(v) => { write!(str, "{}", v).discard() },
+        ResolvedValue::Number(v) => { write!(str, "{}", v).discard() },
+        ResolvedValue::String(v) => { str.push('"'); str.push_str(v); str.push('"') },
         ResolvedValue::Attachment(v) => { str.push_str(&v.filename) },
-        ResolvedValue::Channel(v) => { if let Some(ref name) = v.name { str.push_str(name) } else { str.push_str(&v.id.to_string()) } },
+        ResolvedValue::Channel(v) => { if let Some(ref name) = v.name { str.push_str(name) } else { write!(str, "{}", v.id).discard() } },
         ResolvedValue::Role(v) => { str.push_str(&v.name) },
         ResolvedValue::User(v, _) => { str.push_str(&v.name) },
         _ => { str.push_str("<unknown>") },

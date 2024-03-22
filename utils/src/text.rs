@@ -1,40 +1,40 @@
-pub fn humanize_string(mut value: String) -> String {
+pub fn to_titlecase(mut value: String) -> String {
 	let slice = unsafe { value.as_bytes_mut() };
 	let mut is_start = true;
 
 	for item in slice.iter_mut() {
-		(*item, is_start) = char_transform(*item, is_start);
+		(*item, is_start) = titlecase_transform(*item, is_start);
 	}
 
 	value
 }
 
-pub const fn humanize_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
+pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
 	let mut is_start = true;
 
 	let mut index = 0usize;
 	while index < LEN {
-		(value[index], is_start) = char_transform(value[index], is_start);
+		(value[index], is_start) = titlecase_transform(value[index], is_start);
 		index += 1;
 	}
 
 	value
 }
 
-const fn char_transform(c: u8, is_start: bool) -> (u8, bool) {
+const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 	if c == b'_' {
 		(b' ', true)
-	} else if !is_start && c.is_ascii_uppercase() {
-		(c.to_ascii_lowercase(), is_start)
+	} else if !is_start {
+		(c.to_ascii_lowercase(), false)
 	} else {
-		(c, false)
+		(c.to_ascii_uppercase(), false)
 	}
 }
 
-/// Transforms a const [`str`] in `SNAKE_CASE` format into a human-friendly version (i.e. `Snake Case`).
+/// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version (i.e. `Snake Case`).
 /// The resulting value is still const.
 #[macro_export]
-macro_rules! humanize {
+macro_rules! titlecase {
 	($input:expr) => {{
 		// Ensure input is a `&'static str`
 		const INPUT: &str = $input;
@@ -48,7 +48,22 @@ macro_rules! humanize {
         const CLONE: [u8; N] = unsafe { *$crate::as_with_size::<u8, N>(INPUT.as_bytes()) };
 
 		// Modify and convert back to str
-        const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::humanize_u8_array(CLONE)) };
+        const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::to_titlecase_u8_array(CLONE)) };
         RESULT
 	}}
+}
+
+#[cfg(test)]
+mod tests {
+	#[test]
+	fn titlecase_from_uppercase() {
+		const TITLE: &str = titlecase!("HELLO_NEW_WORLD");
+		assert_eq!(TITLE, "Hello New World");
+	}
+
+	#[test]
+	fn titlecase_from_lowercase() {
+		const TITLE: &str = titlecase!("hello_new_world");
+		assert_eq!(TITLE, "Hello New World");
+	}
 }

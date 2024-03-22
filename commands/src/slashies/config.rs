@@ -14,7 +14,8 @@ pub async fn config(_: HContext<'_>) -> HResult {
 #[poise::command(slash_command, rename = "hide")]
 async fn config_hide(
     ctx: HContext<'_>,
-    #[description = "Whether the responses are hidden. Starts at true."] hidden: Option<bool>
+    #[description = "Whether the responses are hidden. Starts at true."]
+    hidden: Option<bool>
 ) -> HResult {
     let mut data = ctx.get_user_data();
     data.ephemeral = hidden.unwrap_or(!data.ephemeral);
@@ -31,7 +32,7 @@ async fn config_hide(
 
     content.push(" to other users.");
 
-    let embed = CreateEmbed::default()
+    let embed = CreateEmbed::new()
         .description(content.build())
         .color(DEFAULT_EMBED_COLOR);
 

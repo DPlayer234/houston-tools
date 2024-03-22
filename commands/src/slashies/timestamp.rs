@@ -80,7 +80,7 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
     }
     
     let timestamp = timestamp.timestamp();
-    let embed = CreateEmbed::default()
+    let embed = CreateEmbed::new()
         .field("Date & Time", format_time(timestamp, 'f'), true)
         .field("Time Only", format_time(timestamp, 't'), true)
         .field("Relative", format_time(timestamp, 'R'), true)

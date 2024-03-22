@@ -11,4 +11,5 @@ tokio = { version = "1.36.0", features = ["macros"] }
 poise = "0.6.1"
 chrono = "0.4.23"
 chashmap = "2.2.2"
+rand = "0.8.5"
 utils = { path = "../utils" }

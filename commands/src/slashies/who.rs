@@ -1,6 +1,6 @@
 use crate::internal::prelude::*;
 use utils::time::*;
-use utils::humanize;
+use utils::titlecase;
 
 /// Returns basic information about the provided user.
 #[poise::command(slash_command, context_menu_command = "User Info")]
@@ -108,7 +108,7 @@ fn to_string_public_flags(public_flags: UserPublicFlags) -> String {
 				}
 
 				buffer.push('`');
-				buffer.push_str(humanize!(stringify!($flag)));
+				buffer.push_str(titlecase!(stringify!($flag)));
 				buffer.push('`');
 			}
 		};

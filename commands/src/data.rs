@@ -4,10 +4,10 @@ use serenity::model::id::UserId;
 use poise::reply::CreateReply;
 
 /// A general color that can be used for various embeds.
-pub const DEFAULT_EMBED_COLOR: Color = Color::new(0x00DD_A0DD);
+pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 
 /// A general color that can be used for embeds indicating errors.
-pub const ERROR_EMBED_COLOR: Color = Color::new(0x00CF_0025);
+pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
 pub struct HBotData {
     user_data: chashmap::CHashMap<UserId, HUserData>
@@ -72,7 +72,7 @@ impl HUserData {
 }
 
 #[serenity::async_trait]
-pub trait DisContextExtensions {
+pub trait HContextExtensions {
     fn get_user_data(&self) -> HUserData;
     fn set_user_data(&self, data: HUserData);
     fn create_reply(&self) -> CreateReply;
@@ -82,7 +82,7 @@ pub trait DisContextExtensions {
 }
 
 #[serenity::async_trait]
-impl DisContextExtensions for HContext<'_> {
+impl HContextExtensions for HContext<'_> {
     fn get_user_data(&self) -> HUserData {
         self.data().get_user_data(self.author().id)
     }
