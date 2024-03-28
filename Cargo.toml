@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "app",
-    "commands"
-, "utils"]
+    "commands",
+    "utils"
+]
 resolver = "1"
 
 [profile.release]

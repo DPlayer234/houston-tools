@@ -1,13 +1,19 @@
 use std::fmt::Debug;
 
+pub mod discord_fmt;
 pub mod text;
 pub mod time;
 
 /// Converts a slice to an array reference of size `N`.
-/// This is essentially an unsafe version `<[T; N]>::try_from`.
-pub const unsafe fn as_with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
-    // SAFETY: The caller has to ensure that the length of `slice` is at least `N`.
-    &*(slice.as_ptr() as *const [T; N])
+/// This is a const-friendly alternative to `<&[T; N]>::try_from`.
+/// 
+/// If the slice is shorter than `N`, this method will panic.
+pub const fn as_with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
+    assert!(slice.len() >= N);
+    unsafe {
+        // SAFETY: The length has already been validated.
+        &*(slice.as_ptr() as *const [T; N])
+    }
 }
 
 /// Trait that allows discarding values.

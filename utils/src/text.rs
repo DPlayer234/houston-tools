@@ -45,7 +45,7 @@ macro_rules! titlecase {
 		// Include length in constant for next call.
 		// This is also in part necessary to satisfy the borrow checker.
 		// This value has to exist during the call to `from_utf8_unchecked`, and inlining it wouldn't allow that.
-        const CLONE: [u8; N] = unsafe { *$crate::as_with_size::<u8, N>(INPUT.as_bytes()) };
+        const CLONE: [u8; N] = *$crate::as_with_size(INPUT.as_bytes());
 
 		// Modify and convert back to str
         const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::to_titlecase_u8_array(CLONE)) };
