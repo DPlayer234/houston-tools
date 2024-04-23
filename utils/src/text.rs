@@ -1,14 +1,43 @@
+/// Given a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+/// 
+/// # Examples
+/// 
+/// ```
+/// let s = String::from("HELLO_NEW_WORLD");
+/// let s = utils::text::to_titlecase(s);
+/// assert_eq!(&s, "Hello New World");
+/// ```
 pub fn to_titlecase(mut value: String) -> String {
-	let slice = unsafe { value.as_bytes_mut() };
+	// SAFETY: `to_titlecase_u8` only transforms
+	// ASCII characters into other ASCII characters.
+	unsafe {
+		let slice =  value.as_bytes_mut();
+		to_titlecase_u8(slice);
+	}
+	value
+}
+
+/// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+/// The slice is mutated in-place.
+/// 
+/// # Examples
+/// 
+/// ```
+/// let mut s = b"HELLO_NEW_WORLD".to_vec();
+/// utils::text::to_titlecase_u8(&mut s);
+/// assert_eq!(&s, b"Hello New World");
+/// ```
+pub fn to_titlecase_u8(slice: &mut [u8]) {
 	let mut is_start = true;
 
 	for item in slice.iter_mut() {
 		(*item, is_start) = titlecase_transform(*item, is_start);
 	}
-
-	value
 }
 
+/// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+/// 
+/// This function is generally not useful and exists primarily to support the [`titlecase`] macro.
 pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
 	let mut is_start = true;
 
@@ -33,6 +62,19 @@ const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 
 /// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version (i.e. `Snake Case`).
 /// The resulting value is still const.
+/// 
+/// # Examples
+/// 
+/// ```
+/// const TITLE: &str = utils::titlecase!("HELLO_NEW_WORLD");
+/// assert_eq!(TITLE, "Hello New World");
+/// ```
+/// 
+/// Also works with lower snake case:
+/// ```
+/// const TITLE: &str = utils::titlecase!("hello_new_world");
+/// assert_eq!(TITLE, "Hello New World");
+/// ```
 #[macro_export]
 macro_rules! titlecase {
 	($input:expr) => {{
@@ -51,19 +93,4 @@ macro_rules! titlecase {
         const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::to_titlecase_u8_array(CLONE)) };
         RESULT
 	}}
-}
-
-#[cfg(test)]
-mod tests {
-	#[test]
-	fn titlecase_from_uppercase() {
-		const TITLE: &str = titlecase!("HELLO_NEW_WORLD");
-		assert_eq!(TITLE, "Hello New World");
-	}
-
-	#[test]
-	fn titlecase_from_lowercase() {
-		const TITLE: &str = titlecase!("hello_new_world");
-		assert_eq!(TITLE, "Hello New World");
-	}
 }

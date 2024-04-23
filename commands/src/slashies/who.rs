@@ -1,4 +1,7 @@
+use std::fmt::Write;
 use crate::internal::prelude::*;
+use utils::Discard;
+use utils::discord_fmt::get_unique_username;
 use utils::time::*;
 use utils::titlecase;
 
@@ -20,17 +23,11 @@ type EmbedField = (&'static str, String, bool);
 
 fn who_user_embed(user: &User) -> CreateEmbed {
     CreateEmbed::new()
-		.author(CreateEmbedAuthor::new(who_user_account_name(user)))
+	.author(CreateEmbedAuthor::new(get_unique_username(user)))
 		.thumbnail(user.face())
 		.description(who_user_info(user))
 		.fields(who_user_public_flags(user))
         .color(DEFAULT_EMBED_COLOR)
-}
-
-fn who_user_account_name(user: &User) -> String {
-	user.discriminator
-		.map(|d| format!("{}#{:04}", user.name, d))
-		.unwrap_or_else(|| user.name.to_owned())
 }
 
 fn who_user_info(user: &User) -> String {
@@ -131,9 +128,11 @@ fn to_string_public_flags(public_flags: UserPublicFlags) -> String {
 	append_flag!(BOT_HTTP_INTERACTIONS);
 	append_flag!(ACTIVE_DEVELOPER);
 
-	if buffer.is_empty() {
-		buffer.push_str("None")
+	if !buffer.is_empty() {
+		buffer.push('\n');
 	}
+
+	write!(buffer, "Raw: `{:#x}`", public_flags.bits()).discard();
 
 	buffer
 }

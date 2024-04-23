@@ -1,10 +1,24 @@
 use std::fmt::{Display, Formatter, Result as FmtResult, Write};
-use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue};
+use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 
 pub enum DisplayResolvedArgs<'a> {
     Options(DisplayResolvedOptions<'a>),
     Target(DisplayResolvedTarget<'a>),
     String(&'a str),
+}
+
+pub struct DisplayResolvedOptions<'a>(&'a [ResolvedOption<'a>]);
+pub struct DisplayResolvedTarget<'a>(ResolvedTarget<'a>);
+
+struct DisplayResolvedOption<'a>(&'a ResolvedOption<'a>);
+
+/// Gets a unique username for this user.
+/// 
+/// This will either be the pomelo username or include the discriminator.
+pub fn get_unique_username(user: &User) -> String {
+	user.discriminator
+		.map(|d| format!("{}#{:04}", user.name, d))
+		.unwrap_or_else(|| user.name.to_owned())
 }
 
 impl DisplayResolvedArgs<'_> {
@@ -20,11 +34,6 @@ impl DisplayResolvedArgs<'_> {
         DisplayResolvedArgs::String(string)
     }
 }
-
-pub struct DisplayResolvedOptions<'a>(&'a [ResolvedOption<'a>]);
-pub struct DisplayResolvedTarget<'a>(ResolvedTarget<'a>);
-
-struct DisplayResolvedOption<'a>(&'a ResolvedOption<'a>);
 
 impl Display for DisplayResolvedArgs<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
