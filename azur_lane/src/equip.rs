@@ -18,10 +18,15 @@ pub struct Equip {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Weapon {
-    // From weapon property:
     pub weapon_id: u32,
     pub reload_time: f32,
     pub fixed_delay: f32,
+    pub data: WeaponData
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Bullet {
+    // From weapon property:
     pub damage: f32,
     pub coefficient: f32,
     pub scaling: f32,
@@ -37,6 +42,18 @@ pub struct Weapon {
     
     // From barrage template:
     pub amount: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Aircraft {
+    pub speed: f32,
+    pub weapons: Arc<[Weapon]>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WeaponData {
+    Bullet(Bullet),
+    Aircraft(Aircraft),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

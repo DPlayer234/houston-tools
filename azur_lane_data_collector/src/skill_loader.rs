@@ -1,4 +1,3 @@
-use std::hint::black_box;
 use std::{borrow::Borrow, collections::HashSet, sync::Arc};
 
 use mlua::prelude::*;
@@ -26,10 +25,9 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         }
     }
 
+    let buff = require_buff_data(lua, skill_id)?;
     let mut context = ReferencedWeaponsContext::default();
-
-    // let buff = require_buff_data(lua, skill_id)?;
-    // search_referenced_weapons(&mut context, lua, buff)?;
+    search_referenced_weapons(&mut context, lua, buff)?;
 
     Ok(Skill {
         buff_id: skill_id,
@@ -43,80 +41,105 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
     skill_ids.into_iter().map(|id| load_skill(lua, id)).collect()
 }
 
-/* // WIP:
-pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Weapon> {
+// WIP:
+pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
     const RLD_MULT_AT_100: f32 = 0.29533408f32;
 
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let weapon_property: LuaTable = context!(pg.get("weapon_property"); "global pg.weapon_property")?;
     let bullet_template: LuaTable = context!(pg.get("bullet_template"); "global pg.bullet_template")?;
     let barrage_template: LuaTable = context!(pg.get("barrage_template"); "global pg.barrage_template")?;
+    let aircraft_template: LuaTable = context!(pg.get("aircraft_template"); "global pg.aircraft_template")?;
 
     let weapon_data: LuaTable = context!(weapon_property.get(weapon_id); "weapon property for id {weapon_id}")?;
 
-    // TODO: bullet_ID may refer to an aircraft with its own weapons
     let bullet: LuaTable = context!(weapon_data.get("bullet_ID"); "bullet id in weapon {weapon_id}")?;
-    let bullet: u32 = context!(bullet.get(1); "first bullet id in weapon {weapon_id}")?;
-    let bullet: LuaTable = context!(bullet_template.get(bullet); "bullet template for id {bullet}")?;
-
-    let barrage: LuaTable = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
-    let barrage: u32 = context!(barrage.get(1); "first barrage id in weapon {weapon_id}")?;
-    let barrage: LuaTable = context!(barrage_template.get(barrage); "barrage template for id {barrage}")?;
+    let bullet: Option<u32> = context!(bullet.get(1); "first bullet id in weapon {weapon_id}")?;
+    let Some(bullet) = bullet else {
+        return Ok(None);
+    };
 
     let reload_max: f32 = weapon_data.get("reload_max")?;
-    let mut armor_mods: [f32; 3] = bullet.get("damage_type")?;
 
-    let mut kind: BulletKind = BulletKind::HE; // todo
-    let mut pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in weapon {weapon_id}")?;
+    let data =
+    if let Some(bullet) = { let bullet: Option<LuaTable> = context!(bullet_template.get(bullet); "bullet template for id {bullet}")?; bullet } {
+        let barrage: LuaTable = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
+        let barrage: u32 = context!(barrage.get(1); "first barrage id in weapon {weapon_id}")?;
+        let barrage: LuaTable = context!(barrage_template.get(barrage); "barrage template for id {barrage}")?;
 
-    let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in weapon {weapon_id}")?;
-    let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in weapon {weapon_id}")?;
-    let mut amount = (senior_repeat + 1) * (primal_repeat + 1);
+        let mut armor_mods: [f32; 3] = bullet.get("damage_type")?;
 
-    if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
-        let shrapnel: Option<Vec<LuaTable>> = extra_param.get("shrapnel")?;
-        if let Some(shrapnel) = shrapnel {
-            let mut sub_mult = 0u32;
-            for emitter in shrapnel {
-                let bullet: u32 = context!(emitter.get("bullet_ID"); "bullet id in emitter for bullet")?;
-                let bullet: LuaTable = context!(bullet_template.get(bullet); "bullet template for id {bullet} in emitter")?;
+        let mut kind: BulletKind = BulletKind::HE; // todo
+        let mut pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in weapon {weapon_id}")?;
 
-                let barrage: u32 = context!(emitter.get("barrage_ID"); "barrage id in emitter for bullet")?;
-                let barrage: LuaTable = context!(barrage_template.get(barrage); "barrage template for id {barrage} in emitter")?;
+        let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in weapon {weapon_id}")?;
+        let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in weapon {weapon_id}")?;
+        let mut amount = (senior_repeat + 1) * (primal_repeat + 1);
 
-                // todo: set kind of based on shrapnel bullet
-                armor_mods = bullet.get("damage_type")?;
+        if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
+            let shrapnel: Option<Vec<LuaTable>> = extra_param.get("shrapnel")?;
+            if let Some(shrapnel) = shrapnel {
+                let mut sub_mult = 0u32;
+                for emitter in shrapnel {
+                    let bullet: u32 = context!(emitter.get("bullet_ID"); "bullet id in emitter for bullet")?;
+                    let bullet: LuaTable = context!(bullet_template.get(bullet); "bullet template for id {bullet} in emitter")?;
 
-                let sub_pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in emitter for bullet")?;
-                pierce = sub_pierce.max(pierce);
+                    let barrage: u32 = context!(emitter.get("barrage_ID"); "barrage id in emitter for bullet")?;
+                    let barrage: LuaTable = context!(barrage_template.get(barrage); "barrage template for id {barrage} in emitter")?;
 
-                let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in emitter for bullet")?;
-                let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in emitter for bullet")?;
-                sub_mult += (senior_repeat + 1) * (primal_repeat + 1);
+                    // todo: set kind of based on shrapnel bullet
+                    armor_mods = bullet.get("damage_type")?;
+
+                    let sub_pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in emitter for bullet")?;
+                    pierce = sub_pierce.max(pierce);
+
+                    let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in emitter for bullet")?;
+                    let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in emitter for bullet")?;
+                    sub_mult += (senior_repeat + 1) * (primal_repeat + 1);
+                }
+
+                amount *= sub_mult;
             }
-
-            amount *= sub_mult;
         }
-    }
 
-    Ok(Weapon {
+        WeaponData::Bullet(Bullet {
+            damage: weapon_data.get("damage")?,
+            coefficient: weapon_data.get("corrected")?,
+            scaling: { let raw: f32 = weapon_data.get("attack_attribute_ratio")?; raw / 100f32 },
+            scaling_stat: convert_al::to_stat_kind(weapon_data.get("attack_attribute")?),
+            range: weapon_data.get("range")?,
+            firing_angle: weapon_data.get("angle")?,
+    
+            pierce: pierce.unwrap_or_default(),
+            kind,
+            velocity: bullet.get("velocity")?,
+            modifiers: ArmorModifiers(armor_mods[0], armor_mods[1], armor_mods[2]),
+    
+            amount,
+        })
+    } else {
+        let aircraft: LuaTable = context!(aircraft_template.get(bullet); "bullet aircraft_template for id {bullet}")?;
+        let speed: f32 = aircraft.get("speed")?;
+        let weapons: Vec<u32> = aircraft.get("weapon_ID")?;
+        let weapons = weapons.into_iter()
+            .map(|id| load_weapon(lua, id))
+            .collect::<LuaResult<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+        WeaponData::Aircraft(Aircraft {
+            speed,
+            weapons: Arc::from(weapons)
+        })
+    };
+
+    Ok(Some(Weapon {
         weapon_id,
         reload_time: reload_max * RLD_MULT_AT_100,
         fixed_delay: weapon_data.get("recover_time")?,
-        damage: weapon_data.get("damage")?,
-        coefficient: weapon_data.get("corrected")?,
-        scaling: { let raw: f32 = weapon_data.get("attack_attribute_ratio")?; raw / 100f32 },
-        scaling_stat: convert_al::to_stat_kind(weapon_data.get("attack_attribute")?),
-        range: weapon_data.get("range")?,
-        firing_angle: weapon_data.get("angle")?,
-
-        pierce: pierce.unwrap_or_default(),
-        kind,
-        velocity: bullet.get("velocity")?,
-        modifiers: ArmorModifiers(armor_mods[0], armor_mods[1], armor_mods[2]),
-
-        amount,
-    })
+        data,
+    }))
 }
 
 fn search_referenced_weapons(barrages: &mut ReferencedWeaponsContext, lua: &Lua, skill: LuaTable) -> LuaResult<()> {
@@ -170,8 +193,9 @@ fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsCon
             if barrages.seen_weapons.insert(weapon_id) {
                 let target: Option<String> = entry.get("target_choise" /* sic */)?;
                 let target = target.as_deref().map(convert_al::to_barrage_target).unwrap_or(SkillAttackTarget::Random);
-                let weapon = load_weapon(lua, weapon_id)?;
-                barrages.attacks.push(SkillAttack { weapon, target });
+                if let Some(weapon) = load_weapon(lua, weapon_id)? {
+                    barrages.attacks.push(SkillAttack { weapon, target });
+                }
             }
         },
         _ => (),
@@ -187,7 +211,6 @@ fn require_buff_data(lua: &Lua, buff_id: u32) -> LuaResult<LuaTable> {
 fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_skill", skill_id)
 }
-*/
 
 #[derive(Debug, Default)]
 struct ReferencedWeaponsContext {
