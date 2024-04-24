@@ -40,9 +40,7 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}",
-            "env": {
-                "DATA_PATH": "D:/Private/Coding/Lua/AzurLaneLuaScripts/EN"
-            }
+            "envFile": ".env"
         },
         {
             "type": "lldb",

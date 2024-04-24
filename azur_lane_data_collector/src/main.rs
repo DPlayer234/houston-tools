@@ -113,15 +113,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut ships = HashMap::new();
     for candidate in candidates {
         let mut mlb = candidate.mlb.to_ship_data(&lua)?;
-        fix_up_data(&mut mlb, &candidate.mlb)?;
-
+        
         let mut retrofits: Vec<ShipData> = Vec::new();
         if let Some(ref retrofit_data) = candidate.retrofit_data {
             if retrofits.is_empty() {
                 let mut retrofit = mlb.clone();
                 enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
 
-                fix_up_data(&mut retrofit, &candidate.mlb)?;
+                fix_up_retrofitted_data(&mut retrofit, &candidate.mlb)?;
                 retrofits.push(retrofit); 
             }
 
@@ -129,7 +128,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let mut retrofit = retrofit_set.to_ship_data(&lua)?;
                 enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
     
-                fix_up_data(&mut retrofit, &retrofit_set)?;
+                fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
                 retrofits.push(retrofit);
             }
         }
@@ -364,7 +363,7 @@ fn add_strengthen_stats(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> 
     Ok(())
 }
 
-fn fix_up_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
+fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
     let buff_list_display: Vec<u32> = set.template.get("buff_list_display")?;
     let mut skills = ship.skills.to_vec();
     skills.sort_by_key(|s| buff_list_display.iter().enumerate().find(|i| *i.1 == s.buff_id).map(|i| i.0).unwrap_or_default());

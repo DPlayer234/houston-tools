@@ -3,6 +3,7 @@ use mlua::prelude::*;
 use azur_lane::ship::*;
 
 use crate::context;
+use crate::skill_loader;
 
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     const M: f32 = 100f32;
@@ -18,9 +19,10 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
         add_effect_attr(ship, effect_attr)?;
     }
 
-    // change_skill: { number, number }
-    // effect_skill: unused
-
+    if let LuaValue::Table(change_skill) = table.get("change_skill")? {
+        replace_skill(lua, ship, change_skill)?;
+    }
+    
     if let LuaValue::Table(effect_base) = table.get("effect_base")? {
         replace_equip_slot_part(lua, ship, effect_base, |s| &mut s.mounts)?;
     }
@@ -45,6 +47,19 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
 
         Ok(())
     })
+}
+
+fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
+    let from_id: u32 = effect.get(1)?;
+    let to_id: u32 = effect.get(2)?;
+
+    let mut skills = ship.skills.to_vec();
+    if let Some(slot) = skills.iter_mut().find(|s| s.buff_id == from_id) {
+        *slot = skill_loader::load_skill(lua, to_id)?;
+        ship.skills = Arc::from(skills);
+    }
+
+    Ok(())
 }
 
 fn replace_equip_slot_part<'a, T: FromLua<'a> + Clone>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut T) -> LuaResult<()> {
