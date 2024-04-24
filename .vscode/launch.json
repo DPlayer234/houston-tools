@@ -26,6 +26,27 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'azur_lane_data_collector'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=azur_lane_data_collector",
+                    "--package=azur_lane_data_collector"
+                ],
+                "filter": {
+                    "name": "azur_lane_data_collector",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATA_PATH": "G:/repos/priv/AzurLaneLuaScripts/EN"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'app'",
             "cargo": {
                 "args": [

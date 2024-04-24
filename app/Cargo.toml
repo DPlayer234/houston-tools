@@ -12,3 +12,4 @@ poise = "0.6.1"
 serde = "1.0.197"
 commands = { path = "../commands" }
 utils = { path = "../utils" }
+azur_lane = { path = "../azur_lane" }
