@@ -47,12 +47,12 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
     })
 }
 
-fn replace_equip_slot_part<'a, T: FromLua<'a> + Clone>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipSlot) -> &mut T) -> LuaResult<()> {
+fn replace_equip_slot_part<'a, T: FromLua<'a> + Clone>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut T) -> LuaResult<()> {
     let mut slots = ship.equip_slots.to_vec();
     let effect_base: Vec<T> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
     for (index, mounts) in effect_base.iter().enumerate() {
-        if let Some(slot) = slots.get_mut(index) {
+        if let Some(slot) = slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
             *select(slot) = mounts.clone();
         }
     }
@@ -66,7 +66,7 @@ fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> 
     let amount: f32 = effect.get(2)?;
 
     let mut slots = ship.equip_slots.to_vec();
-    if let Some(slot) = slots.get_mut(index - 1) {
+    if let Some(slot) = slots.get_mut(index - 1).and_then(|s| s.mount.as_mut()) {
         slot.efficiency += amount;
         ship.equip_slots = Arc::from(slots);
     }

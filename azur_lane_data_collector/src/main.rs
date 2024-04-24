@@ -20,6 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let lua = Lua::new();
 
     lua.load(include_str!("assets/lua_init.lua"))
+        .set_name("main")
         .set_mode(mlua::ChunkMode::Text)
         .exec()?;
 
@@ -112,12 +113,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut ships = HashMap::new();
     for candidate in candidates {
         let mut mlb = candidate.mlb.to_ship_data(&lua)?;
+        fix_up_data(&mut mlb, &candidate.mlb)?;
 
-        let mut retrofits = candidate.retrofits.iter().map(|s| s.to_ship_data(&lua)).collect::<LuaResult<Vec<_>>>()?;
-        if let Some(retrofit) = candidate.retrofit_data {
-            if retrofits.is_empty() { retrofits.push(mlb.clone()); }
-            for r in &mut retrofits {
-                enhance::retrofit::apply_retrofit(r, &retrofit)?;
+        let mut retrofits: Vec<ShipData> = Vec::new();
+        if let Some(ref retrofit_data) = candidate.retrofit_data {
+            if retrofits.is_empty() {
+                let mut retrofit = mlb.clone();
+                enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
+
+                fix_up_data(&mut retrofit, &candidate.mlb)?;
+                retrofits.push(retrofit); 
+            }
+
+            for retrofit_set in candidate.retrofits {
+                let mut retrofit = retrofit_set.to_ship_data(&lua)?;
+                enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
+    
+                fix_up_data(&mut retrofit, &retrofit_set)?;
+                retrofits.push(retrofit);
             }
         }
 
@@ -125,6 +138,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ships.insert(candidate.id, mlb);
     }
 
+    println!("Writing output...");
     let f = fs::File::create("houston_azur_lane_data.json")?;
     serde_json::to_writer(&f, &DefinitionData {
         ships
@@ -229,21 +243,20 @@ impl ShipSet<'_> {
             ($allowed_at:literal, $index:literal) => {{
                 let allow: Vec<u32> = read!(self.template, $allowed_at);
                 EquipSlot {
-                    efficiency: read!(equipment_proficiency, $index),
-                    mounts: read!(base_list, $index),
-                    parallel: read!(parallel_max, $index),
-                    preload: read!(preload_count, $index),
-                    allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect()
+                    allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
+                    mount: Some(EquipWeaponMount {
+                        efficiency: read!(equipment_proficiency, $index),
+                        mounts: read!(base_list, $index),
+                        parallel: read!(parallel_max, $index),
+                        preload: read!(preload_count, $index)
+                    })
                 }
             }};
             ($allowed_at:literal) => {{
                 let allow: Vec<u32> = read!(self.template, $allowed_at);
                 EquipSlot {
-                    efficiency: 0f32,
-                    mounts: 0,
-                    parallel: 0,
-                    preload: 0,
-                    allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect()
+                    allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
+                    mount: None
                 }
             }};
         }
@@ -280,9 +293,17 @@ impl ShipSet<'_> {
                 make_equip_slot!("equip_4"),
                 make_equip_slot!("equip_5")
             ]),
-            shadow_equip: Arc::new([]),
+            shadow_equip: Arc::from(
+                skill_loader::load_equips(lua, read!(self.statistics, "fix_equip_list"))?.into_iter()
+                    .enumerate()
+                    .map(|(index, equip)| Ok(ShadowEquip {
+                        efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or_default() },
+                        weapons: equip.weapons
+                    }))
+                    .collect::<LuaResult<Vec<_>>>()?
+            ),
             skills: Arc::from(
-                skill_loader::load_skills(lua, read!(self.template, "buff_list_display"))?
+                skill_loader::load_skills(lua, read!(self.template, "buff_list"))?
             ),
             retrofits: Arc::new([]),
             wiki_name: None
@@ -321,6 +342,12 @@ impl ShipSet<'_> {
                     let id: u32 = table.get(2)?;
                     enhance::meta::add_repair_effect(&mut ship, &read!(ex.repair_effect_lookup, id))?;
                 }
+
+                // META ships have a definition for "buff_list_task" but this seems to go unused
+                // and Fusou META doesn't even have the right data here. Just use the display list.
+                ship.skills = Arc::from(
+                    skill_loader::load_skills(lua, read!(self.template, "buff_list_display"))?
+                );
             }
         }
 
@@ -334,5 +361,14 @@ fn add_strengthen_stats(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> 
     ship.stats.aa += { let v: f32 = table.get(3)?; v };
     ship.stats.avi += { let v: f32 = table.get(4)?; v };
     ship.stats.rld += { let v: f32 = table.get(5)?; v };
+    Ok(())
+}
+
+fn fix_up_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
+    let buff_list_display: Vec<u32> = set.template.get("buff_list_display")?;
+    let mut skills = ship.skills.to_vec();
+    skills.sort_by_key(|s| buff_list_display.iter().enumerate().find(|i| *i.1 == s.buff_id).map(|i| i.0).unwrap_or_default());
+    ship.skills = Arc::from(skills);
+
     Ok(())
 }

@@ -41,7 +41,7 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "DATA_PATH": "G:/repos/priv/AzurLaneLuaScripts/EN"
+                "DATA_PATH": "D:/Private/Coding/Lua/AzurLaneLuaScripts/EN"
             }
         },
         {

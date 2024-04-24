@@ -19,7 +19,7 @@ pub struct ShipData {
     pub enhance_kind: EnhanceKind,
     pub stats: ShipStats,
     pub equip_slots: Arc<[EquipSlot]>,
-    pub shadow_equip: Arc<[Equip]>,
+    pub shadow_equip: Arc<[ShadowEquip]>,
     pub skills: Arc<[Skill]>,
     pub retrofits: Arc<[ShipData]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -47,11 +47,23 @@ pub struct ShipStats {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipSlot {
+    pub allowed: Arc<[EquipKind]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mount: Option<EquipWeaponMount>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShadowEquip {
+    pub efficiency: f32,
+    pub weapons: Arc<[Weapon]>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EquipWeaponMount {
     pub efficiency: f32,
     pub mounts: u8,
     pub parallel: u8,
     pub preload: u8,
-    pub allowed: Arc<[EquipKind]>
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

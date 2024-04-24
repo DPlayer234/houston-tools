@@ -61,7 +61,7 @@ local function lazy_load(mode, allow_name_code)
         if base_id ~= nil then
             args[index] = setmetatable(real, {
                 __index = function (self, key)
-                    local raw = rawget(self, key)
+                    local raw = data[key]
                     if raw == nil then
                         return args[base_id][key]
                     else

@@ -100,29 +100,60 @@ pub fn to_equip_type(num: u32) -> EquipKind {
     }
 }
 
-pub fn to_stat_kind(num: u32) -> StatKind {
+pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
     match num {
-        1 => StatKind::HP,
-        6 => StatKind::RLD,
-        2 => StatKind::FP,
-        3 => StatKind::TRP,
-        9 => StatKind::EVA,
-        4 => StatKind::AA,
-        5 => StatKind::AVI,
-        8 => StatKind::ACC,
-        12 => StatKind::ASW,
-        10 => StatKind::SPD,
-        11 => StatKind::LCK,
-        _ => StatKind::HP
+        1 => StatKind::FP,
+        2 => StatKind::TRP,
+        3 => StatKind::AA,
+        4 => StatKind::AVI,
+        5 => StatKind::ASW,
+        _ => StatKind::LCK
     }
 }
 
-pub fn to_barrage_target(text: &str) -> SkillAttackTarget {
+pub fn to_skill_target(text: &str) -> SkillAttackTarget {
     match text {
         "TargetHarmRandom" => SkillAttackTarget::Random,
         "TargetHarmRandomByWeight" => SkillAttackTarget::PriorityTarget,
         "TargetHarmNearest" => SkillAttackTarget::Nearest,
         "TargetHarmFarthest" => SkillAttackTarget::Farthest,
         "TargetNil" | _ => SkillAttackTarget::Fixed
+    }
+}
+
+pub fn to_bullet_kind(num: u32) -> BulletKind {
+    match num {
+        1 => BulletKind::Cannon,
+        2 => BulletKind::Bomb,
+        3 => BulletKind::Torpedo,
+        4 => BulletKind::Direct,
+        5 => BulletKind::Shrapnel,
+        6 => BulletKind::AntiAir,
+        7 => BulletKind::AntiSea,
+        9 => BulletKind::Effect,
+        10 => BulletKind::Beam,
+        11 => BulletKind::GBullet,
+        12 => BulletKind::EletricArc,
+        13 => BulletKind::Missile,
+        14 => BulletKind::SpaceLaser,
+        15 => BulletKind::Scale,
+        16 => BulletKind::TriggerBomb,
+        17 => BulletKind::AAMissile,
+        _ => BulletKind::Cannon
+    }
+}
+
+pub fn to_ammo_kind(num: u32) -> AmmoKind {
+    match num {
+        1 => AmmoKind::Normal,
+        2 => AmmoKind::AP,
+        3 => AmmoKind::HE,
+        4 => AmmoKind::Torpedo,
+        5 => AmmoKind::Unknown5,
+        6 => AmmoKind::Bomb,
+        7 => AmmoKind::SAP,
+        8 => AmmoKind::Unknown8,
+        9 => AmmoKind::Unknown9,
+        _ => AmmoKind::Normal
     }
 }
