@@ -1,5 +1,5 @@
 -- Set up loader to support paths relative to working dir
-package.path = (os.getenv("DATA_PATH") or "..") .. "/?.lua;" .. package.path
+package.path = AZUR_LANE_DATA_PATH .. "/?.lua;" .. package.path
 
 -- Set up data loading like AL does. Mostly.
 pg = {}

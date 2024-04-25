@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use serde::*;
 
 mod data_def;
@@ -8,7 +7,7 @@ pub mod equip;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {
-    pub ships: HashMap<u32, ship::ShipData>
+    pub ships: Vec<ship::ShipData>
 }
 
 define_data_enum! {

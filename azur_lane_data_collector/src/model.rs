@@ -101,14 +101,27 @@ impl ShipSet<'_> {
         let preload_count: LuaTable = read!(self.statistics, "preload_count");
         let equipment_proficiency: LuaTable = read!(self.statistics, "equipment_proficiency");
 
+        let mut buff_list: Vec<u32> = read!(self.template, "buff_list");
+        let buff_list_display: Vec<u32> = read!(self.template, "buff_list_display");
+        let hide_buff_list: Vec<u32> = read!(self.template, "hide_buff_list");
+        intersect(&mut buff_list, &buff_list_display);
+
+        let extra_main_guns: u8 =
+            if hide_buff_list.contains(&1) { 1 }
+            else if hide_buff_list.contains(&2) { 2 }
+            else { 0 };
+
         macro_rules! make_equip_slot {
             ($allowed_at:literal, $index:literal) => {{
                 let allow: Vec<u32> = read!(self.template, $allowed_at);
+                let mut mounts: u8 = read!(base_list, $index);
+                if $index == 1 { mounts += extra_main_guns; }
+                
                 EquipSlot {
                     allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
                     mount: Some(EquipWeaponMount {
                         efficiency: read!(equipment_proficiency, $index),
-                        mounts: read!(base_list, $index),
+                        mounts,
                         parallel: read!(parallel_max, $index),
                         preload: read!(preload_count, $index)
                     })
@@ -122,10 +135,6 @@ impl ShipSet<'_> {
                 }
             }};
         }
-
-        let mut buff_list: Vec<u32> = read!(self.template, "buff_list");
-        let buff_list_display: Vec<u32> = read!(self.template, "buff_list_display");
-        intersect(&mut buff_list, &buff_list_display);
 
         let mut ship = ShipData {
             group_id: read!(self.template, "group_type"),

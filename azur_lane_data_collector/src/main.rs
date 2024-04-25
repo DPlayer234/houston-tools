@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::sync::Arc;
+use clap::Parser;
 use mlua::prelude::*;
-
 use azur_lane::*;
 use azur_lane::ship::*;
 
@@ -15,9 +15,21 @@ mod model;
 
 use model::*;
 
+#[derive(Debug, Parser)]
+struct Cli {
+    /// The path that the game scripts live in.
+    #[arg(short, long)]
+    input: String,
+    /// The output file name.
+    #[arg(short, long)]
+    out: Option<String>
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
     let lua = Lua::new();
 
+    lua.globals().raw_set("AZUR_LANE_DATA_PATH", cli.input)?;
     lua.load(include_str!("assets/lua_init.lua"))
         .set_name("main")
         .set_mode(mlua::ChunkMode::Text)
@@ -109,7 +121,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     candidates.sort_by_key(|t| t.id);
     println!("candidates: {}", candidates.len());
 
-    let mut ships = HashMap::new();
+    let mut ships = Vec::new();
     for candidate in candidates {
         let mut mlb = candidate.mlb.to_ship_data(&lua)?;
         
@@ -133,11 +145,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         mlb.retrofits = Arc::from(retrofits);
-        ships.insert(candidate.id, mlb);
+        ships.push(mlb);
     }
 
     println!("Writing output...");
-    let f = fs::File::create("houston_azur_lane_data.json")?;
+
+    let out_path = cli.out.as_deref().unwrap_or("houston_azur_lane_data.json");
+    let f = fs::File::create(out_path)?;
     serde_json::to_writer_pretty(&f, &DefinitionData {
         ships
     })?;

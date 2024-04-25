@@ -38,9 +38,8 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "envFile": ".env"
+            "args": ["-i", "G:/repos/priv/AzurLaneLuaScripts/EN"],
+            "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
