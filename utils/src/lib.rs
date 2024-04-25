@@ -3,6 +3,7 @@ use std::fmt::Debug;
 pub mod discord_fmt;
 pub mod text;
 pub mod time;
+pub mod prefix_map;
 
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.

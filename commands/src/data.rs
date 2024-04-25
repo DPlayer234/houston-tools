@@ -1,7 +1,11 @@
 use crate::HContext;
+use std::collections::HashMap;
+use std::sync::Arc;
 use serenity::all::Color;
 use serenity::model::id::UserId;
 use poise::reply::CreateReply;
+use utils::prefix_map::PrefixMap;
+use azur_lane::ship::*;
 
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
@@ -10,10 +14,19 @@ pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
 pub struct HBotData {
-    user_data: chashmap::CHashMap<UserId, HUserData>
+    user_data: chashmap::CHashMap<UserId, HUserData>,
+    pub azur_lane: HAzurLane
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
+pub struct HAzurLane {
+    pub ship_list: Vec<ShipData>,
+    id_to_index: HashMap<u32, usize>,
+    name_to_index: HashMap<Arc<str>, usize>,
+    prefix_map: PrefixMap<usize>,
+}
+
+#[derive(Debug, Clone)]
 pub struct HUserData {
     pub ephemeral: bool
 }
@@ -35,11 +48,47 @@ impl std::fmt::Debug for HBotData {
     }
 }
 
-impl Default for HBotData {
-    fn default() -> Self {
+impl HBotData {
+    pub fn new(azur_lane: azur_lane::DefinitionData) -> Self {
         HBotData {
-            user_data: chashmap::CHashMap::new()
+            user_data: chashmap::CHashMap::new(),
+            azur_lane: HAzurLane::from(azur_lane)
         }
+    }
+}
+
+impl HAzurLane {
+    pub fn from(data: azur_lane::DefinitionData) -> Self {
+        let mut id_to_index: HashMap<u32, usize> = HashMap::with_capacity(data.ships.len());
+        let mut name_to_index: HashMap<Arc<str>, usize> = HashMap::with_capacity(data.ships.len());
+        let mut prefix_map: PrefixMap<usize> = PrefixMap::new();
+
+        for (index, data) in data.ships.iter().enumerate() {
+            id_to_index.insert(data.group_id, index);
+            name_to_index.insert(Arc::clone(&data.name), index);
+            prefix_map.insert(&*data.name, index);
+        }
+
+        HAzurLane {
+            ship_list: data.ships,
+            id_to_index,
+            name_to_index,
+            prefix_map
+        }
+    }
+
+    pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
+        let index = *self.id_to_index.get(&id)?;
+        self.ship_list.get(index)
+    }
+
+    pub fn ship_by_name(&self, name: &str) -> Option<&ShipData> {
+        let index = *self.name_to_index.get(name)?;
+        self.ship_list.get(index)
+    }
+
+    pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
+        self.prefix_map.find(prefix).flat_map(|i| self.ship_list.get(*i))
     }
 }
 

@@ -12,4 +12,6 @@ poise = "0.6.1"
 chrono = "0.4.23"
 chashmap = "2.2.2"
 rand = "0.8.5"
+bitcode = { version = "0.6.0", features = ["derive"] }
 utils = { path = "../utils" }
+azur_lane = { path = "../azur_lane" }

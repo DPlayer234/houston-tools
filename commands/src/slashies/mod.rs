@@ -1,14 +1,17 @@
+use std::sync::Arc;
 use crate::internal::prelude::*;
 use utils::discord_fmt::DisplayResolvedArgs;
 
+mod azur;
 mod coin;
 mod config;
 mod dice;
 mod timestamp;
 mod who;
 
-pub fn get_commands() -> Vec<poise::Command<HBotData, HError>> {
+pub fn get_commands() -> Vec<poise::Command<Arc<HBotData>, HError>> {
     vec![
+        azur::azur(),
         coin::coin(),
         config::config(),
         dice::dice(),
@@ -30,7 +33,7 @@ pub async fn pre_command(ctx: HContext<'_>) {
     })
 }
 
-pub async fn error_handler(error: poise::FrameworkError<'_, HBotData, HError>) {
+pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HError>) {
     match &error {
         poise::FrameworkError::Command { error, ctx, .. } => {
             context_error(ctx, format_error(error)).await
