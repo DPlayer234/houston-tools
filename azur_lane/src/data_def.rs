@@ -41,3 +41,7 @@ pub fn make_empty_arc<T>() -> Arc<[T]> {
 pub fn is_empty_arc<T>(arc: &Arc<[T]>) -> bool {
     arc.is_empty()
 }
+
+pub fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
+}

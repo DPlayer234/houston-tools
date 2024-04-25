@@ -121,6 +121,14 @@ pub fn to_skill_target(text: &str) -> SkillAttackTarget {
     }
 }
 
+pub fn to_skill_category(text: &str) -> SkillCategory {
+    match text {
+        "red" => SkillCategory::Offense,
+        "blue" => SkillCategory::Defense,
+        _ => SkillCategory::Support
+    }
+}
+
 pub fn to_bullet_kind(num: u32) -> BulletKind {
     match num {
         1 => BulletKind::Cannon,

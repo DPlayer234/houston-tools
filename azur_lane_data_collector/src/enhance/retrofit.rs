@@ -10,6 +10,8 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
     let list: Vec<Vec<LuaTable>> = retrofit.data.get("transform_list")?;
     let mut new_skills = Vec::new();
 
+    ship.rarity = ship.rarity.next();
+
     for entry in list.iter().flatten() {
         let transform: u32 = entry.get(2)?;
         let transform: LuaTable = retrofit.list_lookup.get(transform)?;

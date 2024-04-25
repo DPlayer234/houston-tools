@@ -4,10 +4,12 @@ use serde::*;
 use crate::define_data_enum;
 use crate::ship::*;
 use crate::data_def::*;
+use crate::skill::*;
 use super::Faction;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equip {
+    pub name: Arc<str>,
     pub kind: EquipKind,
     pub faction: Faction,
     #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
@@ -42,19 +44,22 @@ pub struct Barrage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bullet {
     pub bullet_id: u32,
-
-    // From bullet template:
-    pub pierce: u32,
-    pub ammo: AmmoKind,
-    pub kind: BulletKind,
-    pub velocity: f32,
-    pub modifiers: ArmorModifiers,
-
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub spread: Option<BulletSpread>,
     
     // From barrage template:
     pub amount: u32,
+
+    // From bullet template:
+    pub kind: BulletKind,
+    pub ammo: AmmoKind,
+    pub pierce: u32,
+    pub velocity: f32,
+    pub modifiers: ArmorModifiers,
+
+    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
+    pub attach_buff: Arc<[BuffInfo]>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spread: Option<BulletSpread>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,5 +161,17 @@ impl ArmorModifiers {
             ShipArmor::Medium => self.1,
             ShipArmor::Heavy => self.2,
         }
+    }
+}
+
+impl From<[f32; 3]> for ArmorModifiers {
+    fn from(value: [f32; 3]) -> Self {
+        ArmorModifiers(value[0], value[1], value[2])
+    }
+}
+
+impl From<(f32, f32, f32)> for ArmorModifiers {
+    fn from(value: (f32, f32, f32)) -> Self {
+        ArmorModifiers(value.0, value.1, value.2)
     }
 }

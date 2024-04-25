@@ -54,6 +54,7 @@ pub struct EquipSlot {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShadowEquip {
+    pub name: Arc<str>,
     pub efficiency: f32,
     pub weapons: Arc<[Weapon]>
 }
@@ -156,8 +157,19 @@ impl Display for ShipArmor {
     }
 }
 
+impl ShipRarity {
+    pub fn next(self) -> Self {
+        match self {
+            Self::N => Self::R,
+            Self::R => Self::E,
+            Self::E => Self::SR,
+            Self::SR | Self::UR => Self::UR,
+        }
+    }
+}
+
 impl ShipStats {
-    pub fn multiply(&self, mult: f32) -> ShipStats {
+    pub fn multiply(&self, mult: f32) -> Self {
         Self {
             hp: self.hp * mult,
             armor: self.armor,
