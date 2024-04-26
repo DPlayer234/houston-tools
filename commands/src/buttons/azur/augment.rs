@@ -2,6 +2,7 @@ use std::fmt::Write;
 //use crate::internal::prelude::*;
 use crate::buttons::*;
 use azur_lane::equip::*;
+use azur_lane::ship::*;
 use azur_lane::skill::*;
 use utils::Discard;
 
@@ -43,21 +44,16 @@ impl ViewAugment {
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(augment.name.as_ref()))
             .description(description)
+            .color(ShipRarity::SR.data().color_rgb)
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
 
         let mut components = Vec::new();
 
-        if augment.effect.is_some() {
+        if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
-            let view_skill = super::skill::ViewSkill::with_back(source, 0, self.clone().to_custom_id());
+            let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect").style(ButtonStyle::Secondary));
-        }
-
-        if augment.skill_upgrade.is_some() {
-            let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
-            let view_skill = super::skill::ViewSkill::with_back(source, 1, self.clone().to_custom_id());
-            components.push(CreateButton::new(view_skill.to_custom_id()).label("Skill Upgrade").style(ButtonStyle::Secondary));
         }
 
         if let Some(back) = self.back {

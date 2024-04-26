@@ -1,15 +1,16 @@
 //use crate::internal::prelude::*;
 use crate::buttons::*;
+use azur_lane::equip::*;
+use azur_lane::ship::*;
 use azur_lane::skill::*;
 
 use super::AugmentParseError;
 use super::ShipParseError;
-use super::SkillParseError;
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewSkill {
     pub source: ViewSkillSource,
-    pub skill_index: u8,
+    pub skill_index: Option<u8>,
     pub back: Option<String>
 }
 
@@ -25,47 +26,86 @@ impl From<ViewSkill> for ButtonArgs {
     }
 }
 
+type OwnedCreateEmbedField = (String, String, bool);
+
 impl ViewSkill {
-    pub fn new(source: ViewSkillSource, skill_index: u8) -> Self {
-        Self { source, skill_index, back: None }
+    pub fn new(source: ViewSkillSource) -> Self {
+        Self { source, skill_index: None, back: None }
     }
 
-    pub fn with_back(source: ViewSkillSource, skill_index: u8, back: String) -> Self {
-        Self { source, skill_index, back: Some(back) }
+    pub fn with_back(source: ViewSkillSource, back: String) -> Self {
+        Self { source, skill_index: None, back: Some(back) }
     }
 
-    pub fn modify_with_skill(self, create: CreateReply, skill: &Skill) -> anyhow::Result<CreateReply> {
-        let embed = CreateEmbed::new()
-            .author(CreateEmbedAuthor::new(skill.name.as_ref()))
-            .description(skill.description.as_ref())
-            .color(skill.category.data().color_rgb);
-        
-        let components = self.back
-            .map(|back| CreateButton::new(back).emoji('⏪').label("Back"))
-            .into_iter()
-            .collect();
+    pub fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>) -> anyhow::Result<CreateReply> {
+        let index = self.skill_index.map(usize::from);
+        let mut embed = CreateEmbed::new();
+        let mut components = Vec::new();
 
-        Ok(create.embed(embed).components(vec![CreateActionRow::Buttons(components)]))
+        if let Some(ref back) = self.back {
+            components.push(CreateButton::new(back.as_str()).emoji('⏪').label("Back"));
+        }
+
+        for (t_index, skill) in iterator.enumerate().take(4) {
+            if Some(t_index) == index {
+                embed = embed.color(skill.category.data().color_rgb);
+                embed = embed.fields(self.create_ex_skill_field(skill));
+            } else {
+                embed = embed.fields(self.create_skill_field(skill));
+            }
+
+            if !skill.barrages.is_empty() {
+                let button = self.new_button(utils::field!(Self: skill_index), Some(t_index as u8), || Sentinel::new(1, t_index as u32))
+                    .label(skill.name.as_ref())
+                    .style(ButtonStyle::Secondary);
+    
+                components.push(button);
+            }
+        }
+
+        let rows = vec![
+            CreateActionRow::Buttons(components)
+        ];
+
+        Ok(create.embed(embed).components(rows))
+    }
+
+    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData) -> anyhow::Result<CreateReply> {
+        self.modify_with_skills(create, ship.skills.iter())
+    }
+
+    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> anyhow::Result<CreateReply> {
+        self.modify_with_skills(create, augment.effect.iter().chain(augment.skill_upgrade.as_ref()))
+    }
+
+    fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
+        [(
+            format!("{} {}", skill.category.data().emoji, skill.name),
+            skill.description.as_ref().to_owned(),
+            false
+        )]
+    }
+
+    fn create_ex_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
+        [(
+            format!("{} __{}__", skill.category.data().emoji, skill.name),
+            skill.description.as_ref().to_owned(),
+            false
+        )]
     }
 }
 
 impl ButtonArgsModify for ViewSkill {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let skill = match self.source {
+        match self.source {
             ViewSkillSource::Ship(ship_id) => {
                 let ship = data.azur_lane.ship_by_id(ship_id).ok_or(ShipParseError)?;
-                ship.skills.get(usize::from(self.skill_index)).ok_or(SkillParseError)?
+                self.modify_with_ship(create, ship)
             }
             ViewSkillSource::Augment(augment_id) => {
                 let augment = data.azur_lane.augment_by_id(augment_id).ok_or(AugmentParseError)?;
-                match self.skill_index {
-                    0 => augment.effect.as_ref().ok_or(SkillParseError)?,
-                    1 => augment.skill_upgrade.as_ref().ok_or(SkillParseError)?,
-                    _ => Err(SkillParseError)?
-                }
+                self.modify_with_augment(create, augment)
             }
-        };
-
-        self.modify_with_skill(create, skill)
+        }
     }
 }

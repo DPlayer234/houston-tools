@@ -73,31 +73,27 @@ impl ViewShip {
             ])
         ];
 
-        match ship.skills.len() {
-            0 => {},
-            _ => {
-                rows.push(CreateActionRow::Buttons(
-                    ship.skills.iter().enumerate()
-                        .map(|(index, skill)| {
-                            let source = super::skill::ViewSkillSource::Ship(self.ship_id);
-                            let view_skill = super::skill::ViewSkill::with_back(source, index as u8, self.clone().to_custom_id());
-                            CreateButton::new(view_skill.to_custom_id())
-                                .label(skill.name.as_ref())
-                                .emoji(skill.category.data().emoji)
-                                .style(ButtonStyle::Secondary)
-                        })
-                        .chain(data.azur_lane.augment_by_ship_id(ship.group_id)
-                            .map(|augment| {
-                                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.clone().to_custom_id());
-                                CreateButton::new(view_augment.to_custom_id())
-                                    .label("Unique Augment")
-                                    .style(ButtonStyle::Secondary)
-                            }))
-                        .take(5)
-                        .collect()
-                ));
+        {
+            let skills = (ship.skills.len() != 0).then(|| {
+                let source = super::skill::ViewSkillSource::Ship(self.ship_id);
+                let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
+                CreateButton::new(view_skill.to_custom_id())
+                    .label("Skills")
+                    .style(ButtonStyle::Secondary)
+            });
+
+            let augment = data.azur_lane.augment_by_ship_id(ship.group_id).map(|augment| {
+                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.clone().to_custom_id());
+                CreateButton::new(view_augment.to_custom_id())
+                    .label("Unique Augment")
+                    .style(ButtonStyle::Secondary)
+            });
+
+            let row: Vec<_> = skills.into_iter().chain(augment).collect();
+            if !row.is_empty() {
+                rows.push(CreateActionRow::Buttons(row));
             }
-        };
+        }
 
         let base_button = self.button_with_retrofit(None)
             .label("Base")
