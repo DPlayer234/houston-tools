@@ -20,7 +20,8 @@ impl ButtonEventHandler {
         match ButtonArgs::from_custom_id(&interaction.data.custom_id)? {
             ButtonArgs::None(_) => Ok(()),
             ButtonArgs::ViewShip(view_ship) => self.inner_dispatch(ctx, interaction, view_ship).await,
-            ButtonArgs::ViewAugment(view_augment) => self.inner_dispatch(ctx, interaction, view_augment).await
+            ButtonArgs::ViewAugment(view_augment) => self.inner_dispatch(ctx, interaction, view_augment).await,
+            ButtonArgs::ViewSkill(view_skill) => self.inner_dispatch(ctx, interaction, view_skill).await,
         }
     }
 
@@ -49,6 +50,7 @@ pub enum ButtonArgs {
     None(Sentinel),
     ViewShip(azur::ship::ViewShip),
     ViewAugment(azur::augment::ViewAugment),
+    ViewSkill(azur::skill::ViewSkill),
 }
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]

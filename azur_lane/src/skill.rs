@@ -43,11 +43,11 @@ define_data_enum! {
     pub enum SkillCategory for SkillCategoryData {
         pub friendly_name: &'static str,
         pub color_rgb: u32,
-        pub emoji: &'static str;
+        pub emoji: char;
 
-        Offense("Offense", 0xDD2E44, "🟥"),
-        Defense("Defense", 0x55ACEE, "🟦"),
-        Support("Support", 0xFDCB58, "🟨")
+        Offense("Offense", 0xDD2E44, '🟥'),
+        Defense("Defense", 0x55ACEE, '🟦'),
+        Support("Support", 0xFDCB58, '🟨')
     }
 }
 

@@ -73,41 +73,64 @@ impl ViewShip {
             ])
         ];
 
+        match ship.skills.len() {
+            0 => {},
+            _ => {
+                rows.push(CreateActionRow::Buttons(
+                    ship.skills.iter().enumerate()
+                        .map(|(index, skill)| {
+                            let source = super::skill::ViewSkillSource::Ship(self.ship_id);
+                            let view_skill = super::skill::ViewSkill::with_back(source, index as u8, self.clone().to_custom_id());
+                            CreateButton::new(view_skill.to_custom_id())
+                                .label(skill.name.as_ref())
+                                .emoji(skill.category.data().emoji)
+                                .style(ButtonStyle::Secondary)
+                        })
+                        .chain(data.azur_lane.augment_by_ship_id(ship.group_id)
+                            .map(|augment| {
+                                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.clone().to_custom_id());
+                                CreateButton::new(view_augment.to_custom_id())
+                                    .label("Unique Augment")
+                                    .style(ButtonStyle::Secondary)
+                            }))
+                        .take(5)
+                        .collect()
+                ));
+            }
+        };
+
         let base_button = self.button_with_retrofit(None)
             .label("Base")
             .style(ButtonStyle::Secondary);
 
-        let mut state_row = Vec::new();
-
         match base_ship.retrofits.len() {
             0 => {},
             1 => {
-                state_row.push(base_button);
-                state_row.push(self.button_with_retrofit(Some(0))
-                    .label("Retrofit")
-                    .style(ButtonStyle::Secondary));
+                rows.push(CreateActionRow::Buttons(vec![
+                    base_button,
+                    self.button_with_retrofit(Some(0))
+                        .label("Retrofit")
+                        .style(ButtonStyle::Secondary)
+                ]));
             },
             _ => {
-                state_row.push(base_button);
-                state_row.extend(base_ship.retrofits.iter().enumerate()
-                    .filter_map(|(index, retro)| {
-                        let index = u8::try_from(index).ok()?;
-                        let result = self.button_with_retrofit(Some(index))
-                            .label(format!("Retrofit ({})", retro.hull_type.data().team_type.data().name))
-                            .style(ButtonStyle::Secondary);
-                        Some(result)
-                    }));
+                rows.push(CreateActionRow::Buttons(
+                    Some(base_button)
+                        .into_iter()
+                        .chain(
+                            base_ship.retrofits.iter().enumerate()
+                                .filter_map(|(index, retro)| {
+                                    let index = u8::try_from(index).ok()?;
+                                    let result = self.button_with_retrofit(Some(index))
+                                        .label(format!("Retrofit ({})", retro.hull_type.data().team_type.data().name))
+                                        .style(ButtonStyle::Secondary);
+                                    Some(result)
+                                })
+                        )
+                        .collect()
+                ));
             }
         };
-
-        if let Some(augment) = data.azur_lane.augment_by_ship_id(ship.group_id) {
-            let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.to_custom_id());
-            state_row.push(CreateButton::new(view_augment.to_custom_id()).label("Unique Augment").style(ButtonStyle::Secondary));
-        }
-
-        if !state_row.is_empty() {
-            rows.push(CreateActionRow::Buttons(state_row));
-        }
 
         create.embed(embed).components(rows)
     }

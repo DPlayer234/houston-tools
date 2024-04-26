@@ -1,24 +1,22 @@
 pub mod ship;
 pub mod augment;
+pub mod skill;
 
-#[derive(Debug, Clone)]
-pub struct ShipParseError;
+macro_rules! error {
+    ($type:ident : $message:literal) => {
+        #[derive(Debug, Clone)]
+        pub struct $type;
 
-impl std::error::Error for ShipParseError {}
+        impl std::error::Error for $type {}
 
-impl std::fmt::Display for ShipParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Unknown ship.")
-    }
+        impl std::fmt::Display for $type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, $message)
+            }
+        }
+    };
 }
 
-#[derive(Debug, Clone)]
-pub struct AugmentParseError;
-
-impl std::error::Error for AugmentParseError {}
-
-impl std::fmt::Display for AugmentParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Unknown augment.")
-    }
-}
+error!(ShipParseError: "Unknown skill.");
+error!(AugmentParseError: "Unknown skill.");
+error!(SkillParseError: "Unknown skill.");

@@ -20,6 +20,10 @@ impl From<ViewAugment> for ButtonArgs {
 }
 
 impl ViewAugment {
+    pub fn new(augment_id: u32) -> Self {
+        Self { augment_id, back: None }
+    }
+
     pub fn with_back(augment_id: u32, back: String) -> Self {
         Self { augment_id, back: Some(back) }
     }
@@ -42,9 +46,20 @@ impl ViewAugment {
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
 
-        let mut components = vec![
-            // todo: add skill view button
-        ];
+        let mut components = Vec::new();
+
+        if augment.effect.is_some() {
+            let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
+            let view_skill = super::skill::ViewSkill::with_back(source, 0, self.clone().to_custom_id());
+            components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect").style(ButtonStyle::Secondary));
+        }
+
+        if augment.skill_upgrade.is_some() {
+            let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
+            let view_skill = super::skill::ViewSkill::with_back(source, 1, self.clone().to_custom_id());
+            components.push(CreateButton::new(view_skill.to_custom_id()).label("Skill Upgrade").style(ButtonStyle::Secondary));
+        }
+
         if let Some(back) = self.back {
             components.insert(0, CreateButton::new(back).emoji('⏪').label("Back"));
         }
