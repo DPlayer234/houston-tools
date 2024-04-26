@@ -113,7 +113,7 @@ impl ViewShip {
     }
 }
 
-fn get_stats(view: &ViewShip, ship: &ShipData) -> [(&'static str, String, bool); 3] {
+fn get_stats(view: &ViewShip, ship: &ShipData) -> [(&'static str, String, bool); 1] {
     let stats = &ship.stats;
     let affinity = view.affinity.to_mult();
 
@@ -121,19 +121,44 @@ fn get_stats(view: &ViewShip, ship: &ShipData) -> [(&'static str, String, bool);
     macro_rules! s {
         ($val:expr) => {{ f($val.calc(u32::from(view.level), affinity)) }};
     }
-
     if ship.hull_type.data().team_type != TeamType::Submarine {
-        [
-            ("Stats", format!("**`HP:`**`{: >5}`\n**`FP:`**`{: >5}`\n**`AA:`**`{: >5}`\n**`ASW:`**`{: >4}`\n**`LCK:`**`{: >4}`", s!(stats.hp), s!(stats.fp), s!(stats.aa), s!(stats.asw), f(stats.lck)), true),
-            ("\u{200b}", format!("**`{}`**\n**`TRP:`**`{: >4}`\n**`AVI:`**`{: >4}`\n**`SPD:`**`{: >4}`\n**`Cost:`**`{: >3}`", stats.armor.data().name, s!(stats.trp), s!(stats.avi), f(stats.spd), stats.cost), true),
-            ("\u{200b}", format!("**`RLD:`**`{: >4}`\n**`EVA:`**`{: >4}`\n**`ACC:`**`{: >4}`", s!(stats.rld), s!(stats.eva), s!(stats.acc)), true),
-        ]
+        [(
+            "Stats",
+            format!(
+                "\
+                **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
+                ",
+                s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                s!(stats.asw), f(stats.spd),
+                f(stats.lck), stats.cost
+            ),
+            false
+        )]
     } else {
-        [
-            ("Stats", format!("**`HP:`**`{: >5}`\n**`FP:`**`{: >5}`\n**`AA:`**`{: >5}`\n**`OXY:`**`{: >4}`\n**`LCK:`**`{: >4}`", s!(stats.hp), s!(stats.fp), s!(stats.aa), stats.oxy, f(stats.lck)), true),
-            ("\u{200b}", format!("**`{}`**\n**`TRP:`**`{: >4}`\n**`AVI:`**`{: >4}`\n**`AMO:`**`{: >4}`\n**`Cost:`**`{: >3}`", stats.armor.data().name, s!(stats.trp), s!(stats.avi), stats.amo, stats.cost), true),
-            ("\u{200b}", format!("**`RLD:`**`{: >4}`\n**`EVA:`**`{: >4}`\n**`ACC:`**`{: >4}`\n**`SPD:`**`{: >4}`", s!(stats.rld), s!(stats.eva), s!(stats.acc), f(stats.spd)), true),
-        ]
+        [(
+            "Stats",
+            format!(
+                "\
+                **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
+                ",
+                s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                stats.oxy, stats.amo, f(stats.spd),
+                f(stats.lck), stats.cost
+            ),
+            false
+        )]
     }
 }
 
