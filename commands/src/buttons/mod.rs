@@ -51,8 +51,8 @@ pub enum ButtonArgs {
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct Sentinel {
-    pub key: usize,
-    pub value: usize
+    pub key: u32,
+    pub value: u32
 }
 
 pub trait ToButtonArgsId {
@@ -93,7 +93,7 @@ impl<T: Into<ButtonArgs>> ToButtonArgsId for T {
 }
 
 impl Sentinel {
-    pub fn new(key: usize, value: usize) -> Self {
+    pub fn new(key: u32, value: u32) -> Self {
         Self { key, value }
     }
 }

@@ -9,7 +9,7 @@ pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     let attr: String = context!(effect.get(1); "repair's effect_attr name for meta ship id {}", ship.group_id)?;
     let value: f32 = effect.get(2)?;
 
-    super::add_to_stats(&mut ship.stats, &attr, value);
+    super::add_to_stats_base(&mut ship.stats, &attr, value);
 
     Ok(())
 }
@@ -20,7 +20,7 @@ pub fn add_repair_effect(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()>
         let attr: String = context!(effect.get(1); "repair_effect's effect_attr name for meta ship id {}", ship.group_id)?;
         let value: f32 = effect.get(2)?;
 
-        super::add_to_stats(&mut ship.stats, &attr, value);
+        super::add_to_stats_base(&mut ship.stats, &attr, value);
     }
     
     Ok(())

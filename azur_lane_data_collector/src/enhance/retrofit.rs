@@ -16,9 +16,9 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
         let transform: u32 = entry.get(2)?;
         let transform: LuaTable = retrofit.list_lookup.get(transform)?;
         let effects: Vec<LuaTable> = transform.get("effect")?;
-        if let Some(effect) = effects.last() {
+        for effect in effects {
             effect.for_each(|k: String, v: f32| {
-                if !super::add_to_stats(&mut ship.stats, &k, v) {
+                if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
                     match k.borrow() {
                         "skill_id" => new_skills.push(skill_loader::load_skill(lua, v as u32)?),
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,

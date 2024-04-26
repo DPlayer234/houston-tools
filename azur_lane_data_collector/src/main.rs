@@ -22,7 +22,10 @@ struct Cli {
     input: String,
     /// The output file name.
     #[arg(short, long)]
-    out: Option<String>
+    out: Option<String>,
+    /// Minimize the output JSON file.
+    #[arg(short, long)]
+    minimize: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -152,9 +155,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let out_path = cli.out.as_deref().unwrap_or("houston_azur_lane_data.json");
     let f = fs::File::create(out_path)?;
-    serde_json::to_writer_pretty(&f, &DefinitionData {
+    let out_data = DefinitionData {
         ships
-    })?;
+    };
+
+    if cli.minimize {
+        serde_json::to_writer(&f, &out_data)?;
+    } else {
+        serde_json::to_writer_pretty(&f, &out_data)?;
+    }
 
     println!("Written {} bytes.", f.metadata()?.len());
     drop(f);

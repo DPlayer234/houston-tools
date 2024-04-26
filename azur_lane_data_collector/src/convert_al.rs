@@ -5,7 +5,7 @@ use azur_lane::skill::*;
 
 pub fn to_faction(num: u32) -> Faction {
     match num {
-        0 => Faction::Universal,
+        0 | 98 => Faction::Universal,
         1 => Faction::EagleUnion,
         2 => Faction::RoyalNavy,
         3 => Faction::SakuraEmpire,

@@ -9,9 +9,6 @@ use crate::convert_al;
 use crate::enhance;
 use crate::skill_loader;
 
-const MAX_LEVEL: u32 = 125;
-const EXTRA_GROWTH_START: u32 = 100;
-
 #[derive(Debug, Clone)]
 pub struct Group<'a> {
     pub id: u32,
@@ -84,15 +81,19 @@ impl ShipSet<'_> {
 
         let attrs: LuaTable = read!(self.statistics, "attrs");
         let attrs_growth: LuaTable = read!(self.statistics, "attrs_growth");
-        let attrs_growth_extra: LuaTable = read!(self.statistics, "attrs_growth_extra");
 
         macro_rules! calc_stat {
             ($index:literal) => {{
                 let base: f32 = attrs.get($index)?;
                 let grow: f32 = attrs_growth.get($index)?;
-                let grow_ex: f32 = attrs_growth_extra.get($index)?;
-                
-                base + (grow * (MAX_LEVEL - 1) as f32 + grow_ex * (MAX_LEVEL - EXTRA_GROWTH_START) as f32) / 1000f32
+                ShipStatValue::new(base, grow, 0f32)
+            }};
+        }
+
+        macro_rules! get_non_grow_stat {
+            ($index:literal) => {{
+                let base: f32 = attrs.get($index)?;
+                base
             }};
         }
 
@@ -155,8 +156,8 @@ impl ShipSet<'_> {
                 avi: calc_stat!(5),
                 acc: calc_stat!(8),
                 asw: calc_stat!(12),
-                spd: calc_stat!(10),
-                lck: calc_stat!(11),
+                spd: get_non_grow_stat!(10),
+                lck: get_non_grow_stat!(11),
                 cost: read!(self.template, "oil_at_end"),
                 oxy: read!(self.statistics, "oxy_max"),
                 amo: read!(self.statistics, "ammo")
@@ -184,6 +185,11 @@ impl ShipSet<'_> {
             retrofits: Arc::new([]),
             wiki_name: None
         };
+
+        if ship.hull_type.data().team_type == TeamType::Submarine {
+            // I can't explain it but submarine fleet ship costs seem to be 1 too high
+            ship.stats.cost -= 1;
+        }
 
         match &self.strengthen {
             Strengthen::Normal(data) => {
@@ -232,11 +238,12 @@ impl ShipSet<'_> {
 }
 
 fn add_strengthen_stats(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    ship.stats.fp += { let v: f32 = table.get(1)?; v };
-    ship.stats.trp += { let v: f32 = table.get(2)?; v };
-    ship.stats.aa += { let v: f32 = table.get(3)?; v };
-    ship.stats.avi += { let v: f32 = table.get(4)?; v };
-    ship.stats.rld += { let v: f32 = table.get(5)?; v };
+    fn b(n: f32) -> ShipStatValue { ShipStatValue::new(n, 0f32, 0f32) }
+    ship.stats.fp += { let v: f32 = table.get(1)?; b(v) };
+    ship.stats.trp += { let v: f32 = table.get(2)?; b(v) };
+    ship.stats.aa += { let v: f32 = table.get(3)?; b(v) };
+    ship.stats.avi += { let v: f32 = table.get(4)?; b(v) };
+    ship.stats.rld += { let v: f32 = table.get(5)?; b(v) };
     Ok(())
 }
 

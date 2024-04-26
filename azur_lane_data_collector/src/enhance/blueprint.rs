@@ -6,14 +6,14 @@ use crate::context;
 use crate::skill_loader;
 
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    const M: f32 = 100f32;
+    fn b(n: f32) -> ShipStatValue { ShipStatValue::new(n * 0.01f32, 0f32, 0f32) }
 
     let effect: LuaTable = table.get("effect")?;
-    ship.stats.fp += { let v: f32 = effect.get(1)?; v / M };
-    ship.stats.trp += { let v: f32 = effect.get(2)?; v / M };
-    ship.stats.aa += { let v: f32 = effect.get(3)?; v / M };
-    ship.stats.avi += { let v: f32 = effect.get(4)?; v / M };
-    ship.stats.rld += { let v: f32 = effect.get(5)?; v / M };
+    ship.stats.fp += { let v: f32 = effect.get(1)?; b(v) };
+    ship.stats.trp += { let v: f32 = effect.get(2)?; b(v) };
+    ship.stats.aa += { let v: f32 = effect.get(3)?; b(v) };
+    ship.stats.avi += { let v: f32 = effect.get(4)?; b(v) };
+    ship.stats.rld += { let v: f32 = effect.get(5)?; b(v) };
 
     if let LuaValue::Table(effect_attr) = table.get("effect_attr")? {
         add_effect_attr(ship, effect_attr)?;
@@ -43,7 +43,7 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
         let attr: String = context!(v.get(1); "effect_attr name for blueprint ship id {}", ship.group_id)?;
         let value: f32 = v.get(2)?;
 
-        super::add_to_stats(&mut ship.stats, &attr, value);
+        super::add_to_stats_base(&mut ship.stats, &attr, value);
 
         Ok(())
     })

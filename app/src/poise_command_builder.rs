@@ -17,7 +17,9 @@ pub struct CustomCreateCommand
     nsfw: bool,
 }
 
-// This is mostly copied from poise's source code with some parts deleted.
+// This is somewhat copied from poise's source code with some parts deleted.
+// The idea here is that we need to specify the allowed contexts for commands, which is currently missing in both serenity and poise releases.
+// If and when that is available, this entire file will be removed and we will just use the built-in command builder.
 
 pub fn build_commands<E, U>(commands: &[Command<E, U>]) -> Vec<CustomCreateCommand> {
     fn recursively_add_context_menu_commands<U, E>(
@@ -77,7 +79,7 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
     let kind = match context_menu_action {
         ContextMenuCommandAction::User(_) => CommandType::User,
         ContextMenuCommandAction::Message(_) => CommandType::Message,
-        ContextMenuCommandAction::__NonExhaustive => unreachable!(),
+        _ => unreachable!(),
     };
 
     Some(CustomCreateCommand {

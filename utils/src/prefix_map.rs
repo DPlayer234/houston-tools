@@ -29,16 +29,16 @@ impl<T> PrefixMap<T> {
     pub fn find(&self, key: &str) -> impl Iterator<Item = &T> {
         let key = simplify(key);
         let start = self.map.binary_search_by_key(&key.as_str(), |e| &*e.key).unwrap_or_else(std::convert::identity);
-
-        let mut index = start;
-        while index < self.map.len() && self.map[index].key.starts_with(&key) {
-            index += 1;
-        }
-
-        self.map[start..index].iter().map(|e| &e.value)
+        self.map[start..].iter()
+            .take_while(move |e| e.key.starts_with(&key))
+            .map(|e| &e.value)
     }
 }
 
+fn is_allowed_char(c: &char) -> bool {
+    c.is_alphanumeric()
+}
+
 fn simplify(key: &str) -> String {
-    key.chars().filter(char::is_ascii_alphanumeric).map(|c| c.to_ascii_lowercase()).collect()
+    key.chars().filter(is_allowed_char).filter_map(|c| c.to_lowercase().next()).collect()
 }

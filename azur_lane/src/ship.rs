@@ -28,21 +28,52 @@ pub struct ShipData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipStats {
-    pub hp: f32,
+    pub hp: ShipStatValue,
     pub armor: ShipArmor,
-    pub rld: f32,
-    pub fp: f32,
-    pub trp: f32,
-    pub eva: f32,
-    pub aa: f32,
-    pub avi: f32,
-    pub acc: f32,
-    pub asw: f32,
+    pub rld: ShipStatValue,
+    pub fp: ShipStatValue,
+    pub trp: ShipStatValue,
+    pub eva: ShipStatValue,
+    pub aa: ShipStatValue,
+    pub avi: ShipStatValue,
+    pub acc: ShipStatValue,
+    pub asw: ShipStatValue,
     pub spd: f32,
     pub lck: f32,
     pub cost: u32,
     pub oxy: u32,
     pub amo: u32
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ShipStatValue(f32, f32, f32);
+
+impl ShipStatValue {
+    pub const fn new(base: f32, growth: f32, fixed: f32) -> Self {
+        Self(base, growth, fixed)
+    }
+
+    pub const fn base(&self) -> f32 { self.0 }
+    pub const fn growth(&self) -> f32 { self.1 }
+    pub const fn fixed(&self) -> f32 { self.2 }
+
+    pub fn calc(&self, level: u32, affinity: f32) -> f32 {
+        (self.base() + self.growth() * ((level - 1) as f32) * 0.001f32) * affinity + self.fixed()
+    }
+}
+
+impl std::ops::Add<Self> for ShipStatValue {
+    type Output = Self;
+
+    fn add(self, rhs: ShipStatValue) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+impl std::ops::AddAssign for ShipStatValue {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,11 +103,11 @@ define_data_enum! {
         pub name: &'static str,
         pub color_rgb: u32;
 
-        N("N", 0),
-        R("R", 0),
-        E("E", 0),
-        SR("SR", 0),
-        UR("UR", 0)
+        N("N", 0xC0C0C0),
+        R("R", 0x9FE8FF),
+        E("E", 0xC4ADFF),
+        SR("SR", 0xEDDD76),
+        UR("UR", 0xFF8D8D)
     }
 }
 
@@ -173,37 +204,17 @@ impl ShipRarity {
 }
 
 impl ShipStats {
-    pub fn multiply(&self, mult: f32) -> Self {
-        Self {
-            hp: self.hp * mult,
-            armor: self.armor,
-            rld: self.rld * mult,
-            fp: self.fp * mult,
-            trp: self.trp * mult,
-            eva: self.eva * mult,
-            aa: self.aa * mult,
-            avi: self.avi * mult,
-            acc: self.acc * mult,
-            asw: self.asw * mult,
-            spd: self.spd,
-            lck: self.lck,
-            cost: self.cost,
-            oxy: self.oxy,
-            amo: self.amo 
-        }
-    }
-
     pub fn get_stat(&self, kind: StatKind) -> f32 {
         match kind {
-            StatKind::HP => self.hp,
-            StatKind::RLD => self.rld,
-            StatKind::FP => self.fp,
-            StatKind::TRP => self.trp,
-            StatKind::EVA => self.eva,
-            StatKind::AA => self.aa,
-            StatKind::AVI => self.avi,
-            StatKind::ACC => self.acc,
-            StatKind::ASW => self.asw,
+            StatKind::HP => self.hp.calc(125, 1.0),
+            StatKind::RLD => self.rld.calc(125, 1.0),
+            StatKind::FP => self.fp.calc(125, 1.0),
+            StatKind::TRP => self.trp.calc(125, 1.0),
+            StatKind::EVA => self.eva.calc(125, 1.0),
+            StatKind::AA => self.aa.calc(125, 1.0),
+            StatKind::AVI => self.avi.calc(125, 1.0),
+            StatKind::ACC => self.acc.calc(125, 1.0),
+            StatKind::ASW => self.asw.calc(125, 1.0),
             StatKind::SPD => self.spd,
             StatKind::LCK => self.lck
         }
