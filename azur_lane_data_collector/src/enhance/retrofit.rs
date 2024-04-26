@@ -16,7 +16,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
         let transform: u32 = entry.get(2)?;
         let transform: LuaTable = retrofit.list_lookup.get(transform)?;
         let effects: Vec<LuaTable> = transform.get("effect")?;
-        for effect in effects {
+        if let Some(effect) = effects.last() {
             effect.for_each(|k: String, v: f32| {
                 if !super::add_to_stats(&mut ship.stats, &k, v) {
                     match k.borrow() {
