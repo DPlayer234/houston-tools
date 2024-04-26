@@ -92,6 +92,27 @@ pub struct EquipStatBonus {
     pub amount: f32
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Augment {
+    pub augment_id: u32,
+    pub name: Arc<str>,
+    pub stat_bonuses: Arc<[AugmentStatBonus]>,
+    pub allowed: Arc<[HullType]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect: Option<Skill>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unique_ship_id: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skill_upgrade: Option<Skill>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AugmentStatBonus {
+    pub stat_kind: StatKind,
+    pub amount: f32,
+    pub random: f32
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EquipKind {
     DestroyerGun,

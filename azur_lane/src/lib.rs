@@ -7,7 +7,8 @@ pub mod equip;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {
-    pub ships: Vec<ship::ShipData>
+    pub ships: Vec<ship::ShipData>,
+    pub augments: Vec<equip::Augment>
 }
 
 define_data_enum! {

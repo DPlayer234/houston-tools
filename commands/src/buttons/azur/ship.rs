@@ -7,7 +7,7 @@ use utils::{Discard, join};
 
 use super::ShipParseError;
 
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewShip {
     pub ship_id: u32,
     pub level: u8,
@@ -29,11 +29,11 @@ impl From<ViewShip> for ButtonArgs {
 }
 
 impl ViewShip {
-    pub fn new_with_ship_id(ship_id: u32) -> Self {
+    pub fn with_ship_id(ship_id: u32) -> Self {
         Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None }
     }
 
-    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    pub fn modify_with_ship(self, data: &HBotData, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
         let rarity = ship.rarity.data();
         let hull_type = ship.hull_type.data();
@@ -77,32 +77,37 @@ impl ViewShip {
             .label("Base")
             .style(ButtonStyle::Secondary);
 
+        let mut state_row = Vec::new();
+
         match base_ship.retrofits.len() {
             0 => {},
             1 => {
-                rows.push(CreateActionRow::Buttons(vec![
-                    base_button,
-                    self.button_with_retrofit(Some(0))
-                        .label("Retrofit")
-                        .style(ButtonStyle::Secondary)
-                ]));
+                state_row.push(base_button);
+                state_row.push(self.button_with_retrofit(Some(0))
+                    .label("Retrofit")
+                    .style(ButtonStyle::Secondary));
             },
             _ => {
-                rows.push(CreateActionRow::Buttons(
-                    Some(base_button)
-                        .into_iter()
-                        .chain(base_ship.retrofits.iter().enumerate()
-                            .filter_map(|(index, retro)| {
-                                let index = u8::try_from(index).ok()?;
-                                let result = self.button_with_retrofit(Some(index))
-                                    .label(format!("Retrofit ({})", retro.hull_type.data().team_type.data().name))
-                                    .style(ButtonStyle::Secondary);
-                                Some(result)
-                            }))
-                        .collect()
-                ));
+                state_row.push(base_button);
+                state_row.extend(base_ship.retrofits.iter().enumerate()
+                    .filter_map(|(index, retro)| {
+                        let index = u8::try_from(index).ok()?;
+                        let result = self.button_with_retrofit(Some(index))
+                            .label(format!("Retrofit ({})", retro.hull_type.data().team_type.data().name))
+                            .style(ButtonStyle::Secondary);
+                        Some(result)
+                    }));
             }
         };
+
+        if let Some(augment) = data.azur_lane.augment_by_ship_id(ship.group_id) {
+            let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.to_custom_id());
+            state_row.push(CreateButton::new(view_augment.to_custom_id()).label("Unique Augment").style(ButtonStyle::Secondary));
+        }
+
+        if !state_row.is_empty() {
+            rows.push(CreateActionRow::Buttons(state_row));
+        }
 
         create.embed(embed).components(rows)
     }
@@ -215,8 +220,8 @@ impl ButtonArgsModify for ViewShip {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane.ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(create, ship, None),
-            Some(retrofit) => self.modify_with_ship(create, retrofit, Some(ship))
+            None => self.modify_with_ship(data, create, ship, None),
+            Some(retrofit) => self.modify_with_ship(data,create, retrofit, Some(ship))
         })
     }
 }

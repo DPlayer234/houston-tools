@@ -19,7 +19,8 @@ impl ButtonEventHandler {
     async fn interaction_dispatch(&self, ctx: Context, interaction: ComponentInteraction) -> HResult {
         match ButtonArgs::from_custom_id(&interaction.data.custom_id)? {
             ButtonArgs::None(_) => Ok(()),
-            ButtonArgs::ViewShip(view_ship) => self.inner_dispatch(ctx, interaction, view_ship).await
+            ButtonArgs::ViewShip(view_ship) => self.inner_dispatch(ctx, interaction, view_ship).await,
+            ButtonArgs::ViewAugment(view_augment) => self.inner_dispatch(ctx, interaction, view_augment).await
         }
     }
 
@@ -46,7 +47,8 @@ impl serenity::client::EventHandler for ButtonEventHandler {
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub enum ButtonArgs {
     None(Sentinel),
-    ViewShip(azur::ship::ViewShip)
+    ViewShip(azur::ship::ViewShip),
+    ViewAugment(azur::augment::ViewAugment),
 }
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]

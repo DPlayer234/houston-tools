@@ -100,6 +100,23 @@ pub fn to_equip_type(num: u32) -> EquipKind {
     }
 }
 
+pub fn to_stat_kind(stat: &str) -> StatKind {
+    match stat {
+        "durability" => StatKind::HP,
+        "cannon" => StatKind::FP,
+        "torpedo" => StatKind::TRP,
+        "antiaircraft" => StatKind::AA,
+        "air" => StatKind::AVI,
+        "reload" => StatKind::RLD,
+        "hit" => StatKind::ACC,
+        "dodge" => StatKind::EVA,
+        "speed" => StatKind::SPD,
+        "luck" => StatKind::LCK,
+        "antisub" => StatKind::ASW,
+        _ => StatKind::EVA
+    }
+}
+
 pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
     match num {
         1 => StatKind::FP,

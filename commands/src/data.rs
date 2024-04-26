@@ -5,6 +5,7 @@ use serenity::all::Color;
 use serenity::model::id::UserId;
 use poise::reply::CreateReply;
 use utils::prefix_map::PrefixMap;
+use azur_lane::equip::*;
 use azur_lane::ship::*;
 
 /// A general color that can be used for various embeds.
@@ -18,17 +19,20 @@ pub struct HBotData {
     pub azur_lane: HAzurLane
 }
 
-#[derive(Debug)]
-pub struct HAzurLane {
-    pub ship_list: Vec<ShipData>,
-    id_to_index: HashMap<u32, usize>,
-    name_to_index: HashMap<Arc<str>, usize>,
-    prefix_map: PrefixMap<usize>,
-}
-
 #[derive(Debug, Clone)]
 pub struct HUserData {
     pub ephemeral: bool
+}
+
+#[derive(Debug)]
+pub struct HAzurLane {
+    pub ship_list: Vec<ShipData>,
+    pub augment_list: Vec<Augment>,
+    ship_id_to_index: HashMap<u32, usize>,
+    ship_name_to_index: HashMap<Arc<str>, usize>,
+    ship_prefix_map: PrefixMap<usize>,
+    augment_id_to_index: HashMap<u32, usize>,
+    ship_id_to_augment_index: HashMap<u32, usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,43 +58,6 @@ impl HBotData {
             user_data: chashmap::CHashMap::new(),
             azur_lane: HAzurLane::from(azur_lane)
         }
-    }
-}
-
-impl HAzurLane {
-    pub fn from(data: azur_lane::DefinitionData) -> Self {
-        let mut id_to_index: HashMap<u32, usize> = HashMap::with_capacity(data.ships.len());
-        let mut name_to_index: HashMap<Arc<str>, usize> = HashMap::with_capacity(data.ships.len());
-        let mut prefix_map: PrefixMap<usize> = PrefixMap::new();
-
-        for (index, data) in data.ships.iter().enumerate() {
-            id_to_index.insert(data.group_id, index);
-            name_to_index.insert(Arc::clone(&data.name), index);
-            if !prefix_map.insert(data.name.as_ref(), index) {
-                panic!("Duplicate name {} @ id {}", data.name, data.group_id);
-            }
-        }
-
-        HAzurLane {
-            ship_list: data.ships,
-            id_to_index,
-            name_to_index,
-            prefix_map
-        }
-    }
-
-    pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
-        let index = *self.id_to_index.get(&id)?;
-        self.ship_list.get(index)
-    }
-
-    pub fn ship_by_name(&self, name: &str) -> Option<&ShipData> {
-        let index = *self.name_to_index.get(name)?;
-        self.ship_list.get(index)
-    }
-
-    pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.prefix_map.find(prefix).flat_map(|i| self.ship_list.get(*i))
     }
 }
 
@@ -156,5 +123,65 @@ impl HContextExtensions for HContext<'_> {
         }
 
         Ok(())
+    }
+}
+
+impl HAzurLane {
+    pub fn from(data: azur_lane::DefinitionData) -> Self {
+        let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
+        let mut ship_name_to_index = HashMap::with_capacity(data.ships.len());
+        let mut ship_prefix_map = PrefixMap::new();
+
+        let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
+        let mut ship_id_to_augment_index = HashMap::with_capacity(data.augments.len());
+
+        for (index, data) in data.ships.iter().enumerate() {
+            ship_id_to_index.insert(data.group_id, index);
+            ship_name_to_index.insert(Arc::clone(&data.name), index);
+            if !ship_prefix_map.insert(data.name.as_ref(), index) {
+                panic!("Duplicate name {} @ id {}", data.name, data.group_id);
+            }
+        }
+
+        for (index, augment) in data.augments.iter().enumerate() {
+            augment_id_to_index.insert(augment.augment_id, index);
+            if let Some(ship_id) = augment.unique_ship_id {
+                ship_id_to_augment_index.insert(ship_id, index);
+            }
+        }
+
+        HAzurLane {
+            ship_list: data.ships,
+            augment_list: data.augments,
+            ship_id_to_index,
+            ship_name_to_index,
+            ship_prefix_map,
+            augment_id_to_index,
+            ship_id_to_augment_index
+        }
+    }
+
+    pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
+        let index = *self.ship_id_to_index.get(&id)?;
+        self.ship_list.get(index)
+    }
+
+    pub fn ship_by_name(&self, name: &str) -> Option<&ShipData> {
+        let index = *self.ship_name_to_index.get(name)?;
+        self.ship_list.get(index)
+    }
+
+    pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
+        self.ship_prefix_map.find(prefix).flat_map(|i| self.ship_list.get(*i))
+    }
+
+    pub fn augment_by_id(&self, id: u32) -> Option<&Augment> {
+        let index = *self.augment_id_to_index.get(&id)?;
+        self.augment_list.get(index)
+    }
+
+    pub fn augment_by_ship_id(&self, ship_id: u32) -> Option<&Augment> {
+        let index = *self.ship_id_to_augment_index.get(&ship_id)?;
+        self.augment_list.get(index)
     }
 }

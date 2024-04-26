@@ -3,6 +3,7 @@ use std::fmt::{Display, Debug};
 use std::sync::Arc;
 use mlua::prelude::*;
 use azur_lane::ship::*;
+use azur_lane::equip::*;
 
 use crate::context;
 use crate::convert_al;
@@ -257,5 +258,70 @@ fn intersect<T: Eq>(target: &mut Vec<T>, other: &[T]) {
                 break;
             }
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AugmentCandidate<'a> {
+    pub id: u32,
+    pub table: LuaTable<'a>
+}
+
+impl AugmentCandidate<'_> {
+    pub fn to_augment(&self, lua: &Lua) -> LuaResult<Augment> {
+        macro_rules! read {
+            ($field:expr) => {
+                context!(self.table.get($field); "{} of augment with id {}", $field, self.id)?
+            };
+        }
+
+        macro_rules! read_stat {
+            ($field:expr) => {{
+                let temp: String = read!($field);
+                convert_al::to_stat_kind(&temp)
+            }};
+        }
+
+        let effect: u32 = read!("effect_id");
+        let effect = match effect {
+            0 => None,
+            _ => Some(skill_loader::load_skill(lua, effect)?)
+        };
+
+        let skill_upgrade: Vec<LuaTable> = read!("skill_upgrade");
+        let skill_upgrade = match skill_upgrade.into_iter().next() {
+            Some(skill_upgrade) => {
+                let skill_id: u32 = context!(skill_upgrade.get(2); "skill_upgrade id for augment {}", self.id)?;
+                Some(skill_loader::load_skill(lua, skill_id)?)
+            }
+            None => None,
+        };
+
+        let unique_ship_id: u32 = read!("unique");
+        let unique_ship_id = if unique_ship_id != 0 { Some(unique_ship_id) } else { None };
+
+        Ok(Augment {
+            augment_id: self.id,
+            name: From::<String>::from(read!("name")),
+            stat_bonuses: Arc::new([
+                AugmentStatBonus {
+                    stat_kind: read_stat!("attribute_1"),
+                    amount: read!("value_1"),
+                    random: read!("value_1_random")
+                },
+                AugmentStatBonus {
+                    stat_kind: read_stat!("attribute_2"),
+                    amount: read!("value_2"),
+                    random: read!("value_2_random")
+                }
+            ]),
+            allowed: Arc::from_iter({
+                let allowed: Vec<u32> = read!("usability");
+                allowed.into_iter().map(convert_al::to_hull_type)
+            }),
+            effect,
+            unique_ship_id,
+            skill_upgrade,
+        })
     }
 }
