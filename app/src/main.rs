@@ -13,11 +13,15 @@ async fn main() {
 
     unsafe { utils::time::mark_startup_time(); }
 
+    println!("Starting...");
+
     let azur_lane_data = {
         let data_path = std::env::var("AZUR_LANE_DATA").unwrap_or_else(|_| "houston_azur_lane_data.json".to_owned());
         let f = std::fs::File::open(data_path).expect("Failed to read Azur Lane data.");
         serde_json::from_reader(f).expect("Failed to parse Azur Lane data.")
     };
+
+    println!("Loaded Azur Lane data.");
 
     let bot_data = Arc::new(HBotData::new(azur_lane_data));
 

@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 
 pub mod discord_fmt;
 pub mod text;
@@ -44,4 +44,46 @@ impl<T, E: Debug> Discard for Result<T, E> {
         #[cfg(not(debug_assertions))]
         drop(self);
     }
+}
+
+pub trait Field<S: ?Sized, F: ?Sized> {
+    fn get<'r>(&self, obj: &'r S) -> &'r F;
+    fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F;
+}
+
+pub struct LambdaField<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> {
+    pub get: Get,
+    pub get_mut: GetMut,
+    _phantom_s: PhantomData<S>,
+    _phantom_f: PhantomData<F>,
+}
+
+impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> LambdaField<S, F, Get, GetMut> {
+    pub const fn new(get: Get, get_mut: GetMut) -> Self {
+        LambdaField {
+            get, get_mut,
+            _phantom_s: PhantomData,
+            _phantom_f: PhantomData
+        }
+    }
+}
+
+impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> Field<S, F> for LambdaField<S, F, Get, GetMut> {
+    fn get<'r>(&self, obj: &'r S) -> &'r F {
+        (self.get)(obj)
+    }
+
+    fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F {
+        (self.get_mut)(obj)
+    }
+}
+
+#[macro_export]
+macro_rules! field {
+    ($type:ty : $field:ident) => {{
+        $crate::LambdaField::new(
+            |s: &$type| &s.$field,
+            |s: &mut $type| &mut s.$field
+        )
+    }};
 }

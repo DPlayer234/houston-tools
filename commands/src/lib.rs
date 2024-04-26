@@ -5,7 +5,7 @@ pub mod buttons;
 mod internal;
 mod data;
 
-pub type HError = Box<dyn std::error::Error + Send + Sync>;
+pub type HError = anyhow::Error;
 pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
 pub type HResult = Result<(), HError>;
 

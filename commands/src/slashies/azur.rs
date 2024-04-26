@@ -1,4 +1,5 @@
 use crate::internal::prelude::*;
+use crate::buttons;
 
 /// Information about mobile game Azur Lane.
 #[poise::command(
@@ -18,14 +19,10 @@ async fn ship(
     #[autocomplete = "autocomplete_name"]
     name: String
 ) -> HResult {
-    let ship = ctx.data().azur_lane.ship_by_name(&name);
-    match ship {
-        None => Err(ShipParseError)?,
-        Some(ship) => {
-            ctx.send(ctx.create_reply().content(format!("[ {} ]", ship.group_id))).await?;
-            Ok(())
-        }
-    }
+    let ship = ctx.data().azur_lane.ship_by_name(&name).ok_or(buttons::azur::ShipParseError)?;
+    let view = buttons::azur::ship::ViewShip::new_with_ship_id(ship.group_id);
+    ctx.send(view.modify_with_ship(ctx.create_reply(), ship, None)).await?;
+    Ok(())
 }
 
 async fn autocomplete_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
@@ -34,15 +31,4 @@ async fn autocomplete_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
         .map(|s| (*s.name).to_owned())
         .take(10)
         .collect()
-}
-
-#[derive(Debug, Clone)]
-struct ShipParseError;
-
-impl std::error::Error for ShipParseError {}
-
-impl std::fmt::Display for ShipParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Unknown ship name.")
-    }
 }

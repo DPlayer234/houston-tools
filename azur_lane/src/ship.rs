@@ -67,13 +67,17 @@ pub struct EquipWeaponMount {
     pub preload: u8,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ShipRarity {
-    N,
-    R,
-    E,
-    SR,
-    UR
+define_data_enum! {
+    pub enum ShipRarity for ShipRarityData {
+        pub name: &'static str,
+        pub color_rgb: u32;
+
+        N("N", 0),
+        R("R", 0),
+        E("E", 0),
+        SR("SR", 0),
+        UR("UR", 0)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
