@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use crate::internal::prelude::*;
+use crate::prelude::*;
 use utils::Discard;
 use utils::discord_fmt::get_unique_username;
 use utils::time::*;
@@ -18,8 +18,6 @@ pub async fn who(
 }
 
 /* Format the embeds */
-
-type EmbedField = (&'static str, String, bool);
 
 fn who_user_embed(user: &User) -> CreateEmbed {
     CreateEmbed::new()
@@ -86,7 +84,7 @@ fn who_user_info(user: &User) -> String {
 	builder.build()
 }
 
-fn who_user_public_flags(user: &User) -> Option<EmbedField> {
+fn who_user_public_flags(user: &User) -> Option<SimpleEmbedFieldCreate> {
 	user.public_flags
 		.filter(|s| !s.is_empty())
 		.map(|f| ("Public Flags", to_string_public_flags(f), true))

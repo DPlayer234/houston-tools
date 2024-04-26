@@ -1,4 +1,4 @@
-use crate::internal::prelude::*;
+use crate::prelude::*;
 use rand::{thread_rng, Rng};
 
 /// Flips a coin.

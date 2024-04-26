@@ -66,7 +66,9 @@ impl HAzurLane {
         for (index, data) in data.ships.iter().enumerate() {
             id_to_index.insert(data.group_id, index);
             name_to_index.insert(Arc::clone(&data.name), index);
-            prefix_map.insert(&*data.name, index);
+            if !prefix_map.insert(data.name.as_ref(), index) {
+                panic!("Duplicate name {} @ id {}", data.name, data.group_id);
+            }
         }
 
         HAzurLane {

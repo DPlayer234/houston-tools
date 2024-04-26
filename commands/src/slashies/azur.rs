@@ -1,4 +1,4 @@
-use crate::internal::prelude::*;
+use crate::prelude::*;
 use crate::buttons;
 
 /// Information about mobile game Azur Lane.

@@ -38,6 +38,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .set_mode(mlua::ChunkMode::Text)
         .exec()?;
 
+    let name_overrides: HashMap<u32, String> = serde_json::from_str(include_str!("assets/name_overrides.json"))?;
+
     println!("Init done.");
 
     // General:
@@ -127,6 +129,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut ships = Vec::new();
     for candidate in candidates {
         let mut mlb = candidate.mlb.to_ship_data(&lua)?;
+        if let Some(name_override) = name_overrides.get(&mlb.group_id) {
+            mlb.name = Arc::from(name_override.as_str());
+        }
         
         let mut retrofits: Vec<ShipData> = Vec::new();
         if let Some(ref retrofit_data) = candidate.retrofit_data {

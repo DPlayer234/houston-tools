@@ -174,7 +174,7 @@ impl ShipSet<'_> {
                     .enumerate()
                     .map(|(index, equip)| Ok(ShadowEquip {
                         name: equip.name,
-                        efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or_default() },
+                        efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f32) },
                         weapons: equip.weapons
                     }))
                     .collect::<LuaResult<Vec<_>>>()?
@@ -182,8 +182,7 @@ impl ShipSet<'_> {
             skills: Arc::from(
                 skill_loader::load_skills(lua, buff_list)?
             ),
-            retrofits: Arc::new([]),
-            wiki_name: None
+            retrofits: Arc::new([])
         };
 
         if ship.hull_type.data().team_type == TeamType::Submarine {

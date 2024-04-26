@@ -62,13 +62,14 @@ fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<
     Ok(())
 }
 
-fn replace_equip_slot_part<'a, T: FromLua<'a> + Clone>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut T) -> LuaResult<()> {
+fn replace_equip_slot_part<'a>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut u8) -> LuaResult<()> {
     let mut slots = ship.equip_slots.to_vec();
-    let effect_base: Vec<T> = Vec::from_lua(LuaValue::Table(effect), lua)?;
+    let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
-    for (index, mounts) in effect_base.iter().enumerate() {
+    for (index, &new) in effect_base.iter().enumerate() {
         if let Some(slot) = slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
-            *select(slot) = mounts.clone();
+            let part = select(slot);
+            if *part < new { *part = new; }
         }
     }
 

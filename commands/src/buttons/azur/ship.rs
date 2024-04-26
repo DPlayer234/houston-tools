@@ -1,6 +1,9 @@
+use std::fmt::Write;
 //use crate::internal::prelude::*;
 use crate::buttons::*;
 use azur_lane::ship::*;
+use azur_lane::equip::*;
+use utils::{Discard, join};
 
 use super::ShipParseError;
 
@@ -35,6 +38,8 @@ impl ViewShip {
         let rarity = ship.rarity.data();
         let hull_type = ship.hull_type.data();
 
+        let wiki_url = config::WIKI_BASE_URL.to_owned() + &urlencoding::encode(base_ship.name.as_ref());
+
         let description = format!(
             "[{}] {:★<star_pad$}\n[{}] {} {}",
             rarity.name, '★', hull_type.designation, ship.faction.data().name, hull_type.name,
@@ -42,10 +47,12 @@ impl ViewShip {
         );
 
         let embed = CreateEmbed::new()
-            .title(base_ship.name.as_ref())
+            .author(CreateEmbedAuthor::new(base_ship.name.as_ref()).url(wiki_url))
             .description(description)
             .color(rarity.color_rgb)
-            .fields(get_stats(&self, ship));
+            .fields(self.get_stats_field(ship))
+            .fields(self.get_equip_field(ship))
+            .fields(self.get_skills_field(ship));
 
         let mut rows = vec![
             CreateActionRow::Buttons(vec![
@@ -101,7 +108,7 @@ impl ViewShip {
     }
 
     fn button_with_level(&self, level: u8) -> CreateButton {
-        self.new_button(utils::field!(Self: level), level, || Sentinel::new(1, u32::from(level)))
+        self.new_button(utils::field!(Self: level), level, || Sentinel::new(0, u32::from(level)))
     }
 
     fn button_with_affinity(&self, affinity: ViewAffinity) -> CreateButton {
@@ -111,54 +118,96 @@ impl ViewShip {
     fn button_with_retrofit(&self, retrofit: Option<u8>) -> CreateButton {
         self.new_button(utils::field!(Self: retrofit), retrofit, || Sentinel::new(2, retrofit.map(u32::from).unwrap_or(u32::MAX)))
     }
-}
 
-fn get_stats(view: &ViewShip, ship: &ShipData) -> [(&'static str, String, bool); 1] {
-    let stats = &ship.stats;
-    let affinity = view.affinity.to_mult();
-
-    fn f(n: f32) -> u32 { n.floor() as u32 }
-    macro_rules! s {
-        ($val:expr) => {{ f($val.calc(u32::from(view.level), affinity)) }};
+    fn get_stats_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
+        let stats = &ship.stats;
+        let affinity = self.affinity.to_mult();
+    
+        fn f(n: f32) -> u32 { n.floor() as u32 }
+        macro_rules! s {
+            ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
+        }
+        
+        if ship.hull_type.data().team_type != TeamType::Submarine {
+            [(
+                "Stats",
+                format!(
+                    "\
+                    **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                    **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                    **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                    **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                    **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
+                    ",
+                    s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                    s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                    s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                    s!(stats.asw), f(stats.spd),
+                    f(stats.lck), stats.cost
+                ),
+                false
+            )]
+        } else {
+            [(
+                "Stats",
+                format!(
+                    "\
+                    **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                    **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                    **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                    **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                    **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
+                    ",
+                    s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                    s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                    s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                    stats.oxy, stats.amo, f(stats.spd),
+                    f(stats.lck), stats.cost
+                ),
+                false
+            )]
+        }
     }
-    if ship.hull_type.data().team_type != TeamType::Submarine {
-        [(
-            "Stats",
-            format!(
-                "\
-                **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
-                ",
-                s!(stats.hp), stats.armor.data().name, s!(stats.rld),
-                s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                s!(stats.asw), f(stats.spd),
-                f(stats.lck), stats.cost
-            ),
-            false
-        )]
-    } else {
-        [(
-            "Stats",
-            format!(
-                "\
-                **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
-                ",
-                s!(stats.hp), stats.armor.data().name, s!(stats.rld),
-                s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                stats.oxy, stats.amo, f(stats.spd),
-                f(stats.lck), stats.cost
-            ),
-            false
-        )]
+
+    fn get_equip_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
+        let slots = ship.equip_slots.iter()
+            .filter_map(|e| e.mount.as_ref().map(|m| (e.allowed.as_ref(), m)));
+
+        let mut text = String::new();
+        for (allowed, mount) in slots {
+            if !text.is_empty() { text.push('\n'); }
+
+            write!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f32, mount.mounts).discard();
+            
+            for (index, &kind) in allowed.iter().enumerate() {
+                if index != 0 { text.push('/'); }
+                text.push_str(to_equip_slot_display(kind));
+            }
+
+            if mount.preload != 0 {
+                write!(text, " `PRE x{}`", mount.preload).discard();
+            }
+
+            if mount.parallel > 1 {
+                text.push_str(" `PAR`");
+            }
+        }
+
+        [("Equipment", text, true)]
+    }
+
+    fn get_skills_field(&self, ship: &ShipData) -> Option<SimpleEmbedFieldCreate> {
+        match ship.skills.len() {
+            0 => None,
+            _ => {
+                let mut text = String::new();
+                for s in ship.skills.iter() {
+                    if !text.is_empty() { text.push('\n'); }
+                    write!(text, "{} **{}**", s.category.data().emoji, s.name).discard();
+                }
+                Some(("Skills", text, true))
+            }
+        }
     }
 }
 
@@ -179,5 +228,29 @@ impl ViewAffinity {
             ViewAffinity::Love => 1.06f32,
             ViewAffinity::Oath => 1.12f32,
         }
+    }
+}
+
+fn to_equip_slot_display(kind: EquipKind) -> &'static str {
+    match kind {
+        EquipKind::DestroyerGun => join!("[DD](", config::equip::DD_GUN_LIST_URL, ")"),
+        EquipKind::LightCruiserGun => join!("[CL](", config::equip::CL_GUN_LIST_URL, ")"),
+        EquipKind::HeavyCruiserGun => join!("[CA](", config::equip::CA_GUN_LIST_URL, ")"),
+        EquipKind::LargeCruiserGun => join!("[CB](", config::equip::CB_GUN_LIST_URL, ")"),
+        EquipKind::BattleshipGun => join!("[BB](", config::equip::BB_GUN_LIST_URL, ")"),
+        EquipKind::SurfaceTorpedo => join!("[Torpedo](", config::equip::SURFACE_TORPEDO_LIST_URL, ")"),
+        EquipKind::SubmarineTorpedo => join!("[Torpedo](", config::equip::SUB_TORPEDO_LIST_URL, ")"),
+        EquipKind::AntiAirGun => join!("[AA](", config::equip::AA_GUN_LIST_URL, ")"),
+        EquipKind::FuzeAntiAirGun => join!("[AA (Fuze)](", config::equip::FUZE_AA_GUN_LIST_URL, ")"),
+        EquipKind::Fighter => join!("[Fighter](", config::equip::FIGHTER_LIST_URL, ")"),
+        EquipKind::DiveBomber => join!("[Dive Bomber](", config::equip::DIVE_BOMBER_LIST_URL, ")"),
+        EquipKind::TorpedoBomber => join!("[Torpedo Bomber](", config::equip::TORPEDO_BOMBER_LIST_URL, ")"),
+        EquipKind::SeaPlane => join!("[Seaplane](", config::equip::SEAPLANE_LIST_URL, ")"),
+        EquipKind::AntiSubWeapon => join!("[ASW](", config::equip::ANTI_SUB_LIST_URL, ")"),
+        EquipKind::AntiSubAircraft => join!("[ASW Aircraft](", config::equip::ANTI_SUB_LIST_URL, ")"),
+        EquipKind::Helicopter => join!("[Helicopter](", config::equip::AUXILIARY_LIST_URL, ")"),
+        EquipKind::Missile => join!("[Missile](", config::equip::SURFACE_TORPEDO_LIST_URL, ")"),
+        EquipKind::Cargo => join!("[Cargo](", config::equip::CARGO_LIST_URL, ")"),
+        EquipKind::Auxiliary => join!("[Auxiliary](", config::equip::AUXILIARY_LIST_URL, ")"),
     }
 }

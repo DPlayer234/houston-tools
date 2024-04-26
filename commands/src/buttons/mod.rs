@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use serenity::prelude::*;
-use crate::internal::prelude::*;
+use crate::prelude::*;
 
 pub mod azur;
 

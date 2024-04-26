@@ -88,8 +88,8 @@ pub fn to_equip_type(num: u32) -> EquipKind {
         6 => EquipKind::AntiAirGun,
         21 => EquipKind::FuzeAntiAirGun,
         7 => EquipKind::Fighter,
-        8 => EquipKind::DiveBomber,
-        9 => EquipKind::TorpedoBomber,
+        9 => EquipKind::DiveBomber,
+        8 => EquipKind::TorpedoBomber,
         12 => EquipKind::SeaPlane,
         14 => EquipKind::AntiSubWeapon,
         15 => EquipKind::AntiSubAircraft,
@@ -121,10 +121,10 @@ pub fn to_skill_target(text: &str) -> SkillAttackTarget {
     }
 }
 
-pub fn to_skill_category(text: &str) -> SkillCategory {
-    match text {
-        "red" => SkillCategory::Offense,
-        "blue" => SkillCategory::Defense,
+pub fn to_skill_category(num: u32) -> SkillCategory {
+    match num {
+        1 => SkillCategory::Offense,
+        2 => SkillCategory::Defense,
         _ => SkillCategory::Support
     }
 }

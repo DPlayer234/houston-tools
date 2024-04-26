@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::internal::prelude::*;
+use crate::prelude::*;
 use utils::discord_fmt::DisplayResolvedArgs;
 
 mod azur;

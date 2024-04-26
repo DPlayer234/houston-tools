@@ -16,3 +16,7 @@ features = ["derive"]
 [dependencies.mlua]
 version = "0.9.7"
 features = ["lua54", "vendored"]
+
+[dependencies.serde]
+version = "1.0.197"
+features = ["rc", "derive"]

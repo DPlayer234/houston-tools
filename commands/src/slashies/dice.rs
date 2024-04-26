@@ -1,7 +1,7 @@
 use std::num::{NonZeroU16, NonZeroU8};
 use std::str::FromStr;
 use std::fmt::Write;
-use crate::internal::prelude::*;
+use crate::prelude::*;
 use rand::{thread_rng, Rng};
 use rand::distributions::Uniform;
 use utils::Discard;

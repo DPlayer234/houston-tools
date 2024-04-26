@@ -94,3 +94,35 @@ macro_rules! titlecase {
         RESULT
 	}}
 }
+
+pub const unsafe fn join_const_unsafe<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
+	const fn copy_slice<const N: usize>(mut out: [u8; N], slice: &[u8], offset: usize) -> [u8; N] {
+		let mut index = 0usize;
+		while index < slice.len() {
+			out[offset + index] = slice[index];
+			index += 1;
+		}
+
+		out
+	}
+	
+	let out = [0u8; N];
+	let out = copy_slice(out, a, 0);
+	let out = copy_slice(out, b, a.len());
+	out
+}
+
+#[macro_export]
+macro_rules! join {
+	($a:expr, $b:expr) => {{
+		const A: &str = $a;
+		const B: &str = $b;
+		const N: usize = A.len() + B.len();
+		const JOIN: [u8; N] = unsafe { $crate::text::join_const_unsafe(A.as_bytes(), B.as_bytes()) };
+		const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&JOIN) };
+		RESULT
+	}};
+	($a:expr, $b:expr, $c:expr) => {{
+		$crate::join!($crate::join!($a, $b), $c)
+	}};
+}

@@ -21,9 +21,7 @@ pub struct ShipData {
     pub equip_slots: Arc<[EquipSlot]>,
     pub shadow_equip: Arc<[ShadowEquip]>,
     pub skills: Arc<[Skill]>,
-    pub retrofits: Arc<[ShipData]>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub wiki_name: Option<Arc<str>>
+    pub retrofits: Arc<[ShipData]>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

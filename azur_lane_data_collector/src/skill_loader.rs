@@ -16,6 +16,9 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     let mut desc: String = context!(skill.get("desc"); "desc of skill with id {}", skill_id)?;
     let desc_add: Vec<Vec<Vec<String>>> = context!(skill.get("desc_add"); "desc_add of skill with id {}", skill_id)?;
 
+    let category: u32 = context!(skill.get("type"); "type of skill with id {skill_id}")?;
+    let category = convert_al::to_skill_category(category);
+
     for (slot, data_set) in desc_add.iter().enumerate() {
         if let Some(last) = data_set.last() {
             if let Some(text) = last.first() {
@@ -26,10 +29,6 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     }
 
     let buff = require_buff_data(lua, skill_id)?;
-
-    let category: String = context!(buff.get("color"); "color of buff with id {skill_id}")?;
-    let category = convert_al::to_skill_category(&category);
-
     let mut context = ReferencedWeaponsContext::default();
     search_referenced_weapons(&mut context, lua, buff, skill_id)?;
 

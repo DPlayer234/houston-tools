@@ -16,14 +16,14 @@ impl<T> PrefixMap<T> {
         Self { map: Vec::new() }
     }
 
-    pub fn insert(&mut self, key: &str, value: T) {
+    pub fn insert(&mut self, key: &str, value: T) -> bool {
         let key = simplify(key);
         let index = self.map.binary_search_by_key(&key.as_str(), |e| &*e.key);
         let entry = Entry { key: Arc::from(key), value };
         match index {
-            Ok(_) => (),
-            Err(index) => self.map.insert(index, entry)
-        };
+            Ok(_) => false,
+            Err(index) => { self.map.insert(index, entry); true }
+        }
     }
 
     pub fn find(&self, key: &str) -> impl Iterator<Item = &T> {

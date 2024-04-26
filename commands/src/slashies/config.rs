@@ -1,4 +1,4 @@
-use crate::internal::prelude::*;
+use crate::prelude::*;
 
 /// Provides (temporary) configuration for this app.
 #[poise::command(
