@@ -83,7 +83,7 @@ pub enum WeaponData {
     Aircraft(Aircraft),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ArmorModifiers(pub f32, pub f32, pub f32);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,17 +161,18 @@ define_data_enum! {
 
 define_data_enum! {
     pub enum AmmoKind for AmmoKindData {
-        pub name: &'static str;
+        pub name: &'static str,
+        pub short_name: &'static str;
 
-        Normal("Normal"),
-        AP("AP"),
-        HE("HE"),
-        Torpedo("Torpedo"),
-        Unknown5("5"),
-        Bomb("Bomb"),
-        SAP("SAP"),
-        Unknown8("8"),
-        Unknown9("9")
+        Normal("Normal", "Nor."),
+        AP("AP", "AP"),
+        HE("HE", "HE"),
+        Torpedo("Torpedo", "Tor."),
+        Unknown5("5", "?"),
+        Bomb("Bomb", "Bomb"),
+        SAP("SAP", "SAP"),
+        Unknown8("8", "?"),
+        Unknown9("9", "?")
     }
 }
 

@@ -28,14 +28,15 @@ pub struct SkillAttack {
 }
 
 define_data_enum! {
-    pub enum SkillAttackTarget for BarrageTargetData {
-        pub friendly_name: &'static str;
+    pub enum SkillAttackTarget for SkillAttackTargetData {
+        pub friendly_name: &'static str,
+        pub short_name: &'static str;
 
-        Random("Random"),
-        PriorityTarget("Priority Target"),
-        Nearest("Nearest"),
-        Farthest("Farthest"),
-        Fixed("Fixed")
+        Random("Random", "Rand."),
+        PriorityTarget("Priority Target", "Prio."),
+        Nearest("Nearest", "Near."),
+        Farthest("Farthest", "Far."),
+        Fixed("Fixed", "Fix.")
     }
 }
 

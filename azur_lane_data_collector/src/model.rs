@@ -1,14 +1,27 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Debug};
 use std::sync::Arc;
 use mlua::prelude::*;
-use azur_lane::ship::*;
+use once_cell::sync::Lazy;
 use azur_lane::equip::*;
+use azur_lane::ship::*;
+use azur_lane::skill::*;
 
 use crate::context;
 use crate::convert_al;
 use crate::enhance;
 use crate::skill_loader;
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Config {
+    pub name_overrides: HashMap<u32, String>,
+    pub predefined_skills: HashMap<u32, Skill>,
+}
+
+pub static CONFIG: Lazy<Config> = Lazy::new(|| {
+    serde_json::from_str(include_str!("assets/config.json")).unwrap()
+});
 
 #[derive(Debug, Clone)]
 pub struct Group<'a> {

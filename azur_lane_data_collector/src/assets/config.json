@@ -1,0 +1,103 @@
+{
+    "name_overrides": {
+        "20232": "Enterprise (Royal Navy)",
+        "1010001": "Neptune (Neptunia)",
+        "1060003": "Kasumi (Venus Vacation)",
+        "1100005": "Fubuki (Senran Kagura)"
+    },
+    "predefined_skills": {
+        "17030": {
+            "buff_id": 17030,
+            "name": "Exorcism for the Mortal Realm",
+            "description": "Increases this ship's FP, TRP, and EVA by 20.0%. Every 20s: fires a Lv.10 special barrage (DMG is based on the skill's level; enemies hit by this barrage deal 10.0% less DMG to Unzen). While this ship is afloat, when a fleet this ship is NOT in starts a battle: 20s after that battle starts, fires a Lv.10 special barrage (DMG is based on the skill's level) and, if there is a CA in that fleet, increases that fleet's CAs' DMG dealt with HE ammunition by 7.0%.",
+            "category": "Offense",
+            "barrages": [
+                {
+                    "skill_id": 17031,
+                    "attacks": [
+                        {
+                            "target": "PriorityTarget",
+                            "weapon": {
+                                "weapon_id": 163176,
+                                "reload_time": 2.6602895,
+                                "fixed_delay": 0.0,
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 40.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163172,
+                                                "amount": 15,
+                                                "kind": "Direct",
+                                                "ammo": "AP",
+                                                "pierce": 0,
+                                                "velocity": 100.0,
+                                                "modifiers": [
+                                                    0.7,
+                                                    0.9,
+                                                    1.1
+                                                ],
+                                                "attach_buff": [
+                                                    {
+                                                        "buff_id": 17033,
+                                                        "probability": 1.0,
+                                                        "level": 1
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "PriorityTarget",
+                            "weapon": {
+                                "weapon_id": 163175,
+                                "reload_time": 2.6602895,
+                                "fixed_delay": 0.0,
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 300.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163178,
+                                                "amount": 1,
+                                                "kind": "Direct",
+                                                "ammo": "AP",
+                                                "pierce": 0,
+                                                "velocity": 100.0,
+                                                "modifiers": [
+                                                    0.7,
+                                                    0.9,
+                                                    1.1
+                                                ],
+                                                "attach_buff": [
+                                                    {
+                                                        "buff_id": 17033,
+                                                        "probability": 1.0,
+                                                        "level": 1
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }         
+    }
+}

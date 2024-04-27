@@ -38,8 +38,6 @@ impl ViewShip {
         let rarity = ship.rarity.data();
         let hull_type = ship.hull_type.data();
 
-        let wiki_url = config::WIKI_BASE_URL.to_owned() + &urlencoding::encode(base_ship.name.as_ref());
-
         let description = format!(
             "[{}] {:★<star_pad$}\n[{}] {} {}",
             rarity.name, '★', hull_type.designation, ship.faction.data().name, hull_type.name,
@@ -47,7 +45,7 @@ impl ViewShip {
         );
 
         let embed = CreateEmbed::new()
-            .author(CreateEmbedAuthor::new(base_ship.name.as_ref()).url(wiki_url))
+            .author(super::get_ship_url(base_ship))
             .description(description)
             .color(rarity.color_rgb)
             .fields(self.get_stats_field(ship))
@@ -75,7 +73,7 @@ impl ViewShip {
 
         {
             let skills = (ship.skills.len() != 0).then(|| {
-                let source = super::skill::ViewSkillSource::Ship(self.ship_id);
+                let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
                 let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
                 CreateButton::new(view_skill.to_custom_id())
                     .label("Skills")

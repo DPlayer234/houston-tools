@@ -6,8 +6,13 @@ use azur_lane::equip::*;
 
 use crate::context;
 use crate::convert_al;
+use crate::CONFIG;
 
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
+    if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
+        return Ok(skill.clone());
+    }
+
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let skill_data_template: LuaTable = context!(pg.get("skill_data_template"); "global pg.skill_data_template")?;
 

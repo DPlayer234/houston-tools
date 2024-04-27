@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 //use crate::internal::prelude::*;
 use crate::buttons::*;
 use azur_lane::equip::*;
@@ -16,7 +17,7 @@ pub struct ViewSkill {
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub enum ViewSkillSource {
-    Ship(u32),
+    Ship(u32, Option<u8>),
     Augment(u32),
 }
 
@@ -37,9 +38,8 @@ impl ViewSkill {
         Self { source, skill_index: None, back: Some(back) }
     }
 
-    pub fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>) -> anyhow::Result<CreateReply> {
+    fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> anyhow::Result<CreateReply> {
         let index = self.skill_index.map(usize::from);
-        let mut embed = CreateEmbed::new();
         let mut components = Vec::new();
 
         if let Some(ref back) = self.back {
@@ -70,12 +70,21 @@ impl ViewSkill {
         Ok(create.embed(embed).components(rows))
     }
 
-    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData) -> anyhow::Result<CreateReply> {
-        self.modify_with_skills(create, ship.skills.iter())
+    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> anyhow::Result<CreateReply> {
+        let base_ship = base_ship.unwrap_or(ship);
+        self.modify_with_skills(
+            create,
+            ship.skills.iter(),
+            CreateEmbed::new().color(ship.rarity.data().color_rgb).author(super::get_ship_url(base_ship))
+        )
     }
 
     pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> anyhow::Result<CreateReply> {
-        self.modify_with_skills(create, augment.effect.iter().chain(augment.skill_upgrade.as_ref()))
+        self.modify_with_skills(
+            create,
+            augment.effect.iter().chain(augment.skill_upgrade.as_ref()),
+            CreateEmbed::new().color(ShipRarity::SR.data().color_rgb).author(CreateEmbedAuthor::new(augment.name.as_ref()))
+        )
     }
 
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
@@ -86,26 +95,118 @@ impl ViewSkill {
         )]
     }
 
-    fn create_ex_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
-        [(
-            format!("{} __{}__", skill.category.data().emoji, skill.name),
-            skill.description.as_ref().to_owned(),
-            false
-        )]
+    fn create_ex_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 2] {
+        [
+            (
+                format!("{} __{}__", skill.category.data().emoji, skill.name),
+                skill.description.as_ref().to_owned(),
+                false
+            ),
+            (
+                "__Barrage__".to_owned(),
+                {
+                    let m = get_skills_extra_summary(skill);
+                    if m.len() <= 1024 { m } else { println!("barrage:\n{m}"); "<barrage data too long>".to_owned() }
+                },
+                false
+            )
+        ]
     }
 }
 
 impl ButtonArgsModify for ViewSkill {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         match self.source {
-            ViewSkillSource::Ship(ship_id) => {
-                let ship = data.azur_lane.ship_by_id(ship_id).ok_or(ShipParseError)?;
-                self.modify_with_ship(create, ship)
+            ViewSkillSource::Ship(ship_id, retro_index) => {
+                let base_ship = data.azur_lane.ship_by_id(ship_id).ok_or(ShipParseError)?;
+                let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
+                self.modify_with_ship(create, ship, Some(base_ship))
             }
             ViewSkillSource::Augment(augment_id) => {
                 let augment = data.azur_lane.augment_by_id(augment_id).ok_or(AugmentParseError)?;
                 self.modify_with_augment(create, augment)
             }
         }
+    }
+}
+
+macro_rules! idk {
+    ($opt:expr, $($arg:tt)*) => {
+        match $opt {
+            None => None,
+            Some(v) => Some(format!($($arg)*, sum = v))
+        }
+    };
+}
+
+fn get_skills_extra_summary(skill: &Skill) -> String {
+    return join("\n\n", skill.barrages.iter().filter_map(get_skill_barrage_summary)).unwrap_or_else(String::new);
+
+    fn get_skill_barrage_summary(barrage: &SkillBarrage) -> Option<String> {
+        idk!(
+            join("\n", barrage.attacks.iter().filter_map(get_skill_attack_summary)),
+            "__`Trgt. | Amount x  Dmg. | Ammo:  L / M / H  | Scaling `__\n{sum}"
+            // `Fix.  |     12 x  58.0 | Nor.: 120/ 80/ 80 | 100%  FP`
+        )
+    }
+    
+    fn get_skill_attack_summary(attack: &SkillAttack) -> Option<String> {
+        match &attack.weapon.data {
+            WeaponData::Bullets(bullets) => get_barrage_summary(bullets, Some(attack.target)),
+            WeaponData::Aircraft(aircraft) => idk!(
+                get_aircraft_summary(aircraft),
+                "`{: >5} | {: >6} x Aircraft                            `\n{sum}",
+                attack.target.data().short_name, aircraft.amount
+            )
+        }
+    }
+    
+    fn get_barrage_summary(barrage: &Barrage, target: Option<SkillAttackTarget>) -> Option<String> {
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        struct Key { kind: BulletKind, ammo: AmmoKind }
+        struct Value<'a> { amount: u32, bullet: &'a Bullet }
+    
+        let mut sets: HashMap<Key, Value> = HashMap::new();
+        for bullet in barrage.bullets.iter() {
+            let key = Key { kind: bullet.kind, ammo: bullet.ammo };
+            sets.entry(key)
+                .and_modify(|v| v.amount += bullet.amount)
+                .or_insert(Value { amount: bullet.amount, bullet });
+        }
+    
+        join("\n", sets.into_iter().map(|(key, Value { amount, bullet })| {
+            let ArmorModifiers(l, m, h) = bullet.modifiers;
+            format!(
+                // damage with coeff |
+                // ammo type & mods |
+                // % of scaling stat |
+                // amount | totals
+                "`\
+                {: <5} | \
+                {: >6} x{: >6.1} | \
+                {: >4}: {: >3.0}/{: >3.0}/{: >3.0} | \
+                {: >3.0}% {: >3}`",
+                target.map(|t| t.data().short_name).unwrap_or(""),
+                amount, barrage.damage * barrage.coefficient,
+                key.ammo.data().short_name, l * 100f32, m * 100f32, h * 100f32,
+                barrage.scaling * 100f32, barrage.scaling_stat.data().name
+            )
+        }))
+    }
+    
+    fn get_aircraft_summary(aircraft: &Aircraft) -> Option<String> {
+        join("\n", aircraft.weapons.iter().filter_map(|weapon| match &weapon.data { 
+            WeaponData::Bullets(barrage) => get_barrage_summary(barrage, None),
+            _ => None
+        }))
+    }
+    
+    fn join(separator: &str, mut items: impl Iterator<Item = String>) -> Option<String> {
+        let mut result = items.next()?;
+        for item in items {
+            result.push_str(separator);
+            result.push_str(&item);
+        }
+        Some(result)
     }
 }

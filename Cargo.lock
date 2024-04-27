@@ -151,6 +151,7 @@ dependencies = [
  "azur_lane",
  "clap",
  "mlua",
+ "once_cell",
  "serde",
  "serde_json",
 ]
