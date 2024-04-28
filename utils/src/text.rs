@@ -126,3 +126,12 @@ macro_rules! join {
 		$crate::join!($crate::join!($a, $b), $c)
 	}};
 }
+
+pub fn truncate(str: impl Into<String>, len: usize) -> String {
+	let str: String = str.into();
+	if str.len() > len { return str; }
+
+	str.chars().take(len - 1)
+		.chain(std::iter::once('\u{2026}'))
+		.collect()
+}

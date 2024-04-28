@@ -1,5 +1,6 @@
 use crate::HContext;
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 use serenity::all::Color;
 use serenity::model::id::UserId;
 use poise::reply::CreateReply;
@@ -15,7 +16,7 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
 pub struct HBotData {
     user_data: chashmap::CHashMap<UserId, HUserData>,
-    pub azur_lane: HAzurLane
+    azur_lane: Lazy<HAzurLane>
 }
 
 #[derive(Debug, Clone)]
@@ -52,10 +53,10 @@ impl std::fmt::Debug for HBotData {
 }
 
 impl HBotData {
-    pub fn new(azur_lane: azur_lane::DefinitionData) -> Self {
+    pub fn new(azur_lane: Lazy<HAzurLane>) -> Self {
         HBotData {
             user_data: chashmap::CHashMap::new(),
-            azur_lane: HAzurLane::from(azur_lane)
+            azur_lane
         }
     }
 }
@@ -69,6 +70,10 @@ impl Default for HUserData {
 }
 
 impl HBotData {
+    pub fn azur_lane(&self) -> &HAzurLane {
+        Lazy::force(&self.azur_lane)
+    }
+
     pub fn get_user_data(&self, user_id: UserId) -> HUserData {
         match self.user_data.get(&user_id) {
             None => HUserData::default(),

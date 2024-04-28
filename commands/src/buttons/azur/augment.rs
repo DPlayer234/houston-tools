@@ -72,7 +72,7 @@ impl ViewAugment {
 
 impl ButtonArgsModify for ViewAugment {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let augment = data.azur_lane.augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
+        let augment = data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
         self.modify_with_augment(create, augment)
     }
 }

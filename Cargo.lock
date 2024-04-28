@@ -101,6 +101,7 @@ version = "0.1.0"
 dependencies = [
  "azur_lane",
  "commands",
+ "once_cell",
  "poise",
  "serde",
  "serde_json",

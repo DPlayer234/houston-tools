@@ -58,7 +58,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         disappointed: get!("feeling1"),
         stranger: get!("feeling2"),
         friendly: get!("feeling3"),
-        like: get!("feeling4"),
+        crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
         couple_encourage: {
@@ -113,7 +113,7 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
         disappointed: get!("feeling1"),
         stranger: get!("feeling2"),
         friendly: get!("feeling3"),
-        like: get!("feeling4"),
+        crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
         couple_encourage: Vec::new()
@@ -133,7 +133,7 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
 
     Ok(ShipCoupleEncourage {
         amount: context!(table.get(2); "couple_encourage 2 for skin {}", set.skin_id)?,
-        text: context!(table.get(3); "couple_encourage 3 for skin {}", set.skin_id)?,
+        line: context!(table.get(3); "couple_encourage 3 for skin {}", set.skin_id)?,
         condition: match mode {
             Some(1) => ShipCouple::HullType(filter.into_iter().map(convert_al::to_hull_type).collect()),
             Some(2) => ShipCouple::Rarity(filter.into_iter().map(convert_al::to_rarity).collect()),

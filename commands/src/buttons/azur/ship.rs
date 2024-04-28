@@ -72,22 +72,30 @@ impl ViewShip {
         ];
 
         {
+            let self_custom_id = self.clone().to_custom_id();
             let skills = (ship.skills.len() != 0).then(|| {
                 let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
-                let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
+                let view_skill = super::skill::ViewSkill::with_back(source, self_custom_id.clone());
                 CreateButton::new(view_skill.to_custom_id())
                     .label("Skills")
                     .style(ButtonStyle::Secondary)
             });
 
-            let augment = data.azur_lane.augment_by_ship_id(ship.group_id).map(|augment| {
-                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self.clone().to_custom_id());
+            let augment = data.azur_lane().augment_by_ship_id(ship.group_id).map(|augment| {
+                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self_custom_id.clone());
                 CreateButton::new(view_augment.to_custom_id())
                     .label("Unique Augment")
                     .style(ButtonStyle::Secondary)
             });
 
-            let row: Vec<_> = skills.into_iter().chain(augment).collect();
+            let lines = Some({
+                let view_lines = super::lines::ViewLines::with_back(self.ship_id, self_custom_id.clone());
+                CreateButton::new(view_lines.to_custom_id())
+                    .label("Lines")
+                    .style(ButtonStyle::Secondary)
+            });
+
+            let row: Vec<_> = skills.into_iter().chain(augment).chain(lines).collect();
             if !row.is_empty() {
                 rows.push(CreateActionRow::Buttons(row));
             }
@@ -235,7 +243,7 @@ impl ViewShip {
 
 impl ButtonArgsModify for ViewShip {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let ship = data.azur_lane.ship_by_id(self.ship_id).ok_or(ShipParseError)?;
+        let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.modify_with_ship(data, create, ship, None),
             Some(retrofit) => self.modify_with_ship(data,create, retrofit, Some(ship))

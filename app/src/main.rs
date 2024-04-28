@@ -1,10 +1,18 @@
 use std::num::NonZeroU16;
 use std::sync::Arc;
+use once_cell::sync::Lazy;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use commands::*;
 
 mod poise_command_builder;
+
+fn load_azur_lane() -> HAzurLane {
+    let data_path = std::env::var("AZUR_LANE_DATA").unwrap_or_else(|_| "houston_azur_lane_data.json".to_owned());
+    let f = std::fs::File::open(data_path).expect("Failed to read Azur Lane data.");
+    let data = serde_json::from_reader(f).expect("Failed to parse Azur Lane data.");
+    HAzurLane::from(data)
+}
 
 #[tokio::main]
 async fn main() {
@@ -15,15 +23,16 @@ async fn main() {
 
     println!("Starting...");
 
-    let azur_lane_data = {
-        let data_path = std::env::var("AZUR_LANE_DATA").unwrap_or_else(|_| "houston_azur_lane_data.json".to_owned());
-        let f = std::fs::File::open(data_path).expect("Failed to read Azur Lane data.");
-        serde_json::from_reader(f).expect("Failed to parse Azur Lane data.")
-    };
+    let bot_data = Arc::new(HBotData::new(Lazy::new(load_azur_lane)));
 
-    println!("Loaded Azur Lane data.");
-
-    let bot_data = Arc::new(HBotData::new(azur_lane_data));
+    let loader = tokio::task::spawn({
+        let bot_data = Arc::clone(&bot_data);
+        async move {
+            println!("Loading Azur Lane data...");
+            let _ = bot_data.azur_lane();
+            println!("Loaded Azur Lane data.");
+        }
+    });
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
@@ -50,6 +59,7 @@ async fn main() {
         .await.unwrap();
 
     client.start().await.unwrap();
+    loader.await.unwrap();
 }
 
 async fn create_commands(ctx: &Context, framework: &poise::framework::Framework<Arc<HBotData>, HError>) -> HResult {
@@ -63,5 +73,5 @@ async fn create_commands(ctx: &Context, framework: &poise::framework::Framework<
 
 fn print_ready(ready: &Ready) {
     let discriminator = ready.user.discriminator.map_or(0u16, NonZeroU16::get);
-    println!("Started! Logged in as: {}#{:04}", ready.user.name, discriminator);
+    println!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 }

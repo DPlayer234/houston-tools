@@ -4,6 +4,8 @@ use crate::prelude::*;
 
 pub mod azur;
 
+utils::define_simple_error!(InvalidInteractionError: "Invalid interaction.");
+
 #[derive(Debug, Clone)]
 pub struct ButtonEventHandler {
     bot_data: Arc<HBotData>
@@ -17,11 +19,21 @@ impl ButtonEventHandler {
     }
 
     async fn interaction_dispatch(&self, ctx: Context, interaction: ComponentInteraction) -> HResult {
-        match ButtonArgs::from_custom_id(&interaction.data.custom_id)? {
+        let args = match &interaction.data.kind {
+            ComponentInteractionDataKind::StringSelect { values } => {
+                ButtonArgs::from_custom_id(&values.iter().next().ok_or(InvalidInteractionError)?)?
+            }
+            _ => {
+                ButtonArgs::from_custom_id(&interaction.data.custom_id)?
+            }
+        };
+
+        match args {
             ButtonArgs::None(_) => Ok(()),
             ButtonArgs::ViewShip(view_ship) => self.inner_dispatch(ctx, interaction, view_ship).await,
             ButtonArgs::ViewAugment(view_augment) => self.inner_dispatch(ctx, interaction, view_augment).await,
             ButtonArgs::ViewSkill(view_skill) => self.inner_dispatch(ctx, interaction, view_skill).await,
+            ButtonArgs::ViewLines(view_lines) => self.inner_dispatch(ctx, interaction, view_lines).await,
         }
     }
 
@@ -51,6 +63,7 @@ pub enum ButtonArgs {
     ViewShip(azur::ship::ViewShip),
     ViewAugment(azur::augment::ViewAugment),
     ViewSkill(azur::skill::ViewSkill),
+    ViewLines(azur::lines::ViewLines),
 }
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
@@ -74,13 +87,25 @@ pub trait ToButtonArgsId {
             CreateButton::new(new_state.to_custom_id())
         }
     }
+
+    fn new_select_option<T: PartialEq>(&self, label: impl Into<String>, field: impl utils::Field<Self, T>, value: T) -> CreateSelectMenuOption
+    where Self: Clone {
+        let mut new_state = self.clone();
+        *field.get_mut(&mut new_state) = value;
+
+        let default = field.get(&self) == field.get(&new_state);
+        CreateSelectMenuOption::new(label, new_state.to_custom_id())
+            .default_selection(default)
+    }
 }
 
-pub trait ButtonArgsModify {
+pub trait ButtonArgsModify: Sized {
+    #[must_use]
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
 }
 
 impl ButtonArgs {
+    #[must_use]
     pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
         let bytes = from_base256_string(id)?;
         let args = bitcode::decode(&bytes)?;
@@ -89,6 +114,7 @@ impl ButtonArgs {
 }
 
 impl<T: Into<ButtonArgs>> ToButtonArgsId for T {
+    #[must_use]
     fn to_custom_id(self) -> String {
         let args: ButtonArgs = self.into();
         let encoded = bitcode::encode(&args);

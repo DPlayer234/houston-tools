@@ -48,15 +48,15 @@ impl ViewSkill {
 
         for (t_index, skill) in iterator.enumerate().take(4) {
             if Some(t_index) == index {
-                embed = embed.color(skill.category.data().color_rgb);
-                embed = embed.fields(self.create_ex_skill_field(skill));
+                embed = embed.color(skill.category.data().color_rgb)
+                    .fields(self.create_ex_skill_field(skill));
             } else {
                 embed = embed.fields(self.create_skill_field(skill));
             }
 
             if !skill.barrages.is_empty() {
-                let button = self.new_button(utils::field!(Self: skill_index), Some(t_index as u8), || Sentinel::new(1, t_index as u32))
-                    .label(&skill.name)
+                let button = self.button_with_skill(t_index)
+                    .label(utils::text::truncate(&skill.name, 25))
                     .style(ButtonStyle::Secondary);
     
                 components.push(button);
@@ -70,6 +70,10 @@ impl ViewSkill {
         Ok(create.embed(embed).components(rows))
     }
 
+    fn button_with_skill(&self, index: usize) -> CreateButton {
+        self.new_button(utils::field!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
+    }
+    
     pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> anyhow::Result<CreateReply> {
         let base_ship = base_ship.unwrap_or(ship);
         self.modify_with_skills(
@@ -90,7 +94,7 @@ impl ViewSkill {
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
         [(
             format!("{} {}", skill.category.data().emoji, skill.name),
-            skill.description.clone(),
+            utils::text::truncate(&skill.description, 1000),
             false
         )]
     }
@@ -99,7 +103,7 @@ impl ViewSkill {
         [
             (
                 format!("{} __{}__", skill.category.data().emoji, skill.name),
-                skill.description.clone(),
+                utils::text::truncate(&skill.description, 1000),
                 false
             ),
             (
@@ -118,12 +122,12 @@ impl ButtonArgsModify for ViewSkill {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         match self.source {
             ViewSkillSource::Ship(ship_id, retro_index) => {
-                let base_ship = data.azur_lane.ship_by_id(ship_id).ok_or(ShipParseError)?;
+                let base_ship = data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
                 let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
                 self.modify_with_ship(create, ship, Some(base_ship))
             }
             ViewSkillSource::Augment(augment_id) => {
-                let augment = data.azur_lane.augment_by_id(augment_id).ok_or(AugmentParseError)?;
+                let augment = data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
                 self.modify_with_augment(create, augment)
             }
         }

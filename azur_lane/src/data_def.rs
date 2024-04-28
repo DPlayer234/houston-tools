@@ -12,12 +12,14 @@ macro_rules! define_data_enum {
         }
 
         impl $data {
+            #[must_use]
             const fn new_auto_data($($data_name : $data_type),*) -> $data {
                 $data { $($data_name),* }
             }
         }
 
         impl $name {
+            #[must_use]
             pub fn data(self) -> &'static $data {
                 match self {
                     $(
@@ -32,14 +34,17 @@ macro_rules! define_data_enum {
     };
 }
 
+#[must_use]
 pub fn make_empty_vec<T>() -> Vec<T> {
     Vec::new()
 }
 
+#[must_use]
 pub fn is_empty_vec<T>(arc: &Vec<T>) -> bool {
     arc.is_empty()
 }
 
+#[must_use]
 pub fn is_default<T: Default + PartialEq>(value: &T) -> bool {
     *value == T::default()
 }

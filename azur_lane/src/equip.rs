@@ -176,6 +176,7 @@ define_data_enum! {
 }
 
 impl ArmorModifiers {
+    #[must_use]
     pub fn get_modifier(&self, armor_kind: ShipArmor) -> f32 {
         match armor_kind {
             ShipArmor::Light => self.0,

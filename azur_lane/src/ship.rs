@@ -52,10 +52,14 @@ impl ShipStatValue {
         Self(base, growth, fixed)
     }
 
+    #[must_use]
     pub const fn base(&self) -> f32 { self.0 }
+    #[must_use]
     pub const fn growth(&self) -> f32 { self.1 }
+    #[must_use]
     pub const fn fixed(&self) -> f32 { self.2 }
 
+    #[must_use]
     pub fn calc(&self, level: u32, affinity: f32) -> f32 {
         (self.base() + self.growth() * ((level - 1) as f32) * 0.001f32) * affinity + self.fixed()
     }
@@ -156,7 +160,7 @@ pub struct ShipSkinWords {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub friendly: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub like: Option<String>,
+    pub crush: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub love: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -169,22 +173,25 @@ pub struct ShipSkinWords {
 pub struct ShipMainScreenLine(usize, String);
 
 impl ShipMainScreenLine {
+    #[must_use]
     pub fn new(index: usize, text: String) -> Self {
         Self(index, text)
     }
 
+    #[must_use]
     pub fn index(&self) -> usize {
         self.0
     }
 
-    pub fn text(&self) -> &String {
+    #[must_use]
+    pub fn text(&self) -> &str {
         &self.1
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipCoupleEncourage {
-    pub text: String,
+    pub line: String,
     pub amount: u32,
     pub condition: ShipCouple
 }
@@ -293,6 +300,7 @@ impl Display for ShipArmor {
 }
 
 impl ShipRarity {
+    #[must_use]
     pub fn next(self) -> Self {
         match self {
             Self::N => Self::R,
@@ -304,6 +312,7 @@ impl ShipRarity {
 }
 
 impl ShipStats {
+    #[must_use]
     pub fn get_stat(&self, kind: StatKind) -> f32 {
         match kind {
             StatKind::HP => self.hp.calc(125, 1.0),
