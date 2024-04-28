@@ -193,7 +193,7 @@ impl ViewShip {
 
     fn get_equip_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
         let slots = ship.equip_slots.iter()
-            .filter_map(|e| e.mount.as_ref().map(|m| (e.allowed.as_ref(), m)));
+            .filter_map(|e| e.mount.as_ref().map(|m| (&e.allowed, m)));
 
         let mut text = String::new();
         for (allowed, mount) in slots {

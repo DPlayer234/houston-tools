@@ -56,7 +56,7 @@ impl ViewSkill {
 
             if !skill.barrages.is_empty() {
                 let button = self.new_button(utils::field!(Self: skill_index), Some(t_index as u8), || Sentinel::new(1, t_index as u32))
-                    .label(skill.name.as_ref())
+                    .label(&skill.name)
                     .style(ButtonStyle::Secondary);
     
                 components.push(button);
@@ -83,14 +83,14 @@ impl ViewSkill {
         self.modify_with_skills(
             create,
             augment.effect.iter().chain(augment.skill_upgrade.as_ref()),
-            CreateEmbed::new().color(ShipRarity::SR.data().color_rgb).author(CreateEmbedAuthor::new(augment.name.as_ref()))
+            CreateEmbed::new().color(ShipRarity::SR.data().color_rgb).author(CreateEmbedAuthor::new(&augment.name))
         )
     }
 
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
         [(
             format!("{} {}", skill.category.data().emoji, skill.name),
-            skill.description.as_ref().to_owned(),
+            skill.description.clone(),
             false
         )]
     }
@@ -99,7 +99,7 @@ impl ViewSkill {
         [
             (
                 format!("{} __{}__", skill.category.data().emoji, skill.name),
-                skill.description.as_ref().to_owned(),
+                skill.description.clone(),
                 false
             ),
             (

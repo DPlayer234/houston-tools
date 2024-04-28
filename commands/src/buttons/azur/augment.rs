@@ -42,7 +42,7 @@ impl ViewAugment {
         }
 
         let embed = CreateEmbed::new()
-            .author(CreateEmbedAuthor::new(augment.name.as_ref()))
+            .author(CreateEmbedAuthor::new(&augment.name))
             .description(description)
             .color(ShipRarity::SR.data().color_rgb)
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))

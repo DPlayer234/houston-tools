@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 #[derive(Debug, Clone)]
 pub struct PrefixMap<T> {
     map: Vec<Entry<T>>
@@ -7,7 +5,7 @@ pub struct PrefixMap<T> {
 
 #[derive(Debug, Clone)]
 struct Entry<T> {
-    key: Arc<str>,
+    key: String,
     value: T
 }
 
@@ -19,7 +17,7 @@ impl<T> PrefixMap<T> {
     pub fn insert(&mut self, key: &str, value: T) -> bool {
         let key = simplify(key);
         let index = self.map.binary_search_by_key(&key.as_str(), |e| &*e.key);
-        let entry = Entry { key: Arc::from(key), value };
+        let entry = Entry { key, value };
         match index {
             Ok(_) => false,
             Err(index) => { self.map.insert(index, entry); true }

@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, collections::HashSet, sync::Arc};
+use std::{borrow::Borrow, collections::HashSet};
 
 use mlua::prelude::*;
 use azur_lane::skill::*;
@@ -40,9 +40,9 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     Ok(Skill {
         buff_id: skill_id,
         category,
-        name: Arc::from(name),
-        description: Arc::from(desc),
-        barrages: Arc::from(context.attacks)
+        name,
+        description: desc,
+        barrages: context.attacks
     })
 }
 
@@ -66,13 +66,13 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     }
 
     Ok(Equip {
-        name: Arc::from(name),
+        name,
         kind: convert_al::to_equip_type(context!(equip_data.get("type"); "type for equip with id {equip_id}")?),
         faction: convert_al::to_faction(context!(equip_data.get("nationality"); "nationality for equip with id {equip_id}")?),
-        hull_allowed: Arc::new([]), // todo
-        hull_disallowed: Arc::new([]), // todo
-        weapons: Arc::from(weapons),
-        stat_bonuses: Arc::new([]) // todo
+        hull_allowed: Vec::new(), // todo
+        hull_disallowed: Vec::new(), // todo
+        weapons,
+        stat_bonuses: Vec::new() // todo
     })
 }
 
@@ -108,7 +108,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(weapon_data.get("attack_attribute")?),
                 range: weapon_data.get("range")?,
                 firing_angle: weapon_data.get("angle")?,
-                bullets: Arc::from(bullets)
+                bullets
             })
         },
         RoughWeaponType::Aircraft => {
@@ -141,7 +141,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 aircraft_id: weapon_id,
                 amount,
                 speed,
-                weapons: Arc::from(weapons)
+                weapons
             })
         },
         _ => { return Ok(None); }
@@ -212,7 +212,7 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
             pierce: pierce.unwrap_or_default(),
             velocity: bullet.get("velocity")?,
             modifiers: ArmorModifiers::from(armor_mods),
-            attach_buff: Arc::from(attach_buff),
+            attach_buff,
 
             spread: if kind == BulletKind::Bomb {
                 let hit_type: LuaTable = context!(bullet.get("hit_type"); "hit_type in bullet {bullet_id}")?;
@@ -316,8 +316,8 @@ fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsCon
     if !attacks.is_empty() {
         barrages.attacks.push(SkillBarrage {
             skill_id,
-            attacks: Arc::from(attacks)
-        })
+            attacks
+        });
     }
 
     Ok(())

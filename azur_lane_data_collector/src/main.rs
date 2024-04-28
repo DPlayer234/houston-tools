@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use std::sync::Arc;
 use clap::Parser;
 use mlua::prelude::*;
 use azur_lane::*;
@@ -131,29 +130,27 @@ fn main() -> Result<(), Box<dyn Error>> {
         for candidate in candidates {
             let mut mlb = candidate.mlb.to_ship_data(&lua)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
-                mlb.name = Arc::from(name_override.as_str());
+                mlb.name = name_override.clone();
             }
             
-            let mut retrofits: Vec<ShipData> = Vec::new();
             if let Some(ref retrofit_data) = candidate.retrofit_data {
                 for retrofit_set in candidate.retrofits {
                     let mut retrofit = retrofit_set.to_ship_data(&lua)?;
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
         
                     fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
-                    retrofits.push(retrofit);
+                    mlb.retrofits.push(retrofit);
                 }
 
-                if retrofits.is_empty() {
+                if mlb.retrofits.is_empty() {
                     let mut retrofit = mlb.clone();
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
 
                     fix_up_retrofitted_data(&mut retrofit, &candidate.mlb)?;
-                    retrofits.push(retrofit); 
+                    mlb.retrofits.push(retrofit); 
                 }
             }
 
-            mlb.retrofits = Arc::from(retrofits);
             ships.push(mlb);
         }
 
@@ -212,9 +209,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
     let buff_list_display: Vec<u32> = set.template.get("buff_list_display")?;
-    let mut skills = ship.skills.to_vec();
-    skills.sort_by_key(|s| buff_list_display.iter().enumerate().find(|i| *i.1 == s.buff_id).map(|i| i.0).unwrap_or_default());
-    ship.skills = Arc::from(skills);
+    ship.skills.sort_by_key(|s| {
+        buff_list_display.iter().enumerate()
+            .find(|i| *i.1 == s.buff_id)
+            .map(|i| i.0)
+            .unwrap_or_default()
+    });
 
     Ok(())
 }

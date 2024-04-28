@@ -1,6 +1,5 @@
 use crate::HContext;
 use std::collections::HashMap;
-use std::sync::Arc;
 use serenity::all::Color;
 use serenity::model::id::UserId;
 use poise::reply::CreateReply;
@@ -29,7 +28,7 @@ pub struct HAzurLane {
     pub ship_list: Vec<ShipData>,
     pub augment_list: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
-    ship_name_to_index: HashMap<Arc<str>, usize>,
+    ship_name_to_index: HashMap<String, usize>,
     ship_prefix_map: PrefixMap<usize>,
     augment_id_to_index: HashMap<u32, usize>,
     ship_id_to_augment_index: HashMap<u32, usize>,
@@ -137,8 +136,8 @@ impl HAzurLane {
 
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
-            ship_name_to_index.insert(Arc::clone(&data.name), index);
-            if !ship_prefix_map.insert(data.name.as_ref(), index) {
+            ship_name_to_index.insert(data.name.clone(), index);
+            if !ship_prefix_map.insert(&data.name, index) {
                 panic!("Duplicate name {} @ id {}", data.name, data.group_id);
             }
         }

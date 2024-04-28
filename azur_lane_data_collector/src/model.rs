@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Debug};
-use std::sync::Arc;
 use mlua::prelude::*;
 use once_cell::sync::Lazy;
 use azur_lane::equip::*;
@@ -176,27 +175,23 @@ impl ShipSet<'_> {
                 oxy: read!(self.statistics, "oxy_max"),
                 amo: read!(self.statistics, "ammo")
             },
-            equip_slots: Arc::new([
+            equip_slots: vec![
                 make_equip_slot!("equip_1", 1),
                 make_equip_slot!("equip_2", 2),
                 make_equip_slot!("equip_3", 3),
                 make_equip_slot!("equip_4"),
                 make_equip_slot!("equip_5")
-            ]),
-            shadow_equip: Arc::from(
-                skill_loader::load_equips(lua, read!(self.statistics, "fix_equip_list"))?.into_iter()
-                    .enumerate()
-                    .map(|(index, equip)| Ok(ShadowEquip {
-                        name: equip.name,
-                        efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f32) },
-                        weapons: equip.weapons
-                    }))
-                    .collect::<LuaResult<Vec<_>>>()?
-            ),
-            skills: Arc::from(
-                skill_loader::load_skills(lua, buff_list)?
-            ),
-            retrofits: Arc::new([])
+            ],
+            shadow_equip: skill_loader::load_equips(lua, read!(self.statistics, "fix_equip_list"))?.into_iter()
+                .enumerate()
+                .map(|(index, equip)| Ok(ShadowEquip {
+                    name: equip.name,
+                    efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f32) },
+                    weapons: equip.weapons
+                }))
+                .collect::<LuaResult<Vec<_>>>()?,
+            skills: skill_loader::load_skills(lua, buff_list)?,
+            retrofits: Vec::new()
         };
 
         if ship.hull_type.data().team_type == TeamType::Submarine {
@@ -240,9 +235,7 @@ impl ShipSet<'_> {
 
                 // META ships have a definition for "buff_list_task" but this seems to go unused
                 // and Fusou META doesn't even have the right data here. Just use the display list.
-                ship.skills = Arc::from(
-                    skill_loader::load_skills(lua, buff_list_display)?
-                );
+                ship.skills = skill_loader::load_skills(lua, buff_list_display)?;
             }
         }
 
@@ -316,7 +309,7 @@ impl AugmentCandidate<'_> {
         Ok(Augment {
             augment_id: self.id,
             name: From::<String>::from(read!("name")),
-            stat_bonuses: Arc::new([
+            stat_bonuses: vec![
                 AugmentStatBonus {
                     stat_kind: read_stat!("attribute_1"),
                     amount: read!("value_1"),
@@ -327,11 +320,11 @@ impl AugmentCandidate<'_> {
                     amount: read!("value_2"),
                     random: read!("value_2_random")
                 }
-            ]),
-            allowed: Arc::from_iter({
+            ],
+            allowed: {
                 let allowed: Vec<u32> = read!("usability");
-                allowed.into_iter().map(convert_al::to_hull_type)
-            }),
+                allowed.into_iter().map(convert_al::to_hull_type).collect()
+            },
             effect,
             unique_ship_id,
             skill_upgrade,

@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::sync::Arc;
 use serde::*;
 
 use crate::define_data_enum;
@@ -10,7 +9,7 @@ use super::skill::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
     pub group_id: u32,
-    pub name: Arc<str>,
+    pub name: String,
     pub rarity: ShipRarity,
     pub faction: Faction,
     pub hull_type: HullType,
@@ -18,10 +17,10 @@ pub struct ShipData {
     #[serde(default)]
     pub enhance_kind: EnhanceKind,
     pub stats: ShipStats,
-    pub equip_slots: Arc<[EquipSlot]>,
-    pub shadow_equip: Arc<[ShadowEquip]>,
-    pub skills: Arc<[Skill]>,
-    pub retrofits: Arc<[ShipData]>
+    pub equip_slots: Vec<EquipSlot>,
+    pub shadow_equip: Vec<ShadowEquip>,
+    pub skills: Vec<Skill>,
+    pub retrofits: Vec<ShipData>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,16 +75,16 @@ impl std::ops::AddAssign for ShipStatValue {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipSlot {
-    pub allowed: Arc<[EquipKind]>,
+    pub allowed: Vec<EquipKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mount: Option<EquipWeaponMount>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShadowEquip {
-    pub name: Arc<str>,
+    pub name: String,
     pub efficiency: f32,
-    pub weapons: Arc<[Weapon]>
+    pub weapons: Vec<Weapon>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +93,12 @@ pub struct EquipWeaponMount {
     pub mounts: u8,
     pub parallel: u8,
     pub preload: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipSkin {
+    pub skin_id: u32,
+    pub name: String,
 }
 
 define_data_enum! {

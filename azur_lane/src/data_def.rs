@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 #[macro_export]
 macro_rules! define_data_enum {
     ($v:vis enum $name:ident for $data:ident { $($data_vis:vis $data_name:ident : $data_type:ty),* ; $($field:ident $arg:tt),* }) => {
@@ -34,11 +32,11 @@ macro_rules! define_data_enum {
     };
 }
 
-pub fn make_empty_arc<T>() -> Arc<[T]> {
-    Arc::new([])
+pub fn make_empty_vec<T>() -> Vec<T> {
+    Vec::new()
 }
 
-pub fn is_empty_arc<T>(arc: &Arc<[T]>) -> bool {
+pub fn is_empty_vec<T>(arc: &Vec<T>) -> bool {
     arc.is_empty()
 }
 

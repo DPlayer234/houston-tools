@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use serde::*;
 
 use crate::define_data_enum;
@@ -9,17 +8,17 @@ use super::Faction;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equip {
-    pub name: Arc<str>,
+    pub name: String,
     pub kind: EquipKind,
     pub faction: Faction,
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub hull_allowed: Arc<[HullType]>,
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub hull_disallowed: Arc<[HullType]>,
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub weapons: Arc<[Weapon]>,
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub stat_bonuses: Arc<[EquipStatBonus]>
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub hull_allowed: Vec<HullType>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub hull_disallowed: Vec<HullType>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub weapons: Vec<Weapon>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub stat_bonuses: Vec<EquipStatBonus>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,7 +37,7 @@ pub struct Barrage {
     pub scaling_stat: StatKind,
     pub range: f32,
     pub firing_angle: f32,
-    pub bullets: Arc<[Bullet]>
+    pub bullets: Vec<Bullet>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,8 +54,8 @@ pub struct Bullet {
     pub velocity: f32,
     pub modifiers: ArmorModifiers,
 
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub attach_buff: Arc<[BuffInfo]>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub attach_buff: Vec<BuffInfo>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spread: Option<BulletSpread>,
@@ -74,7 +73,7 @@ pub struct Aircraft {
     pub aircraft_id: u32,
     pub amount: u32,
     pub speed: f32,
-    pub weapons: Arc<[Weapon]>
+    pub weapons: Vec<Weapon>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,9 +94,9 @@ pub struct EquipStatBonus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Augment {
     pub augment_id: u32,
-    pub name: Arc<str>,
-    pub stat_bonuses: Arc<[AugmentStatBonus]>,
-    pub allowed: Arc<[HullType]>,
+    pub name: String,
+    pub stat_bonuses: Vec<AugmentStatBonus>,
+    pub allowed: Vec<HullType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

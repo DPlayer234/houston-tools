@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use serde::*;
 
 use crate::define_data_enum;
@@ -8,17 +7,17 @@ use crate::data_def::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
     pub buff_id: u32,
-    pub name: Arc<str>,
-    pub description: Arc<str>,
+    pub name: String,
+    pub description: String,
     pub category: SkillCategory,
-    #[serde(default = "make_empty_arc", skip_serializing_if = "is_empty_arc")]
-    pub barrages: Arc<[SkillBarrage]>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub barrages: Vec<SkillBarrage>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillBarrage {
     pub skill_id: u32,
-    pub attacks: Arc<[SkillAttack]>,
+    pub attacks: Vec<SkillAttack>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

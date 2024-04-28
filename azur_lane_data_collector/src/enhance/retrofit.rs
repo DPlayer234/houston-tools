@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-use std::sync::Arc;
 use mlua::prelude::*;
 use azur_lane::ship::*;
 
@@ -34,17 +33,15 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
     }
 
     if !new_skills.is_empty() {
-        ship.skills = Arc::from_iter(ship.skills.iter().chain(new_skills.iter()).cloned());
+        ship.skills.extend(new_skills.into_iter());
     }
 
     Ok(())
 }
 
 fn add_equip_efficiency(ship: &mut ShipData, index: usize, amount: f32) -> LuaResult<()> {
-    let mut slots = ship.equip_slots.to_vec();
-    if let Some(slot) = slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
+    if let Some(slot) = ship.equip_slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
         slot.efficiency += amount;
-        ship.equip_slots = Arc::from(slots);
     }
 
     Ok(())
