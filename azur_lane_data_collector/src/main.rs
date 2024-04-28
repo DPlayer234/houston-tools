@@ -11,6 +11,7 @@ mod convert_al;
 mod enhance;
 mod skill_loader;
 mod model;
+mod skins;
 
 use model::*;
 
@@ -63,6 +64,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ship_data_trans: LuaTable = context!(pg.get("ship_data_trans"); "global pg.ship_data_trans")?;
         let transform_data_template: LuaTable = context!(pg.get("transform_data_template"); "global pg.transform_data_template")?;
 
+        // Skin/word data:
+        let ship_skin_template: LuaTable = context!(pg.get("ship_skin_template"); "global pg.ship_skin_template")?;
+        let ship_skin_template_get_id_list_by_ship_group: LuaTable = context!(ship_skin_template.get("get_id_list_by_ship_group"); "global pg.ship_skin_template.get_id_list_by_ship_group")?;
+        let ship_skin_words: LuaTable = context!(pg.get("ship_skin_words"); "global pg.ship_skin_words")?;
+        let ship_skin_words_extra: LuaTable = context!(pg.get("ship_skin_words_extra"); "global pg.ship_skin_words_extra")?;
+
         let mut groups = HashMap::new();
         ship_data_template_all.for_each(|_: u32, id: u32| {
             if id >= 900000 && id <= 900999 {
@@ -114,11 +121,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let retrofits = group.tables.iter().filter(|t| t.id > mlb.id).cloned().collect();
 
+            let skins: Vec<u32> = context!(ship_skin_template_get_id_list_by_ship_group.get(group.id); "skin ids for ship with id {}", group.id)?;
+            let skins = skins.into_iter().map(|skin_id| Ok(SkinSet {
+                skin_id,
+                template: context!(ship_skin_template.get(skin_id); "skin template {} for ship {}", skin_id, group.id)?,
+                words: context!(ship_skin_words.get(skin_id); "skin words {} for ship {}", skin_id, group.id)?,
+                words_extra: context!(ship_skin_words_extra.get(skin_id); "skin words extra {} for ship {}", skin_id, group.id)?,
+            })).collect::<LuaResult<Vec<_>>>()?;
+
             candidates.push(ShipCandidate {
                 id: group.id,
                 mlb: mlb.clone(),
                 retrofits,
-                retrofit_data: mlb.retrofit_data.clone()
+                retrofit_data: mlb.retrofit_data.clone(),
+                skins
             });
         }
 
@@ -133,7 +149,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 mlb.name = name_override.clone();
             }
             
-            if let Some(ref retrofit_data) = candidate.retrofit_data {
+            if let Some(retrofit_data) = candidate.retrofit_data {
                 for retrofit_set in candidate.retrofits {
                     let mut retrofit = retrofit_set.to_ship_data(&lua)?;
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
@@ -151,6 +167,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
 
+            mlb.skins.extend(candidate.skins.iter().map(skins::load_skin).collect::<LuaResult<Vec<_>>>()?);
             ships.push(mlb);
         }
 

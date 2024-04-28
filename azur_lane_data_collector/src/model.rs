@@ -42,7 +42,16 @@ pub struct ShipCandidate<'a> {
     pub id: u32,
     pub mlb: ShipSet<'a>,
     pub retrofits: Vec<ShipSet<'a>>,
-    pub retrofit_data: Option<Retrofit<'a>>
+    pub retrofit_data: Option<Retrofit<'a>>,
+    pub skins: Vec<SkinSet<'a>>
+}
+
+#[derive(Debug, Clone)]
+pub struct SkinSet<'a> {
+    pub skin_id: u32,
+    pub template: LuaTable<'a>,
+    pub words: LuaTable<'a>,
+    pub words_extra: Option<LuaTable<'a>>
 }
 
 #[derive(Debug, Clone)]
@@ -191,7 +200,8 @@ impl ShipSet<'_> {
                 }))
                 .collect::<LuaResult<Vec<_>>>()?,
             skills: skill_loader::load_skills(lua, buff_list)?,
-            retrofits: Vec::new()
+            retrofits: Vec::new(),
+            skins: Vec::new()
         };
 
         if ship.hull_type.data().team_type == TeamType::Submarine {

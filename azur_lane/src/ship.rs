@@ -5,6 +5,7 @@ use crate::define_data_enum;
 use super::Faction;
 use super::equip::*;
 use super::skill::*;
+use crate::data_def::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
@@ -20,7 +21,8 @@ pub struct ShipData {
     pub equip_slots: Vec<EquipSlot>,
     pub shadow_equip: Vec<ShadowEquip>,
     pub skills: Vec<Skill>,
-    pub retrofits: Vec<ShipData>
+    pub retrofits: Vec<ShipData>,
+    pub skins: Vec<ShipSkin>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,6 +101,101 @@ pub struct EquipWeaponMount {
 pub struct ShipSkin {
     pub skin_id: u32,
     pub name: String,
+    pub description: String,
+    pub words: ShipSkinWords,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub words_extra: Option<Box<ShipSkinWords>>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipSkinWords {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub introduction: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acquisition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub login: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub details: Option<String>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub main_screen: Vec<ShipMainScreenLine>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub touch: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub special_touch: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rub: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mission_reminder: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mission_complete: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mail_reminder: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_to_port: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commission_complete: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enhance: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flagship_fight: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub victory: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub defeat: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skill: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub low_health: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disappointed: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stranger: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub friendly: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub like: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub love: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oath: Option<String>,
+    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    pub couple_encourage: Vec<ShipCoupleEncourage>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipMainScreenLine(usize, String);
+
+impl ShipMainScreenLine {
+    pub fn new(index: usize, text: String) -> Self {
+        Self(index, text)
+    }
+
+    pub fn index(&self) -> usize {
+        self.0
+    }
+
+    pub fn text(&self) -> &String {
+        &self.1
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipCoupleEncourage {
+    pub text: String,
+    pub amount: u32,
+    pub condition: ShipCouple
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ShipCouple {
+    ShipGroup(Vec<u32>),
+    HullType(Vec<HullType>),
+    Rarity(Vec<ShipRarity>),
+    Faction(Vec<Faction>),
+    Illustrator
 }
 
 define_data_enum! {
