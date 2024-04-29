@@ -9,6 +9,7 @@ mod dice;
 mod timestamp;
 mod who;
 
+/// Gets all poise commands.
 pub fn get_commands() -> Vec<poise::Command<Arc<HBotData>, HError>> {
     vec![
         azur::azur(),
@@ -20,6 +21,7 @@ pub fn get_commands() -> Vec<poise::Command<Arc<HBotData>, HError>> {
     ]
 }
 
+/// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
     println!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
         HContext::Application(ctx) => {
@@ -33,6 +35,7 @@ pub async fn pre_command(ctx: HContext<'_>) {
     })
 }
 
+/// Command execution error handler.
 pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HError>) {
     match &error {
         poise::FrameworkError::Command { error, ctx, .. } => {

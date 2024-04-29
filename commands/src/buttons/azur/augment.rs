@@ -8,6 +8,7 @@ use utils::Discard;
 
 use super::AugmentParseError;
 
+/// Views an augment.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewAugment {
     pub augment_id: u32,
@@ -21,14 +22,17 @@ impl From<ViewAugment> for ButtonArgs {
 }
 
 impl ViewAugment {
+    /// Creates a new instance.
     pub fn new(augment_id: u32) -> Self {
         Self { augment_id, back: None }
     }
 
+    /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(augment_id: u32, back: String) -> Self {
         Self { augment_id, back: Some(back) }
     }
 
+    /// Modifies the create-reply with a preresolved augment.
     pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
         let mut description = String::new();
         for chunk in augment.stat_bonuses.chunks(3) {
@@ -63,6 +67,7 @@ impl ViewAugment {
         create.embed(embed).components(vec![CreateActionRow::Buttons(components)])
     }
 
+    /// Creates the field for a skill summary.
     fn get_skill_field(&self, label: &'static str, skill: Option<&Skill>) -> Option<SimpleEmbedFieldCreate> {
         skill.map(|s| {
             (label, format!("{} **{}**", s.category.emoji(), s.name), false)

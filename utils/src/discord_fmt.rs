@@ -1,3 +1,5 @@
+//! Provides utilities for formatting Discord data.
+
 use std::fmt::{Display, Formatter, Result as FmtResult, Write};
 use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 

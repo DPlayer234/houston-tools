@@ -4,15 +4,15 @@ pub mod blueprint;
 pub mod meta;
 pub mod retrofit;
 
-pub fn add_to_stats_base(stats: &mut ShipStats, stat: &str, amount: f32) -> bool {
-    add_to_stats_intl(stats, stat, amount, ShipStatValue::new(amount, 0f32, 0f32))
+pub fn add_to_stats_base(stats: &mut ShipStatBlock, stat: &str, amount: f32) -> bool {
+    add_to_stats_intl(stats, stat, amount, ShipStat::new(amount, 0f32, 0f32))
 }
 
-pub fn add_to_stats_fixed(stats: &mut ShipStats, stat: &str, amount: f32) -> bool {
-    add_to_stats_intl(stats, stat, amount, ShipStatValue::new(0f32, 0f32, amount))
+pub fn add_to_stats_fixed(stats: &mut ShipStatBlock, stat: &str, amount: f32) -> bool {
+    add_to_stats_intl(stats, stat, amount, ShipStat::new(0f32, 0f32, amount))
 }
 
-fn add_to_stats_intl(stats: &mut ShipStats, stat: &str, amount: f32, amount_as_stat: ShipStatValue) -> bool {
+fn add_to_stats_intl(stats: &mut ShipStatBlock, stat: &str, amount: f32, amount_as_stat: ShipStat) -> bool {
     match stat {
         "durability" => stats.hp += amount_as_stat,
         "cannon" => stats.fp += amount_as_stat,

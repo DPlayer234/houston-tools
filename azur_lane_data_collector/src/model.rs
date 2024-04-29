@@ -1,3 +1,5 @@
+//! Data model used while parsing game data.
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Debug};
@@ -7,61 +9,90 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 
-use crate::{context, from_const_json_str};
+use crate::context;
 use crate::convert_al;
 use crate::enhance;
 use crate::skill_loader;
 
+/// The config model.
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
+    /// Overrides for ship names based on their group ID.
     pub name_overrides: HashMap<u32, String>,
+    /// Overrides for skills based on their buff ID.
     pub predefined_skills: HashMap<u32, Skill>,
 }
 
+/// The app config. Statically embed as JSON.
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
-    from_const_json_str!(include_str!("assets/config.json")).unwrap()
+    serde_json::from_str(include_str!("assets/config.json")).unwrap()
 });
 
+/// A group of ships.
 #[derive(Debug, Clone)]
 pub struct ShipGroup {
+    /// The ID of the group, aka "group_type".
     pub id: u32,
+    /// The IDs of the members.
     pub members: Vec<u32>
 }
 
+/// A set of data from which [`ShipData`] can be constructed.
 #[derive(Debug, Clone)]
 pub struct ShipSet<'a> {
+    /// The ship ID. Not the group's.
     pub id: u32,
+    /// The "ship_data_template" entry.
     pub template: LuaTable<'a>,
+    /// The "ship_data_statistics" entry.
     pub statistics: LuaTable<'a>,
+    /// The associated strengthen data.
     pub strengthen: Strengthen<'a>,
+    /// The associated retrofit data.
     pub retrofit_data: Option<Retrofit<'a>>
 }
 
+/// A set of data from which [`ShipSkin`] can be constructed.
 #[derive(Debug, Clone)]
 pub struct SkinSet<'a> {
+    /// The skin ID.
     pub skin_id: u32,
+    /// The "ship_skin_template" entry.
     pub template: LuaTable<'a>,
+    /// The "ship_skin_words" entry.
     pub words: LuaTable<'a>,
+    /// The "ship_skin_words_extra" entry.
     pub words_extra: Option<LuaTable<'a>>
 }
 
+/// The strengthen data.
 #[derive(Debug, Clone)]
 pub enum Strengthen<'a> {
+    /// Normal. Holds the "ship_data_strengthen" entry.
     Normal(LuaTable<'a>),
+    /// Research.
     Blueprint(BlueprintStrengthen<'a>),
+    // META.
     META(MetaStrengthen<'a>)
 }
 
+/// Strengthen data for a research ship.
 #[derive(Debug, Clone)]
 pub struct BlueprintStrengthen<'a> {
+    /// The "ship_data_blueprint" entry.
     pub data: LuaTable<'a>,
+    /// A reference to "ship_strengthen_blueprint".
     pub effect_lookup: &'a LuaTable<'a>
 }
 
+/// Strengthen data for a META ship.
 #[derive(Debug, Clone)]
 pub struct MetaStrengthen<'a> {
+    /// The "ship_strengthen_meta" entry.
     pub data: LuaTable<'a>,
+    /// A reference to "ship_meta_repair".
     pub repair_lookup: &'a LuaTable<'a>,
+    /// A reference to "ship_meta_repair_effect".
     pub repair_effect_lookup: &'a LuaTable<'a>
 }
 
@@ -69,6 +100,12 @@ pub struct MetaStrengthen<'a> {
 pub struct Retrofit<'a> {
     pub data: LuaTable<'a>,
     pub list_lookup: &'a LuaTable<'a>
+}
+
+#[derive(Debug, Clone)]
+pub struct AugmentSet<'a> {
+    pub id: u32,
+    pub table: LuaTable<'a>
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +136,7 @@ impl ShipSet<'_> {
             ($index:literal) => {{
                 let base: f32 = attrs.get($index)?;
                 let grow: f32 = attrs_growth.get($index)?;
-                ShipStatValue::new(base, grow, 0f32)
+                ShipStat::new(base, grow, 0f32)
             }};
         }
 
@@ -158,7 +195,7 @@ impl ShipSet<'_> {
             hull_type: convert_al::to_hull_type(read!(self.statistics, "type")),
             stars: read!(self.template, "star_max"),
             enhance_kind: EnhanceKind::Normal, // TODO
-            stats: ShipStats {
+            stats: ShipStatBlock {
                 hp: calc_stat!(1),
                 armor: convert_al::to_armor_type(read!(self.statistics, "armor_type")),
                 rld: calc_stat!(6),
@@ -245,7 +282,7 @@ impl ShipSet<'_> {
 }
 
 fn add_strengthen_stats(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    fn b(n: f32) -> ShipStatValue { ShipStatValue::new(n, 0f32, 0f32) }
+    fn b(n: f32) -> ShipStat { ShipStat::new(n, 0f32, 0f32) }
     ship.stats.fp += { let v: f32 = table.get(1)?; b(v) };
     ship.stats.trp += { let v: f32 = table.get(2)?; b(v) };
     ship.stats.aa += { let v: f32 = table.get(3)?; b(v) };
@@ -266,12 +303,6 @@ fn intersect<T: Eq>(target: &mut Vec<T>, other: &[T]) {
             }
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct AugmentSet<'a> {
-    pub id: u32,
-    pub table: LuaTable<'a>
 }
 
 impl AugmentSet<'_> {

@@ -5,7 +5,7 @@ use crate::context;
 use crate::skill_loader;
 
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    fn b(n: f32) -> ShipStatValue { ShipStatValue::new(n * 0.01f32, 0f32, 0f32) }
+    fn b(n: f32) -> ShipStat { ShipStat::new(n * 0.01f32, 0f32, 0f32) }
 
     let effect: LuaTable = table.get("effect")?;
     ship.stats.fp += { let v: f32 = effect.get(1)?; b(v) };

@@ -8,6 +8,7 @@ use azur_lane::skill::*;
 use super::AugmentParseError;
 use super::ShipParseError;
 
+/// View skill details of a ship or augment.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewSkill {
     pub source: ViewSkillSource,
@@ -15,6 +16,7 @@ pub struct ViewSkill {
     pub back: Option<String>
 }
 
+/// Where to load the skills from.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub enum ViewSkillSource {
     Ship(u32, Option<u8>),
@@ -30,14 +32,17 @@ impl From<ViewSkill> for ButtonArgs {
 type OwnedCreateEmbedField = (String, String, bool);
 
 impl ViewSkill {
+    /// Creates a new instance.
     pub fn new(source: ViewSkillSource) -> Self {
         Self { source, skill_index: None, back: None }
     }
 
+    /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(source: ViewSkillSource, back: String) -> Self {
         Self { source, skill_index: None, back: Some(back) }
     }
 
+    /// Modifies the create-reply with a preresolved list of skills and a base embed.
     fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> CreateReply {
         let index = self.skill_index.map(usize::from);
         let mut components = Vec::new();
@@ -49,7 +54,7 @@ impl ViewSkill {
         for (t_index, skill) in iterator.enumerate().take(4) {
             if Some(t_index) == index {
                 embed = embed.color(skill.category.color_rgb())
-                    .fields(self.create_ex_skill_field(skill));
+                    .fields(self.create_ex_skill_fields(skill));
             } else {
                 embed = embed.fields(self.create_skill_field(skill));
             }
@@ -69,20 +74,18 @@ impl ViewSkill {
 
         create.embed(embed).components(rows)
     }
-
-    fn button_with_skill(&self, index: usize) -> CreateButton {
-        self.new_button(utils::field!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
-    }
     
+    /// Modifies the create-reply with preresolved ship data.
     pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
         self.modify_with_skills(
             create,
             ship.skills.iter(),
-            CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_url(base_ship))
+            CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_wiki_url(base_ship))
         )
     }
 
+    /// Modifies the create-reply with preresolved augment data.
     pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
         self.modify_with_skills(
             create,
@@ -91,6 +94,12 @@ impl ViewSkill {
         )
     }
 
+    /// Creates a button that redirects to a skill index.
+    fn button_with_skill(&self, index: usize) -> CreateButton {
+        self.new_button(utils::field!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
+    }
+
+    /// Creates the embed field for a skill.
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
         [(
             format!("{} {}", skill.category.emoji(), skill.name),
@@ -99,7 +108,8 @@ impl ViewSkill {
         )]
     }
 
-    fn create_ex_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 2] {
+    /// Creates the embed fields for the selected skill.
+    fn create_ex_skill_fields(&self, skill: &Skill) -> [OwnedCreateEmbedField; 2] {
         [
             (
                 format!("{} __{}__", skill.category.emoji(), skill.name),
@@ -134,17 +144,18 @@ impl ButtonArgsModify for ViewSkill {
     }
 }
 
-macro_rules! idk {
-    ($opt:expr, $($arg:tt)*) => {
-        match $opt {
-            None => None,
-            Some(v) => Some(format!($($arg)*, sum = v))
-        }
-    };
-}
-
+/// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
     return join("\n\n", skill.barrages.iter().filter_map(get_skill_barrage_summary)).unwrap_or_else(String::new);
+
+    macro_rules! idk {
+        ($opt:expr, $($arg:tt)*) => {
+            match $opt {
+                None => None,
+                Some(v) => Some(format!($($arg)*, sum = v))
+            }
+        };
+    }
 
     fn get_skill_barrage_summary(barrage: &SkillBarrage) -> Option<String> {
         idk!(

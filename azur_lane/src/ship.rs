@@ -1,3 +1,5 @@
+//! Data structures relating directly to ships.
+
 use std::fmt::Display;
 use serde::*;
 
@@ -6,6 +8,7 @@ use super::Faction;
 use super::equip::*;
 use super::skill::*;
 
+/// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
     pub group_id: u32,
@@ -16,7 +19,7 @@ pub struct ShipData {
     pub stars: u8,
     #[serde(default)]
     pub enhance_kind: EnhanceKind,
-    pub stats: ShipStats,
+    pub stats: ShipStatBlock,
     pub equip_slots: Vec<EquipSlot>,
     pub shadow_equip: Vec<ShadowEquip>,
     pub skills: Vec<Skill>,
@@ -24,18 +27,19 @@ pub struct ShipData {
     pub skins: Vec<ShipSkin>
 }
 
+/// Provides stat block information for a ship.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipStats {
-    pub hp: ShipStatValue,
+pub struct ShipStatBlock {
+    pub hp: ShipStat,
     pub armor: ShipArmor,
-    pub rld: ShipStatValue,
-    pub fp: ShipStatValue,
-    pub trp: ShipStatValue,
-    pub eva: ShipStatValue,
-    pub aa: ShipStatValue,
-    pub avi: ShipStatValue,
-    pub acc: ShipStatValue,
-    pub asw: ShipStatValue,
+    pub rld: ShipStat,
+    pub fp: ShipStat,
+    pub trp: ShipStat,
+    pub eva: ShipStat,
+    pub aa: ShipStat,
+    pub avi: ShipStat,
+    pub acc: ShipStat,
+    pub asw: ShipStat,
     pub spd: f32,
     pub lck: f32,
     pub cost: u32,
@@ -43,73 +47,103 @@ pub struct ShipStats {
     pub amo: u32
 }
 
+/// Represents a single ship stat. Its value can be calculated on demand.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ShipStatValue(f32, f32, f32);
+pub struct ShipStat(f32, f32, f32);
 
-impl ShipStatValue {
+impl ShipStat {
+    /// Creates a new stat given its parameters.
     pub const fn new(base: f32, growth: f32, fixed: f32) -> Self {
         Self(base, growth, fixed)
     }
 
+    /// The base value, aka the level 1 stats.
     #[must_use]
     pub const fn base(&self) -> f32 { self.0 }
+
+    /// The level growth value.
     #[must_use]
     pub const fn growth(&self) -> f32 { self.1 }
+
+    /// A fixed addition unaffected by affinity.
     #[must_use]
     pub const fn fixed(&self) -> f32 { self.2 }
 
+    /// Calculates the actual value.
+    /// 
+    /// Depending on how the data was stored, this may be inaccurate for levels below 100.
     #[must_use]
     pub fn calc(&self, level: u32, affinity: f32) -> f32 {
         (self.base() + self.growth() * ((level - 1) as f32) * 0.001f32) * affinity + self.fixed()
     }
 }
 
-impl std::ops::Add<Self> for ShipStatValue {
+impl std::ops::Add<Self> for ShipStat {
     type Output = Self;
 
-    fn add(self, rhs: ShipStatValue) -> Self::Output {
+    fn add(self, rhs: ShipStat) -> Self::Output {
         Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
-impl std::ops::AddAssign for ShipStatValue {
+impl std::ops::AddAssign for ShipStat {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs
     }
 }
 
+/// A singular normal equipment slot of a ship.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipSlot {
+    /// Which kinds of equipment can be equipped in the slot.
     pub allowed: Vec<EquipKind>,
+    /// If a weapon slot, the data for the mount.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mount: Option<EquipWeaponMount>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShadowEquip {
-    pub name: String,
-    pub efficiency: f32,
-    pub weapons: Vec<Weapon>
-}
-
+/// Mount information for an [`EquipSlot`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipWeaponMount {
+    /// The mount efficiency, as displayed in-game.
     pub efficiency: f32,
+    /// The amount of mounts.
     pub mounts: u8,
+    /// The amount of parallel loads.
+    /// 
+    /// F.e. Gascogne's main gun and Unzen's torpedo has a value 2.
     pub parallel: u8,
+    /// How many preloads this slot has.
+    /// 
+    /// This is only meaningful for Battleship main guns, torpedoes, and missiles.
     pub preload: u8,
 }
 
+/// Provides information about "shadow" equipment; inherent gear that is not displayed in-game.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShadowEquip {
+    /// The name of the associated equipment.
+    pub name: String,
+    /// The mount efficiency. Same meaning as [`EquipWeaponMount::efficiency`].
+    pub efficiency: f32,
+    /// The weapons on that equipment.
+    pub weapons: Vec<Weapon>
+}
+
+/// Data for a ship skin. This may represent the default skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkin {
     pub skin_id: u32,
     pub name: String,
     pub description: String,
+    /// The default dialogue lines.
     pub words: ShipSkinWords,
+    /// Replacement dialogue lines, usually after oath.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub words_extra: Option<Box<ShipSkinWords>>
 }
 
+/// The block of dialogue for a given skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkinWords {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -164,30 +198,38 @@ pub struct ShipSkinWords {
     pub love: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oath: Option<String>,
+    /// Voices lines that may be played when sortieing other specific ships.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub couple_encourage: Vec<ShipCoupleEncourage>
 }
 
+/// Information about a ship line that may be displayed on the main screen.
+/// 
+/// Also see [`ShipSkinWords::main_screen`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipMainScreenLine(usize, String);
 
 impl ShipMainScreenLine {
+    /// Creates a new instance.
     #[must_use]
     pub fn new(index: usize, text: String) -> Self {
         Self(index, text)
     }
 
+    /// Gets the index for the line. Relevant for replacement.
     #[must_use]
     pub fn index(&self) -> usize {
         self.0
     }
 
+    /// Gets the text associated with the line.
     #[must_use]
     pub fn text(&self) -> &str {
         &self.1
     }
 }
 
+/// Data for voices lines that may be played when sortieing other specific ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipCoupleEncourage {
     pub line: String,
@@ -195,38 +237,63 @@ pub struct ShipCoupleEncourage {
     pub condition: ShipCouple
 }
 
+/// Condition for [`ShipCoupleEncourage`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShipCouple {
+    /// Triggered when other specific ships are present.
+    /// Holds a vector of ship group IDs.
     ShipGroup(Vec<u32>),
+    /// Triggered when ships of specified hull types are present.
     HullType(Vec<HullType>),
+    /// Triggered when ships of a specified rarity are present.
     Rarity(Vec<ShipRarity>),
+    /// Triggered when ships from a specified faction are present.
     Faction(Vec<Faction>),
+    /// Triggered when ships from the same illustrator are present.
+    /// 
+    /// Actual in-game data specifies which one, but it's only ever used to refer to the same one as the source ship's.
     Illustrator
 }
 
 define_data_enum! {
+    /// The rarities for a ship.
     pub enum ShipRarity for ShipRarityData {
+        /// The display name for the rarity.
         pub name: &'static str,
+        /// An RGB color that can be used to represent the rarity. 
         pub color_rgb: u32;
 
+        /// N (Common)
         N("N", 0xC0C0C0),
+        /// R (Rare)
         R("R", 0x9FE8FF),
+        /// E (Elite)
         E("E", 0xC4ADFF),
+        /// SR (Super Rare) / Priority
         SR("SR", 0xEDDD76),
+        /// UR (Ultra Rare) / Decisive
         UR("UR", 0xFF8D8D)
     }
 }
 
+/// The enhancement mode kind.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum EnhanceKind {
+    /// Normal. Enhancement by feeding spare duplicate ships.
     #[default]
     Normal,
+    /// Research ships enhanced with blueprints.
     Research,
+    /// META ships with their own nonsense.
     META
 }
 
 define_data_enum! {
+    /// The possible stat kinds.
+    /// 
+    /// Only includes ones that represent a numeric value.
     pub enum StatKind for StatKindData {
+        /// The in-game display name.
         pub name: &'static str;
 
         HP("HP"),
@@ -244,9 +311,13 @@ define_data_enum! {
 }
 
 define_data_enum! {
+    /// The possible hull types/designations for ships.
     pub enum HullType for HullTypeData {
+        /// The short-hand designation for the hull type.
         pub designation: &'static str,
+        /// The long hull type name.
         pub name: &'static str,
+        /// Which team type this hull type gets sortied in.
         pub team_type: TeamType;
 
         Unknown("??", "Unknown", TeamType::Vanguard),
@@ -273,6 +344,7 @@ define_data_enum! {
 }
 
 define_data_enum! {
+    /// The armor thickness of a ship.
     pub enum ShipArmor for ShipArmorData {
         pub name: &'static str;
 
@@ -283,6 +355,7 @@ define_data_enum! {
 }
 
 define_data_enum! {
+    /// The sortie team types.
     pub enum TeamType for TeamTypeData {
         pub name: &'static str;
 
@@ -299,6 +372,9 @@ impl Display for ShipArmor {
 }
 
 impl ShipRarity {
+    /// Returns the next higher rarity.
+    /// 
+    /// For [`ShipRarity::UR`], returns itself.
     #[must_use]
     pub fn next(self) -> Self {
         match self {
@@ -310,19 +386,20 @@ impl ShipRarity {
     }
 }
 
-impl ShipStats {
+impl ShipStatBlock {
+    /// Gets and calculates a certain stat value.
     #[must_use]
-    pub fn get_stat(&self, kind: StatKind) -> f32 {
+    pub fn calc_stat(&self, kind: StatKind, level: u32, affinity: f32) -> f32 {
         match kind {
-            StatKind::HP => self.hp.calc(125, 1.0),
-            StatKind::RLD => self.rld.calc(125, 1.0),
-            StatKind::FP => self.fp.calc(125, 1.0),
-            StatKind::TRP => self.trp.calc(125, 1.0),
-            StatKind::EVA => self.eva.calc(125, 1.0),
-            StatKind::AA => self.aa.calc(125, 1.0),
-            StatKind::AVI => self.avi.calc(125, 1.0),
-            StatKind::ACC => self.acc.calc(125, 1.0),
-            StatKind::ASW => self.asw.calc(125, 1.0),
+            StatKind::HP => self.hp.calc(level, affinity),
+            StatKind::RLD => self.rld.calc(level, affinity),
+            StatKind::FP => self.fp.calc(level, affinity),
+            StatKind::TRP => self.trp.calc(level, affinity),
+            StatKind::EVA => self.eva.calc(level, affinity),
+            StatKind::AA => self.aa.calc(level, affinity),
+            StatKind::AVI => self.avi.calc(level, affinity),
+            StatKind::ACC => self.acc.calc(level, affinity),
+            StatKind::ASW => self.asw.calc(level, affinity),
             StatKind::SPD => self.spd,
             StatKind::LCK => self.lck
         }

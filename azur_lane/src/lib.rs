@@ -5,15 +5,21 @@ pub mod ship;
 pub mod skill;
 pub mod equip;
 
+/// Definition data to be saved/loaded in bulk.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {
+    /// All known ships.
     pub ships: Vec<ship::ShipData>,
+    /// All known augments.
     pub augments: Vec<equip::Augment>
 }
 
 define_data_enum! {
+    /// A game faction/nation.
     pub enum Faction for FactionData {
+        /// The display name of the faction.
         pub name: &'static str,
+        /// The prefix usually used by ships of the faction.
         pub prefix: Option<&'static str>;
 
         Unknown("Unknown", None),

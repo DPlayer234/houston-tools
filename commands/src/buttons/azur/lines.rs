@@ -6,6 +6,7 @@ use utils::Discard;
 
 use super::ShipParseError;
 
+/// Views ship lines.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewLines {
     pub ship_id: u32,
@@ -15,6 +16,7 @@ pub struct ViewLines {
     pub back: Option<String>
 }
 
+/// Which part of the lines to display.
 #[derive(Debug, Clone, Copy, bitcode::Encode, bitcode::Decode, PartialEq, Eq)]
 pub enum ViewLinesPart {
     Info,
@@ -31,14 +33,17 @@ impl From<ViewLines> for ButtonArgs {
 }
 
 impl ViewLines {
+    /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
         Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: None }
     }
 
+    /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(ship_id: u32, back: String) -> Self {
         Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: Some(back) }
     }
 
+    /// Modifies the create-reply with preresolved ship and skin data.
     pub fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
         let words = match (&self, skin) {
             (ViewLines { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
@@ -47,7 +52,7 @@ impl ViewLines {
 
         let embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
-            .author(super::get_ship_url(ship))
+            .author(super::get_ship_wiki_url(ship))
             .description(self.get_description(data, words));
 
         let mut components = Vec::new();
@@ -90,18 +95,22 @@ impl ViewLines {
         create.embed(embed).components(components)
     }
     
+    /// Creates a button that redirects to a different Base/EX state.
     fn button_with_extra(&self, extra: bool) -> CreateButton {
         self.new_button(utils::field!(Self: extra), extra, || Sentinel::new(0, extra as u32))
     }
 
+    /// Creates a button that redirects to a different viewed part.
     fn button_with_part(&self, part: ViewLinesPart) -> CreateButton {
         self.new_button(utils::field!(Self: part), part, || Sentinel::new(1, part as u32))
     }
 
+    /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index(&self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
         self.new_select_option(&skin.name, utils::field!(Self: skin_index), index as u32)
     }
 
+    /// Creates the embed description for the current state.
     fn get_description(&self, data: &HBotData, words: &ShipSkinWords) -> String {
         let mut result = String::new();
 
@@ -180,6 +189,7 @@ impl ButtonArgsModify for ViewLines {
     }
 }
 
+/// Creates a label for a couple line.
 fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourage) -> String {
     match &opt.condition {
         ShipCouple::ShipGroup(ship_ids) => {

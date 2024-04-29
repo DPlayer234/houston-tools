@@ -1,8 +1,11 @@
+//! Provides a subset of data for ship/equipment skills.
+
 use serde::*;
 
 use crate::define_data_enum;
 use crate::equip::Weapon;
 
+/// Represents a single skill.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
     pub buff_id: u32,
@@ -13,12 +16,14 @@ pub struct Skill {
     pub barrages: Vec<SkillBarrage>,
 }
 
+/// Represents a skill barrage.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillBarrage {
     pub skill_id: u32,
     pub attacks: Vec<SkillAttack>,
 }
 
+/// Represents a skill barrage's attack.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillAttack {
     pub target: SkillAttackTarget,
@@ -26,8 +31,11 @@ pub struct SkillAttack {
 }
 
 define_data_enum! {
+    /// How a barrage attack chooses its target.
     pub enum SkillAttackTarget for SkillAttackTargetData {
+        /// The friendly display name for the targeting.
         pub friendly_name: &'static str,
+        /// A short-hand name.
         pub short_name: &'static str;
 
         Random("Random", "Rand."),
@@ -39,9 +47,13 @@ define_data_enum! {
 }
 
 define_data_enum! {
+    /// The category of the skill, or its "color".
     pub enum SkillCategory for SkillCategoryData {
+        /// A friendly display name for the category.
         pub friendly_name: &'static str,
+        /// A color matching the category.
         pub color_rgb: u32,
+        /// An emoji for the category.
         pub emoji: char;
 
         Offense("Offense", 0xDD2E44, '🟥'),
@@ -50,6 +62,7 @@ define_data_enum! {
     }
 }
 
+/// Represents basic information about a buff, to be extended later if needed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuffInfo {
     pub buff_id: u32,

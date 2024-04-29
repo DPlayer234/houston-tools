@@ -20,7 +20,7 @@ async fn ship(
     name: String
 ) -> HResult {
     let ship = ctx.data().azur_lane().ships_by_prefix(&name).next().ok_or(buttons::azur::ShipParseError)?;
-    let view = buttons::azur::ship::ViewShip::with_ship_id(ship.group_id);
+    let view = buttons::azur::ship::ViewShip::new(ship.group_id);
     ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;
     Ok(())
 }

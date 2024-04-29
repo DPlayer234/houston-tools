@@ -172,7 +172,7 @@ dependencies = [
  "mlua",
  "once_cell",
  "serde",
- "simd-json",
+ "serde_json",
 ]
 
 [[package]]
