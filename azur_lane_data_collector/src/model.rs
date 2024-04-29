@@ -195,7 +195,7 @@ impl ShipSet<'_> {
             skins: Vec::new()
         };
 
-        if ship.hull_type.data().team_type == TeamType::Submarine {
+        if ship.hull_type.team_type() == TeamType::Submarine {
             // I can't explain it but submarine fleet ship costs seem to be 1 too high
             ship.stats.cost -= 1;
         }

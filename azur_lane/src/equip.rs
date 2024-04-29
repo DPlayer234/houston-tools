@@ -2,7 +2,6 @@ use serde::*;
 
 use crate::define_data_enum;
 use crate::ship::*;
-use crate::data_def::*;
 use crate::skill::*;
 use super::Faction;
 
@@ -11,13 +10,13 @@ pub struct Equip {
     pub name: String,
     pub kind: EquipKind,
     pub faction: Faction,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub hull_allowed: Vec<HullType>,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub hull_disallowed: Vec<HullType>,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub weapons: Vec<Weapon>,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub stat_bonuses: Vec<EquipStatBonus>
 }
 
@@ -54,7 +53,7 @@ pub struct Bullet {
     pub velocity: f32,
     pub modifiers: ArmorModifiers,
 
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub attach_buff: Vec<BuffInfo>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]

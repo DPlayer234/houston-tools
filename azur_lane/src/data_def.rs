@@ -1,8 +1,8 @@
 #[macro_export]
 macro_rules! define_data_enum {
-    ($v:vis enum $name:ident for $data:ident { $($data_vis:vis $data_name:ident : $data_type:ty),* ; $($field:ident $arg:tt),* }) => {
+    ($v:vis enum $name:ident for $vd:vis $data:ident { $($data_vis:vis $data_name:ident : $data_type:ty),* ; $($field:ident $arg:tt),* }) => {
         #[derive(Debug, Clone)]
-        $v struct $data {
+        $vd struct $data {
             $($data_vis $data_name : $data_type),*
         }
 
@@ -11,37 +11,31 @@ macro_rules! define_data_enum {
             $($field),*
         }
 
-        impl $data {
-            #[must_use]
-            const fn new_auto_data($($data_name : $data_type),*) -> $data {
-                $data { $($data_name),* }
-            }
-        }
-
         impl $name {
             #[must_use]
-            pub fn data(self) -> &'static $data {
+            $vd const fn data(self) -> &'static $data {
+                const fn make_val($($data_name : $data_type),*) -> $data {
+                    $data { $($data_name),* }
+                }
+
                 match self {
                     $(
                         $name::$field => {
-                            const VAL: $data = $data::new_auto_data $arg;
+                            const VAL: $data = make_val $arg;
                             &VAL
                         }
                     ),*
                 }
             }
+
+            $(
+                #[must_use]
+                $data_vis const fn $data_name (self) -> $data_type {
+                    self.data().$data_name
+                }
+            )*
         }
     };
-}
-
-#[must_use]
-pub fn make_empty_vec<T>() -> Vec<T> {
-    Vec::new()
-}
-
-#[must_use]
-pub fn is_empty_vec<T>(arc: &Vec<T>) -> bool {
-    arc.is_empty()
 }
 
 #[must_use]

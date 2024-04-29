@@ -29,14 +29,14 @@ impl ViewAugment {
         Self { augment_id, back: Some(back) }
     }
 
-    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> anyhow::Result<CreateReply> {
+    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
         let mut description = String::new();
         for chunk in augment.stat_bonuses.chunks(3) {
             if !description.is_empty() { description.push('\n'); }
             for (index, stat) in chunk.iter().enumerate() {
                 if index != 0 { description.push_str(" \u{2E31} "); }
 
-                let name = stat.stat_kind.data().name;
+                let name = stat.stat_kind.name();
                 write!(description, "**`{}:`**`{: >len$}`", name, stat.amount + stat.random, len = 7 - name.len()).discard();
             }
         }
@@ -44,7 +44,7 @@ impl ViewAugment {
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(&augment.name))
             .description(description)
-            .color(ShipRarity::SR.data().color_rgb)
+            .color(ShipRarity::SR.color_rgb())
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
 
@@ -60,12 +60,12 @@ impl ViewAugment {
             components.insert(0, CreateButton::new(back).emoji('⏪').label("Back"));
         }
 
-        Ok(create.embed(embed).components(vec![CreateActionRow::Buttons(components)]))
+        create.embed(embed).components(vec![CreateActionRow::Buttons(components)])
     }
 
     fn get_skill_field(&self, label: &'static str, skill: Option<&Skill>) -> Option<SimpleEmbedFieldCreate> {
         skill.map(|s| {
-            (label, format!("{} **{}**", s.category.data().emoji, s.name), false)
+            (label, format!("{} **{}**", s.category.emoji(), s.name), false)
         })
     }
 }
@@ -73,6 +73,6 @@ impl ViewAugment {
 impl ButtonArgsModify for ViewAugment {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let augment = data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
-        self.modify_with_augment(create, augment)
+        Ok(self.modify_with_augment(create, augment))
     }
 }

@@ -2,7 +2,6 @@ use serde::*;
 
 use crate::define_data_enum;
 use crate::equip::Weapon;
-use crate::data_def::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
@@ -10,7 +9,7 @@ pub struct Skill {
     pub name: String,
     pub description: String,
     pub category: SkillCategory,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub barrages: Vec<SkillBarrage>,
 }
 
@@ -55,6 +54,6 @@ define_data_enum! {
 pub struct BuffInfo {
     pub buff_id: u32,
     pub probability: f32,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default, skip_serializing_if = "crate::data_def::is_default")]
     pub level: u32,
 }

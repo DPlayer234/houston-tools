@@ -38,7 +38,7 @@ impl ViewSkill {
         Self { source, skill_index: None, back: Some(back) }
     }
 
-    fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> anyhow::Result<CreateReply> {
+    fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> CreateReply {
         let index = self.skill_index.map(usize::from);
         let mut components = Vec::new();
 
@@ -48,7 +48,7 @@ impl ViewSkill {
 
         for (t_index, skill) in iterator.enumerate().take(4) {
             if Some(t_index) == index {
-                embed = embed.color(skill.category.data().color_rgb)
+                embed = embed.color(skill.category.color_rgb())
                     .fields(self.create_ex_skill_field(skill));
             } else {
                 embed = embed.fields(self.create_skill_field(skill));
@@ -67,33 +67,33 @@ impl ViewSkill {
             CreateActionRow::Buttons(components)
         ];
 
-        Ok(create.embed(embed).components(rows))
+        create.embed(embed).components(rows)
     }
 
     fn button_with_skill(&self, index: usize) -> CreateButton {
         self.new_button(utils::field!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
     }
     
-    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> anyhow::Result<CreateReply> {
+    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
         self.modify_with_skills(
             create,
             ship.skills.iter(),
-            CreateEmbed::new().color(ship.rarity.data().color_rgb).author(super::get_ship_url(base_ship))
+            CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_url(base_ship))
         )
     }
 
-    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> anyhow::Result<CreateReply> {
+    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
         self.modify_with_skills(
             create,
             augment.effect.iter().chain(augment.skill_upgrade.as_ref()),
-            CreateEmbed::new().color(ShipRarity::SR.data().color_rgb).author(CreateEmbedAuthor::new(&augment.name))
+            CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name))
         )
     }
 
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
         [(
-            format!("{} {}", skill.category.data().emoji, skill.name),
+            format!("{} {}", skill.category.emoji(), skill.name),
             utils::text::truncate(&skill.description, 1000),
             false
         )]
@@ -102,7 +102,7 @@ impl ViewSkill {
     fn create_ex_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 2] {
         [
             (
-                format!("{} __{}__", skill.category.data().emoji, skill.name),
+                format!("{} __{}__", skill.category.emoji(), skill.name),
                 utils::text::truncate(&skill.description, 1000),
                 false
             ),
@@ -124,11 +124,11 @@ impl ButtonArgsModify for ViewSkill {
             ViewSkillSource::Ship(ship_id, retro_index) => {
                 let base_ship = data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
                 let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                self.modify_with_ship(create, ship, Some(base_ship))
+                Ok(self.modify_with_ship(create, ship, Some(base_ship)))
             }
             ViewSkillSource::Augment(augment_id) => {
                 let augment = data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
-                self.modify_with_augment(create, augment)
+                Ok(self.modify_with_augment(create, augment))
             }
         }
     }
@@ -160,7 +160,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             WeaponData::Aircraft(aircraft) => idk!(
                 get_aircraft_summary(aircraft),
                 "`{: >5} | {: >6} x Aircraft                            `\n{sum}",
-                attack.target.data().short_name, aircraft.amount
+                attack.target.short_name(), aircraft.amount
             )
         }
     }
@@ -190,10 +190,10 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 {: >6} x{: >6.1} | \
                 {: >4}: {: >3.0}/{: >3.0}/{: >3.0} | \
                 {: >3.0}% {: >3}`",
-                target.map(|t| t.data().short_name).unwrap_or(""),
+                target.map(|t| t.short_name()).unwrap_or(""),
                 amount, barrage.damage * barrage.coefficient,
-                key.ammo.data().short_name, l * 100f32, m * 100f32, h * 100f32,
-                barrage.scaling * 100f32, barrage.scaling_stat.data().name
+                key.ammo.short_name(), l * 100f32, m * 100f32, h * 100f32,
+                barrage.scaling * 100f32, barrage.scaling_stat.name()
             )
         }))
     }

@@ -5,7 +5,6 @@ use crate::define_data_enum;
 use super::Faction;
 use super::equip::*;
 use super::skill::*;
-use crate::data_def::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
@@ -123,7 +122,7 @@ pub struct ShipSkinWords {
     pub login: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub main_screen: Vec<ShipMainScreenLine>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub touch: Option<String>,
@@ -165,7 +164,7 @@ pub struct ShipSkinWords {
     pub love: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oath: Option<String>,
-    #[serde(default = "make_empty_vec", skip_serializing_if = "is_empty_vec")]
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub couple_encourage: Vec<ShipCoupleEncourage>
 }
 
@@ -295,7 +294,7 @@ define_data_enum! {
 
 impl Display for ShipArmor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.data().name)
+        f.write_str(self.name())
     }
 }
 

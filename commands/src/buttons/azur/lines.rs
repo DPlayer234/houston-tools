@@ -39,14 +39,14 @@ impl ViewLines {
         Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: Some(back) }
     }
 
-    pub fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> anyhow::Result<CreateReply> {
+    pub fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
         let words = match (&self, skin) {
             (ViewLines { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
         };
 
         let embed = CreateEmbed::new()
-            .color(ship.rarity.data().color_rgb)
+            .color(ship.rarity.color_rgb())
             .author(super::get_ship_url(ship))
             .description(self.get_description(data, words));
 
@@ -87,7 +87,7 @@ impl ViewLines {
             components.push(CreateActionRow::SelectMenu(select));
         }
 
-        Ok(create.embed(embed).components(components))
+        create.embed(embed).components(components)
     }
     
     fn button_with_extra(&self, extra: bool) -> CreateButton {
@@ -176,7 +176,7 @@ impl ButtonArgsModify for ViewLines {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         let skin = ship.skins.get(self.skin_index as usize).ok_or(ShipParseError)?;
-        self.modify_with_ship(data, create, ship, skin)
+        Ok(self.modify_with_ship(data, create, ship, skin))
     }
 }
 
@@ -205,7 +205,7 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         }
         ShipCouple::HullType(hull_types) => {
             let hull_types = hull_types.iter()
-                .map(|hull_type| hull_type.data().designation)
+                .map(|hull_type| hull_type.designation())
                 .collect::<Vec<_>>()
                 .join(", ");
 
@@ -217,7 +217,7 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         }
         ShipCouple::Rarity(rarities) => {
             let rarities = rarities.iter()
-                .map(|rarity| rarity.data().name)
+                .map(|rarity| rarity.name())
                 .collect::<Vec<_>>()
                 .join(", ");
 
@@ -229,7 +229,7 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         }
         ShipCouple::Faction(factions) => {
             let factions = factions.iter()
-                .map(|faction| faction.data().name)
+                .map(|faction| faction.name())
                 .collect::<Vec<_>>()
                 .join(", ");
 

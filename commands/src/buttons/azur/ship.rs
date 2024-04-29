@@ -35,19 +35,17 @@ impl ViewShip {
 
     pub fn modify_with_ship(self, data: &HBotData, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
-        let rarity = ship.rarity.data();
-        let hull_type = ship.hull_type.data();
 
         let description = format!(
             "[{}] {:★<star_pad$}\n[{}] {} {}",
-            rarity.name, '★', hull_type.designation, ship.faction.data().name, hull_type.name,
+            ship.rarity.name(), '★', ship.hull_type.designation(), ship.faction.name(), ship.hull_type.name(),
             star_pad = usize::from(ship.stars)
         );
 
         let embed = CreateEmbed::new()
             .author(super::get_ship_url(base_ship))
             .description(description)
-            .color(rarity.color_rgb)
+            .color(ship.rarity.color_rgb())
             .fields(self.get_stats_field(ship))
             .fields(self.get_equip_field(ship))
             .fields(self.get_skills_field(ship));
@@ -117,14 +115,13 @@ impl ViewShip {
             },
             _ => {
                 rows.push(CreateActionRow::Buttons(
-                    Some(base_button)
-                        .into_iter()
+                    std::iter::once(base_button)
                         .chain(
                             base_ship.retrofits.iter().enumerate()
                                 .filter_map(|(index, retro)| {
                                     let index = u8::try_from(index).ok()?;
                                     let result = self.button_with_retrofit(Some(index))
-                                        .label(format!("Retrofit ({})", retro.hull_type.data().team_type.data().name))
+                                        .label(format!("Retrofit ({})", retro.hull_type.team_type().name()))
                                         .style(ButtonStyle::Secondary);
                                     Some(result)
                                 })
@@ -158,7 +155,7 @@ impl ViewShip {
             ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
         }
         
-        if ship.hull_type.data().team_type != TeamType::Submarine {
+        if ship.hull_type.team_type() != TeamType::Submarine {
             [(
                 "Stats",
                 format!(
@@ -169,7 +166,7 @@ impl ViewShip {
                     **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
                     **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
                     ",
-                    s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                    s!(stats.hp), stats.armor.name(), s!(stats.rld),
                     s!(stats.fp), s!(stats.trp), s!(stats.eva),
                     s!(stats.aa), s!(stats.avi), s!(stats.acc),
                     s!(stats.asw), f(stats.spd),
@@ -188,7 +185,7 @@ impl ViewShip {
                     **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
                     **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
                     ",
-                    s!(stats.hp), stats.armor.data().name, s!(stats.rld),
+                    s!(stats.hp), stats.armor.name(), s!(stats.rld),
                     s!(stats.fp), s!(stats.trp), s!(stats.eva),
                     s!(stats.aa), s!(stats.avi), s!(stats.acc),
                     stats.oxy, stats.amo, f(stats.spd),
@@ -233,7 +230,7 @@ impl ViewShip {
                 let mut text = String::new();
                 for s in ship.skills.iter() {
                     if !text.is_empty() { text.push('\n'); }
-                    write!(text, "{} **{}**", s.category.data().emoji, s.name).discard();
+                    write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
                 }
                 Some(("Skills", text, true))
             }
