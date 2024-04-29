@@ -16,6 +16,7 @@ features = ["derive"]
 
 [dependencies.mlua]
 version = "0.9.7"
+# luajit is not supported because the game scripts have an absurd amount of constants
 features = ["lua54", "vendored"]
 
 [dependencies.serde]

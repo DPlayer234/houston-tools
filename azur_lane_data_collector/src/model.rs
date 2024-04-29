@@ -23,9 +23,9 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
 });
 
 #[derive(Debug, Clone)]
-pub struct Group<'a> {
+pub struct ShipGroup {
     pub id: u32,
-    pub tables: Vec<ShipSet<'a>>
+    pub members: Vec<u32>
 }
 
 #[derive(Debug, Clone)]
@@ -35,15 +35,6 @@ pub struct ShipSet<'a> {
     pub statistics: LuaTable<'a>,
     pub strengthen: Strengthen<'a>,
     pub retrofit_data: Option<Retrofit<'a>>
-}
-
-#[derive(Debug, Clone)]
-pub struct ShipCandidate<'a> {
-    pub id: u32,
-    pub mlb: ShipSet<'a>,
-    pub retrofits: Vec<ShipSet<'a>>,
-    pub retrofit_data: Option<Retrofit<'a>>,
-    pub skins: Vec<SkinSet<'a>>
 }
 
 #[derive(Debug, Clone)]
@@ -278,12 +269,12 @@ fn intersect<T: Eq>(target: &mut Vec<T>, other: &[T]) {
 }
 
 #[derive(Debug, Clone)]
-pub struct AugmentCandidate<'a> {
+pub struct AugmentSet<'a> {
     pub id: u32,
     pub table: LuaTable<'a>
 }
 
-impl AugmentCandidate<'_> {
+impl AugmentSet<'_> {
     pub fn to_augment(&self, lua: &Lua) -> LuaResult<Augment> {
         macro_rules! read {
             ($field:expr) => {

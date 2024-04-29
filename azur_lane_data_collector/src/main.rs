@@ -32,13 +32,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let lua = Lua::new();
 
+    let start = std::time::Instant::now();
+
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", cli.input)?;
     lua.load(include_str!("assets/lua_init.lua"))
         .set_name("main")
         .set_mode(mlua::ChunkMode::Text)
         .exec()?;
 
-    println!("Init done.");
+    println!("Init done. ({:.2?})", start.elapsed());
 
     // General:
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
@@ -77,9 +79,21 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
 
             let template: LuaTable = context!(ship_data_template.get(id); "ship_data_template with id {id}")?;
+            let group_id: u32 = context!(template.get("group_type"); "group_type of ship_data_template with id {id}")?;
+
+            groups.entry(group_id)
+                .or_insert_with(|| ShipGroup { id: group_id, members: Vec::new() })
+                .members.push(id);
+
+            Ok(())
+        })?;
+
+        println!("Ship groups: {} ({:.2?})", groups.len(), start.elapsed());
+
+        let make_ship_set = |id: u32| -> LuaResult<ShipSet> {
+            let template: LuaTable = context!(ship_data_template.get(id); "!ship_data_template with id {id}")?;
             let statistics: LuaTable = context!(ship_data_statistics.get(id); "ship_data_statistics with id {id}")?;
             
-            let group_id: u32 = context!(template.get("group_type"); "group_type of ship_data_template with id {id}")?;
             let strengthen_id: u32 = context!(template.get("strengthen_id"); "strengthen_id of ship_data_template with id {id}")?;
             let _: u32 = context!(template.get("id"); "id of ship_data_template with id {id}")?;
             
@@ -97,62 +111,45 @@ fn main() -> Result<(), Box<dyn Error>> {
             let retrofit: Option<LuaTable> = context!(ship_data_trans.get(strengthen_id); "ship_data_trans with {id}")?;
             let retrofit = retrofit.map(|r| Retrofit { data: r, list_lookup: &transform_data_template });
 
-            let ship = ShipSet {
+            Ok(ShipSet {
                 id,
                 template,
                 statistics,
                 strengthen,
                 retrofit_data: retrofit
-            };
+            })
+        };
 
-            groups.entry(group_id)
-                .or_insert_with(|| Group { id: group_id, tables: Vec::new() })
-                .tables.push(ship);
+        let config = &*CONFIG;
+        let mut ships = groups.into_values().map(|group| {
+            let members = group.members.into_iter()
+                .map(make_ship_set)
+                .collect::<LuaResult<Vec<_>>>()?;
 
-            Ok(())
-        })?;
-
-        let mut candidates = Vec::new();
-        for group in groups.into_values() {
             let mlb_max_id = group.id * 10 + 4;
-            let Some(mlb) = group.tables.iter().filter(|t| t.id <= mlb_max_id).max_by_key(|t| t.id) else {
+            let Some(raw_mlb) = members.iter().filter(|t| t.id <= mlb_max_id).max_by_key(|t| t.id) else {
                 Err(LuaError::external(DataError::NoMlb).with_context(|_| format!("no mlb for ship with id {}", group.id)))?
             };
 
-            let retrofits = group.tables.iter().filter(|t| t.id > mlb.id).cloned().collect();
+            let raw_retrofits: Vec<&ShipSet> = members.iter().filter(|t| t.id > raw_mlb.id).collect();
 
-            let skins: Vec<u32> = context!(ship_skin_template_get_id_list_by_ship_group.get(group.id); "skin ids for ship with id {}", group.id)?;
-            let skins = skins.into_iter().map(|skin_id| Ok(SkinSet {
+            let raw_skins: Vec<u32> = context!(ship_skin_template_get_id_list_by_ship_group.get(group.id); "skin ids for ship with id {}", group.id)?;
+            let raw_skins = raw_skins.into_iter().map(|skin_id| Ok(SkinSet {
                 skin_id,
                 template: context!(ship_skin_template.get(skin_id); "skin template {} for ship {}", skin_id, group.id)?,
                 words: context!(ship_skin_words.get(skin_id); "skin words {} for ship {}", skin_id, group.id)?,
                 words_extra: context!(ship_skin_words_extra.get(skin_id); "skin words extra {} for ship {}", skin_id, group.id)?,
             })).collect::<LuaResult<Vec<_>>>()?;
-
-            candidates.push(ShipCandidate {
-                id: group.id,
-                mlb: mlb.clone(),
-                retrofits,
-                retrofit_data: mlb.retrofit_data.clone(),
-                skins
-            });
-        }
-
-        candidates.sort_by_key(|t| t.id);
-        println!("Ships: {}", candidates.len());
-
-        let config = &*CONFIG;
-        let mut ships = Vec::new();
-        for candidate in candidates {
-            let mut mlb = candidate.mlb.to_ship_data(&lua)?;
+            
+            let mut mlb = raw_mlb.to_ship_data(&lua)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
                 mlb.name = name_override.clone();
             }
             
-            if let Some(retrofit_data) = candidate.retrofit_data {
-                for retrofit_set in candidate.retrofits {
+            if let Some(ref retrofit_data) = raw_mlb.retrofit_data {
+                for retrofit_set in raw_retrofits {
                     let mut retrofit = retrofit_set.to_ship_data(&lua)?;
-                    enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
+                    enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
         
                     fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
                     mlb.retrofits.push(retrofit);
@@ -160,17 +157,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 if mlb.retrofits.is_empty() {
                     let mut retrofit = mlb.clone();
-                    enhance::retrofit::apply_retrofit(&lua, &mut retrofit, &retrofit_data)?;
+                    enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
 
-                    fix_up_retrofitted_data(&mut retrofit, &candidate.mlb)?;
+                    fix_up_retrofitted_data(&mut retrofit, &raw_mlb)?;
                     mlb.retrofits.push(retrofit); 
                 }
             }
 
-            mlb.skins.extend(candidate.skins.iter().map(skins::load_skin).collect::<LuaResult<Vec<_>>>()?);
-            ships.push(mlb);
-        }
+            mlb.skins.extend(raw_skins.iter().map(skins::load_skin).collect::<LuaResult<Vec<_>>>()?);
+            Ok(mlb)
+        }).collect::<LuaResult<Vec<_>>>()?;
+        
+        println!("Built Ship data. ({:.2?})", start.elapsed());
 
+        ships.sort_by_key(|t| t.group_id);
         ships
     };
 
@@ -178,28 +178,31 @@ fn main() -> Result<(), Box<dyn Error>> {
         let spweapon_data_statistics: LuaTable = context!(pg.get("spweapon_data_statistics"); "global pg.spweapon_data_statistics")?;
         let spweapon_data_statistics_all: LuaTable = context!(spweapon_data_statistics.get("all"); "global pg.spweapon_data_statistics.all")?;
 
-        let mut candidates: HashMap<u32, AugmentCandidate> = HashMap::new();
+        let mut groups: HashMap<u32, u32> = HashMap::new();
         spweapon_data_statistics_all.for_each(|_: u32, id: u32| {
             let statistics: LuaTable = context!(spweapon_data_statistics.get(id); "spweapon_data_statistics with id {id}")?;
             
             let base_id: Option<u32> = context!(statistics.get("base"); "base of spweapon_data_statistics with id {id}")?;
             let base_id = base_id.unwrap_or(id);
 
-            let data = AugmentCandidate { id, table: statistics };
-            candidates.entry(base_id)
-                .and_modify(|e| { if e.id < id { *e = data.clone() } })
-                .or_insert(data);
+            groups.entry(base_id)
+                .and_modify(|e| { if *e < id { *e = id } })
+                .or_insert(id);
 
             Ok(())
         })?;
 
-        let mut augments = candidates.into_values()
-            .map(|c| c.to_augment(&lua))
-            .collect::<LuaResult<Vec<_>>>()?;
+        println!("Augments: {} ({:.2?})", groups.len(), start.elapsed());
+
+        let mut augments = groups.into_values().map(|id| {
+            let statistics: LuaTable = context!(spweapon_data_statistics.get(id); "spweapon_data_statistics with id {id}")?;
+            let data = AugmentSet { id, table: statistics };
+            data.to_augment(&lua)
+        }).collect::<LuaResult<Vec<_>>>()?;
+        
+        println!("Built Augment data. ({:.2?})", start.elapsed());
         
         augments.sort_by_key(|t| t.augment_id);
-        println!("Augments: {}", augments.len());
-
         augments
     };
 
@@ -218,7 +221,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         simd_json::to_writer_pretty(&f, &out_data)?;
     }
 
-    println!("Written {} bytes.", f.metadata()?.len());
+    println!("Written {} bytes. ({:.2?})", f.metadata()?.len(), start.elapsed());
     drop(f);
 
     Ok(())
