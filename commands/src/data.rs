@@ -16,7 +16,7 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
 pub struct HBotData {
     user_data: chashmap::CHashMap<UserId, HUserData>,
-    azur_lane: Lazy<HAzurLane>
+    azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>
 }
 
 #[derive(Debug, Clone)]
@@ -53,11 +53,17 @@ impl std::fmt::Debug for HBotData {
 }
 
 impl HBotData {
-    pub fn new(azur_lane: Lazy<HAzurLane>) -> Self {
+    pub fn new(azur_lane: impl Send + FnOnce() -> azur_lane::DefinitionData + 'static) -> Self {
         HBotData {
             user_data: chashmap::CHashMap::new(),
-            azur_lane
+            azur_lane: Lazy::new(Box::new(move || {
+                HAzurLane::from(azur_lane())
+            }))
         }
+    }
+
+    pub fn force_init(&self) {
+        let _ = self.azur_lane();
     }
 }
 

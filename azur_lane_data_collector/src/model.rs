@@ -7,7 +7,7 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 
-use crate::context;
+use crate::{context, from_const_json_str};
 use crate::convert_al;
 use crate::enhance;
 use crate::skill_loader;
@@ -19,7 +19,7 @@ pub struct Config {
 }
 
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
-    serde_json::from_str(include_str!("assets/config.json")).unwrap()
+    from_const_json_str!(include_str!("assets/config.json")).unwrap()
 });
 
 #[derive(Debug, Clone)]

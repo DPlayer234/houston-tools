@@ -213,9 +213,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     if cli.minimize {
-        serde_json::to_writer(&f, &out_data)?;
+        simd_json::to_writer(&f, &out_data)?;
     } else {
-        serde_json::to_writer_pretty(&f, &out_data)?;
+        simd_json::to_writer_pretty(&f, &out_data)?;
     }
 
     println!("Written {} bytes.", f.metadata()?.len());
