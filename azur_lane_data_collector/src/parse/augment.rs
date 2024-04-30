@@ -1,4 +1,3 @@
-use std::num::NonZeroU32;
 use mlua::prelude::*;
 use azur_lane::equip::*;
 
@@ -46,7 +45,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     // ID of the only ship group this can be equipped to, if unique.
     // As with the effect, always present but 0 if not used.
     let unique_ship_id: u32 = read!("unique");
-    let unique_ship_id = NonZeroU32::new(unique_ship_id);
+    let unique_ship_id = if unique_ship_id != 0 { Some(unique_ship_id) } else { None };
 
     Ok(Augment {
         augment_id: set.id,

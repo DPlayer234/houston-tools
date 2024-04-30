@@ -90,14 +90,14 @@ pub fn load_equips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<Equip>> {
 
 /// Loads a weapon from the Lua state.
 pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
-    const RLD_MULT_AT_100: f32 = 0.006650724f32;
+    const RLD_MULT_AT_100: f64 = 0.006650724;
 
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let weapon_property: LuaTable = context!(pg.get("weapon_property"); "global pg.weapon_property")?;
     let weapon_data: LuaTable = context!(weapon_property.get(weapon_id); "weapon property for id {weapon_id}")?;
 
     let weapon_type: u32 = context!(weapon_data.get("type"); "weapon type in weapon {weapon_id}")?;
-    let reload_max: f32 = weapon_data.get("reload_max")?;
+    let reload_max: f64 = weapon_data.get("reload_max")?;
 
     let data = match RoughWeaponType::from(weapon_type) {
         RoughWeaponType::Bullet => {
@@ -112,8 +112,8 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
             WeaponData::Bullets(Barrage {
                 damage: weapon_data.get("damage")?,
-                coefficient: { let raw: f32 = weapon_data.get("corrected")?; raw / 100f32 },
-                scaling: { let raw: f32 = weapon_data.get("attack_attribute_ratio")?; raw / 100f32 },
+                coefficient: { let raw: f64 = weapon_data.get("corrected")?; raw * 0.01 },
+                scaling: { let raw: f64 = weapon_data.get("attack_attribute_ratio")?; raw * 0.01 },
                 scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(weapon_data.get("attack_attribute")?),
                 range: weapon_data.get("range")?,
                 firing_angle: weapon_data.get("angle")?,
@@ -137,7 +137,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 amount += (senior_repeat + 1) * (primal_repeat + 1);
             }
 
-            let speed: f32 = aircraft.get("speed")?;
+            let speed: f64 = aircraft.get("speed")?;
             let weapons: Vec<u32> = aircraft.get("weapon_ID")?;
             let weapons = weapons.into_iter()
                 .map(|id| load_weapon(lua, id))
@@ -193,7 +193,7 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
     if let Some(existing) = bullets.iter_mut().find(|b| b.bullet_id == bullet_id) {
         existing.amount += amount;
     } else {
-        let armor_mods: [f32; 3] = bullet.get("damage_type")?;
+        let armor_mods: [f64; 3] = bullet.get("damage_type")?;
         let pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in bullet {bullet_id}")?;
         let kind = convert_al::to_bullet_kind(bullet.get("type")?);
 
@@ -202,12 +202,12 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
         if let Some(attach_buff_raw) = attach_buff_raw {
             for buff in attach_buff_raw {
                 let buff_id: u32 = buff.get("buff_id")?;
-                let probability: Option<f32> = buff.get("rant" /* sic */)?;
+                let probability: Option<f64> = buff.get("rant" /* sic */)?;
                 let level: Option<u32> = buff.get("level")?;
 
                 attach_buff.push(BuffInfo {
                     buff_id,
-                    probability: probability.map(|f| f * 0.0001).unwrap_or(1f32),
+                    probability: probability.map(|f| f * 0.0001).unwrap_or(1f64),
                     level: level.unwrap_or(1)
                 })
             }
@@ -227,8 +227,8 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
                 let hit_type: LuaTable = context!(bullet.get("hit_type"); "hit_type in bullet {bullet_id}")?;
                 let extra_param: LuaTable = context!(bullet.get("extra_param"); "extra_param in bullet {bullet_id}")?;
 
-                let spread_x: Option<f32> = context!(extra_param.get("randomOffsetX"); "randomOffsetX in bullet {bullet_id}")?;
-                let spread_y: Option<f32> = context!(extra_param.get("randomOffsetZ"); "randomOffsetZ in bullet {bullet_id}")?;
+                let spread_x: Option<f64> = context!(extra_param.get("randomOffsetX"); "randomOffsetX in bullet {bullet_id}")?;
+                let spread_y: Option<f64> = context!(extra_param.get("randomOffsetZ"); "randomOffsetZ in bullet {bullet_id}")?;
 
                 Some(BulletSpread {
                     spread_x: spread_x.unwrap_or_default(),

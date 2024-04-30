@@ -66,7 +66,7 @@ define_data_enum! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuffInfo {
     pub buff_id: u32,
-    pub probability: f32,
+    pub probability: f64,
     #[serde(default, skip_serializing_if = "crate::data_def::is_default")]
     pub level: u32,
 }

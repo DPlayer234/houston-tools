@@ -40,8 +40,8 @@ pub struct ShipStatBlock {
     pub avi: ShipStat,
     pub acc: ShipStat,
     pub asw: ShipStat,
-    pub spd: f32,
-    pub lck: f32,
+    pub spd: f64,
+    pub lck: f64,
     pub cost: u32,
     pub oxy: u32,
     pub amo: u32
@@ -49,48 +49,7 @@ pub struct ShipStatBlock {
 
 /// Represents a single ship stat. Its value can be calculated on demand.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ShipStat(f32, f32, f32);
-
-impl ShipStat {
-    /// Creates a new stat given its parameters.
-    pub const fn new(base: f32, growth: f32, fixed: f32) -> Self {
-        Self(base, growth, fixed)
-    }
-
-    /// The base value, aka the level 1 stats.
-    #[must_use]
-    pub const fn base(&self) -> f32 { self.0 }
-
-    /// The level growth value.
-    #[must_use]
-    pub const fn growth(&self) -> f32 { self.1 }
-
-    /// A fixed addition unaffected by affinity.
-    #[must_use]
-    pub const fn fixed(&self) -> f32 { self.2 }
-
-    /// Calculates the actual value.
-    /// 
-    /// Depending on how the data was stored, this may be inaccurate for levels below 100.
-    #[must_use]
-    pub fn calc(&self, level: u32, affinity: f32) -> f32 {
-        (self.base() + self.growth() * ((level - 1) as f32) * 0.001f32) * affinity + self.fixed()
-    }
-}
-
-impl std::ops::Add<Self> for ShipStat {
-    type Output = Self;
-
-    fn add(self, rhs: ShipStat) -> Self::Output {
-        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-
-impl std::ops::AddAssign for ShipStat {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
-    }
-}
+pub struct ShipStat(f64, f64, f64);
 
 /// A singular normal equipment slot of a ship.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,7 +65,7 @@ pub struct EquipSlot {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipWeaponMount {
     /// The mount efficiency, as displayed in-game.
-    pub efficiency: f32,
+    pub efficiency: f64,
     /// The amount of mounts.
     pub mounts: u8,
     /// The amount of parallel loads.
@@ -125,7 +84,7 @@ pub struct ShadowEquip {
     /// The name of the associated equipment.
     pub name: String,
     /// The mount efficiency. Same meaning as [`EquipWeaponMount::efficiency`].
-    pub efficiency: f32,
+    pub efficiency: f64,
     /// The weapons on that equipment.
     pub weapons: Vec<Weapon>
 }
@@ -208,26 +167,6 @@ pub struct ShipSkinWords {
 /// Also see [`ShipSkinWords::main_screen`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipMainScreenLine(usize, String);
-
-impl ShipMainScreenLine {
-    /// Creates a new instance.
-    #[must_use]
-    pub fn new(index: usize, text: String) -> Self {
-        Self(index, text)
-    }
-
-    /// Gets the index for the line. Relevant for replacement.
-    #[must_use]
-    pub fn index(&self) -> usize {
-        self.0
-    }
-
-    /// Gets the text associated with the line.
-    #[must_use]
-    pub fn text(&self) -> &str {
-        &self.1
-    }
-}
 
 /// Data for voices lines that may be played when sortieing other specific ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -371,25 +310,10 @@ impl Display for ShipArmor {
     }
 }
 
-impl ShipRarity {
-    /// Returns the next higher rarity.
-    /// 
-    /// For [`ShipRarity::UR`], returns itself.
-    #[must_use]
-    pub fn next(self) -> Self {
-        match self {
-            Self::N => Self::R,
-            Self::R => Self::E,
-            Self::E => Self::SR,
-            Self::SR | Self::UR => Self::UR,
-        }
-    }
-}
-
 impl ShipStatBlock {
     /// Gets and calculates a certain stat value.
     #[must_use]
-    pub fn calc_stat(&self, kind: StatKind, level: u32, affinity: f32) -> f32 {
+    pub fn calc_stat(&self, kind: StatKind, level: u32, affinity: f64) -> f64 {
         match kind {
             StatKind::HP => self.hp.calc(level, affinity),
             StatKind::RLD => self.rld.calc(level, affinity),
@@ -402,6 +326,110 @@ impl ShipStatBlock {
             StatKind::ASW => self.asw.calc(level, affinity),
             StatKind::SPD => self.spd,
             StatKind::LCK => self.lck
+        }
+    }
+}
+
+impl ShipStat {
+    /// Creates a stat with all zeroes.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self(0f64, 0f64, 0f64)
+    }
+
+    /// Sets the base value, aka the level 1 stats.
+    #[must_use]
+    pub const fn set_base(mut self, base: f64) -> Self {
+        self.0 = base;
+        self
+    }
+
+    /// Sets the level growth value.
+    #[must_use]
+    pub const fn set_growth(mut self, growth: f64) -> Self {
+        self.1 = growth;
+        self
+    }
+
+    /// Sets the fixed addition unaffected by affinity.
+    #[must_use]
+    pub const fn set_fixed(mut self, fixed: f64) -> Self {
+        self.2 = fixed;
+        self
+    }
+
+    /// The base value, aka the level 1 stats.
+    #[must_use]
+    pub const fn base(&self) -> f64 { self.0 }
+
+    /// The level growth value.
+    #[must_use]
+    pub const fn growth(&self) -> f64 { self.1 }
+
+    /// A fixed addition unaffected by affinity.
+    #[must_use]
+    pub const fn fixed(&self) -> f64 { self.2 }
+
+    /// Calculates the actual value.
+    /// 
+    /// Depending on how the data was stored, this may be inaccurate for levels below 100.
+    #[must_use]
+    pub fn calc(&self, level: u32, affinity: f64) -> f64 {
+        (self.base() + self.growth() * f64::from(level - 1) * 0.001) * affinity + self.fixed()
+    }
+}
+
+impl Default for ShipStat {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::ops::Add<Self> for ShipStat {
+    type Output = Self;
+
+    fn add(self, rhs: ShipStat) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+impl std::ops::AddAssign for ShipStat {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
+impl ShipMainScreenLine {
+    /// Creates a new instance.
+    #[must_use]
+    pub fn new(index: usize, text: String) -> Self {
+        Self(index, text)
+    }
+
+    /// Gets the index for the line. Relevant for replacement.
+    #[must_use]
+    pub fn index(&self) -> usize {
+        self.0
+    }
+
+    /// Gets the text associated with the line.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.1
+    }
+}
+
+impl ShipRarity {
+    /// Returns the next higher rarity.
+    /// 
+    /// For [`ShipRarity::UR`], returns itself.
+    #[must_use]
+    pub fn next(self) -> Self {
+        match self {
+            Self::N => Self::R,
+            Self::R => Self::E,
+            Self::E => Self::SR,
+            Self::SR | Self::UR => Self::UR,
         }
     }
 }

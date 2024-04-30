@@ -20,7 +20,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
         // where the nested map keys are the effect type and its value the amount.
         let effects: Vec<LuaTable> = transform.get("effect")?;
         for effect in effects {
-            effect.for_each(|k: String, v: f32| {
+            effect.for_each(|k: String, v: f64| {
                 // Stats added by retrofits are NOT affected by affinity.
                 if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
                     match k.borrow() {
@@ -44,7 +44,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
     Ok(())
 }
 
-fn add_equip_efficiency(ship: &mut ShipData, index: usize, amount: f32) -> LuaResult<()> {
+fn add_equip_efficiency(ship: &mut ShipData, index: usize, amount: f64) -> LuaResult<()> {
     if let Some(slot) = ship.equip_slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
         slot.efficiency += amount;
     }

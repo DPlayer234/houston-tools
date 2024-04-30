@@ -203,8 +203,8 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 {: >3.0}% {: >3}`",
                 target.map(|t| t.short_name()).unwrap_or(""),
                 amount, barrage.damage * barrage.coefficient,
-                key.ammo.short_name(), l * 100f32, m * 100f32, h * 100f32,
-                barrage.scaling * 100f32, barrage.scaling_stat.name()
+                key.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
+                barrage.scaling * 100f64, barrage.scaling_stat.name()
             )
         }))
     }

@@ -22,16 +22,16 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     /// Reads the values for a regular stat.
     macro_rules! get_stat {
         ($index:literal) => {{
-            let base: f32 = attrs.get($index)?;
-            let grow: f32 = attrs_growth.get($index)?;
-            ShipStat::new(base, grow, 0f32)
+            ShipStat::new()
+                .set_base(attrs.get($index)?)
+                .set_growth(attrs_growth.get($index)?)
         }};
     }
 
     /// Reads the values for a stat without level growth.
     macro_rules! get_non_grow_stat {
         ($index:literal) => {{
-            let base: f32 = attrs.get($index)?;
+            let base: f64 = attrs.get($index)?;
             base
         }};
     }
@@ -119,7 +119,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             .enumerate()
             .map(|(index, equip)| Ok(ShadowEquip {
                 name: equip.name,
-                efficiency: { let e: Option<f32> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f32) },
+                efficiency: { let e: Option<f64> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f64) },
                 weapons: equip.weapons
             }))
             .collect::<LuaResult<Vec<_>>>()?,
@@ -138,16 +138,17 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
         Strengthen::Normal(data) => {
             // ship_data_strengthen
             ship.enhance_kind = EnhanceKind::Normal;
+
+            fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n) }
             
             // Up the base value. This makes stat calc below level 100 inaccurate
             // but I don't really care about that.
             let extra: LuaTable = read!(data, "durability");
-            fn b(n: f32) -> ShipStat { ShipStat::new(n, 0f32, 0f32) }
-            ship.stats.fp += { let v: f32 = extra.get(1)?; b(v) };
-            ship.stats.trp += { let v: f32 = extra.get(2)?; b(v) };
-            ship.stats.aa += { let v: f32 = extra.get(3)?; b(v) };
-            ship.stats.avi += { let v: f32 = extra.get(4)?; b(v) };
-            ship.stats.rld += { let v: f32 = extra.get(5)?; b(v) };
+            ship.stats.fp += b(extra.get(1)?);
+            ship.stats.trp += b(extra.get(2)?);
+            ship.stats.aa += b(extra.get(3)?);
+            ship.stats.avi += b(extra.get(4)?);
+            ship.stats.rld += b(extra.get(5)?);
         }
         Strengthen::Blueprint(ex) => {
             // ship_data_blueprint

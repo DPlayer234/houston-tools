@@ -158,7 +158,7 @@ impl ViewShip {
         let stats = &ship.stats;
         let affinity = self.affinity.to_mult();
     
-        fn f(n: f32) -> u32 { n.floor() as u32 }
+        fn f(n: f64) -> u32 { n.floor() as u32 }
         macro_rules! s {
             ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
         }
@@ -213,7 +213,7 @@ impl ViewShip {
         for (allowed, mount) in slots {
             if !text.is_empty() { text.push('\n'); }
 
-            write!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f32, mount.mounts).discard();
+            write!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f64, mount.mounts).discard();
             
             for (index, &kind) in allowed.iter().enumerate() {
                 if index != 0 { text.push('/'); }
@@ -260,11 +260,11 @@ impl ButtonArgsModify for ViewShip {
 
 impl ViewAffinity {
     /// Converts the affinity to a stat multiplier.
-    fn to_mult(self) -> f32 {
+    fn to_mult(self) -> f64 {
         match self {
-            ViewAffinity::Neutral => 1.0f32,
-            ViewAffinity::Love => 1.06f32,
-            ViewAffinity::Oath => 1.12f32,
+            ViewAffinity::Neutral => 1.0,
+            ViewAffinity::Love => 1.06,
+            ViewAffinity::Oath => 1.12,
         }
     }
 }

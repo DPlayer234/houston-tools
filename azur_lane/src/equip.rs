@@ -1,6 +1,5 @@
 //! Provides data structures for ship equipment.
 
-use std::num::NonZeroU32;
 use serde::*;
 
 use crate::define_data_enum;
@@ -28,20 +27,20 @@ pub struct Equip {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Weapon {
     pub weapon_id: u32,
-    pub reload_time: f32,
-    pub fixed_delay: f32,
+    pub reload_time: f64,
+    pub fixed_delay: f64,
     pub data: WeaponData
 }
 
 /// A bullet barrage pattern for a [`Weapon`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Barrage {
-    pub damage: f32,
-    pub coefficient: f32,
-    pub scaling: f32,
+    pub damage: f64,
+    pub coefficient: f64,
+    pub scaling: f64,
     pub scaling_stat: StatKind,
-    pub range: f32,
-    pub firing_angle: f32,
+    pub range: f64,
+    pub firing_angle: f64,
     pub bullets: Vec<Bullet>
 }
 
@@ -57,7 +56,7 @@ pub struct Bullet {
     pub kind: BulletKind,
     pub ammo: AmmoKind,
     pub pierce: u32,
-    pub velocity: f32,
+    pub velocity: f64,
     pub modifiers: ArmorModifiers,
 
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
@@ -71,9 +70,9 @@ pub struct Bullet {
 /// How far a bullet's hit spread is. Only applicable to main gun fire and bombs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulletSpread {
-    pub spread_x: f32,
-    pub spread_y: f32,
-    pub hit_range: f32,
+    pub spread_x: f64,
+    pub spread_y: f64,
+    pub hit_range: f64,
 }
 
 /// Aircraft data for a [`Weapon`].
@@ -81,7 +80,7 @@ pub struct BulletSpread {
 pub struct Aircraft {
     pub aircraft_id: u32,
     pub amount: u32,
-    pub speed: f32,
+    pub speed: f64,
     pub weapons: Vec<Weapon>
 }
 
@@ -96,13 +95,13 @@ pub enum WeaponData {
 
 /// Armor modifiers to apply to the damage.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ArmorModifiers(pub f32, pub f32, pub f32);
+pub struct ArmorModifiers(pub f64, pub f64, pub f64);
 
 /// Bonus stats gained by equipping the associated equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipStatBonus {
     pub stat_kind: StatKind,
-    pub amount: f32
+    pub amount: f64
 }
 
 /// Represents an Augment Module.
@@ -115,7 +114,7 @@ pub struct Augment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub unique_ship_id: Option<NonZeroU32>,
+    pub unique_ship_id: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skill_upgrade: Option<Skill>
 }
@@ -124,8 +123,8 @@ pub struct Augment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AugmentStatBonus {
     pub stat_kind: StatKind,
-    pub amount: f32,
-    pub random: f32
+    pub amount: f64,
+    pub random: f64
 }
 
 /// The possible kinds of equipment.
@@ -200,23 +199,34 @@ define_data_enum! {
 impl ArmorModifiers {
     /// Gets the modifier for a specific kind of armor.
     #[must_use]
-    pub fn get_modifier(&self, armor_kind: ShipArmor) -> f32 {
+    pub fn get_modifier(&self, armor_kind: ShipArmor) -> f64 {
         match armor_kind {
             ShipArmor::Light => self.0,
             ShipArmor::Medium => self.1,
             ShipArmor::Heavy => self.2,
         }
     }
+
+    /// Sets the modifier for a specific kind of armor.
+    #[must_use]
+    pub fn set_modifier(mut self, armor_kind: ShipArmor, value: f64) -> Self {
+        *match armor_kind {
+            ShipArmor::Light => &mut self.0,
+            ShipArmor::Medium => &mut self.1,
+            ShipArmor::Heavy => &mut self.2,
+        } = value;
+        self
+    }
 }
 
-impl From<[f32; 3]> for ArmorModifiers {
-    fn from(value: [f32; 3]) -> Self {
+impl From<[f64; 3]> for ArmorModifiers {
+    fn from(value: [f64; 3]) -> Self {
         ArmorModifiers(value[0], value[1], value[2])
     }
 }
 
-impl From<(f32, f32, f32)> for ArmorModifiers {
-    fn from(value: (f32, f32, f32)) -> Self {
+impl From<(f64, f64, f64)> for ArmorModifiers {
+    fn from(value: (f64, f64, f64)) -> Self {
         ArmorModifiers(value.0, value.1, value.2)
     }
 }

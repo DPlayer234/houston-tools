@@ -1,12 +1,12 @@
 #[macro_export]
 macro_rules! define_data_enum {
-    (
+    {
         $(#[$attr:meta])*
         $v:vis enum $name:ident for $vd:vis $data:ident {
             $($(#[$data_attr:meta])* $data_vis:vis $data_name:ident : $data_type:ty),* ;
             $($(#[$field_attr:meta])* $field:ident $arg:tt),*
         }
-    ) => {
+    } => {
         $(#[$attr])*
         #[derive(Debug, Clone)]
         $vd struct $data {

@@ -8,14 +8,14 @@ use crate::parse;
 /// 
 /// This refers to a single enhance/fate simulation level.
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    fn b(n: f32) -> ShipStat { ShipStat::new(n * 0.01f32, 0f32, 0f32) }
+    fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n * 0.01) }
 
     let effect: LuaTable = table.get("effect")?;
-    ship.stats.fp += { let v: f32 = effect.get(1)?; b(v) };
-    ship.stats.trp += { let v: f32 = effect.get(2)?; b(v) };
-    ship.stats.aa += { let v: f32 = effect.get(3)?; b(v) };
-    ship.stats.avi += { let v: f32 = effect.get(4)?; b(v) };
-    ship.stats.rld += { let v: f32 = effect.get(5)?; b(v) };
+    ship.stats.fp += b(effect.get(1)?);
+    ship.stats.trp += b(effect.get(2)?);
+    ship.stats.aa += b(effect.get(3)?);
+    ship.stats.avi += b(effect.get(4)?);
+    ship.stats.rld += b(effect.get(5)?);
 
     if let LuaValue::Table(effect_attr) = table.get("effect_attr")? {
         add_effect_attr(ship, effect_attr)?;
@@ -44,7 +44,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
 fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
         let attr: String = context!(v.get(1); "effect_attr name for blueprint ship id {}", ship.group_id)?;
-        let value: f32 = v.get(2)?;
+        let value: f64 = v.get(2)?;
 
         super::add_to_stats_base(&mut ship.stats, &attr, value);
 
@@ -81,7 +81,7 @@ fn replace_equip_slot_part<'a>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTab
 /// "effect_equipment_proficiency" adds efficiency to some gear slot.
 fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
     let index: usize = effect.get(1)?;
-    let amount: f32 = effect.get(2)?;
+    let amount: f64 = effect.get(2)?;
 
     if let Some(slot) = ship.equip_slots.get_mut(index - 1).and_then(|s| s.mount.as_mut()) {
         slot.efficiency += amount;
