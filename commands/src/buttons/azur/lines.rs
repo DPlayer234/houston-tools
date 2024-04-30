@@ -195,62 +195,80 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         ShipCouple::ShipGroup(ship_ids) => {
             let ships = ship_ids.iter()
                 .flat_map(|&id| data.azur_lane().ship_by_id(id))
-                .map(|ship| ship.name.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
+                .map(|ship| ship.name.as_str());
 
-            if opt.amount == 1 {
-                format!("Sortie with {}", ships)
+            if opt.amount as usize == ship_ids.len() {
+                format!("Sortie with {}", join_natural_and(ships))
             } else {
                 format!(
                     "Sortie with {} of {}",
                     opt.amount,
-                    ship_ids.iter()
-                        .flat_map(|&id| data.azur_lane().ship_by_id(id))
-                        .map(|ship| ship.name.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
+                    join_natural_or(ships)
                 )
             }
         }
         ShipCouple::HullType(hull_types) => {
             let hull_types = hull_types.iter()
-                .map(|hull_type| hull_type.designation())
-                .collect::<Vec<_>>()
-                .join(", ");
+                .map(|hull_type| hull_type.designation());
 
+            let label = if opt.amount != 1 { "s" } else { "" };
             format!(
-                "Sortie with {} more {}",
+                "Sortie with {} more {}{}",
                 opt.amount,
-                hull_types
+                join_natural_or(hull_types),
+                label
             )
         }
         ShipCouple::Rarity(rarities) => {
             let rarities = rarities.iter()
-                .map(|rarity| rarity.name())
-                .collect::<Vec<_>>()
-                .join(", ");
+                .map(|rarity| rarity.name());
 
+            let label = if opt.amount != 1 { "s" } else { "" };
             format!(
-                "Sortie with {} more {} ships",
+                "Sortie with {} more {} ship{}",
                 opt.amount,
-                rarities
+                join_natural_or(rarities),
+                label
             )
         }
         ShipCouple::Faction(factions) => {
             let factions = factions.iter()
-                .map(|faction| faction.name())
-                .collect::<Vec<_>>()
-                .join(", ");
+                .map(|faction| faction.name());
 
+            let label = if opt.amount != 1 { "s" } else { "" };
             format!(
-                "Sortie with {} more {} ships",
+                "Sortie with {} more {} ship{}",
                 opt.amount,
-                factions
+                join_natural_or(factions),
+                label
             )
         }
         ShipCouple::Illustrator => {
             format!("Sortie with {} more ships by the same illustrator", opt.amount)
+        }
+    }
+}
+
+fn join_natural_and<'a>(iter: impl Iterator<Item = &'a str>) -> String {
+    join_natural(iter, ", ", ", and ", " and ")
+}
+
+fn join_natural_or<'a>(iter: impl Iterator<Item = &'a str>) -> String {
+    join_natural(iter, ", ", ", or ", " or ")
+}
+
+fn join_natural<'a>(iter: impl Iterator<Item = &'a str>, join: &str, join_last: &str, join_once: &str) -> String {
+    let data = iter.collect::<Vec<_>>();
+    match data.split_last() {
+        None => String::new(),
+        Some((&last, head)) => {
+            if head.is_empty() { return last.to_owned(); }
+            if head.len() == 1 { return head[0].to_owned() + join_once + last; }
+
+            let mut result = head.join(join);
+            result.push_str(join_last);
+            result.push_str(last);
+            result
         }
     }
 }
