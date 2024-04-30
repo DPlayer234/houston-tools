@@ -1,5 +1,6 @@
 //! Provides data structures for ship equipment.
 
+use std::num::NonZeroU32;
 use serde::*;
 
 use crate::define_data_enum;
@@ -114,7 +115,7 @@ pub struct Augment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub unique_ship_id: Option<u32>,
+    pub unique_ship_id: Option<NonZeroU32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skill_upgrade: Option<Skill>
 }

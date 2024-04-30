@@ -8,11 +8,8 @@ use crate::context;
 use crate::convert_al;
 use crate::CONFIG;
 
+/// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
-    if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
-        return Ok(skill.clone());
-    }
-
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let skill_data_template: LuaTable = context!(pg.get("skill_data_template"); "global pg.skill_data_template")?;
 
@@ -20,9 +17,6 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     let name: String = context!(skill.get("name"); "name of skill with id {}", skill_id)?;
     let mut desc: String = context!(skill.get("desc"); "desc of skill with id {}", skill_id)?;
     let desc_add: Vec<Vec<Vec<String>>> = context!(skill.get("desc_add"); "desc_add of skill with id {}", skill_id)?;
-
-    let category: u32 = context!(skill.get("type"); "type of skill with id {skill_id}")?;
-    let category = convert_al::to_skill_category(category);
 
     for (slot, data_set) in desc_add.iter().enumerate() {
         if let Some(last) = data_set.last() {
@@ -32,6 +26,17 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
             }
         }
     }
+    
+    if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
+        let mut skill = skill.clone();
+        skill.name = name;
+        skill.description = desc;
+
+        return Ok(skill);
+    }
+
+    let category: u32 = context!(skill.get("type"); "type of skill with id {skill_id}")?;
+    let category = convert_al::to_skill_category(category);
 
     let buff = require_buff_data(lua, skill_id)?;
     let mut context = ReferencedWeaponsContext::default();
@@ -46,10 +51,12 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     })
 }
 
+/// Loads skills from the Lua state.
 pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
     skill_ids.into_iter().map(|id| load_skill(lua, id)).collect()
 }
 
+/// Loads a piece of equipment from the Lua state.
 pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let equip_data_statistics: LuaTable = context!(pg.get("equip_data_statistics"); "global pg.equip_data_statistics")?;
@@ -76,10 +83,12 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     })
 }
 
+/// Loads equipment pieces from the Lua state.
 pub fn load_equips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<Equip>> {
     equip_ids.into_iter().map(|id| load_equip(lua, id)).collect()
 }
 
+/// Loads a weapon from the Lua state.
 pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
     const RLD_MULT_AT_100: f32 = 0.006650724f32;
 
@@ -323,10 +332,12 @@ fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsCon
     Ok(())
 }
 
+/// Calls our "require_buff" Lua helper to get buff data.
 fn require_buff_data(lua: &Lua, buff_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_buff", buff_id)
 }
 
+/// Calls our "require_skill" Lua helper to get skill data.
 fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_skill", skill_id)
 }

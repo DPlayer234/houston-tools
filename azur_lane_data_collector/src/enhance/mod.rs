@@ -1,13 +1,17 @@
+//! Helper methods to apply enhance/strengthen data.
+
 use azur_lane::ship::*;
 
 pub mod blueprint;
 pub mod meta;
 pub mod retrofit;
 
+/// Adds to the base amount of the named stat.
 pub fn add_to_stats_base(stats: &mut ShipStatBlock, stat: &str, amount: f32) -> bool {
     add_to_stats_intl(stats, stat, amount, ShipStat::new(amount, 0f32, 0f32))
 }
 
+/// Adds to the fixed amount of the named stat.
 pub fn add_to_stats_fixed(stats: &mut ShipStatBlock, stat: &str, amount: f32) -> bool {
     add_to_stats_intl(stats, stat, amount, ShipStat::new(0f32, 0f32, amount))
 }

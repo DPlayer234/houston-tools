@@ -9,9 +9,8 @@ use azur_lane::ship::*;
 mod macros;
 mod convert_al;
 mod enhance;
-mod skill_loader;
 mod model;
-mod skins;
+mod parse;
 
 use model::*;
 
@@ -141,14 +140,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                 words_extra: context!(ship_skin_words_extra.get(skin_id); "skin words extra {} for ship {}", skin_id, group.id)?,
             })).collect::<LuaResult<Vec<_>>>()?;
             
-            let mut mlb = raw_mlb.to_ship_data(&lua)?;
+            let mut mlb = parse::ship::load_ship_data(&lua, &raw_mlb)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
                 mlb.name = name_override.clone();
             }
             
             if let Some(ref retrofit_data) = raw_mlb.retrofit_data {
                 for retrofit_set in raw_retrofits {
-                    let mut retrofit = retrofit_set.to_ship_data(&lua)?;
+                    let mut retrofit = parse::ship::load_ship_data(&lua, &retrofit_set)?;
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
         
                     fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
@@ -164,7 +163,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            mlb.skins.extend(raw_skins.iter().map(skins::load_skin).collect::<LuaResult<Vec<_>>>()?);
+            mlb.skins.extend(raw_skins.iter().map(parse::skin::load_skin).collect::<LuaResult<Vec<_>>>()?);
             Ok(mlb)
         }).collect::<LuaResult<Vec<_>>>()?;
         
@@ -196,8 +195,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let mut augments = groups.into_values().map(|id| {
             let statistics: LuaTable = context!(spweapon_data_statistics.get(id); "spweapon_data_statistics with id {id}")?;
-            let data = AugmentSet { id, table: statistics };
-            data.to_augment(&lua)
+            let data = AugmentSet { id, statistics };
+            parse::augment::load_augment(&lua, &data)
         }).collect::<LuaResult<Vec<_>>>()?;
         
         println!("Built Augment data. ({:.2?})", start.elapsed());

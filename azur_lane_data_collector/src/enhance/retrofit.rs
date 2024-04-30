@@ -3,8 +3,9 @@ use mlua::prelude::*;
 use azur_lane::ship::*;
 
 use crate::Retrofit;
-use crate::skill_loader;
+use crate::parse;
 
+/// Applies the full retrofit template to the ship data.
 pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> LuaResult<()> {
     let list: Vec<Vec<LuaTable>> = retrofit.data.get("transform_list")?;
     let mut new_skills = Vec::new();
@@ -14,12 +15,16 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
     for entry in list.iter().flatten() {
         let transform: u32 = entry.get(2)?;
         let transform: LuaTable = retrofit.list_lookup.get(transform)?;
+
+        // Effects are structured as a list of maps,
+        // where the nested map keys are the effect type and its value the amount.
         let effects: Vec<LuaTable> = transform.get("effect")?;
         for effect in effects {
             effect.for_each(|k: String, v: f32| {
+                // Stats added by retrofits are NOT affected by affinity.
                 if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
                     match k.borrow() {
-                        "skill_id" => new_skills.push(skill_loader::load_skill(lua, v as u32)?),
+                        "skill_id" => new_skills.push(parse::skill::load_skill(lua, v as u32)?),
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,
                         "equipment_proficiency_2" => add_equip_efficiency(ship, 1, v)?,
                         "equipment_proficiency_3" => add_equip_efficiency(ship, 2, v)?,

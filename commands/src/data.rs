@@ -178,7 +178,7 @@ impl HAzurLane {
         for (index, augment) in data.augments.iter().enumerate() {
             augment_id_to_index.insert(augment.augment_id, index);
             if let Some(ship_id) = augment.unique_ship_id {
-                ship_id_to_augment_index.insert(ship_id, index);
+                ship_id_to_augment_index.insert(ship_id.get(), index);
             }
         }
 

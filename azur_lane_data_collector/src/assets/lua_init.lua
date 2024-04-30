@@ -27,7 +27,7 @@ local function lazy_load(mode, allow_name_code)
         local name = args.__name;
 
         if mode == 1 and cs[name][index] then
-            -- I have no idea what the Lua helper actually does, but it seems to load the corresponding sharecfgdata file
+            -- I have no idea what the LuaHelper actually does, but it seems to load the corresponding sharecfgdata file
             -- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
             require("sharecfgdata." .. name)
         end
@@ -79,16 +79,18 @@ local function lazy_load(mode, allow_name_code)
     end
 end
 
-confSP = {
+-- These tables are used as metatable by the resource lookup tables.
+confSP = { -- Use sublist files
 	__index = lazy_load(2, true)
 }
-confMT = {
+confMT = { -- Load sharecfgdata file first
 	__index = lazy_load(1, true)
 }
-confHX = {
+confHX = { -- Immediately accessible
 	__index = lazy_load(0, true)
 }
 
+-- Accessed by some loaded scripts and dummied out
 ys.Battle = {
     BattleDataFunction = {
         ConvertBuffTemplate = function() end,
@@ -96,7 +98,7 @@ ys.Battle = {
     }
 }
 
--- cursed fix
+-- cursed fix for some scripts
 uv0 = setmetatable({}, {
     __index = function() return {} end
 });
@@ -107,6 +109,7 @@ require("config")
 require("buffcfg")
 require("skillcfg")
 
+-- Enable lazy-loading the resource tables themselves.
 setmetatable(pg, {
 	__index = function (self, index)
 		if ShareCfg["ShareCfg." .. index] then
@@ -116,6 +119,7 @@ setmetatable(pg, {
 	end
 })
 
+-- Used by our code to load a buff/skill.
 function require_buff(id)
     if pg.buffCfg_tag["buff_" .. id] then
         return require("gamecfg.buff.buff_" .. id)

@@ -3,6 +3,7 @@ use azur_lane::ship::*;
 
 use crate::context;
 
+/// Adds meta repair attributes to the ship stats.
 pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     let effect: LuaTable = table.get("effect_attr")?;
     
@@ -14,6 +15,9 @@ pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     Ok(())
 }
 
+/// Adds meta repair effect attributes to the ship stats.
+/// 
+/// This refers to the x% complete milestones.
 pub fn add_repair_effect(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     let effect_attr: Vec<LuaTable> = table.get("effect_attr")?;
     for effect in effect_attr {

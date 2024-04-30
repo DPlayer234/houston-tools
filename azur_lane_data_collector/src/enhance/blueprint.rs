@@ -2,8 +2,11 @@ use mlua::prelude::*;
 use azur_lane::ship::*;
 
 use crate::context;
-use crate::skill_loader;
+use crate::parse;
 
+/// Modifies the ship data, adding a blueprint effect.
+/// 
+/// This refers to a single enhance/fate simulation level.
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     fn b(n: f32) -> ShipStat { ShipStat::new(n * 0.01f32, 0f32, 0f32) }
 
@@ -37,6 +40,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
     Ok(())
 }
 
+/// "effect_attr" adds a flat amount of base stats.
 fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
         let attr: String = context!(v.get(1); "effect_attr name for blueprint ship id {}", ship.group_id)?;
@@ -48,17 +52,19 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
     })
 }
 
+/// "change_skill" replaces the skill with a given ID with another one.
 fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
     let from_id: u32 = effect.get(1)?;
     let to_id: u32 = effect.get(2)?;
 
     if let Some(slot) = ship.skills.iter_mut().find(|s| s.buff_id == from_id) {
-        *slot = skill_loader::load_skill(lua, to_id)?;
+        *slot = parse::skill::load_skill(lua, to_id)?;
     }
 
     Ok(())
 }
 
+/// "effect_base" and "effect_preload" *replace* components of the ship's equipment slots.
 fn replace_equip_slot_part<'a>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut u8) -> LuaResult<()> {
     let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
@@ -72,6 +78,7 @@ fn replace_equip_slot_part<'a>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTab
     Ok(())
 }
 
+/// "effect_equipment_proficiency" adds efficiency to some gear slot.
 fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
     let index: usize = effect.get(1)?;
     let amount: f32 = effect.get(2)?;

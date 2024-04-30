@@ -1,8 +1,11 @@
+//! Provides functions to convert primitives to AL model values.
+
 use azur_lane::*;
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 
+/// Converts an ID to a faction.
 pub fn to_faction(num: u32) -> Faction {
     match num {
         0 | 98 => Faction::Universal,
@@ -31,6 +34,7 @@ pub fn to_faction(num: u32) -> Faction {
     }
 }
 
+/// Converts an ID to a rarity.
 pub fn to_rarity(num: u32) -> ShipRarity {
     match num {
         1 | 2 => ShipRarity::N,
@@ -42,6 +46,7 @@ pub fn to_rarity(num: u32) -> ShipRarity {
     }
 }
 
+/// Converts an ID to a hull type.
 pub fn to_hull_type(num: u32) -> HullType {
     match num {
         1 => HullType::Destroyer,
@@ -67,6 +72,7 @@ pub fn to_hull_type(num: u32) -> HullType {
     }
 }
 
+/// Converts an ID to an armor type.
 pub fn to_armor_type(num: u32) -> ShipArmor {
     match num {
         1 => ShipArmor::Light,
@@ -76,6 +82,7 @@ pub fn to_armor_type(num: u32) -> ShipArmor {
     }
 }
 
+/// Converts an ID to an equipment kind.
 pub fn to_equip_type(num: u32) -> EquipKind {
     match num {
         1 => EquipKind::DestroyerGun,
@@ -100,6 +107,7 @@ pub fn to_equip_type(num: u32) -> EquipKind {
     }
 }
 
+/// Converts a name to a stat kind.
 pub fn to_stat_kind(stat: &str) -> StatKind {
     match stat {
         "durability" => StatKind::HP,
@@ -117,6 +125,7 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
     }
 }
 
+/// Converts a weapon attack attribute number to a stat kind.
 pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
     match num {
         1 => StatKind::FP,
@@ -128,6 +137,7 @@ pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
     }
 }
 
+/// Converts a name to a skill target.
 pub fn to_skill_target(text: &str) -> SkillAttackTarget {
     match text {
         "TargetHarmRandom" => SkillAttackTarget::Random,
@@ -138,6 +148,7 @@ pub fn to_skill_target(text: &str) -> SkillAttackTarget {
     }
 }
 
+/// Converts an ID to a skill category.
 pub fn to_skill_category(num: u32) -> SkillCategory {
     match num {
         1 => SkillCategory::Offense,
@@ -146,6 +157,7 @@ pub fn to_skill_category(num: u32) -> SkillCategory {
     }
 }
 
+/// Converts an ID to a bullet kind.
 pub fn to_bullet_kind(num: u32) -> BulletKind {
     match num {
         1 => BulletKind::Cannon,
@@ -168,6 +180,7 @@ pub fn to_bullet_kind(num: u32) -> BulletKind {
     }
 }
 
+/// Converts an ID to an ammo kind.
 pub fn to_ammo_kind(num: u32) -> AmmoKind {
     match num {
         1 => AmmoKind::Normal,
