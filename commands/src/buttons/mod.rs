@@ -21,7 +21,7 @@ impl ButtonEventHandler {
     }
 
     /// Handles the component interaction dispatch.
-    async fn interaction_dispatch(&self, ctx: Context, interaction: ComponentInteraction) -> HResult {
+    async fn interaction_dispatch(&self, ctx: &Context, interaction: &ComponentInteraction) -> HResult {
         let args = match &interaction.data.kind {
             ComponentInteractionDataKind::StringSelect { values } => {
                 ButtonArgs::from_custom_id(&values.iter().next().ok_or(InvalidInteractionError)?)?
@@ -41,22 +41,43 @@ impl ButtonEventHandler {
     }
 
     /// Dispatches the component interaction to specified arguments.
-    async fn interaction_dispatch_to<T: ButtonArgsModify>(&self, ctx: Context, interaction: ComponentInteraction, args: T) -> HResult {
+    async fn interaction_dispatch_to<T: ButtonArgsModify>(&self, ctx: &Context, interaction: &ComponentInteraction, args: T) -> HResult {
         let user_data = self.bot_data.get_user_data(interaction.user.id);
         let reply = args.modify(&self.bot_data, user_data.create_reply())?;
         let response_message = reply.to_slash_initial_response(Default::default());
         interaction.create_response(ctx, CreateInteractionResponse::UpdateMessage(response_message)).await?;
         Ok(())
     }
+
+    #[cold]
+    async fn handle_dispatch_error(&self, ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
+        if let Some(err) = err.downcast_ref::<serenity::Error>() {
+            println!("Discord interaction error: {}", err);
+        } else {
+            println!("Component error: {}", err);
+
+            let err_text = format!("Button error: ```{}```", err);
+            let reply = CreateReply::default().ephemeral(true)
+                .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
+            let response = reply.to_slash_initial_response(Default::default());
+
+            let res = interaction.create_response(ctx, CreateInteractionResponse::Message(response)).await;
+            if let Err(res) = res {
+                println!("Error sending component error: {}", res);
+            }
+        }
+    }
 }
 
 #[serenity::async_trait]
 impl serenity::client::EventHandler for ButtonEventHandler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::Component(interaction) = interaction {
-            if let Err(err) = self.interaction_dispatch(ctx, interaction).await {
-                println!("Dispatch error: {}", err);
-            }
+        // We only care about component interactions.
+        let Interaction::Component(interaction) = interaction else { return };
+
+        // Dispatch, then handle errors.
+        if let Err(err) = self.interaction_dispatch(&ctx, &interaction).await {
+            self.handle_dispatch_error(ctx, interaction, err).await
         }
     }
 }

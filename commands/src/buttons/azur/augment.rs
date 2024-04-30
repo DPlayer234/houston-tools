@@ -57,7 +57,7 @@ impl ViewAugment {
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
             let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
-            components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect").style(ButtonStyle::Secondary));
+            components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
         if let Some(back) = self.back {

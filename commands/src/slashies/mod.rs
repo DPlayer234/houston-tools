@@ -36,6 +36,7 @@ pub async fn pre_command(ctx: HContext<'_>) {
 }
 
 /// Command execution error handler.
+#[cold]
 pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HError>) {
     match &error {
         poise::FrameworkError::Command { error, ctx, .. } => {
@@ -55,6 +56,6 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
     }
 
     fn format_error(err: &HError) -> String {
-        format!("{err}")
+        format!("Command error: ```{err}```")
     }
 }

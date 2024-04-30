@@ -54,59 +54,63 @@ impl ViewShip {
             .fields(self.get_equip_field(ship))
             .fields(self.get_skills_field(ship));
 
-        let mut rows = vec![
+        let mut rows = Vec::new();
+        self.add_upgrade_row(&mut rows);
+        self.add_retro_state_row(base_ship, &mut rows);
+        self.add_nav_row(ship, data, &mut rows);
+
+        create.embed(embed).components(rows)
+    }
+
+    fn add_upgrade_row(&self, rows: &mut Vec<CreateActionRow>) {
+        rows.push(
             CreateActionRow::Buttons(vec![
-                self.button_with_level(100)
-                    .label("Lv.100"),
                 self.button_with_level(120)
                     .label("Lv.120"),
                 self.button_with_level(125)
-                    .label("Lv.125")
-            ]),
-            CreateActionRow::Buttons(vec![
-                self.button_with_affinity(ViewAffinity::Neutral)
-                    .emoji('💙').label("50"),
+                    .label("Lv.125"),
                 self.button_with_affinity(ViewAffinity::Love)
                     .emoji('❤').label("100"),
                 self.button_with_affinity(ViewAffinity::Oath)
                     .emoji('💗').label("200"),
             ])
-        ];
+        );
+    }
+    
+    fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
+        let self_custom_id = self.clone().to_custom_id();
+        let skills = (ship.skills.len() != 0).then(|| {
+            let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
+            let view_skill = super::skill::ViewSkill::with_back(source, self_custom_id.clone());
+            CreateButton::new(view_skill.to_custom_id())
+                .label("Skills")
+                .style(ButtonStyle::Secondary)
+        });
 
-        {
-            let self_custom_id = self.clone().to_custom_id();
-            let skills = (ship.skills.len() != 0).then(|| {
-                let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
-                let view_skill = super::skill::ViewSkill::with_back(source, self_custom_id.clone());
-                CreateButton::new(view_skill.to_custom_id())
-                    .label("Skills")
-                    .style(ButtonStyle::Secondary)
-            });
+        let augment = data.azur_lane().augment_by_ship_id(ship.group_id).map(|augment| {
+            let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self_custom_id.clone());
+            CreateButton::new(view_augment.to_custom_id())
+                .label("Unique Augment")
+                .style(ButtonStyle::Secondary)
+        });
 
-            let augment = data.azur_lane().augment_by_ship_id(ship.group_id).map(|augment| {
-                let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self_custom_id.clone());
-                CreateButton::new(view_augment.to_custom_id())
-                    .label("Unique Augment")
-                    .style(ButtonStyle::Secondary)
-            });
+        let lines = Some({
+            let view_lines = super::lines::ViewLines::with_back(self.ship_id, self_custom_id.clone());
+            CreateButton::new(view_lines.to_custom_id())
+                .label("Lines")
+                .style(ButtonStyle::Secondary)
+        });
 
-            let lines = Some({
-                let view_lines = super::lines::ViewLines::with_back(self.ship_id, self_custom_id.clone());
-                CreateButton::new(view_lines.to_custom_id())
-                    .label("Lines")
-                    .style(ButtonStyle::Secondary)
-            });
-
-            let row: Vec<_> = skills.into_iter().chain(augment).chain(lines).collect();
-            if !row.is_empty() {
-                rows.push(CreateActionRow::Buttons(row));
-            }
+        let row: Vec<_> = lines.into_iter().chain(skills).chain(augment).collect();
+        if !row.is_empty() {
+            rows.push(CreateActionRow::Buttons(row));
         }
-
+    }
+    
+    fn add_retro_state_row(&self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
         let base_button = self.button_with_retrofit(None)
-            .label("Base")
-            .style(ButtonStyle::Secondary);
-
+            .label("Base");
+    
         match base_ship.retrofits.len() {
             0 => {},
             1 => {
@@ -114,7 +118,6 @@ impl ViewShip {
                     base_button,
                     self.button_with_retrofit(Some(0))
                         .label("Retrofit")
-                        .style(ButtonStyle::Secondary)
                 ]));
             },
             _ => {
@@ -125,8 +128,7 @@ impl ViewShip {
                                 .filter_map(|(index, retro)| {
                                     let index = u8::try_from(index).ok()?;
                                     let result = self.button_with_retrofit(Some(index))
-                                        .label(format!("Retrofit ({})", retro.hull_type.team_type().name()))
-                                        .style(ButtonStyle::Secondary);
+                                        .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
                                     Some(result)
                                 })
                         )
@@ -134,10 +136,8 @@ impl ViewShip {
                 ));
             }
         };
-
-        create.embed(embed).components(rows)
     }
-
+    
     /// Gets a button that redirects to a different level.
     fn button_with_level(&self, level: u8) -> CreateButton {
         self.new_button(utils::field!(Self: level), level, || Sentinel::new(0, u32::from(level)))
