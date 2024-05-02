@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs;
+use std::io::Write;
+use std::path::Path;
 use clap::Parser;
 use mlua::prelude::*;
 use azur_lane::*;
@@ -19,15 +20,20 @@ struct Cli {
     /// The path that the game scripts live in.
     #[arg(short, long)]
     input: String,
-    /// The output file name.
+    /// The output directory.
     #[arg(short, long)]
     out: Option<String>,
+
+    /// The path that holds the game assets.
+    #[arg(long)]
+    assets: Option<String>,
+
     /// Minimize the output JSON file.
     #[arg(short, long)]
-    minimize: bool,
+    minimize: bool
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let lua = Lua::new();
 
@@ -40,6 +46,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         .exec()?;
 
     println!("Init done. ({:.2?})", start.elapsed());
+    
+    let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
+    fs::create_dir(out_dir)?;
+
+    if cli.assets.is_some() {
+        fs::create_dir(Path::new(out_dir).join("chibi"))?;
+    }
 
     // General:
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
@@ -163,9 +176,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            mlb.skins.extend(raw_skins.iter().map(parse::skin::load_skin).collect::<LuaResult<Vec<_>>>()?);
+            for raw_skin in raw_skins {
+                let skin = parse::skin::load_skin(&raw_skin)?;
+                if let Some(assets) = cli.assets.as_deref() {
+                    if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
+                        if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(Path::new(out_dir).join("chibi").join(&skin.image_key)) {
+                            f.write_all(&image)?;
+                        }
+                    }
+                }
+
+                mlb.skins.push(skin);
+            }
+
             Ok(mlb)
-        }).collect::<LuaResult<Vec<_>>>()?;
+        }).collect::<anyhow::Result<Vec<_>>>()?;
         
         println!("Built Ship data. ({:.2?})", start.elapsed());
 
@@ -207,8 +232,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Writing output...");
 
-    let out_path = cli.out.as_deref().unwrap_or("houston_azur_lane_data.json");
-    let f = fs::File::create(out_path)?;
+    let f = fs::File::create(Path::new(out_dir).join("main.json"))?;
     let out_data = DefinitionData {
         ships,
         augments

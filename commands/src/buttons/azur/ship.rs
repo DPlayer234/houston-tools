@@ -37,7 +37,7 @@ impl ViewShip {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship(self, data: &HBotData, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    pub fn modify_with_ship(self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
@@ -46,7 +46,7 @@ impl ViewShip {
             star_pad = usize::from(ship.stars)
         );
 
-        let embed = CreateEmbed::new()
+        let mut embed = CreateEmbed::new()
             .author(super::get_ship_wiki_url(base_ship))
             .description(description)
             .color(ship.rarity.color_rgb())
@@ -58,6 +58,13 @@ impl ViewShip {
         self.add_upgrade_row(&mut rows);
         self.add_retro_state_row(base_ship, &mut rows);
         self.add_nav_row(ship, data, &mut rows);
+
+        if let Some(skin) = ship.default_skin() {
+            if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
+                create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.png", skin.image_key)));
+                embed = embed.thumbnail(format!("attachment://{}.png", skin.image_key));
+            }
+        }
 
         create.embed(embed).components(rows)
     }

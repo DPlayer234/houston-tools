@@ -118,7 +118,7 @@ macro_rules! join {
 /// If it exceeds the size, it is truncated to the specified size, including appending ellipses at the end. 
 pub fn truncate(str: impl Into<String>, len: usize) -> String {
 	let str: String = str.into();
-	if str.len() > len { return str; }
+	if str.len() < len { return str; }
 
 	str.chars().take(len - 1)
 		.chain(std::iter::once('\u{2026}'))

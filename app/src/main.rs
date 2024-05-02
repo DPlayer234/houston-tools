@@ -18,11 +18,9 @@ async fn main() {
 
     let start = std::time::Instant::now();
 
-    let bot_data = Arc::new(HBotData::new(|| {
-        let data_path = std::env::var("AZUR_LANE_DATA").unwrap_or_else(|_| "houston_azur_lane_data.json".to_owned());
-        let f = std::fs::File::open(data_path).expect("Failed to read Azur Lane data.");
-        simd_json::from_reader(f).expect("Failed to parse Azur Lane data.")
-    }));
+    let bot_data_path = std::env::var("AZUR_LANE_DATA");
+    let bot_data_path = bot_data_path.as_deref().unwrap_or("azur_lane_data");
+    let bot_data = Arc::new(HBotData::at(bot_data_path));
 
     let loader = tokio::task::spawn({
         let bot_data = Arc::clone(&bot_data);

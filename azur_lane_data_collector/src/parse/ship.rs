@@ -108,6 +108,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             oxy: read!(set.statistics, "oxy_max"),
             amo: read!(set.statistics, "ammo")
         },
+        default_skin_id: read!(set.statistics, "skin_id"),
         equip_slots: vec![
             make_equip_slot!("equip_1", 1),
             make_equip_slot!("equip_2", 2),

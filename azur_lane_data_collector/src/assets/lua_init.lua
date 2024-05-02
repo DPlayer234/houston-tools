@@ -27,7 +27,8 @@ local function lazy_load(mode, allow_name_code)
         local name = args.__name;
 
         if mode == 1 and cs[name][index] then
-            -- I have no idea what the LuaHelper actually does, but it seems to load the corresponding sharecfgdata file
+            -- The sharecfgdata files are separate from the main game script.
+            -- In this case however, we just have them decompiled already, so just run them.
             -- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
             require("sharecfgdata." .. name)
         end

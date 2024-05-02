@@ -13,10 +13,11 @@ pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
 
     let mut skin = ShipSkin {
         skin_id: set.skin_id,
+        image_key: get!("painting"),
         name: get!("name"),
         description: get!("desc"),
         words: load_words(set)?,
-        words_extra: None // todo
+        words_extra: None, // loaded below
     };
 
     if let Some(ref extra) = set.words_extra {

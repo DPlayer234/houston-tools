@@ -16,6 +16,12 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
         let transform: u32 = entry.get(2)?;
         let transform: LuaTable = retrofit.list_lookup.get(transform)?;
 
+        // If not zero, override the default skin ID value.
+        let skin_id: u32 = transform.get("skin_id")?;
+        if skin_id != 0 {
+            ship.default_skin_id = skin_id;
+        }
+
         // Effects are structured as a list of maps,
         // where the nested map keys are the effect type and its value the amount.
         let effects: Vec<LuaTable> = transform.get("effect")?;

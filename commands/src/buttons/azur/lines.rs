@@ -44,13 +44,13 @@ impl ViewLines {
     }
 
     /// Modifies the create-reply with preresolved ship and skin data.
-    pub fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
+    pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
         let words = match (&self, skin) {
             (ViewLines { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
         };
 
-        let embed = CreateEmbed::new()
+        let mut embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
             .author(super::get_ship_wiki_url(ship))
             .description(self.get_description(data, words));
@@ -90,6 +90,11 @@ impl ViewLines {
                 .placeholder(&skin.name);
 
             components.push(CreateActionRow::SelectMenu(select));
+        }
+
+        if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
+            create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.png", skin.image_key)));
+            embed = embed.thumbnail(format!("attachment://{}.png", skin.image_key));
         }
 
         create.embed(embed).components(components)

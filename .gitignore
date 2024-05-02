@@ -1,4 +1,5 @@
 /target
 .env
 
-houston_azur_lane_data*.json
+# Generated output
+azur_lane_data

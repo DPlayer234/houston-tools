@@ -4,3 +4,4 @@ pub mod augment;
 pub mod ship;
 pub mod skill;
 pub mod skin;
+pub mod image;

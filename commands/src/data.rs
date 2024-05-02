@@ -1,5 +1,8 @@
 use crate::HContext;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use chashmap::CHashMap;
 use once_cell::sync::Lazy;
 use serenity::all::Color;
 use serenity::model::id::UserId;
@@ -17,7 +20,7 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
     /// A concurrent hash map to user data.
-    user_data: chashmap::CHashMap<UserId, HUserData>,
+    user_data: CHashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
     azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>
 }
@@ -31,6 +34,7 @@ pub struct HUserData {
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug)]
 pub struct HAzurLane {
+    data_path: PathBuf,
     pub ship_list: Vec<ShipData>,
     pub augment_list: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
@@ -38,6 +42,7 @@ pub struct HAzurLane {
     ship_prefix_map: PrefixMap<usize>,
     augment_id_to_index: HashMap<u32, usize>,
     ship_id_to_augment_index: HashMap<u32, usize>,
+    chibi_sprite_cache: CHashMap<String, Option<Arc<[u8]>>>
 }
 
 /// A simple error that can return any error message.
@@ -63,12 +68,11 @@ impl std::fmt::Debug for HBotData {
 
 impl HBotData {
     /// Creates a new instance.
-    pub fn new(azur_lane: impl Send + FnOnce() -> azur_lane::DefinitionData + 'static) -> Self {
+    pub fn at<P: AsRef<Path>>(data_path: P) -> Self {
+        let data_path = data_path.as_ref().to_owned();
         HBotData {
             user_data: chashmap::CHashMap::new(),
-            azur_lane: Lazy::new(Box::new(move || {
-                HAzurLane::from(azur_lane())
-            }))
+            azur_lane: Lazy::new(Box::new(move || HAzurLane::load_from(data_path)))
         }
     }
 
@@ -159,7 +163,10 @@ impl HContextExtensions for HContext<'_> {
 
 impl HAzurLane {
     /// Constructs extended data from definitions.
-    pub fn from(data: azur_lane::DefinitionData) -> Self {
+    fn load_from(data_path: PathBuf) -> Self {
+        let f = std::fs::File::open(data_path.join("main.json")).expect("Failed to read Azur Lane data.");
+        let data: azur_lane::DefinitionData = simd_json::from_reader(f).expect("Failed to parse Azur Lane data.");
+
         let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
         let mut ship_name_to_index = HashMap::with_capacity(data.ships.len());
         let mut ship_prefix_map = PrefixMap::new();
@@ -183,13 +190,15 @@ impl HAzurLane {
         }
 
         HAzurLane {
+            data_path,
             ship_list: data.ships,
             augment_list: data.augments,
             ship_id_to_index,
             ship_name_to_index,
             ship_prefix_map,
             augment_id_to_index,
-            ship_id_to_augment_index
+            ship_id_to_augment_index,
+            chibi_sprite_cache: CHashMap::new()
         }
     }
 
@@ -220,5 +229,37 @@ impl HAzurLane {
     pub fn augment_by_ship_id(&self, ship_id: u32) -> Option<&Augment> {
         let index = *self.ship_id_to_augment_index.get(&ship_id)?;
         self.augment_list.get(index)
+    }
+
+    pub fn get_chibi_image(&self, image_key: &str) -> Option<Arc<[u8]>> {
+        // Consult the cache first. If the image has been seen already, it will be stored here.
+        // It may also have a None entry if the image was requested but not found.
+        if let Some(entry) = self.chibi_sprite_cache.get(image_key) {
+            return entry.clone();
+        }
+
+        // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
+        // files outside of `data_path`. Currently, this doesn't take user-input, but this should
+        // be considered for the future.
+        match std::fs::read(self.data_path.join("chibi").join(image_key)) {
+            Ok(data) => {
+                // File read successfully, cache the data.
+                let data = Arc::from(data);
+                self.chibi_sprite_cache.insert(image_key.to_owned(), Some(Arc::clone(&data)));
+                Some(data)
+            },
+            Err(err) => {
+                // Reading failed. Check the error kind.
+                use std::io::ErrorKind::*;
+                match err.kind() {
+                    // Most errors aren't interesting and may be transient issues.
+                    // However, these ones imply permanent problems. Store None to prevent repeated attempts.
+                    NotFound | PermissionDenied => { self.chibi_sprite_cache.insert(image_key.to_owned(), None); },
+                    _ => ()
+                };
+
+                None
+            }
+        }
     }
 }

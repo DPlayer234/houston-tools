@@ -20,6 +20,7 @@ pub struct ShipData {
     #[serde(default)]
     pub enhance_kind: EnhanceKind,
     pub stats: ShipStatBlock,
+    pub default_skin_id: u32,
     pub equip_slots: Vec<EquipSlot>,
     pub shadow_equip: Vec<ShadowEquip>,
     pub skills: Vec<Skill>,
@@ -93,6 +94,7 @@ pub struct ShadowEquip {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkin {
     pub skin_id: u32,
+    pub image_key: String,
     pub name: String,
     pub description: String,
     /// The default dialogue lines.
@@ -307,6 +309,13 @@ define_data_enum! {
 impl Display for ShipArmor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.name())
+    }
+}
+
+impl ShipData {
+    #[must_use]
+    pub fn default_skin(&self) -> Option<&ShipSkin> {
+        self.skins.iter().find(|s| s.skin_id == self.default_skin_id)
     }
 }
 
