@@ -49,7 +49,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
 
     Ok(Augment {
         augment_id: set.id,
-        name: From::<String>::from(read!("name")),
+        name: read!("name"),
         stat_bonuses: vec![
             AugmentStatBonus {
                 stat_kind: read_stat!("attribute_1"),

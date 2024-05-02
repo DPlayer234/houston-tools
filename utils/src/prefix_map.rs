@@ -26,11 +26,9 @@ impl<T> PrefixMap<T> {
     /// Insertion is O(n log n).
     pub fn insert(&mut self, key: &str, value: T) -> bool {
         let key = simplify(key);
-        let index = self.search_by(&key);
-        let entry = Entry { key, value };
-        match index {
+        match self.search_by(&key) {
             Ok(_) => false,
-            Err(index) => { self.map.insert(index, entry); true }
+            Err(index) => { self.map.insert(index, Entry { key, value }); true }
         }
     }
 

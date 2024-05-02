@@ -85,7 +85,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
 
     let mut ship = ShipData {
         group_id: read!(set.template, "group_type"),
-        name: From::<String>::from(read!(set.statistics, "name")), 
+        name: read!(set.statistics, "name"), 
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),
         faction: convert_al::to_faction(read!(set.statistics, "nationality")),
         hull_type: convert_al::to_hull_type(read!(set.statistics, "type")),
