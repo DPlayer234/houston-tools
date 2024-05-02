@@ -314,8 +314,8 @@ impl Display for ShipArmor {
 
 impl ShipData {
     #[must_use]
-    pub fn default_skin(&self) -> Option<&ShipSkin> {
-        self.skins.iter().find(|s| s.skin_id == self.default_skin_id)
+    pub fn skin_by_id(&self, skin_id: u32) -> Option<&ShipSkin> {
+        self.skins.iter().find(|s| s.skin_id == skin_id)
     }
 }
 

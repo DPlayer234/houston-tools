@@ -48,10 +48,10 @@ fn main() -> anyhow::Result<()> {
     println!("Init done. ({:.2?})", start.elapsed());
     
     let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
-    fs::create_dir(out_dir)?;
+    fs::create_dir_all(out_dir)?;
 
     if cli.assets.is_some() {
-        fs::create_dir(Path::new(out_dir).join("chibi"))?;
+        fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
     }
 
     // General:

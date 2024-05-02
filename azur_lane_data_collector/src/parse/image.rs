@@ -12,7 +12,8 @@ use unity_rs::classes::Texture2D;
 
 #[must_use]
 pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
-    let Ok(file) = std::fs::read(Path::new(dir).join("shipmodels").join(name)) else {
+    let name = name.to_ascii_lowercase();
+    let Ok(file) = std::fs::read(Path::new(dir).join("shipmodels").join(&name)) else {
         println!("Skin shipmodels file {name} not found.");
         return Ok(None)
     };
@@ -23,7 +24,7 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
     let texture = env.objects()
         .filter(|o| o.class() == ClassID::Texture2D)
         .filter_map(|o| o.read::<Texture2D>().ok())
-        .find(|t| t.name == name);
+        .find(|t| t.name.to_ascii_lowercase() == name);
 
     if let Some(texture) = texture {
         let image = texture.decode_image_without_cache()?;

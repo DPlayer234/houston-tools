@@ -53,7 +53,7 @@ impl ViewLines {
         let mut embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
             .author(super::get_ship_wiki_url(ship))
-            .description(self.get_description(data, words));
+            .description(self.part.get_description(data, words));
 
         let mut components = Vec::new();
 
@@ -72,11 +72,11 @@ impl ViewLines {
         }
 
         components.push(CreateActionRow::Buttons(vec![
-            self.button_with_part(ViewLinesPart::Info).label("1").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Main1).label("2").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Main2).label("3").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Affinity).label("4").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Combat).label("5").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewLinesPart::Info, words).label("1").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewLinesPart::Main1, words).label("2").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewLinesPart::Main2, words).label("3").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewLinesPart::Affinity, words).label("4").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewLinesPart::Combat, words).label("5").style(ButtonStyle::Secondary),
         ]));
 
         if ship.skins.len() > 1 {
@@ -106,23 +106,30 @@ impl ViewLines {
     }
 
     /// Creates a button that redirects to a different viewed part.
-    fn button_with_part(&self, part: ViewLinesPart) -> CreateButton {
-        self.new_button(utils::field!(Self: part), part, || Sentinel::new(1, part as u32))
+    fn button_with_part(&self, part: ViewLinesPart, words: &ShipSkinWords) -> CreateButton {
+        let disabled = self.part == part || !part.has_texts(words);
+        self.new_button(utils::field!(Self: part), part, || Sentinel::new(1, part as u32)).disabled(disabled)
     }
 
     /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index(&self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
         self.new_select_option(&skin.name, utils::field!(Self: skin_index), index as u32)
     }
+}
 
+impl ViewLinesPart {
     /// Creates the embed description for the current state.
-    fn get_description(&self, data: &HBotData, words: &ShipSkinWords) -> String {
+    fn get_description(self, data: &HBotData, words: &ShipSkinWords) -> String {
         let mut result = String::new();
+
+        fn norm(input: impl AsRef<str>) -> String {
+            input.as_ref().replace('*', "\\*").replace('`', "\\`").replace('_', "\\_")
+        }
 
         macro_rules! add {
             ($label:literal, $key:ident) => {{
                 if let Some(ref text) = words.$key {
-                    write!(result, concat!("- **", $label, ":** {}\n"), text).discard();
+                    write!(result, concat!("- **", $label, ":** {}\n"), norm(text)).discard();
                 }
             }};
             (dyn $label:literal, $($extra:tt)*) => {{
@@ -130,7 +137,7 @@ impl ViewLines {
             }};
         }
 
-        match self.part {
+        match self {
             ViewLinesPart::Info => {
                 add!("Description", description);
                 add!("Profile", introduction);
@@ -140,7 +147,7 @@ impl ViewLines {
                 add!("Login", login);
                 
                 for line in &words.main_screen {
-                    add!(dyn "Main Screen {}", line.index() + 1, line.text());    
+                    add!(dyn "Main Screen {}", line.index() + 1, norm(line.text()));    
                 }
 
                 add!("Touch", touch);
@@ -173,7 +180,7 @@ impl ViewLines {
 
                 for opt in &words.couple_encourage {
                     let label = get_label_for_ship_couple_encourage(data, opt);
-                    add!(dyn "{}", label, opt.line);
+                    add!(dyn "{}", label, norm(&opt.line));
                 }
             }
         }
@@ -183,6 +190,67 @@ impl ViewLines {
         }
 
         result
+    }
+
+    /// Determines whether this part shows any lines.
+    fn has_texts(self, words: &ShipSkinWords) -> bool {
+        // I love duplicated code.
+        macro_rules! check {
+            ($key:ident) => {{
+                if words.$key.is_some() {
+                    return true;
+                }
+            }};
+        }
+
+        match self {
+            ViewLinesPart::Info => {
+                check!(description);
+                check!(introduction);
+                check!(acquisition);
+            }
+            ViewLinesPart::Main1 => {
+                check!(login);
+                
+                if !words.main_screen.is_empty() {
+                    return true;
+                }
+
+                check!(touch);
+                check!(special_touch);
+                check!(rub);
+            }
+            ViewLinesPart::Main2 => {
+                check!(mission_reminder);
+                check!(mission_complete);
+                check!(mail_reminder);
+                check!(return_to_port);
+                check!(commission_complete);
+            }
+            ViewLinesPart::Affinity => {
+                check!(details);
+                check!(disappointed);
+                check!(stranger);
+                check!(friendly);
+                check!(crush);
+                check!(love);
+                check!(oath);
+            }
+            ViewLinesPart::Combat => {
+                check!(enhance);
+                check!(flagship_fight);
+                check!(victory);
+                check!(defeat);
+                check!(skill);
+                check!(low_health);
+
+                if !words.couple_encourage.is_empty() {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 }
 

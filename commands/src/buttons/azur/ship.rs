@@ -59,7 +59,7 @@ impl ViewShip {
         self.add_retro_state_row(base_ship, &mut rows);
         self.add_nav_row(ship, data, &mut rows);
 
-        if let Some(skin) = ship.default_skin() {
+        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
                 create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.png", skin.image_key)));
                 embed = embed.thumbnail(format!("attachment://{}.png", skin.image_key));
