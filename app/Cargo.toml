@@ -6,12 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serenity = { version = "0.12.1", features = ["simd_json"] }
-tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
+once_cell = "1.19.0"
 poise = "0.6.1"
 serde = "1.0.197"
-once_cell = "1.19.0"
+serenity = { version = "0.12.1", features = ["simd_json"] }
 simd-json = { version = "0.13.10", features = ["serde"] }
+tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
+
+azur_lane = { path = "../azur_lane" }
 commands = { path = "../commands" }
 utils = { path = "../utils" }
-azur_lane = { path = "../azur_lane" }

@@ -1,15 +1,17 @@
 use crate::HContext;
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use chashmap::CHashMap;
+
+use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use serenity::all::Color;
-use serenity::model::id::UserId;
 use poise::reply::CreateReply;
-use utils::prefix_map::PrefixMap;
+use serenity::all::{Color, UserId};
+
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use utils::prefix_map::PrefixMap;
 
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
@@ -20,7 +22,7 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
     /// A concurrent hash map to user data.
-    user_data: CHashMap<UserId, HUserData>,
+    user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
     azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>
 }
@@ -42,7 +44,7 @@ pub struct HAzurLane {
     ship_prefix_map: PrefixMap<usize>,
     augment_id_to_index: HashMap<u32, usize>,
     ship_id_to_augment_index: HashMap<u32, usize>,
-    chibi_sprite_cache: CHashMap<String, Option<Arc<[u8]>>>
+    chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>
 }
 
 /// A simple error that can return any error message.
@@ -71,8 +73,8 @@ impl HBotData {
     pub fn at<P: AsRef<Path>>(data_path: P) -> Self {
         let data_path = data_path.as_ref().to_owned();
         HBotData {
-            user_data: chashmap::CHashMap::new(),
-            azur_lane: Lazy::new(Box::new(move || HAzurLane::load_from(data_path)))
+            user_data: DashMap::new(),
+            azur_lane: Lazy::new(Box::new(move || HAzurLane::load_from( data_path)))
         }
     }
 
@@ -198,7 +200,7 @@ impl HAzurLane {
             ship_prefix_map,
             augment_id_to_index,
             ship_id_to_augment_index,
-            chibi_sprite_cache: CHashMap::new()
+            chibi_sprite_cache: DashMap::new()
         }
     }
 
