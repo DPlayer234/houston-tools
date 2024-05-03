@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-pub mod discord_fmt;
 pub mod prefix_map;
 pub mod text;
 pub mod time;
@@ -103,4 +102,18 @@ macro_rules! define_simple_error {
             }
         }
     };
+}
+
+#[macro_export]
+macro_rules! join_path {
+    [$root:expr, $($parts:expr),* $(; $ext:expr)?] => {{
+        let mut path = std::path::PathBuf::from($root);
+        $(
+            path.push($parts);
+        )*
+        $(
+            path.set_extension($ext);
+        )?
+        path
+    }};
 }

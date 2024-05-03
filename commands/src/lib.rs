@@ -3,6 +3,7 @@ use std::sync::Arc;
 pub mod buttons;
 pub mod slashies;
 pub mod config;
+mod discord_fmt;
 mod data;
 mod prelude;
 

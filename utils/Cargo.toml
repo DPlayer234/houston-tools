@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.23"
-serenity = "0.12.1"

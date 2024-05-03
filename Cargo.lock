@@ -193,6 +193,7 @@ dependencies = [
  "serde",
  "serde_json",
  "unity_rs",
+ "utils",
 ]
 
 [[package]]
@@ -2808,7 +2809,6 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "serenity",
 ]
 
 [[package]]

@@ -93,8 +93,8 @@ impl ViewLines {
         }
 
         if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-            create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.png", skin.image_key)));
-            embed = embed.thumbnail(format!("attachment://{}.png", skin.image_key));
+            create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.webp", skin.image_key)));
+            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
         }
 
         create.embed(embed).components(components)

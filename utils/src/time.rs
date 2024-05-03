@@ -1,8 +1,5 @@
 //! Convenience module for dealing with times and timestamps.
 
-use serenity::model::Timestamp;
-use serenity::utils::Content;
-
 use chrono::prelude::*;
 
 pub const SHORT_TIME: Option<char> = Some('t');
@@ -43,22 +40,16 @@ pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
 /// Allows mentioning a timestamp in Discord messages.
 pub trait TimestampMention {
 	/// Formats a mention for a timestamp.
-	fn mention(&self, format: Option<char>) -> Content;
+	fn mention(&self, format: Option<char>) -> String;
 }
 
 impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
-	fn mention(&self, format: Option<char>) -> Content {
+	fn mention(&self, format: Option<char>) -> String {
 		if let Some(format_raw) = format {
 			format!("<t:{}:{}>", self.timestamp(), format_raw).into()
 		} else {
 			format!("<t:{}>", self.timestamp()).into()
 		}
-	}
-}
-
-impl TimestampMention for Timestamp {
-	fn mention(&self, format: Option<char>) -> Content {
-		(**self).mention(format)
 	}
 }
 

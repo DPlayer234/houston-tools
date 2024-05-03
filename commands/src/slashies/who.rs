@@ -1,10 +1,10 @@
 use std::fmt::Write;
 
 use utils::Discard;
-use utils::discord_fmt::get_unique_username;
 use utils::time::*;
 use utils::titlecase;
 
+use crate::discord_fmt::get_unique_username;
 use crate::prelude::*;
 
 /// Returns basic information about the provided user.

@@ -233,7 +233,7 @@ fn main() -> anyhow::Result<()> {
             if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
                 extract_count += 1;
 
-                let path = Path::new(out_dir).join("chibi").join(&skin.image_key);
+                let path = utils::join_path![out_dir, "chibi", &skin.image_key; "webp"];
                 if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(path) {
                     new_count += 1;
 
