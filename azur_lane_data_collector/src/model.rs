@@ -2,9 +2,11 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{Display, Debug};
+use std::fmt::{Debug, Display};
+
 use mlua::prelude::*;
 use once_cell::sync::Lazy;
+
 use azur_lane::skill::*;
 
 /// The config model.

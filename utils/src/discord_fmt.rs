@@ -1,6 +1,7 @@
 //! Provides utilities for formatting Discord data.
 
 use std::fmt::{Display, Formatter, Result as FmtResult, Write};
+
 use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 
 pub enum DisplayResolvedArgs<'a> {
@@ -15,7 +16,7 @@ pub struct DisplayResolvedTarget<'a>(ResolvedTarget<'a>);
 struct DisplayResolvedOption<'a>(&'a ResolvedOption<'a>);
 
 /// Gets a unique username for this user.
-/// 
+///
 /// This will either be the pomelo username or include the discriminator.
 pub fn get_unique_username(user: &User) -> String {
 	user.discriminator
@@ -55,7 +56,7 @@ impl Display for DisplayResolvedOptions<'_> {
             DisplayResolvedOption(o).fmt(f)?;
             f.write_char(' ')?;
         }
-        
+
         Ok(())
     }
 }

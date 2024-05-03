@@ -1,9 +1,9 @@
 use std::fmt::Write;
-//use crate::internal::prelude::*;
-use crate::buttons::*;
+
 use azur_lane::ship::*;
 use utils::Discard;
 
+use crate::buttons::*;
 use super::ShipParseError;
 
 /// Views ship lines.
@@ -99,7 +99,7 @@ impl ViewLines {
 
         create.embed(embed).components(components)
     }
-    
+
     /// Creates a button that redirects to a different Base/EX state.
     fn button_with_extra(&self, extra: bool) -> CreateButton {
         self.new_button(utils::field!(Self: extra), extra, || Sentinel::new(0, extra as u32))
@@ -145,9 +145,9 @@ impl ViewLinesPart {
             }
             ViewLinesPart::Main1 => {
                 add!("Login", login);
-                
+
                 for line in &words.main_screen {
-                    add!(dyn "Main Screen {}", line.index() + 1, norm(line.text()));    
+                    add!(dyn "Main Screen {}", line.index() + 1, norm(line.text()));
                 }
 
                 add!("Touch", touch);
@@ -211,7 +211,7 @@ impl ViewLinesPart {
             }
             ViewLinesPart::Main1 => {
                 check!(login);
-                
+
                 if !words.main_screen.is_empty() {
                     return true;
                 }

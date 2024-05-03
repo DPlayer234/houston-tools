@@ -2,14 +2,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+
 use clap::Parser;
 use mlua::prelude::*;
+
 use azur_lane::*;
 use azur_lane::ship::*;
 
-mod macros;
 mod convert_al;
 mod enhance;
+mod macros;
 mod model;
 mod parse;
 
@@ -46,7 +48,7 @@ fn main() -> anyhow::Result<()> {
         .exec()?;
 
     println!("Init done. ({:.2?})", start.elapsed());
-    
+
     let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
     fs::create_dir_all(out_dir)?;
 
@@ -61,19 +63,19 @@ fn main() -> anyhow::Result<()> {
         let ship_data_template: LuaTable = context!(pg.get("ship_data_template"); "global pg.ship_data_template")?;
         let ship_data_template_all: LuaTable = context!(ship_data_template.get("all"); "global pg.ship_data_template.all")?;
         let ship_data_statistics: LuaTable = context!(pg.get("ship_data_statistics"); "global pg.ship_data_statistics")?;
-    
+
         // Normal enhancement data (may be present even if not used for that ship):
         let ship_data_strengthen: LuaTable = context!(pg.get("ship_data_strengthen"); "global pg.ship_data_strengthen")?;
-    
+
         // Blueprint/Research ship data:
         let ship_data_blueprint: LuaTable = context!(pg.get("ship_data_blueprint"); "global pg.ship_data_blueprint")?;
         let ship_strengthen_blueprint: LuaTable = context!(pg.get("ship_strengthen_blueprint"); "global pg.ship_strengthen_blueprint")?;
-    
+
         // META ship data:
         let ship_strengthen_meta: LuaTable = context!(pg.get("ship_strengthen_meta"); "global pg.ship_strengthen_meta")?;
         let ship_meta_repair: LuaTable = context!(pg.get("ship_meta_repair"); "global pg.ship_meta_repair")?;
         let ship_meta_repair_effect: LuaTable = context!(pg.get("ship_meta_repair_effect"); "global pg.ship_meta_repair_effect")?;
-    
+
         // Retrofit data:
         let ship_data_trans: LuaTable = context!(pg.get("ship_data_trans"); "global pg.ship_data_trans")?;
         let transform_data_template: LuaTable = context!(pg.get("transform_data_template"); "global pg.transform_data_template")?;
@@ -105,10 +107,10 @@ fn main() -> anyhow::Result<()> {
         let make_ship_set = |id: u32| -> LuaResult<ShipSet> {
             let template: LuaTable = context!(ship_data_template.get(id); "!ship_data_template with id {id}")?;
             let statistics: LuaTable = context!(ship_data_statistics.get(id); "ship_data_statistics with id {id}")?;
-            
+
             let strengthen_id: u32 = context!(template.get("strengthen_id"); "strengthen_id of ship_data_template with id {id}")?;
             let _: u32 = context!(template.get("id"); "id of ship_data_template with id {id}")?;
-            
+
             let enhance: Option<LuaTable> = context!(ship_data_strengthen.get(strengthen_id); "ship_data_strengthen with {id}")?;
             let blueprint: Option<LuaTable> = context!(ship_data_blueprint.get(strengthen_id); "ship_data_blueprint with {id}")?;
             let meta: Option<LuaTable> = context!(ship_strengthen_meta.get(strengthen_id); "ship_strengthen_meta with {id}")?;
@@ -152,17 +154,17 @@ fn main() -> anyhow::Result<()> {
                 words: context!(ship_skin_words.get(skin_id); "skin words {} for ship {}", skin_id, group.id)?,
                 words_extra: context!(ship_skin_words_extra.get(skin_id); "skin words extra {} for ship {}", skin_id, group.id)?,
             })).collect::<LuaResult<Vec<_>>>()?;
-            
+
             let mut mlb = parse::ship::load_ship_data(&lua, &raw_mlb)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
                 mlb.name = name_override.clone();
             }
-            
+
             if let Some(ref retrofit_data) = raw_mlb.retrofit_data {
                 for retrofit_set in raw_retrofits {
                     let mut retrofit = parse::ship::load_ship_data(&lua, &retrofit_set)?;
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
-        
+
                     fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
                     mlb.retrofits.push(retrofit);
                 }
@@ -172,7 +174,7 @@ fn main() -> anyhow::Result<()> {
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
 
                     fix_up_retrofitted_data(&mut retrofit, &raw_mlb)?;
-                    mlb.retrofits.push(retrofit); 
+                    mlb.retrofits.push(retrofit);
                 }
             }
 
@@ -191,7 +193,7 @@ fn main() -> anyhow::Result<()> {
 
             Ok(mlb)
         }).collect::<anyhow::Result<Vec<_>>>()?;
-        
+
         println!("Built Ship data. ({:.2?})", start.elapsed());
 
         ships.sort_by_key(|t| t.group_id);
@@ -205,7 +207,7 @@ fn main() -> anyhow::Result<()> {
         let mut groups: HashMap<u32, u32> = HashMap::new();
         spweapon_data_statistics_all.for_each(|_: u32, id: u32| {
             let statistics: LuaTable = context!(spweapon_data_statistics.get(id); "spweapon_data_statistics with id {id}")?;
-            
+
             let base_id: Option<u32> = context!(statistics.get("base"); "base of spweapon_data_statistics with id {id}")?;
             let base_id = base_id.unwrap_or(id);
 
@@ -223,9 +225,9 @@ fn main() -> anyhow::Result<()> {
             let data = AugmentSet { id, statistics };
             parse::augment::load_augment(&lua, &data)
         }).collect::<LuaResult<Vec<_>>>()?;
-        
+
         println!("Built Augment data. ({:.2?})", start.elapsed());
-        
+
         augments.sort_by_key(|t| t.augment_id);
         augments
     };

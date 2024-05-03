@@ -1,10 +1,11 @@
 use mlua::prelude::*;
+
 use azur_lane::equip::*;
 
 use crate::context;
 use crate::convert_al;
-use crate::parse;
 use crate::model::*;
+use crate::parse;
 
 /// Construct augment data from this set.
 pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {

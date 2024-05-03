@@ -1,9 +1,11 @@
 use std::borrow::Borrow;
+
 use mlua::prelude::*;
+
 use azur_lane::ship::*;
 
-use crate::Retrofit;
 use crate::parse;
+use crate::Retrofit;
 
 /// Applies the full retrofit template to the ship data.
 pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> LuaResult<()> {

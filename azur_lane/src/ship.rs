@@ -1,12 +1,13 @@
 //! Data structures relating directly to ships.
 
 use std::fmt::Display;
+
 use serde::*;
 
 use crate::define_data_enum;
-use super::Faction;
 use super::equip::*;
 use super::skill::*;
+use super::Faction;
 
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,11 +71,11 @@ pub struct EquipWeaponMount {
     /// The amount of mounts.
     pub mounts: u8,
     /// The amount of parallel loads.
-    /// 
+    ///
     /// F.e. Gascogne's main gun and Unzen's torpedo has a value 2.
     pub parallel: u8,
     /// How many preloads this slot has.
-    /// 
+    ///
     /// This is only meaningful for Battleship main guns, torpedoes, and missiles.
     pub preload: u8,
 }
@@ -165,7 +166,7 @@ pub struct ShipSkinWords {
 }
 
 /// Information about a ship line that may be displayed on the main screen.
-/// 
+///
 /// Also see [`ShipSkinWords::main_screen`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipMainScreenLine(usize, String);
@@ -191,7 +192,7 @@ pub enum ShipCouple {
     /// Triggered when ships from a specified faction are present.
     Faction(Vec<Faction>),
     /// Triggered when ships from the same illustrator are present.
-    /// 
+    ///
     /// Actual in-game data specifies which one, but it's only ever used to refer to the same one as the source ship's.
     Illustrator
 }
@@ -201,7 +202,7 @@ define_data_enum! {
     pub enum ShipRarity for ShipRarityData {
         /// The display name for the rarity.
         pub name: &'static str,
-        /// An RGB color that can be used to represent the rarity. 
+        /// An RGB color that can be used to represent the rarity.
         pub color_rgb: u32;
 
         /// N (Common)
@@ -231,7 +232,7 @@ pub enum EnhanceKind {
 
 define_data_enum! {
     /// The possible stat kinds.
-    /// 
+    ///
     /// Only includes ones that represent a numeric value.
     pub enum StatKind for StatKindData {
         /// The in-game display name.
@@ -280,7 +281,7 @@ define_data_enum! {
         MissileDestroyerM("DDG m", "Missile Destroyer M", TeamType::MainFleet),
         FrigateS("IX s", "Sailing Frigate S", TeamType::Submarine),
         FrigateV("IX v", "Sailing Frigate V", TeamType::Vanguard),
-        FrigateM("IX m", "Sailing Frigate M", TeamType::MainFleet) 
+        FrigateM("IX m", "Sailing Frigate M", TeamType::MainFleet)
     }
 }
 
@@ -380,7 +381,7 @@ impl ShipStat {
     pub const fn fixed(&self) -> f64 { self.2 }
 
     /// Calculates the actual value.
-    /// 
+    ///
     /// Depending on how the data was stored, this may be inaccurate for levels below 100.
     #[must_use]
     pub fn calc(&self, level: u32, affinity: f64) -> f64 {
@@ -430,7 +431,7 @@ impl ShipMainScreenLine {
 
 impl ShipRarity {
     /// Returns the next higher rarity.
-    /// 
+    ///
     /// For [`ShipRarity::UR`], returns itself.
     #[must_use]
     pub fn next(self) -> Self {

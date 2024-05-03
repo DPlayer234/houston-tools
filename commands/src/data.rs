@@ -141,7 +141,7 @@ impl HContextExtensions for HContext<'_> {
     fn get_user_data(&self) -> HUserData {
         self.data().get_user_data(self.author().id)
     }
-    
+
     fn set_user_data(&self, data: HUserData) {
         self.data().set_user_data(self.author().id, data)
     }

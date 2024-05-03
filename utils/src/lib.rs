@@ -1,19 +1,20 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 pub mod discord_fmt;
+pub mod prefix_map;
 pub mod text;
 pub mod time;
-pub mod prefix_map;
 
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
-/// 
+///
 /// # Panics
-/// 
+///
 /// Panics if the slice is shorter than `N`. Longer slices are allowed.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let x: &[u8] = &[1, 2, 3, 4];
 /// let y: &[u8; 4] = utils::as_with_size(x);

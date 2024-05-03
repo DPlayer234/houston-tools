@@ -1,11 +1,12 @@
 use mlua::prelude::*;
+
 use azur_lane::ship::*;
 
 use crate::context;
 use crate::parse;
 
 /// Modifies the ship data, adding a blueprint effect.
-/// 
+///
 /// This refers to a single enhance/fate simulation level.
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n * 0.01) }
@@ -24,7 +25,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
     if let LuaValue::Table(change_skill) = table.get("change_skill")? {
         replace_skill(lua, ship, change_skill)?;
     }
-    
+
     if let LuaValue::Table(effect_base) = table.get("effect_base")? {
         replace_equip_slot_part(lua, ship, effect_base, |s| &mut s.mounts)?;
     }

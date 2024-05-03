@@ -1,8 +1,10 @@
-use crate::context;
-use crate::model::*;
-use crate::convert_al;
 use mlua::prelude::*;
+
 use azur_lane::ship::*;
+
+use crate::context;
+use crate::convert_al;
+use crate::model::*;
 
 pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
     macro_rules! get {
@@ -35,7 +37,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         }};
     }
 
-    Ok(ShipSkinWords { 
+    Ok(ShipSkinWords {
         description: get!("drop_descrip"),
         introduction: get!("profile"),
         acquisition: get!("unlock"),
@@ -90,7 +92,7 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
         .flat_map(|s| s.split('|')).enumerate()
         .map(|(index, text)| ShipMainScreenLine::new(index + base.main_screen.len(), text.to_owned())));
 
-    Ok(ShipSkinWords { 
+    Ok(ShipSkinWords {
         description: get!("drop_descrip"),
         introduction: get!("profile"),
         acquisition: get!("unlock"),

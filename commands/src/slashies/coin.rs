@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use rand::{thread_rng, Rng};
+
+use crate::prelude::*;
 
 /// Flips a coin.
 #[poise::command(slash_command)]
@@ -17,7 +18,7 @@ pub async fn coin(
             "### Tails!"
         }
     };
-    
+
     let embed = CreateEmbed::new()
         .description(content)
         .color(DEFAULT_EMBED_COLOR);

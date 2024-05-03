@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-pub mod slashies;
 pub mod buttons;
-mod prelude;
-mod data;
+pub mod slashies;
 pub mod config;
+mod data;
+mod prelude;
 
 /// The error type used for the poise context.
 pub type HError = anyhow::Error;

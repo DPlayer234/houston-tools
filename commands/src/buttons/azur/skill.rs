@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-//use crate::internal::prelude::*;
-use crate::buttons::*;
+
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 
+use crate::buttons::*;
 use super::AugmentParseError;
 use super::ShipParseError;
 
@@ -63,7 +63,7 @@ impl ViewSkill {
                 let button = self.button_with_skill(t_index)
                     .label(utils::text::truncate(&skill.name, 25))
                     .style(ButtonStyle::Secondary);
-    
+
                 components.push(button);
             }
         }
@@ -74,7 +74,7 @@ impl ViewSkill {
 
         create.embed(embed).components(rows)
     }
-    
+
     /// Modifies the create-reply with preresolved ship data.
     pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
@@ -164,7 +164,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             // `Fix.  |     12 x  58.0 | Nor.: 120/ 80/ 80 | 100%  FP`
         )
     }
-    
+
     fn get_skill_attack_summary(attack: &SkillAttack) -> Option<String> {
         match &attack.weapon.data {
             WeaponData::Bullets(bullets) => get_barrage_summary(bullets, Some(attack.target)),
@@ -175,12 +175,12 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             )
         }
     }
-    
+
     fn get_barrage_summary(barrage: &Barrage, target: Option<SkillAttackTarget>) -> Option<String> {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         struct Key { kind: BulletKind, ammo: AmmoKind }
         struct Value<'a> { amount: u32, bullet: &'a Bullet }
-    
+
         let mut sets: HashMap<Key, Value> = HashMap::new();
         for bullet in barrage.bullets.iter() {
             let key = Key { kind: bullet.kind, ammo: bullet.ammo };
@@ -188,7 +188,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 .and_modify(|v| v.amount += bullet.amount)
                 .or_insert(Value { amount: bullet.amount, bullet });
         }
-    
+
         join("\n", sets.into_iter().map(|(key, Value { amount, bullet })| {
             let ArmorModifiers(l, m, h) = bullet.modifiers;
             format!(
@@ -208,14 +208,14 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             )
         }))
     }
-    
+
     fn get_aircraft_summary(aircraft: &Aircraft) -> Option<String> {
-        join("\n", aircraft.weapons.iter().filter_map(|weapon| match &weapon.data { 
+        join("\n", aircraft.weapons.iter().filter_map(|weapon| match &weapon.data {
             WeaponData::Bullets(barrage) => get_barrage_summary(barrage, None),
             _ => None
         }))
     }
-    
+
     fn join(separator: &str, mut items: impl Iterator<Item = String>) -> Option<String> {
         let mut result = items.next()?;
         for item in items {

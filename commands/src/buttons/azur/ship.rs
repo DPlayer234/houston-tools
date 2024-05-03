@@ -1,10 +1,10 @@
 use std::fmt::Write;
-//use crate::internal::prelude::*;
-use crate::buttons::*;
-use azur_lane::ship::*;
+
 use azur_lane::equip::*;
+use azur_lane::ship::*;
 use utils::{Discard, join};
 
+use crate::buttons::*;
 use super::ShipParseError;
 
 /// View general ship details.
@@ -83,7 +83,7 @@ impl ViewShip {
             ])
         );
     }
-    
+
     fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
         let self_custom_id = self.clone().to_custom_id();
         let skills = (ship.skills.len() != 0).then(|| {
@@ -113,11 +113,11 @@ impl ViewShip {
             rows.push(CreateActionRow::Buttons(row));
         }
     }
-    
+
     fn add_retro_state_row(&self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
         let base_button = self.button_with_retrofit(None)
             .label("Base");
-    
+
         match base_ship.retrofits.len() {
             0 => {},
             1 => {
@@ -144,7 +144,7 @@ impl ViewShip {
             }
         };
     }
-    
+
     /// Gets a button that redirects to a different level.
     fn button_with_level(&self, level: u8) -> CreateButton {
         self.new_button(utils::field!(Self: level), level, || Sentinel::new(0, u32::from(level)))
@@ -164,12 +164,12 @@ impl ViewShip {
     fn get_stats_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
         let stats = &ship.stats;
         let affinity = self.affinity.to_mult();
-    
+
         fn f(n: f64) -> u32 { n.floor() as u32 }
         macro_rules! s {
             ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
         }
-        
+
         if ship.hull_type.team_type() != TeamType::Submarine {
             [(
                 "Stats",
@@ -221,7 +221,7 @@ impl ViewShip {
             if !text.is_empty() { text.push('\n'); }
 
             write!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f64, mount.mounts).discard();
-            
+
             for (index, &kind) in allowed.iter().enumerate() {
                 if index != 0 { text.push('/'); }
                 text.push_str(to_equip_slot_display(kind));

@@ -1,5 +1,7 @@
 use std::sync::Arc;
+
 use serenity::prelude::*;
+
 use crate::prelude::*;
 
 pub mod azur;
@@ -105,14 +107,14 @@ pub struct Sentinel {
 }
 
 /// Provides a way to convert an object into a component custom ID.
-/// 
+///
 /// This is auto-implemented for all [`Into<ButtonArgs>`].
 pub trait ToButtonArgsId {
     /// Converts this instance to a component custom ID.
     fn to_custom_id(self) -> String;
 
     /// Creates a new button that would switch to a state where one field is changed.
-    /// 
+    ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
     fn new_button<T: PartialEq>(&self, field: impl utils::Field<Self, T>, value: T, sentinel: impl FnOnce() -> Sentinel) -> CreateButton
     where Self: Clone {

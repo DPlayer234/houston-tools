@@ -3,9 +3,9 @@
 use serde::*;
 
 mod data_def;
+pub mod equip;
 pub mod ship;
 pub mod skill;
-pub mod equip;
 
 /// Definition data to be saved/loaded in bulk.
 #[derive(Debug, Clone, Serialize, Deserialize)]

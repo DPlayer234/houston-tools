@@ -1,7 +1,9 @@
 use std::num::NonZeroU16;
 use std::sync::Arc;
+
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+
 use commands::*;
 
 mod poise_command_builder;
@@ -43,7 +45,7 @@ async fn main() {
             move |ctx, ready, framework| {
                 Box::pin(async move {
                     create_commands(ctx, framework).await?;
-                    
+
                     let discriminator = ready.user.discriminator.map_or(0u16, NonZeroU16::get);
                     println!("Logged in as: {}#{:04} ({:.2?})", ready.user.name, discriminator, start.elapsed());
 

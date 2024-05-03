@@ -1,11 +1,12 @@
 use mlua::prelude::*;
+
 use azur_lane::ship::*;
 
 use crate::context;
 use crate::convert_al;
 use crate::enhance;
-use crate::parse;
 use crate::model::*;
+use crate::parse;
 
 /// Constructs ship data from this set.
 pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {

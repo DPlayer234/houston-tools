@@ -1,6 +1,8 @@
 use std::sync::Arc;
-use crate::prelude::*;
+
 use utils::discord_fmt::DisplayResolvedArgs;
+
+use crate::prelude::*;
 
 mod azur;
 mod coin;

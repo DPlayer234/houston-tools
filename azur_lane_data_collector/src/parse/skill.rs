@@ -1,12 +1,14 @@
-use std::{borrow::Borrow, collections::HashSet};
+use std::borrow::Borrow;
+use std::collections::HashSet;
 
 use mlua::prelude::*;
+
 use azur_lane::skill::*;
 use azur_lane::equip::*;
 
 use crate::context;
-use crate::convert_al;
 use crate::CONFIG;
+use crate::convert_al;
 
 /// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
@@ -26,7 +28,7 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
             }
         }
     }
-    
+
     if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
         let mut skill = skill.clone();
         skill.name = name;
@@ -123,14 +125,14 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
         RoughWeaponType::Aircraft => {
             let aircraft_template: LuaTable = context!(pg.get("aircraft_template"); "global pg.aircraft_template")?;
             let aircraft: LuaTable = context!(aircraft_template.get(weapon_id); "aircraft_template for id {weapon_id}")?;
-            
+
             let barrage_template: LuaTable = context!(pg.get("barrage_template"); "global pg.barrage_template")?;
             let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
 
             let mut amount = 0u32;
             for barrage_id in barrage_ids {
                 let barrage: LuaTable = context!(barrage_template.get(barrage_id); "barrage template for id {barrage_id}")?;
-                
+
                 let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in barrage {barrage_id}")?;
                 let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in barrage {barrage_id}")?;
 
@@ -171,7 +173,7 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
 
     let bullet: LuaTable = context!(bullet_template.get(bullet_id); "bullet template for id {bullet_id}")?;
     let barrage: LuaTable = context!(barrage_template.get(barrage_id); "barrage template for id {barrage_id}")?;
-        
+
     let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in barrage {barrage_id}")?;
     let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in barrage {barrage_id}")?;
 

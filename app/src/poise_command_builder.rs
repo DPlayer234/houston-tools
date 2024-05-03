@@ -1,12 +1,11 @@
+use serde::Serialize;
 use serenity::all::{CommandType, CommandOptionType};
 use serenity::builder::CreateCommandOption;
 use poise::{Command, ContextMenuCommandAction};
-use serde::Serialize;
 
 // Custom Create Command payload type to include new data
 #[derive(Clone, Debug, Serialize)]
-pub struct CustomCreateCommand
-{
+pub struct CustomCreateCommand {
     name: String,
     description: String,
     options: Vec<CreateCommandOption>,

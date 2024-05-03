@@ -1,8 +1,11 @@
 use std::str::FromStr;
-use crate::prelude::*;
-use utils::time::{parse_date_time, get_creation_time};
+
 use chrono::prelude::*;
 use chrono::TimeDelta;
+
+use utils::time::{parse_date_time, get_creation_time};
+
+use crate::prelude::*;
 
 /// Provides methods to help with timestamps.
 #[poise::command(
@@ -70,7 +73,7 @@ async fn timestamp_of(
     let timestamp = u64::from_str(&snowflake).ok()
         .and_then(|u| get_creation_time(u))
         .ok_or_else(|| SNOWFLAKE_INVALID)?;
-    
+
     show_timestamp(&ctx, timestamp).await
 }
 
@@ -78,7 +81,7 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
     fn format_time(timestamp: i64, f: char) -> String {
         format!("<t:{timestamp}:{f}>\n```\n<t:{timestamp}:{f}>\n```")
     }
-    
+
     let timestamp = timestamp.timestamp();
     let embed = CreateEmbed::new()
         .field("Date & Time", format_time(timestamp, 'f'), true)

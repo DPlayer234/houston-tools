@@ -1,9 +1,9 @@
 use crate::buttons::*;
 
-pub mod ship;
 pub mod augment;
-pub mod skill;
 pub mod lines;
+pub mod ship;
+pub mod skill;
 
 utils::define_simple_error!(ShipParseError: "Unknown ship.");
 utils::define_simple_error!(AugmentParseError: "Unknown augment.");

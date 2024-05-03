@@ -1,9 +1,11 @@
 use std::fmt::Write;
-use crate::prelude::*;
+
 use utils::Discard;
 use utils::discord_fmt::get_unique_username;
 use utils::time::*;
 use utils::titlecase;
+
+use crate::prelude::*;
 
 /// Returns basic information about the provided user.
 #[poise::command(slash_command, context_menu_command = "User Info")]

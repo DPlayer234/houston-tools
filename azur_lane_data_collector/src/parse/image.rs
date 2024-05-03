@@ -1,5 +1,6 @@
 use std::io::Cursor;
 use std::path::Path;
+
 use image::ImageOutputFormat;
 use unity_rs::{ClassID, Env};
 use unity_rs::classes::Texture2D;

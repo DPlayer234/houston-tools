@@ -2,6 +2,7 @@
 
 use serenity::model::Timestamp;
 use serenity::utils::Content;
+
 use chrono::prelude::*;
 
 pub const SHORT_TIME: Option<char> = Some('t');
@@ -19,7 +20,7 @@ const DISCORD_EPOCH: u64 = 1_420_070_400_000;
 static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 
 /// Marks the current time as the startup time of the application.
-/// 
+///
 /// SAFETY: This function is unsafe as the underlying memory is static.
 /// This should be called before any other threads might be trying to call [`get_startup_time`].
 pub unsafe fn mark_startup_time() {
@@ -27,7 +28,7 @@ pub unsafe fn mark_startup_time() {
 }
 
 /// Gets the marked startup time of the application.
-/// 
+///
 /// If the program setup never called [`mark_startup_time`], this will be the unix epoch.
 pub fn get_startup_time() -> DateTime<Utc> {
 	unsafe { STARTUP_TIME }

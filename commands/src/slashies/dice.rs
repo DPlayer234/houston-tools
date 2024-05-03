@@ -1,10 +1,13 @@
 use std::num::{NonZeroU16, NonZeroU8};
 use std::str::FromStr;
 use std::fmt::Write;
-use crate::prelude::*;
+
 use rand::{thread_rng, Rng};
 use rand::distributions::Uniform;
+
 use utils::Discard;
+
+use crate::prelude::*;
 
 /// Rolls some dice.
 #[poise::command(slash_command)]
@@ -51,7 +54,7 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> Result<String, HError> {
         if d.count.get() > 1 && len > 1 {
             write!(content, " *(\u{2211}{})*", local_sum).discard();
         }
-        
+
         total_sum += u64::from(local_sum);
         content.push('\n');
     }

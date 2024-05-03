@@ -48,7 +48,7 @@ pub struct Barrage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bullet {
     pub bullet_id: u32,
-    
+
     // From barrage template:
     pub amount: u32,
 
