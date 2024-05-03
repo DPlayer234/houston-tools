@@ -49,13 +49,6 @@ fn main() -> anyhow::Result<()> {
 
     println!("Init done. ({:.2?})", start.elapsed());
 
-    let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
-    fs::create_dir_all(out_dir)?;
-
-    if cli.assets.is_some() {
-        fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
-    }
-
     // General:
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
 
@@ -179,16 +172,7 @@ fn main() -> anyhow::Result<()> {
             }
 
             for raw_skin in raw_skins {
-                let skin = parse::skin::load_skin(&raw_skin)?;
-                if let Some(assets) = cli.assets.as_deref() {
-                    if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
-                        if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(Path::new(out_dir).join("chibi").join(&skin.image_key)) {
-                            f.write_all(&image)?;
-                        }
-                    }
-                }
-
-                mlb.skins.push(skin);
+                mlb.skins.push(parse::skin::load_skin(&raw_skin)?);
             }
 
             Ok(mlb)
@@ -231,6 +215,37 @@ fn main() -> anyhow::Result<()> {
         augments.sort_by_key(|t| t.augment_id);
         augments
     };
+
+    let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
+    if let Some(assets) = cli.assets.as_deref() {
+        // Extract and save chibis for all skins.
+        fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
+
+        println!("Extracting chibis...");
+
+        let mut extract_count = 0usize;
+        let mut total_count = 0usize;
+        let mut new_count = 0usize;
+
+        for skin in ships.iter().flat_map(|s| s.skins.iter()) {
+            total_count += 1;
+
+            if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
+                extract_count += 1;
+
+                let path = Path::new(out_dir).join("chibi").join(&skin.image_key);
+                if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(path) {
+                    new_count += 1;
+
+                    f.write_all(&image)?;
+                }
+            }
+        }
+
+        println!("Extracted chibis ({extract_count}/{total_count}); {new_count} new. {:.2?}", start.elapsed());
+    } else {
+        fs::create_dir_all(out_dir)?;
+    }
 
     println!("Writing output...");
 

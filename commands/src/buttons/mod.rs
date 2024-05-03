@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use serenity::prelude::*;
 
-use crate::prelude::*;
+pub use crate::prelude::*;
 
 pub mod azur;
 

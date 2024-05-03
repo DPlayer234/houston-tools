@@ -6,7 +6,6 @@ use azur_lane::skill::*;
 use utils::Discard;
 
 use crate::buttons::*;
-
 use super::AugmentParseError;
 
 /// Views an augment.

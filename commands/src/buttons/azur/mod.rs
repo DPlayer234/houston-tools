@@ -1,6 +1,7 @@
 use crate::buttons::*;
 
 pub mod augment;
+pub mod filter;
 pub mod lines;
 pub mod ship;
 pub mod skill;
