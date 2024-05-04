@@ -8,7 +8,7 @@ pub mod ship;
 pub mod skill;
 
 /// Definition data to be saved/loaded in bulk.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {
     /// All known ships.
     pub ships: Vec<ship::ShipData>,

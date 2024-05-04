@@ -32,7 +32,10 @@ struct Cli {
 
     /// Minimize the output JSON file.
     #[arg(short, long)]
-    minimize: bool
+    minimize: bool,
+
+    #[arg(long)]
+    test: bool
 }
 
 fn main() -> anyhow::Result<()> {

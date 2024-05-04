@@ -7,11 +7,16 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.82"
+binrw = "0.13.3"
 image = "0.24.9"
+modular-bitfield = "0.11.2"
+num_enum = "0.7.2"
+lz4 = "1.24.0"
 once_cell = "1.19.0"
 serde_json = "1.0.116"
 
 azur_lane = { path = "../azur_lane" }
+unity_read = { path = "../unity_read" }
 utils = { path = "../utils" }
 
 [dependencies.clap]
@@ -26,7 +31,3 @@ features = ["lua54", "vendored"]
 [dependencies.serde]
 version = "1.0.197"
 features = ["rc", "derive"]
-
-[dependencies.unity_rs]
-git = "https://github.com/yuanyan3060/unity-rs.git"
-rev = "428d47f"

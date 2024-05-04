@@ -166,8 +166,10 @@ impl HContextExtensions for HContext<'_> {
 impl HAzurLane {
     /// Constructs extended data from definitions.
     fn load_from(data_path: PathBuf) -> Self {
-        let f = std::fs::File::open(data_path.join("main.json")).expect("Failed to read Azur Lane data.");
-        let data: azur_lane::DefinitionData = simd_json::from_reader(f).expect("Failed to parse Azur Lane data.");
+        let data = Self::load_definitions(&data_path).unwrap_or_else(|err| {
+            eprintln!("No Azur Lane data: {err}");
+            Default::default()
+        });
 
         let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
         let mut ship_name_to_index = HashMap::with_capacity(data.ships.len());
@@ -202,6 +204,12 @@ impl HAzurLane {
             ship_id_to_augment_index,
             chibi_sprite_cache: DashMap::new()
         }
+    }
+
+    fn load_definitions(data_path: &Path) -> Result<azur_lane::DefinitionData, &'static str> {
+        let f = std::fs::File::open(data_path.join("main.json")).map_err(|_| "Failed to read Azur Lane data.")?;
+        let data = simd_json::from_reader(f).map_err(|_| "Failed to parse Azur Lane data.")?;
+        Ok(data)
     }
 
     /// Gets a ship by its ID.

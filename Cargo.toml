@@ -4,6 +4,7 @@ members = [
     "azur_lane",
     "azur_lane_data_collector",
     "commands",
+    "unity_read",
     "utils"
 ]
 resolver = "1"
