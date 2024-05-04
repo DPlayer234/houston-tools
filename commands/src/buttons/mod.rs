@@ -39,6 +39,7 @@ impl ButtonEventHandler {
             ButtonArgs::ViewAugment(view_augment) => self.interaction_dispatch_to(ctx, interaction, view_augment).await,
             ButtonArgs::ViewSkill(view_skill) => self.interaction_dispatch_to(ctx, interaction, view_skill).await,
             ButtonArgs::ViewLines(view_lines) => self.interaction_dispatch_to(ctx, interaction, view_lines).await,
+            ButtonArgs::ViewFilter(view_filter) => self.interaction_dispatch_to(ctx, interaction, view_filter).await,
         }
     }
 
@@ -97,6 +98,8 @@ pub enum ButtonArgs {
     ViewSkill(azur::skill::ViewSkill),
     /// Open the ship lines detail view.
     ViewLines(azur::lines::ViewLines),
+    /// Open the ship filter list view.
+    ViewFilter(azur::filter::ViewFilter),
 }
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.

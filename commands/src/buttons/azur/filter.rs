@@ -11,26 +11,81 @@ pub struct ViewFilter {
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct ViewFilterInfo {
-    faction: Option<Faction>,
-    hull_type: Option<HullType>,
-    rarity: Option<ShipRarity>,
-    has_augment: Option<bool>
+    pub faction: Option<Faction>,
+    pub hull_type: Option<HullType>,
+    pub rarity: Option<ShipRarity>,
+    pub has_augment: Option<bool>
 }
 
+impl From<ViewFilter> for ButtonArgs {
+    fn from(value: ViewFilter) -> Self {
+        ButtonArgs::ViewFilter(value)
+    }
+}
+
+const PAGE_SIZE: usize = 15;
+
 impl ViewFilter {
+    pub fn new(filter: ViewFilterInfo) -> ViewFilter {
+        ViewFilter { page: 0, filter }
+    }
+
     pub fn modify_with_iter<'a>(self, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
-        create
+        let mut desc = String::new();
+        let mut options = Vec::new();
+        let mut has_next = false;
+
+        for ship in iter {
+            if options.len() >= PAGE_SIZE {
+                has_next = true;
+                break
+            }
+
+            desc.push_str("- ");
+            desc.push_str(&ship.name);
+            desc.push('\n');
+
+            let view_ship = super::ship::ViewShip::new(ship.group_id);
+            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
+        }
+
+        let embed = CreateEmbed::new()
+            .title("Ships")
+            .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
+            .description(desc)
+            .color(DEFAULT_EMBED_COLOR);
+
+        let options = CreateSelectMenuKind::String { options };
+        let mut rows = vec![
+            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().to_custom_id(), options).placeholder("View ship..."))
+        ];
+
+        if self.page > 0 || has_next {
+            rows.insert(0, CreateActionRow::Buttons(vec![
+                if self.page > 0 {
+                    self.new_button(utils::field!(Self: page), self.page - 1, || Sentinel::new(0, 1))
+                } else {
+                    CreateButton::new("#no-back").disabled(true)
+                }.emoji('◀'),
+
+                if has_next {
+                    self.new_button(utils::field!(Self: page), self.page + 1, || Sentinel::new(0, 2))
+                } else {
+                    CreateButton::new("#no-forward").disabled(true)
+                }.emoji('▶')
+            ]));
+        }
+
+        create.embed(embed).components(rows)
     }
 }
 
 impl ButtonArgsModify for ViewFilter {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        const PAGE_SIZE: usize = 15;
-
         let mut predicate = self.filter.predicate(data);
         let filtered = data.azur_lane().ship_list.iter()
             .filter(move |&s| predicate(s))
-            .skip(PAGE_SIZE * usize::from(self.page)).take(PAGE_SIZE);
+            .skip(PAGE_SIZE * usize::from(self.page));
 
         Ok(self.modify_with_iter(create, filtered))
     }
