@@ -60,6 +60,11 @@ impl SerializedFile {
         })
     }
 
+    /// Gets the serialized types.
+    pub fn types(&self) -> &[SerializedType] {
+        &self.types
+    }
+
     /// Determines whether a buffer represents a serialized file.
     pub(crate) fn is_serialized_file(buf: &[u8]) -> bool {
         let cursor = &mut Cursor::new(buf);

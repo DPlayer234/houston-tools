@@ -1,5 +1,8 @@
 //! Allows reading in UnityFS archives, enumerating their files, and objects.
 //!
+//! Note that some functionality is not generally applicable, e.g. image decoding and meshes are only
+//! implemented for a small subset of the functionality required to work with Azur Lane's data.
+//!
 //! Inspired and made by referencing https://github.com/gameltb/io_unity and https://github.com/yuanyan3060/unity-rs for file formats.
 
 use std::{error::Error, fmt::{Debug, Display}};

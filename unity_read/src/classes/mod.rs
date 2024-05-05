@@ -10,9 +10,13 @@ use crate::serialized_file::TypeTreeNode;
 use crate::read_endian;
 
 mod class_id;
+mod mesh;
+mod streaming_info;
 mod texture2d;
 
 pub use class_id::*;
+pub use mesh::*;
+pub use streaming_info::*;
 pub use texture2d::{Texture2D, Texture2DData};
 
 /// Trait that allows reading Unity object data in a structured form.
@@ -201,8 +205,28 @@ impl UnityClass for String {
     }
 }
 
+impl<T: UnityClass> UnityClass for Option<T> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+        // Just deletes to the inner type and wraps it in Some
+        T::parse_tree(r, is_big_endian, root, tree).map(Some)
+    }
+}
+
 impl<T: UnityClass> UnityClass for Vec<T> {
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+        if root.type_name.as_str() == "vector" {
+            let (next, children) = tree.split_first()
+                .ok_or(UnityError::InvalidData("vector type data does not contain children"))?;
+
+            let result = Self::parse_tree(r, is_big_endian, next, children)?;
+
+            if (root.meta_flags & 0x4000) != 0 {
+                Self::align_reader(r)?;
+            }
+
+            return Ok(result)
+        }
+
         check_mismatch!(root, "Array" | "TypelessData");
 
         // The first element is the size, and the second is the child data.

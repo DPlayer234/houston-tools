@@ -5,6 +5,7 @@ use image::*;
 
 use crate::{define_unity_class, UnityError};
 use crate::unity_fs::UnityFsFile;
+use super::StreamingInfo;
 
 define_unity_class! {
     /// Data for Unity's Texture2D class.
@@ -15,15 +16,6 @@ define_unity_class! {
         format: i32 = "m_TextureFormat",
         image_data: Vec<u8> = "image data",
         stream_data: StreamingInfo = "m_StreamData",
-    }
-}
-
-define_unity_class! {
-    /// Streaming information for [`Texture2D`].
-    pub class StreamingInfo = "StreamingInfo" {
-        offset: u32 = "offset",
-        size: u32 = "size",
-        path: String = "path",
     }
 }
 
@@ -42,19 +34,10 @@ impl Texture2D {
 
     /// Reads the texture data.
     pub fn read_data<'a>(&'a self, fs: &UnityFsFile) -> anyhow::Result<Texture2DData<'a>> {
-        let data = if self.stream_data.path.is_empty() {
+        let data = if self.stream_data.is_empty() {
             Cow::Borrowed(self.image_data.as_slice())
         } else {
-            let path = self.stream_data.path.split('/').last().ok_or(UnityError::InvalidData("image streaming data path incorrect"))?;
-            let node = fs.entries().find(|e| e.path().as_str() == path).ok_or(UnityError::InvalidData("stream data file not found"))?;
-
-            let mut full = node.read_raw()?;
-            if self.stream_data.offset == 0 {
-                full.truncate(self.stream_data.size as usize);
-                Cow::Owned(full)
-            } else {
-                Cow::Owned(full[self.stream_data.offset as usize ..][.. self.stream_data.size as usize].to_vec())
-            }
+            Cow::Owned(self.stream_data.load_data(fs)?)
         };
 
         Ok(Texture2DData {
@@ -84,25 +67,31 @@ impl Texture2DData<'_> {
             unsafe { std::slice::from_raw_parts(ptr, byte_len) }.to_vec()
         }
 
-        fn flip_vertical<T: Copy>(v: &[T], width: u32) -> Vec<T> {
-            v.chunks(width as usize).rev().flatten().copied().collect()
-        }
-
         match self.texture.format() {
             TextureFormat::RGBA32 => {
                 // I think this matches the Rgba<u8> layout?
-                Ok(RgbaImage::from_raw(width.try_into()?, height.try_into()?, flip_vertical(&self.data, width * 4)).ok_or(UnityError::InvalidData("image data size incorrect"))?)
+                let image = RgbaImage::from_raw(width.try_into()?, height.try_into()?, self.data.to_vec())
+                    .ok_or(UnityError::InvalidData("image data size incorrect"))?;
+
+                Ok(image)
             },
             TextureFormat::ETC2_RGBA8 => {
                 let mut buffer = vec![0u32; (width * height) as usize];
                 texture2ddecoder::decode_etc2_rgba8(&self.data, width as usize, height as usize, buffer.as_mut_slice()).map_err(UnityError::InvalidData)?;
 
+                // Swap red and green channels
                 #[cfg(target_endian = "little")]
                 for px in buffer.iter_mut() {
                     *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
                 }
 
-                Ok(RgbaImage::from_raw(width, height, as_bytes(&flip_vertical(&buffer, width))).unwrap())
+                #[cfg(target_endian = "big")]
+                for px in buffer.iter_mut() {
+                    *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
+                }
+
+                let image = RgbaImage::from_raw(width, height, as_bytes(&buffer)).unwrap();
+                Ok(image)
             },
             _ => todo!("texture format {:?} not implemented", self.texture.format())
         }

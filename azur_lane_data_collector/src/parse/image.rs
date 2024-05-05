@@ -1,7 +1,8 @@
 use std::io::Cursor;
 
-use image::ImageOutputFormat;
-use unity_read::{classes::{ClassID, Texture2D}, unity_fs::{UnityFsFile, UnityFsData}};
+use image::{imageops, ImageOutputFormat};
+use unity_read::classes::{ClassID, Texture2D};
+use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 
 // shipmodels: chibi sprites, 1:1
 // paintingface: alternative faces, 0/1:1
@@ -26,7 +27,8 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
                 .find(|t| t.name.to_ascii_lowercase() == name);
 
             if let Some(texture) = texture {
-                let image = texture.read_data(&unity_fs)?.decode()?;
+                let mut image = texture.read_data(&unity_fs)?.decode()?;
+                imageops::flip_vertical_in_place(&mut image);
 
                 let mut writer = Cursor::new(Vec::new());
                 image.write_to(&mut writer, ImageOutputFormat::WebP)?;
