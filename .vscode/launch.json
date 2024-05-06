@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'app'",
+            "name": "Debug executable 'houston_app'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=app",
-                    "--package=app"
+                    "--bin=houston_app",
+                    "--package=houston_app"
                 ],
                 "filter": {
-                    "name": "app",
+                    "name": "houston_app",
                     "kind": "bin"
                 }
             },
@@ -38,26 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["-i", "G:/repos/priv/AzurLaneLuaScripts/EN"],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'app'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=app",
-                    "--package=app"
-                ],
-                "filter": {
-                    "name": "app",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
+            "args": ["-i", "D:/Private/Coding/Lua/AzurLaneLuaScripts/EN", "--assets", "C:/Users/dplay/Desktop/archive", "--test"],
             "cwd": "${workspaceFolder}"
         },
         {

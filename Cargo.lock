@@ -114,21 +114,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "azur_lane",
- "commands",
- "once_cell",
- "poise",
- "serde",
- "serenity",
- "simd-json",
- "tokio",
- "utils",
-]
-
-[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -953,6 +938,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
 dependencies = [
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "houston_app"
+version = "0.1.0"
+dependencies = [
+ "azur_lane",
+ "commands",
+ "once_cell",
+ "poise",
+ "serde",
+ "serenity",
+ "simd-json",
+ "tokio",
+ "utils",
 ]
 
 [[package]]
