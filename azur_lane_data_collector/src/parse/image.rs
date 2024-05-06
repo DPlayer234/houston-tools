@@ -13,7 +13,7 @@ use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 #[must_use]
 pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
     let name = name.to_ascii_lowercase();
-    let Ok(file) = std::fs::read(utils::join_path!(dir, "shipmodels", &name)) else {
+    let Ok(file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
         println!("Skin shipmodels file {name} not found.");
         return Ok(None)
     };

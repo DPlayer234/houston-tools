@@ -2,8 +2,9 @@
 #![allow(dead_code)]
 
 use std::borrow::Cow;
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::ops::Deref;
+use std::sync::Mutex;
 
 use binrw::{binread, BinRead, NullString};
 use num_enum::TryFromPrimitive;
@@ -14,9 +15,9 @@ use crate::serialized_file::SerializedFile;
 use crate::UnityError;
 
 /// A UnityFS file.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct UnityFsFile {
-    buf: DebugIgnore<Vec<u8>>,
+    buf: DebugIgnore<Box<Mutex<dyn SeekRead>>>,
     blocks_info: BlocksInfo,
     data_offset: u64
 }
@@ -139,19 +140,15 @@ struct BlockOffset {
 }
 
 impl UnityFsFile {
-    /// Reads a UnityFS from an in-memory buffer.
-    pub fn read(buf: Vec<u8>) -> anyhow::Result<Self> {
-        let slice = buf.as_slice();
-        let mut cursor = Cursor::new(slice);
-        let header = UnityFsHeader::read(&mut cursor)?;
+    /// Reads a UnityFS from a reader.
+    pub fn read<R: Seek + Read + 'static>(mut buf: R) -> anyhow::Result<Self> {
+        let header = UnityFsHeader::read(&mut buf)?;
 
-        type LocalCursor<'a> = Cursor<&'a [u8]>;
-
-        fn seek_to_16_byte_boundary(cursor: &mut LocalCursor) -> anyhow::Result<()> {
-            let pos = cursor.position();
+        fn seek_to_16_byte_boundary<R: Seek + Read>(buf: &mut R) -> anyhow::Result<()> {
+            let pos = buf.stream_position()?;
             let offset = pos % 16;
             if offset != 0 {
-                cursor.seek(SeekFrom::Current(16i64 - offset as i64))?;
+                buf.seek(SeekFrom::Current(16i64 - offset as i64))?;
             }
 
             Ok(())
@@ -161,24 +158,26 @@ impl UnityFsFile {
         let blocks_info = {
             if header.version >= 7 {
                 // Starting with version 7, the blocks info is aligned to the next 16-byte boundary.
-                seek_to_16_byte_boundary(&mut cursor)?;
+                seek_to_16_byte_boundary(&mut buf)?;
             }
 
-            let compressed_data = if header.flags.blocks_info_at_end() {
-                slice.get((slice.len() - header.compressed_blocks_info_size as usize) ..).ok_or(UnityError::InvalidData("invalid compressed blocks info"))?
+            let mut compressed_data = vec![0u8; header.compressed_blocks_info_size.try_into()?];
+
+            if header.flags.blocks_info_at_end() {
+                let pos = buf.stream_position()?;
+                buf.seek(SeekFrom::End(-i64::from(header.compressed_blocks_info_size)))?;
+                buf.read_exact(&mut compressed_data)?;
+                buf.seek(SeekFrom::Start(pos))?;
             } else {
-                let pos = cursor.position() as usize;
-                let end_pos = pos + header.compressed_blocks_info_size as usize;
-                cursor.set_position(end_pos as u64);
-                slice.get(pos .. end_pos).ok_or(UnityError::UnexpectedEof)?
-            };
+                buf.read_exact(&mut compressed_data)?;
+            }
 
             if header.flags.blocks_info_need_start_pad() {
-                seek_to_16_byte_boundary(&mut cursor)?;
+                seek_to_16_byte_boundary(&mut buf)?;
             }
 
             let decompressed_data = decompress_data(
-                compressed_data,
+                &compressed_data,
                 header.flags.compression(),
                 Some(header.uncompressed_blocks_info_size as i32)
             )?;
@@ -187,10 +186,10 @@ impl UnityFsFile {
             BlocksInfo::read(&mut reader)?
         };
 
-        let data_offset = cursor.position();
+        let data_offset = buf.stream_position()?;
 
         Ok(UnityFsFile {
-            buf: DebugIgnore(buf),
+            buf: DebugIgnore(Box::new(Mutex::new(buf))),
             blocks_info,
             data_offset
         })
@@ -234,14 +233,19 @@ impl<'a> UnityFsNode<'a> {
 
         let mut result = Vec::new();
         for block in &self.file.blocks_info.blocks[index ..] {
-            // Decompress the entire block
+            // Read and decompress the entire block
             let start = compressed_offset + self.file.data_offset;
-            let end = start + u64::from(block.compressed_size);
 
-            let compressed_data = &self.file.buf.0[(start as usize) .. (end as usize)];
+            let mut lock = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
+            let buf = &mut *lock;
 
-            let decompressed_data = decompress_data(
-                compressed_data,
+            let mut compressed_data = vec![0u8; block.compressed_size.try_into()?];
+
+            buf.seek(SeekFrom::Start(start))?;
+            buf.read_exact(&mut compressed_data)?;
+
+            let uncompressed_data = decompress_data(
+                &compressed_data,
                 block.flags.compression(),
                 Some(block.uncompressed_size as i32)
             )?;
@@ -251,12 +255,12 @@ impl<'a> UnityFsNode<'a> {
             let missing_size = (self.node.size - result.len() as u64) as usize;
             let sub_end = sub_start + missing_size;
 
-            if sub_end <= decompressed_data.len() {
-                result.extend(&decompressed_data[sub_start .. sub_end]);
+            if sub_end <= uncompressed_data.len() {
+                result.extend(&uncompressed_data[sub_start .. sub_end]);
                 break
             }
 
-            result.extend(&decompressed_data[sub_start ..]);
+            result.extend(&uncompressed_data[sub_start ..]);
 
             compressed_offset += u64::from(block.compressed_size);
             uncompressed_offset += u64::from(block.uncompressed_size);
@@ -296,6 +300,9 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: Optio
         _ => Err(UnityError::Unsupported("unsupported compression method"))?
     }
 }
+
+trait SeekRead: Seek + Read {}
+impl<T: Seek + Read> SeekRead for T {}
 
 #[derive(Clone)]
 struct DebugIgnore<T>(pub T);
