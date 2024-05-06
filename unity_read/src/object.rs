@@ -18,7 +18,7 @@ pub(crate) struct ObjectInfo {
 /// A reference to a Unity object.
 #[derive(Debug, Clone)]
 pub struct ObjectRef<'a> {
-    pub(crate) file: &'a SerializedFile,
+    pub(crate) file: &'a SerializedFile<'a>,
     pub(crate) ser_type: &'a SerializedType,
     pub(crate) object: ObjectInfo
 }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, io::Cursor};
+use std::io::Cursor;
 
 use binrw::BinRead;
 use half::f16;
@@ -89,11 +89,7 @@ pub struct ResolvedMesh {
 impl Mesh {
     // Only assuming Unity 2018 and newer.
     pub fn resolve_meshes(&self, fs: &UnityFsFile) -> anyhow::Result<Vec<ResolvedMesh>> {
-        let data = if self.stream_data.is_empty() {
-            Cow::Borrowed(self.vertex_data.data_size.as_slice())
-        } else {
-            Cow::Owned(self.stream_data.load_data(fs)?)
-        };
+        let data = self.stream_data.load_data_or_else(fs, || &self.vertex_data.data_size)?;
 
         // Would you believe me if this handles barely anything a mesh can store?
         let (index_size, index_buffer) = self.load_index_buffer()?;

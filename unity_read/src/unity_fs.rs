@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use std::io::{Cursor, Seek, SeekFrom};
 use std::ops::Deref;
 
-use binrw::{binrw, BinRead, NullString};
+use binrw::{binread, BinRead, NullString};
 use num_enum::TryFromPrimitive;
 use modular_bitfield::{bitfield, BitfieldSpecifier};
 use modular_bitfield::specifiers::*;
@@ -26,18 +26,18 @@ pub struct UnityFsFile {
 #[derive(Debug, Clone)]
 pub struct UnityFsNode<'a> {
     file: &'a UnityFsFile,
-    node: Node
+    node: &'a Node
 }
 
 /// Data for UnityFS node.
 #[derive(Debug, Clone)]
-pub enum UnityFsData {
-    SerializedFile(SerializedFile),
-    RawData(Vec<u8>)
+pub enum UnityFsData<'a> {
+    SerializedFile(SerializedFile<'a>),
+    RawData(&'a [u8])
 }
 
-#[binrw]
-#[brw(big, magic = b"UnityFS\0")] // Only going to support UnityFS and no other formats
+#[binread]
+#[br(big, magic = b"UnityFS\0")] // Only going to support UnityFS and no other formats
 #[derive(Clone, Debug)]
 struct UnityFsHeader {
     version: u32,
@@ -50,7 +50,7 @@ struct UnityFsHeader {
 }
 
 #[bitfield]
-#[binrw]
+#[binread]
 #[derive(Debug, Clone)]
 #[br(map = |x: u32| Self::from_bytes(x.to_le_bytes()))]
 struct ArchiveFlags {
@@ -67,20 +67,22 @@ struct ArchiveFlags {
     pad: B22
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Debug, Clone)]
 struct BlocksInfo {
     data_hash: [u8; 16],
+    #[br(temp)]
     blocks_count: u32,
     #[br(count = blocks_count)]
     blocks: Vec<Block>,
+    #[br(temp)]
     nodes_count: u32,
     #[br(count = nodes_count)]
-    nodes: Vec<Node>,
+    nodes: Vec<Node>
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Clone, Debug)]
 struct Block {
@@ -90,7 +92,7 @@ struct Block {
 }
 
 #[bitfield]
-#[binrw]
+#[binread]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[br(map = |x: u16| Self::from_bytes(x.to_le_bytes()))]
 struct BlockFlags {
@@ -104,7 +106,7 @@ struct BlockFlags {
     pad: B9,
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Clone, Debug, PartialEq)]
 struct Node {
@@ -112,6 +114,10 @@ struct Node {
     size: u64,
     flags: u32,
     path: NullString,
+
+    ///
+    #[br(ignore)]
+    uncompressed_cache: std::sync::Arc<once_cell::sync::OnceCell<Vec<u8>>>
 }
 
 #[repr(u32)]
@@ -191,10 +197,10 @@ impl UnityFsFile {
     }
 
     /// Enumerates all node entries within the file.
-    pub fn entries<'a>(&'a self) -> impl Iterator<Item = UnityFsNode> {
+    pub fn entries<'a>(&'a self) -> impl Iterator<Item = UnityFsNode<'a>> {
         self.blocks_info.nodes.iter().map(|n| UnityFsNode {
             file: self,
-            node: n.clone()
+            node: n
         })
     }
 
@@ -218,8 +224,7 @@ impl UnityFsFile {
 }
 
 impl<'a> UnityFsNode<'a> {
-    /// Reads the raw binary data for this node.
-    pub fn read_raw(&self) -> anyhow::Result<Vec<u8>> {
+    fn decompress(&self) -> anyhow::Result<Vec<u8>> {
         let uncompressed_start = self.node.offset;
         let BlockOffset {
             index,
@@ -261,8 +266,13 @@ impl<'a> UnityFsNode<'a> {
         Ok(result)
     }
 
+    /// Reads the raw binary data for this node.
+    pub fn read_raw(&self) -> anyhow::Result<&'a [u8]> {
+        Ok(&self.node.uncompressed_cache.get_or_try_init(|| self.decompress())?)
+    }
+
     /// Reads the data for this node.
-    pub fn read(&self) -> anyhow::Result<UnityFsData> {
+    pub fn read(&'a self) -> anyhow::Result<UnityFsData<'a>> {
         let buf = self.read_raw()?;
         if SerializedFile::is_serialized_file(&buf) {
             Ok(UnityFsData::SerializedFile(SerializedFile::read(buf)?))

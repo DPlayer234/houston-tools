@@ -2,15 +2,15 @@
 
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
-use binrw::{binrw, BinRead, NullString};
+use binrw::{binread, BinRead, NullString};
 
 use crate::object::{ObjectInfo, ObjectRef};
 use crate::read_endian;
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]
-pub struct SerializedFile {
-    pub(crate) buf: Vec<u8>,
+pub struct SerializedFile<'a> {
+    pub(crate) buf: &'a [u8],
     metadata_size: u32,
     file_size: u64,
     pub version: u32,
@@ -47,7 +47,7 @@ pub struct TypeTreeNode {
     pub level: u8,
 }
 
-impl SerializedFile {
+impl SerializedFile<'_> {
     /// Enumerates the objects listed within this file.
     pub fn objects<'a>(&'a self) -> impl Iterator<Item = ObjectRef<'a>> {
         self.objects.iter().map(|obj| ObjectRef {
@@ -87,9 +87,8 @@ impl SerializedFile {
     }
 
     /// Reads a buffer into a [`SerializedFile`] struct.
-    pub fn read(buf: Vec<u8>) -> anyhow::Result<Self> {
-        let slice = buf.as_slice();
-        let cursor = &mut Cursor::new(slice);
+    pub fn read<'a>(buf: &'a [u8]) -> anyhow::Result<SerializedFile<'a>> {
+        let cursor = &mut Cursor::new(buf);
 
         let mut result = SerializedFile::default();
 
@@ -336,7 +335,7 @@ fn align_cursor(cursor: &mut LocalCursor) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Debug, Clone)]
 struct HeaderMain {
@@ -346,7 +345,7 @@ struct HeaderMain {
     data_offset: u32
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Debug, Clone)]
 struct HeaderV9Ext {
@@ -355,7 +354,7 @@ struct HeaderV9Ext {
     reserved: [u8; 3]
 }
 
-#[binrw]
+#[binread]
 #[br(big)]
 #[derive(Debug, Clone)]
 struct HeaderV22Ext {
@@ -366,7 +365,8 @@ struct HeaderV22Ext {
     reserved: u64
 }
 
-#[binrw]
+#[allow(dead_code)]
+#[binread]
 #[derive(Debug, Clone)]
 struct SerializedTypeRefNames {
     class_name: NullString,
@@ -374,15 +374,17 @@ struct SerializedTypeRefNames {
     asm_name: NullString,
 }
 
-#[binrw]
+#[allow(dead_code)]
+#[binread]
 #[derive(Debug, Clone)]
 struct SerializedTypeDeps {
+    #[br(temp)]
     count: u32,
     #[br(count = count)]
     vec: Vec<u32>
 }
 
-#[binrw]
+#[binread]
 #[derive(Debug, Clone)]
 struct TypeTreeNodeBlob {
     version: u16,
@@ -395,7 +397,7 @@ struct TypeTreeNodeBlob {
     meta_flags: u32,
 }
 
-#[binrw]
+#[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlob {
     path_id: u32,
@@ -404,7 +406,7 @@ struct ObjectBlob {
     type_id: u32
 }
 
-#[binrw]
+#[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlobBigId {
     path_id: u64,
@@ -413,7 +415,7 @@ struct ObjectBlobBigId {
     type_id: u32
 }
 
-#[binrw]
+#[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlobV22 {
     path_id: u64,

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use num_enum::FromPrimitive;
 use image::*;
 
@@ -23,7 +21,7 @@ define_unity_class! {
 #[derive(Debug, Clone)]
 pub struct Texture2DData<'a> {
     texture: &'a Texture2D,
-    data: Cow<'a, [u8]>
+    data: &'a [u8]
 }
 
 impl Texture2D {
@@ -33,16 +31,10 @@ impl Texture2D {
     }
 
     /// Reads the texture data.
-    pub fn read_data<'a>(&'a self, fs: &UnityFsFile) -> anyhow::Result<Texture2DData<'a>> {
-        let data = if self.stream_data.is_empty() {
-            Cow::Borrowed(self.image_data.as_slice())
-        } else {
-            Cow::Owned(self.stream_data.load_data(fs)?)
-        };
-
+    pub fn read_data<'a>(&'a self, fs: &'a UnityFsFile) -> anyhow::Result<Texture2DData<'a>> {
         Ok(Texture2DData {
             texture: self,
-            data
+            data: self.stream_data.load_data_or_else(fs, || &self.image_data)?
         })
     }
 }
@@ -77,7 +69,8 @@ impl Texture2DData<'_> {
             },
             TextureFormat::ETC2_RGBA8 => {
                 let mut buffer = vec![0u32; (width * height) as usize];
-                texture2ddecoder::decode_etc2_rgba8(&self.data, width as usize, height as usize, buffer.as_mut_slice()).map_err(UnityError::InvalidData)?;
+                texture2ddecoder::decode_etc2_rgba8(&self.data, width as usize, height as usize, buffer.as_mut_slice())
+                    .map_err(UnityError::InvalidData)?;
 
                 // Swap red and green channels
                 #[cfg(target_endian = "little")]
