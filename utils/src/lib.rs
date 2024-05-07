@@ -19,6 +19,7 @@ pub mod time;
 /// let y: &[u8; 4] = utils::as_with_size(x);
 /// assert_eq!(x, y);
 /// ```
+#[must_use]
 pub const fn as_with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
     assert!(slice.len() >= N);
     unsafe {
@@ -46,14 +47,23 @@ impl<T, E: Debug> Discard for Result<T, E> {
     }
 }
 
+/// Represents a field of a struct. Provides methods to access the field.
+#[must_use]
 pub trait Field<S: ?Sized, F: ?Sized> {
+    /// Gets a reference to the field.
+    #[must_use]
     fn get<'r>(&self, obj: &'r S) -> &'r F;
+
+    /// Gets a mutable reference to the field.
+    #[must_use]
     fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F;
 }
 
+/// Provides a [`Field`] implementation that uses lambdas.
+#[must_use]
 pub struct LambdaField<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> {
-    pub get: Get,
-    pub get_mut: GetMut,
+    get: Get,
+    get_mut: GetMut,
     _phantom_s: PhantomData<S>,
     _phantom_f: PhantomData<F>,
 }
@@ -78,6 +88,7 @@ impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> Fiel
     }
 }
 
+/// Gets a [`Field`] that refers to the provided info.
 #[macro_export]
 macro_rules! field {
     ($type:ty : $field:ident) => {{

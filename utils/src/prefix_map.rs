@@ -1,7 +1,7 @@
 //! Contains the [`PrefixMap`] struct.
 
 /// Provides a way to map values of type `T` to strings and access all values whose key starts with a certain prefix.
-/// 
+///
 /// The access here is at least O(log n). The map is backed by a vector which is binary searched.
 #[derive(Debug, Clone)]
 pub struct PrefixMap<T> {
@@ -22,7 +22,7 @@ impl<T> PrefixMap<T> {
     }
 
     /// Inserts a new value into the map.
-    /// 
+    ///
     /// Insertion is O(n log n).
     pub fn insert(&mut self, key: &str, value: T) -> bool {
         let key = simplify(key);
@@ -33,9 +33,10 @@ impl<T> PrefixMap<T> {
     }
 
     /// Provides an iterator over all entries whose key starts with the provided prefix.
-    /// 
+    ///
     /// This function in itself is O(log n), looking for the start of the data.
     /// The data is evaluated lazily as you use the iterator.
+    #[must_use]
     pub fn find(&self, key_prefix: &str) -> impl Iterator<Item = &T> {
         let key_prefix = simplify(key_prefix);
         let start = self.search_by(&key_prefix).unwrap_or_else(std::convert::identity);
@@ -54,6 +55,7 @@ fn is_allowed_char(c: &char) -> bool {
     c.is_alphanumeric()
 }
 
+#[must_use]
 fn simplify(key: &str) -> String {
     key.chars().filter(is_allowed_char).filter_map(|c| c.to_lowercase().next()).collect()
 }

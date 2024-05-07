@@ -3,7 +3,8 @@ use std::io::Cursor;
 use binrw::BinRead;
 use half::f16;
 
-use crate::{define_unity_class, unity_fs::UnityFsFile, UnityError};
+use crate::{define_unity_class, UnityError};
+use crate::unity_fs::UnityFsFile;
 use super::StreamingInfo;
 
 define_unity_class! {

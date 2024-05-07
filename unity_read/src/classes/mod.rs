@@ -14,10 +14,10 @@ mod mesh;
 mod streaming_info;
 mod texture2d;
 
-pub use class_id::ClassID;
-pub use mesh::Mesh;
-pub use streaming_info::StreamingInfo;
-pub use texture2d::Texture2D;
+pub use class_id::*;
+pub use mesh::*;
+pub use streaming_info::*;
+pub use texture2d::*;
 
 /// Trait that allows reading Unity object data in a structured form.
 pub trait UnityClass: Default {

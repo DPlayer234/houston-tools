@@ -1,14 +1,15 @@
 //! Provides helper methods to work with displayed text.
 
 /// Given a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let s = String::from("HELLO_NEW_WORLD");
 /// let s = utils::text::to_titlecase(s);
 /// assert_eq!(&s, "Hello New World");
 /// ```
+#[must_use]
 pub fn to_titlecase(mut value: String) -> String {
 	// SAFETY: `to_titlecase_u8` only transforms
 	// ASCII characters into other ASCII characters.
@@ -21,9 +22,9 @@ pub fn to_titlecase(mut value: String) -> String {
 
 /// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
 /// The slice is mutated in-place.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let mut s = b"HELLO_NEW_WORLD".to_vec();
 /// utils::text::to_titlecase_u8(&mut s);
@@ -37,6 +38,7 @@ pub fn to_titlecase_u8(slice: &mut [u8]) {
 	}
 }
 
+#[must_use]
 const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 	if c == b'_' {
 		(b' ', true)
@@ -49,14 +51,14 @@ const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 
 /// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version (i.e. `Snake Case`).
 /// The resulting value is still const.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// const TITLE: &str = utils::titlecase!("HELLO_NEW_WORLD");
 /// assert_eq!(TITLE, "Hello New World");
 /// ```
-/// 
+///
 /// Also works with lower snake case:
 /// ```
 /// const TITLE: &str = utils::titlecase!("hello_new_world");
@@ -67,7 +69,7 @@ macro_rules! titlecase {
 	($input:expr) => {{
 		// Ensure input is a `&'static str`
 		const INPUT: &str = $input;
-		
+
 		// Reusable const for byte length
 		const N: usize = INPUT.len();
 
@@ -83,11 +85,11 @@ macro_rules! titlecase {
 }
 
 /// Joins an arbitrary amount of const [`str`] values.
-/// 
+///
 /// Unlike the [`std::concat`] macro, the parameters don't have to be literals, but also aren't stringified.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// const BASE: &str = "https://example.com/";
 /// const PATH: &str = "cool_page.html";
@@ -115,7 +117,8 @@ macro_rules! join {
 }
 
 /// Ensures a string is at most `len` in size.
-/// If it exceeds the size, it is truncated to the specified size, including appending ellipses at the end. 
+/// If it exceeds the size, it is truncated to the specified size, including appending ellipses at the end.
+#[must_use]
 pub fn truncate(str: impl Into<String>, len: usize) -> String {
 	let str: String = str.into();
 	if str.len() < len { return str; }
@@ -128,23 +131,25 @@ pub fn truncate(str: impl Into<String>, len: usize) -> String {
 #[doc(hidden)]
 pub mod __private {
 	/// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
-	/// 
+	///
 	/// This function is generally not useful and exists primarily to support the [`titlecase`] macro.
+	#[must_use]
 	pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
 		let mut is_start = true;
-	
+
 		let mut index = 0usize;
 		while index < LEN {
 			(value[index], is_start) = super::titlecase_transform(value[index], is_start);
 			index += 1;
 		}
-	
+
 		value
 	}
 
 	/// Provides an unsafe way to join two [`u8`] slices into a single array.
-	/// 
+	///
 	/// Providing the wrong length may lead to undefined behavior.
+	#[must_use]
 	pub const unsafe fn join_const_unsafe<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
 		const fn copy_slice<const N: usize>(mut out: [u8; N], slice: &[u8], offset: usize) -> [u8; N] {
 			let mut index = 0usize;
@@ -152,13 +157,13 @@ pub mod __private {
 				out[offset + index] = slice[index];
 				index += 1;
 			}
-	
+
 			out
 		}
-		
+
 		let out = [0u8; N];
 		let out = copy_slice(out, a, 0);
 		let out = copy_slice(out, b, a.len());
 		out
 	}
-} 
+}

@@ -27,11 +27,13 @@ pub unsafe fn mark_startup_time() {
 /// Gets the marked startup time of the application.
 ///
 /// If the program setup never called [`mark_startup_time`], this will be the unix epoch.
+#[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
 	unsafe { STARTUP_TIME }
 }
 
 /// Gets the creation time from a snowflake
+#[must_use]
 pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
     // This shouldn't be able to fail due to the bit shift, but I'm not validating that.
     DateTime::from_timestamp_millis(((snowflake >> 22) + DISCORD_EPOCH) as i64)
@@ -40,6 +42,7 @@ pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
 /// Allows mentioning a timestamp in Discord messages.
 pub trait TimestampMention {
 	/// Formats a mention for a timestamp.
+    #[must_use]
 	fn mention(&self, format: Option<char>) -> String;
 }
 
@@ -53,6 +56,7 @@ impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
 	}
 }
 
+#[must_use]
 pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
     for f in DATE_TIME_FORMATS {
         if let Ok(date_time) = DateTime::parse_from_str(s, f.full) {
