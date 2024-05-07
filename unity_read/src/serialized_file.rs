@@ -47,9 +47,9 @@ pub struct TypeTreeNode {
     pub level: u8,
 }
 
-impl SerializedFile<'_> {
+impl<'a> SerializedFile<'a> {
     /// Enumerates the objects listed within this file.
-    pub fn objects<'a>(&'a self) -> impl Iterator<Item = ObjectRef<'a>> {
+    pub fn objects(&'a self) -> impl Iterator<Item = ObjectRef<'a>> {
         self.objects.iter().map(|obj| ObjectRef {
             file: self,
             // the below will panic if the class_id and type_id don't map to anything
@@ -87,7 +87,7 @@ impl SerializedFile<'_> {
     }
 
     /// Reads a buffer into a [`SerializedFile`] struct.
-    pub fn read<'a>(buf: &'a [u8]) -> anyhow::Result<SerializedFile<'a>> {
+    pub fn read(buf: &'a [u8]) -> anyhow::Result<Self> {
         let cursor = &mut Cursor::new(buf);
 
         let mut result = SerializedFile::default();

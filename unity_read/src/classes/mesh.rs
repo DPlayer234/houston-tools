@@ -85,23 +85,37 @@ pub struct ResolvedMesh {
     triangle_data: Vec<(usize, usize, usize)>,
 }
 
+/// Loaded vertex data for a [`Mesh`].
+#[derive(Debug, Clone)]
+pub struct MeshVertexData<'t> {
+    mesh: &'t Mesh,
+    data: &'t [u8]
+}
 
 impl Mesh {
-    // Only assuming Unity 2018 and newer.
-    pub fn resolve_meshes(&self, fs: &UnityFsFile) -> anyhow::Result<Vec<ResolvedMesh>> {
-        let data = self.stream_data.load_data_or_else(fs, || &self.vertex_data.data_size)?;
+    /// Reads the mesh's vertex data.
+    pub fn read_vertex_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> anyhow::Result<MeshVertexData<'t>> {
+        Ok(MeshVertexData {
+            mesh: self,
+            data: self.stream_data.load_data_or_else(fs, || &self.vertex_data.data_size)?
+        })
+    }
+}
 
+impl MeshVertexData<'_> {
+    // Only assuming Unity 2018 and newer.
+    pub fn resolve_meshes(&self) -> anyhow::Result<Vec<ResolvedMesh>> {
         // Would you believe me if this handles barely anything a mesh can store?
         let (index_size, index_buffer) = self.load_index_buffer()?;
-        let streams = self.load_streams(data.len().try_into()?)?;
+        let streams = self.load_streams()?;
 
         let mut result_meshes = Vec::new();
 
-        for sub_mesh in &self.sub_meshes {
+        for sub_mesh in &self.mesh.sub_meshes {
             let mut result = ResolvedMesh::default();
             result.vertices = vec![Vertex::default(); sub_mesh.vertex_count.try_into()?];
 
-            for (index, channel) in self.vertex_data.channels.iter().enumerate() {
+            for (index, channel) in self.mesh.vertex_data.channels.iter().enumerate() {
                 if !matches!(channel.dimension, 1 | 2 | 3) { continue }
 
                 // CMBK: currently only supporting some channels
@@ -114,20 +128,19 @@ impl Mesh {
                     * u64::from(sub_mesh.vertex_count)
                     + u64::from(stream.offset);
 
-                if channel_size > stream.stride || stream_size > data.len() as u64 { continue }
-
+                if channel_size > stream.stride || stream_size > self.data.len().try_into()? { continue }
 
                 match index {
                     0 => { // pos
                         if channel.dimension != 3 { continue }
                         for i in 0 .. sub_mesh.vertex_count {
-                            let cursor = &mut make_cursor(&data, i, sub_mesh, stream, channel);
+                            let cursor = &mut make_cursor(self.data, i, sub_mesh, stream, channel);
                             result.vertices[i as usize].pos = read_f32_vector::<3>(cursor, channel.format)?.into();
                         }
                     }
                     3 | 4 => { // uv1/2
                         for i in 0 .. sub_mesh.vertex_count {
-                            let cursor = &mut make_cursor(&data, i, sub_mesh, stream, channel);
+                            let cursor = &mut make_cursor(self.data, i, sub_mesh, stream, channel);
                             let uv = &mut result.vertices[i as usize].uv;
                             match channel.dimension {
                                 1 => *uv = read_f32_vector::<1>(cursor, channel.format)?.into(),
@@ -211,14 +224,14 @@ impl Mesh {
     }
 
     fn load_index_buffer(&self) -> anyhow::Result<(u32, Vec<u32>)> {
-        match self.index_format {
+        match self.mesh.index_format {
             0 => { // UInt16
-                Ok((2, self.index_buffer.chunks_exact(2)
+                Ok((2, self.mesh.index_buffer.chunks_exact(2)
                     .map(|m| u32::from(u16::from(m[0]) | (u16::from(m[1]) << 8)))
                     .collect()))
             }
             1 => { // UInt32
-                Ok((4, self.index_buffer.chunks_exact(4)
+                Ok((4, self.mesh.index_buffer.chunks_exact(4)
                     .map(|m| u32::from(m[0]) | (u32::from(m[1]) << 8) | (u32::from(m[2]) << 16) | (u32::from(m[3]) << 24))
                     .collect()))
             }
@@ -228,13 +241,16 @@ impl Mesh {
         }
     }
 
-    fn load_streams(&self, data_size: u32) -> anyhow::Result<Vec<StreamInfo>> {
-        let mut streams = self.vertex_data.streams
+    fn load_streams(&self) -> anyhow::Result<Vec<StreamInfo>> {
+        let data_size: u32 = self.data.len().try_into()?;
+        let vertex_data = &self.mesh.vertex_data;
+
+        let mut streams = vertex_data.streams
             .as_ref()
             .map(|s| s.clone())
             .unwrap_or_else(Vec::new);
 
-        let max_stream = self.vertex_data.channels.iter()
+        let max_stream = vertex_data.channels.iter()
             .map(|c| c.stream).max()
             .unwrap_or_default() as usize;
 
@@ -242,8 +258,8 @@ impl Mesh {
             streams.push(StreamInfo::default());
         }
 
-        if self.vertex_data.streams.is_none() {
-            for (index, channel) in self.vertex_data.channels.iter().enumerate() {
+        if vertex_data.streams.is_none() {
+            for (index, channel) in vertex_data.channels.iter().enumerate() {
                 let stream = &mut streams[usize::from(channel.stream)];
 
                 stream.channel_mask |= (1 << index) as u32;
@@ -257,7 +273,7 @@ impl Mesh {
             let mut cur_offset = 0u32;
             for stream in &mut streams {
                 stream.offset = cur_offset;
-                cur_offset += stream.stride * self.vertex_data.vertex_count;
+                cur_offset += stream.stride * vertex_data.vertex_count;
             }
 
             if cur_offset > data_size {
@@ -265,7 +281,7 @@ impl Mesh {
             }
 
             if streams.len() == 2 {
-                streams[1].offset = data_size - streams[1].stride * self.vertex_data.vertex_count;
+                streams[1].offset = data_size - streams[1].stride * vertex_data.vertex_count;
             }
         }
 

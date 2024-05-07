@@ -16,7 +16,7 @@ impl StreamingInfo {
     }
 
     /// Loads the streaming data.
-    pub fn load_data<'a>(&self, fs: &'a UnityFsFile) -> anyhow::Result<&'a [u8]> {
+    pub fn load_data<'a>(&self, fs: &'a UnityFsFile<'a>) -> anyhow::Result<&'a [u8]> {
         let path = self.path.split('/').last().ok_or(UnityError::InvalidData("streaming data path incorrect"))?;
         let node = fs.entries().find(|e| e.path().as_str() == path).ok_or(UnityError::InvalidData("streaming data file not found"))?;
 
@@ -39,7 +39,7 @@ impl StreamingInfo {
         Ok(slice)
     }
 
-    pub fn load_data_or_else<'a>(&self, fs: &'a UnityFsFile, fallback: impl FnOnce() -> &'a [u8]) -> anyhow::Result<&'a [u8]> {
+    pub fn load_data_or_else<'t, 'fs: 't>(&self, fs: &'fs UnityFsFile<'fs>, fallback: impl FnOnce() -> &'t [u8]) -> anyhow::Result<&'t [u8]> {
         if self.path.is_empty() {
             Ok(fallback())
         } else {

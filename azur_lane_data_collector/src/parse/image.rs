@@ -13,12 +13,12 @@ use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 #[must_use]
 pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
     let name = name.to_ascii_lowercase();
-    let Ok(file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
+    let Ok(mut file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
         println!("Skin shipmodels file {name} not found.");
         return Ok(None)
     };
 
-    let unity_fs = UnityFsFile::read(file)?;
+    let unity_fs = UnityFsFile::open(&mut file)?;
     for entry in unity_fs.entries() {
         if let UnityFsData::SerializedFile(ser_file) = entry.read()? {
             let texture = ser_file.objects()

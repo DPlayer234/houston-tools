@@ -19,9 +19,9 @@ define_unity_class! {
 
 /// Loaded data for a [`Texture2D`].
 #[derive(Debug, Clone)]
-pub struct Texture2DData<'a> {
-    texture: &'a Texture2D,
-    data: &'a [u8]
+pub struct Texture2DData<'t> {
+    texture: &'t Texture2D,
+    data: &'t [u8]
 }
 
 impl Texture2D {
@@ -31,7 +31,7 @@ impl Texture2D {
     }
 
     /// Reads the texture data.
-    pub fn read_data<'a>(&'a self, fs: &'a UnityFsFile) -> anyhow::Result<Texture2DData<'a>> {
+    pub fn read_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> anyhow::Result<Texture2DData<'t>> {
         Ok(Texture2DData {
             texture: self,
             data: self.stream_data.load_data_or_else(fs, || &self.image_data)?

@@ -16,8 +16,8 @@ use crate::UnityError;
 
 /// A UnityFS file.
 #[derive(Debug)]
-pub struct UnityFsFile {
-    buf: DebugIgnore<Box<Mutex<dyn SeekRead>>>,
+pub struct UnityFsFile<'a> {
+    buf: DebugIgnore<Mutex<&'a mut dyn SeekRead>>,
     blocks_info: BlocksInfo,
     data_offset: u64
 }
@@ -26,7 +26,7 @@ pub struct UnityFsFile {
 /// Broadly represents a block of binary data.
 #[derive(Debug, Clone)]
 pub struct UnityFsNode<'a> {
-    file: &'a UnityFsFile,
+    file: &'a UnityFsFile<'a>,
     node: &'a Node
 }
 
@@ -139,12 +139,12 @@ struct BlockOffset {
     uncompressed_offset: u64
 }
 
-impl UnityFsFile {
+impl<'a> UnityFsFile<'a> {
     /// Reads a UnityFS from a reader.
-    pub fn read<R: Seek + Read + 'static>(mut buf: R) -> anyhow::Result<Self> {
+    pub fn open(mut buf: &'a mut dyn SeekRead) -> anyhow::Result<Self> {
         let header = UnityFsHeader::read(&mut buf)?;
 
-        fn seek_to_16_byte_boundary<R: Seek + Read>(buf: &mut R) -> anyhow::Result<()> {
+        fn seek_to_16_byte_boundary(buf: &mut dyn SeekRead) -> anyhow::Result<()> {
             let pos = buf.stream_position()?;
             let offset = pos % 16;
             if offset != 0 {
@@ -158,7 +158,7 @@ impl UnityFsFile {
         let blocks_info = {
             if header.version >= 7 {
                 // Starting with version 7, the blocks info is aligned to the next 16-byte boundary.
-                seek_to_16_byte_boundary(&mut buf)?;
+                seek_to_16_byte_boundary(buf)?;
             }
 
             let mut compressed_data = vec![0u8; header.compressed_blocks_info_size.try_into()?];
@@ -173,7 +173,7 @@ impl UnityFsFile {
             }
 
             if header.flags.blocks_info_need_start_pad() {
-                seek_to_16_byte_boundary(&mut buf)?;
+                seek_to_16_byte_boundary(buf)?;
             }
 
             let decompressed_data = decompress_data(
@@ -189,14 +189,14 @@ impl UnityFsFile {
         let data_offset = buf.stream_position()?;
 
         Ok(UnityFsFile {
-            buf: DebugIgnore(Box::new(Mutex::new(buf))),
+            buf: DebugIgnore(Mutex::new(buf)),
             blocks_info,
             data_offset
         })
     }
 
     /// Enumerates all node entries within the file.
-    pub fn entries<'a>(&'a self) -> impl Iterator<Item = UnityFsNode<'a>> {
+    pub fn entries(&'a self) -> impl Iterator<Item = UnityFsNode<'a>> {
         self.blocks_info.nodes.iter().map(|n| UnityFsNode {
             file: self,
             node: n
@@ -236,9 +236,7 @@ impl<'a> UnityFsNode<'a> {
             // Read and decompress the entire block
             let start = compressed_offset + self.file.data_offset;
 
-            let mut lock = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
-            let buf = &mut *lock;
-
+            let mut buf = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
             let mut compressed_data = vec![0u8; block.compressed_size.try_into()?];
 
             buf.seek(SeekFrom::Start(start))?;
@@ -276,7 +274,7 @@ impl<'a> UnityFsNode<'a> {
     }
 
     /// Reads the data for this node.
-    pub fn read(&'a self) -> anyhow::Result<UnityFsData<'a>> {
+    pub fn read(&self) -> anyhow::Result<UnityFsData<'a>>{
         let buf = self.read_raw()?;
         if SerializedFile::is_serialized_file(&buf) {
             Ok(UnityFsData::SerializedFile(SerializedFile::read(buf)?))
@@ -301,8 +299,8 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: Optio
     }
 }
 
-trait SeekRead: Seek + Read {}
-impl<T: Seek + Read> SeekRead for T {}
+pub trait SeekRead: Read + Seek {}
+impl<T: Read + Seek> SeekRead for T {}
 
 #[derive(Clone)]
 struct DebugIgnore<T>(pub T);
