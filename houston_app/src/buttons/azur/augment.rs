@@ -23,6 +23,7 @@ impl From<ViewAugment> for ButtonArgs {
 
 impl ViewAugment {
     /// Creates a new instance.
+    #[allow(dead_code)] // planned for future use
     pub fn new(augment_id: u32) -> Self {
         Self { augment_id, back: None }
     }

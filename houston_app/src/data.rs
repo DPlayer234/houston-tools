@@ -1,5 +1,3 @@
-use crate::HContext;
-
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -18,6 +16,13 @@ pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 
 /// A general color that can be used for embeds indicating errors.
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
+
+/// The error type used for the poise context.
+pub type HError = anyhow::Error;
+/// The full poise context type.
+pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
+/// The poise command result type.
+pub type HResult = Result<(), HError>;
 
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
@@ -40,7 +45,6 @@ pub struct HAzurLane {
     pub ship_list: Vec<ShipData>,
     pub augment_list: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
-    ship_name_to_index: HashMap<String, usize>,
     ship_prefix_map: PrefixMap<usize>,
     augment_id_to_index: HashMap<u32, usize>,
     ship_id_to_augment_index: HashMap<u32, usize>,
@@ -172,7 +176,6 @@ impl HAzurLane {
         });
 
         let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
-        let mut ship_name_to_index = HashMap::with_capacity(data.ships.len());
         let mut ship_prefix_map = PrefixMap::new();
 
         let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
@@ -180,10 +183,7 @@ impl HAzurLane {
 
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
-            ship_name_to_index.insert(data.name.clone(), index);
-            if !ship_prefix_map.insert(&data.name, index) {
-                panic!("Duplicate name {} @ id {}", data.name, data.group_id);
-            }
+            assert!(ship_prefix_map.insert(&data.name, index), "Duplicate name {} @ id {}", data.name, data.group_id);
         }
 
         for (index, augment) in data.augments.iter().enumerate() {
@@ -198,7 +198,6 @@ impl HAzurLane {
             ship_list: data.ships,
             augment_list: data.augments,
             ship_id_to_index,
-            ship_name_to_index,
             ship_prefix_map,
             augment_id_to_index,
             ship_id_to_augment_index,
@@ -215,12 +214,6 @@ impl HAzurLane {
     /// Gets a ship by its ID.
     pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
         let index = *self.ship_id_to_index.get(&id)?;
-        self.ship_list.get(index)
-    }
-
-    /// Gets a ship by its name.
-    pub fn ship_by_name(&self, name: &str) -> Option<&ShipData> {
-        let index = *self.ship_name_to_index.get(name)?;
         self.ship_list.get(index)
     }
 

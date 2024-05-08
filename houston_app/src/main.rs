@@ -4,9 +4,15 @@ use std::sync::Arc;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use commands::*;
-
+mod buttons;
+mod slashies;
+mod config;
+mod discord_fmt;
+mod data;
+mod prelude;
 mod poise_command_builder;
+
+use data::*;
 
 #[tokio::main]
 async fn main() {

@@ -2,7 +2,6 @@
 members = [
     "azur_lane",
     "azur_lane_data_collector",
-    "commands",
     "houston_app",
     "unity_read",
     "utils"

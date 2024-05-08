@@ -5,19 +5,18 @@
 /// # Examples
 ///
 /// ```
-/// let s = String::from("HELLO_NEW_WORLD");
-/// let s = utils::text::to_titlecase(s);
+/// let mut s = String::from("HELLO_NEW_WORLD");
+/// utils::text::to_titlecase(&mut s);
 /// assert_eq!(&s, "Hello New World");
 /// ```
 #[must_use]
-pub fn to_titlecase(mut value: String) -> String {
+pub fn to_titlecase(value: &mut String) {
 	// SAFETY: `to_titlecase_u8` only transforms
 	// ASCII characters into other ASCII characters.
 	unsafe {
 		let slice =  value.as_bytes_mut();
 		to_titlecase_u8(slice);
 	}
-	value
 }
 
 /// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
@@ -64,6 +63,12 @@ const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 /// const TITLE: &str = utils::titlecase!("hello_new_world");
 /// assert_eq!(TITLE, "Hello New World");
 /// ```
+///
+/// Or byte strings, if prefixed with `b:`:
+/// ```
+/// const TITLE: &[u8] = utils::titlecase!(b: b"HELLO_NEW_WORLD");
+/// assert_eq!(TITLE, b"Hello New World");
+/// ```
 #[macro_export]
 macro_rules! titlecase {
 	($input:expr) => {{
@@ -81,6 +86,16 @@ macro_rules! titlecase {
 		// Modify and convert back to str
         const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::__private::to_titlecase_u8_array(CLONE)) };
         RESULT
+	}};
+	(b: $input:expr) => {{
+		// Ensure input is a `&'static [u8]`
+		const INPUT: &[u8] = $input;
+
+		// See above
+		const N: usize = INPUT.len();
+        const CLONE: [u8; N] = *$crate::as_with_size(INPUT);
+		const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
+		&RESULT
 	}}
 }
 
@@ -104,7 +119,7 @@ macro_rules! join {
 		const A: &str = $a;
 		const B: &str = $b;
 		const N: usize = A.len() + B.len();
-		const JOIN: [u8; N] = unsafe { $crate::text::__private::join_const_unsafe(A.as_bytes(), B.as_bytes()) };
+		const JOIN: [u8; N] = $crate::text::__private::join_const(A.as_bytes(), B.as_bytes());
 		const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&JOIN) };
 		RESULT
 	}};
@@ -146,11 +161,17 @@ pub mod __private {
 		value
 	}
 
-	/// Provides an unsafe way to join two [`u8`] slices into a single array.
+	/// Provides a way to join two [`u8`] slices into a single array.
 	///
-	/// Providing the wrong length may lead to undefined behavior.
+	/// This function is generally not useful and exists primarily to support the [`join`] macro.
+	///
+	/// # Panic
+	///
+	/// Panics if `N` is not equal to sum of the length of `a` and `b`.
 	#[must_use]
-	pub const unsafe fn join_const_unsafe<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
+	pub const fn join_const<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
+		assert!(N == (a.len() + b.len()));
+
 		const fn copy_slice<const N: usize>(mut out: [u8; N], slice: &[u8], offset: usize) -> [u8; N] {
 			let mut index = 0usize;
 			while index < slice.len() {

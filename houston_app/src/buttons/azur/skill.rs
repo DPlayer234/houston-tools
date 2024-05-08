@@ -32,11 +32,6 @@ impl From<ViewSkill> for ButtonArgs {
 type OwnedCreateEmbedField = (String, String, bool);
 
 impl ViewSkill {
-    /// Creates a new instance.
-    pub fn new(source: ViewSkillSource) -> Self {
-        Self { source, skill_index: None, back: None }
-    }
-
     /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(source: ViewSkillSource, back: String) -> Self {
         Self { source, skill_index: None, back: Some(back) }

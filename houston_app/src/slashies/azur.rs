@@ -6,12 +6,12 @@ use azur_lane::Faction;
 use crate::prelude::*;
 use crate::buttons;
 use crate::buttons::ButtonArgsModify;
-use crate::buttons::azur::filter::*;
+use crate::buttons::azur::search_ship::*;
 
 /// Information about mobile game Azur Lane.
 #[poise::command(
     slash_command,
-    subcommands("ship", "filter"),
+    subcommands("ship", "search_ship"),
     subcommand_required
 )]
 pub async fn azur(_: HContext<'_>) -> HResult {
@@ -32,10 +32,12 @@ async fn ship(
     Ok(())
 }
 
-/// Shows a filtered ship list.
-#[poise::command(slash_command)]
-async fn filter(
+/// Searches for ships.
+#[poise::command(slash_command, rename = "search-ship")]
+async fn search_ship(
     ctx: HContext<'_>,
+    #[description = "A name prefix to search for."]
+    name: Option<String>,
     #[description = "The faction to select."]
     faction: Option<EFaction>,
     #[description = "The hull type to select."]
@@ -45,14 +47,15 @@ async fn filter(
     #[description = "Whether the ships have a unique augment."]
     has_augment: Option<bool>
 ) -> HResult {
-    let filter = ViewFilterInfo {
+    let filter = Filter {
+        name,
         faction: faction.map(EFaction::convert),
         hull_type: hull_type.map(EHullType::convert),
         rarity: rarity.map(EShipRarity::convert),
         has_augment
     };
 
-    let view = ViewFilter::new(filter);
+    let view = ViewSearchShip::new(filter);
     ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
 
     Ok(())

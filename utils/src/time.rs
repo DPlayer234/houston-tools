@@ -18,8 +18,10 @@ static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 
 /// Marks the current time as the startup time of the application.
 ///
-/// SAFETY: This function is unsafe as the underlying memory is static.
-/// This should be called before any other threads might be trying to call [`get_startup_time`].
+/// # SAFETY
+///
+/// This function is unsafe as the underlying memory is static.
+/// This must not be called concurrently with itself or [`get_startup_time`].
 pub unsafe fn mark_startup_time() {
 	STARTUP_TIME = Utc::now();
 }

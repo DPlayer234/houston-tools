@@ -4,30 +4,31 @@ use azur_lane::Faction;
 use crate::buttons::*;
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewFilter {
+pub struct ViewSearchShip {
     page: u16,
-    filter: ViewFilterInfo
+    filter: Filter
 }
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewFilterInfo {
+pub struct Filter {
+    pub name: Option<String>,
     pub faction: Option<Faction>,
     pub hull_type: Option<HullType>,
     pub rarity: Option<ShipRarity>,
     pub has_augment: Option<bool>
 }
 
-impl From<ViewFilter> for ButtonArgs {
-    fn from(value: ViewFilter) -> Self {
-        ButtonArgs::ViewFilter(value)
+impl From<ViewSearchShip> for ButtonArgs {
+    fn from(value: ViewSearchShip) -> Self {
+        ButtonArgs::ViewSearchShip(value)
     }
 }
 
 const PAGE_SIZE: usize = 15;
 
-impl ViewFilter {
-    pub fn new(filter: ViewFilterInfo) -> ViewFilter {
-        ViewFilter { page: 0, filter }
+impl ViewSearchShip {
+    pub fn new(filter: Filter) -> ViewSearchShip {
+        ViewSearchShip { page: 0, filter }
     }
 
     pub fn modify_with_iter<'a>(self, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
@@ -80,39 +81,45 @@ impl ViewFilter {
     }
 }
 
-impl ButtonArgsModify for ViewFilter {
+impl ButtonArgsModify for ViewSearchShip {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let mut predicate = self.filter.predicate(data);
-        let filtered = data.azur_lane().ship_list.iter()
-            .filter(move |&s| predicate(s))
+        let filtered = self.filter
+            .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
         Ok(self.modify_with_iter(create, filtered))
     }
 }
 
-macro_rules! def_and_filter {
-    ($fn_name:ident: $field:ident => $next:ident) => {
-        fn $fn_name<'a>(f: &ViewFilterInfo, data: &'a HBotData, mut base: impl FnMut(&ShipData) -> bool + 'a) -> Box<dyn FnMut(&ShipData) -> bool + 'a> {
-            match f.$field {
-                Some(filter) => $next(f, data, move |s| base(s) && s.$field == filter),
-                None => $next(f, data, base)
-            }
+impl Filter {
+    fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
+        let predicate = self.predicate(data);
+        match self.name {
+            Some(ref name) => Box::new(data.ships_by_prefix(name.as_str()).filter(predicate)),
+            None => Box::new(data.ship_list.iter().filter(predicate))
         }
     }
-}
 
-impl ViewFilterInfo {
-    fn predicate<'a>(&self, data: &'a HBotData) -> Box<dyn FnMut(&ShipData) -> bool + 'a> {
+    fn predicate<'a>(&self, data: &'a HAzurLane) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
+        macro_rules! def_and_filter {
+            ($fn_name:ident: $field:ident => $next:ident) => {
+                fn $fn_name<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&ShipData) -> bool + 'a) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
+                    match f.$field {
+                        Some(filter) => $next(f, data, move |s| base(s) && s.$field == filter),
+                        None => $next(f, data, base)
+                    }
+                }
+            }
+        }
+
         def_and_filter!(next_faction: faction => next_hull_type);
         def_and_filter!(next_hull_type: hull_type => next_rarity);
         def_and_filter!(next_rarity: rarity => finish);
 
-        fn finish<'a>(f: &ViewFilterInfo, data: &'a HBotData, mut base: impl FnMut(&ShipData) -> bool + 'a) -> Box<dyn FnMut(&ShipData) -> bool + 'a> {
+        fn finish<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&ShipData) -> bool + 'a) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
             match f.has_augment {
                 Some(filter) => {
-                    let azur_lane = data.azur_lane();
-                    Box::new(move |s| base(s) && azur_lane.augment_by_ship_id(s.group_id).is_some() == filter)
+                    Box::new(move |s| base(s) && data.augment_by_ship_id(s.group_id).is_some() == filter)
                 }
                 None => Box::new(base)
             }

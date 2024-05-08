@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod azur_lane {
     /// The base URL to the Azur Lane wiki.
     pub const WIKI_BASE_URL: &str = "https://azurlane.koumakan.jp/wiki/";

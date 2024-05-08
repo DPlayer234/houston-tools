@@ -34,6 +34,7 @@ impl From<ViewLines> for ButtonArgs {
 
 impl ViewLines {
     /// Creates a new instance.
+    #[allow(dead_code)] // planned for future use
     pub fn new(ship_id: u32) -> Self {
         Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: None }
     }
