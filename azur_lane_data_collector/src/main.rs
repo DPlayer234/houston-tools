@@ -20,8 +20,8 @@ use model::*;
 #[derive(Debug, Parser)]
 struct Cli {
     /// The path that the game scripts live in.
-    #[arg(short, long)]
-    input: String,
+    #[arg(short, long, num_args = 1..)]
+    inputs: Vec<String>,
     /// The output directory.
     #[arg(short, long)]
     out: Option<String>,
@@ -40,11 +40,73 @@ struct Cli {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let lua = Lua::new();
-
     let start = std::time::Instant::now();
 
-    lua.globals().raw_set("AZUR_LANE_DATA_PATH", cli.input)?;
+    let out_data = {
+        let mut inputs = cli.inputs.iter();
+
+        // Expect at least 1 input
+        let mut out_data = load_definition(inputs.next().unwrap(), start)?;
+        for input in inputs {
+            println!("Loading more from '{}'...", input);
+            let next = load_definition(input, start)?;
+            merge_out_data(&mut out_data, next);
+            println!("Merged data. ({:.2?})", start.elapsed());
+        }
+
+        out_data
+    };
+
+    let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
+    {
+        println!("Writing output...");
+
+        fs::create_dir_all(out_dir)?;
+        let f = fs::File::create(Path::new(out_dir).join("main.json"))?;
+        if cli.minimize {
+            serde_json::to_writer(&f, &out_data)?;
+        } else {
+            serde_json::to_writer_pretty(&f, &out_data)?;
+        }
+
+        println!("Written {} bytes. ({:.2?})", f.metadata()?.len(), start.elapsed());
+    }
+
+    if let Some(assets) = cli.assets.as_deref() {
+        // Extract and save chibis for all skins.
+        fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
+
+        println!("Extracting chibis...");
+
+        let mut extract_count = 0usize;
+        let mut total_count = 0usize;
+        let mut new_count = 0usize;
+
+        for skin in out_data.ships.iter().flat_map(|s| s.skins.iter()) {
+            total_count += 1;
+
+            if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
+                extract_count += 1;
+
+                let path = utils::join_path![out_dir, "chibi", &skin.image_key; "webp"];
+                if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(path) {
+                    new_count += 1;
+
+                    f.write_all(&image)?;
+                }
+            }
+        }
+
+        println!("Extracted chibis ({extract_count}/{total_count}); {new_count} new. {:.2?}", start.elapsed());
+    }
+
+    Ok(())
+}
+
+fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionData, anyhow::Error> {
+    let lua = Lua::new();
+
+    lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
     lua.load(include_str!("assets/lua_init.lua"))
         .set_name("main")
         .set_mode(mlua::ChunkMode::Text)
@@ -52,7 +114,6 @@ fn main() -> anyhow::Result<()> {
 
     println!("Init done. ({:.2?})", start.elapsed());
 
-    // General:
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
 
     let ships = {
@@ -219,55 +280,10 @@ fn main() -> anyhow::Result<()> {
         augments
     };
 
-    let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
-    if let Some(assets) = cli.assets.as_deref() {
-        // Extract and save chibis for all skins.
-        fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
-
-        println!("Extracting chibis...");
-
-        let mut extract_count = 0usize;
-        let mut total_count = 0usize;
-        let mut new_count = 0usize;
-
-        for skin in ships.iter().flat_map(|s| s.skins.iter()) {
-            total_count += 1;
-
-            if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
-                extract_count += 1;
-
-                let path = utils::join_path![out_dir, "chibi", &skin.image_key; "webp"];
-                if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(path) {
-                    new_count += 1;
-
-                    f.write_all(&image)?;
-                }
-            }
-        }
-
-        println!("Extracted chibis ({extract_count}/{total_count}); {new_count} new. {:.2?}", start.elapsed());
-    } else {
-        fs::create_dir_all(out_dir)?;
-    }
-
-    println!("Writing output...");
-
-    let f = fs::File::create(Path::new(out_dir).join("main.json"))?;
-    let out_data = DefinitionData {
+    Ok(DefinitionData {
         ships,
         augments
-    };
-
-    if cli.minimize {
-        serde_json::to_writer(&f, &out_data)?;
-    } else {
-        serde_json::to_writer_pretty(&f, &out_data)?;
-    }
-
-    println!("Written {} bytes. ({:.2?})", f.metadata()?.len(), start.elapsed());
-    drop(f);
-
-    Ok(())
+    })
 }
 
 fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
@@ -280,4 +296,25 @@ fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> 
     });
 
     Ok(())
+}
+
+fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
+    for next_ship in next.ships {
+        if let Some(main_ship) = main.ships.iter_mut().find(|s| s.group_id == next_ship.group_id) {
+            add_missing(&mut main_ship.retrofits, next_ship.retrofits, |a, b| a.default_skin_id == b.default_skin_id);
+            add_missing(&mut main_ship.skins, next_ship.skins, |a, b| a.skin_id == b.skin_id);
+        } else {
+            main.ships.push(next_ship);
+        }
+    }
+
+    add_missing(&mut main.augments, next.augments, |a, b| a.augment_id == b.augment_id);
+}
+
+fn add_missing<T>(main: &mut Vec<T>, next: Vec<T>, matches: impl Fn(&T, &T) -> bool) {
+    for new in next {
+        if !main.iter().any(|old| matches(&old, &new)) {
+            main.push(new);
+        }
+    }
 }

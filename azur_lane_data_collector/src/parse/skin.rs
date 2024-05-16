@@ -43,7 +43,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         acquisition: get!("unlock"),
         login: get!("login"),
         details: get!("detail"),
-        main_screen: to_main_screen_vec(get!("main")),
+        main_screen: to_main_screen(get!("main").as_deref()).collect(),
         touch: get!("touch"),
         special_touch: get!("touch2"),
         rub: get!("headtouch"),
@@ -86,11 +86,12 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
         }};
     }
 
-    let mut main_screen = to_main_screen_vec(get!("main"));
+    let mut main_screen: Vec<ShipMainScreenLine> = to_main_screen(get!("main").as_deref()).collect();
 
-    main_screen.extend(get!("main_extra").iter()
-        .flat_map(|s| s.split('|')).enumerate()
-        .map(|(index, text)| ShipMainScreenLine::new(index + base.main_screen.len(), text.to_owned())));
+    main_screen.extend(
+        to_main_screen(get!("main_extra").as_deref())
+            .map(|line| { let index = line.index(); line.set_index(index + base.main_screen.len()) })
+    );
 
     Ok(ShipSkinWords {
         description: get!("drop_descrip"),
@@ -123,11 +124,10 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
     })
 }
 
-fn to_main_screen_vec(raw: Option<String>) -> Vec<ShipMainScreenLine> {
-    raw.iter().flat_map(|s| s.split('|')).enumerate()
+fn to_main_screen<'a>(raw: Option<&'a str>) -> impl Iterator<Item = ShipMainScreenLine> + 'a {
+    raw.into_iter().flat_map(|s| s.split('|')).enumerate()
         .filter(|(_, text)| !text.is_empty() && *text != "nil")
         .map(|(index, text)| ShipMainScreenLine::new(index, text.to_owned()))
-        .collect()
 }
 
 fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCoupleEncourage> {

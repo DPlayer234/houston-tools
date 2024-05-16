@@ -427,6 +427,12 @@ impl ShipMainScreenLine {
     pub fn text(&self) -> &str {
         &self.1
     }
+
+    /// Sets the index for the line.
+    #[must_use]
+    pub fn set_index(self, index: usize) -> Self {
+        Self(self.0 + index, self.1)
+    }
 }
 
 impl ShipRarity {
