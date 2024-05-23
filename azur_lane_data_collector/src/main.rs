@@ -43,11 +43,9 @@ fn main() -> anyhow::Result<()> {
     let start = std::time::Instant::now();
 
     let out_data = {
-        let mut inputs = cli.inputs.iter();
-
         // Expect at least 1 input
-        let mut out_data = load_definition(inputs.next().unwrap(), start)?;
-        for input in inputs {
+        let mut out_data = load_definition(&cli.inputs[0], start)?;
+        for input in cli.inputs.iter().skip(1) {
             println!("Loading more from '{}'...", input);
             let next = load_definition(input, start)?;
             merge_out_data(&mut out_data, next);
@@ -279,6 +277,13 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
         augments.sort_by_key(|t| t.augment_id);
         augments
     };
+
+    // i have no idea why this deadlocks, but i don't care.
+    // when the program exits, the memory will be cleaned up.
+    if cfg!(debug_assertions) {
+        drop(pg);
+        std::mem::forget(lua);
+    }
 
     Ok(DefinitionData {
         ships,

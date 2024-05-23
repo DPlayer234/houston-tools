@@ -1,12 +1,25 @@
+use crate::serialized_file::TypeTreeNode;
 use crate::{define_unity_class, UnityError};
 use crate::unity_fs::UnityFsFile;
+use super::UnityClass;
 
 define_unity_class! {
     /// Streaming information for resources.
     pub class StreamingInfo = "StreamingInfo" {
-        pub offset: u32 = "offset",
+        pub offset: Offset = "offset",
         pub size: u32 = "size",
         pub path: String = "path",
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Offset(pub u64);
+
+impl UnityClass for Offset {
+    fn parse_tree(r: &mut std::io::Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+        u32::parse_tree(r, is_big_endian, root, tree).map(u64::from)
+            .or_else(|_| u64::parse_tree(r, is_big_endian, root, tree))
+            .map(Offset)
     }
 }
 
@@ -22,7 +35,7 @@ impl StreamingInfo {
 
         let mut slice = node.read_raw()?;
 
-        let offset = self.offset as usize;
+        let offset = self.offset.0 as usize;
         let size = self.size as usize;
 
         if offset > slice.len() {

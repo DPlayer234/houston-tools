@@ -38,7 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["-i", "D:/Private/Coding/Lua/AzurLaneLuaScripts/EN", "--assets", "C:/Users/dplay/Desktop/archive", "--test"],
+            "args": ["-i", "D:/Private/Coding/Lua/al-lua/EN", "--assets", "D:/Private/Coding/Other/azurlane-assets-temp"],
             "cwd": "${workspaceFolder}"
         },
         {
