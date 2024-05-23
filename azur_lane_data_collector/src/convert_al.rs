@@ -8,7 +8,7 @@ use azur_lane::skill::*;
 /// Converts an ID to a faction.
 pub fn to_faction(num: u32) -> Faction {
     match num {
-        0 | 98 => Faction::Universal,
+        0 | 98 => Faction::Universal, // 98 is technically "Bulin"
         1 => Faction::EagleUnion,
         2 => Faction::RoyalNavy,
         3 => Faction::SakuraEmpire,
@@ -20,6 +20,7 @@ pub fn to_faction(num: u32) -> Faction {
         9 => Faction::VichyaDominion,
         96 => Faction::Tempesta,
         97 => Faction::META,
+        99 => Faction::Siren,
         101 => Faction::CollabNeptunia,
         102 => Faction::CollabBilibili,
         103 => Faction::CollabUtawarerumono,

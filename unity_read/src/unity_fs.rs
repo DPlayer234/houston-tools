@@ -232,11 +232,11 @@ impl<'a> UnityFsNode<'a> {
         } = self.file.get_block_index_by_offset(uncompressed_start).ok_or(UnityError::InvalidData("compressed data position out of bounds"))?;
 
         let mut result = Vec::new();
+        let mut buf = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
+
         for block in &self.file.blocks_info.blocks[index ..] {
             // Read and decompress the entire block
             let start = compressed_offset + self.file.data_offset;
-
-            let mut buf = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
             let mut compressed_data = vec![0u8; block.compressed_size.try_into()?];
 
             buf.seek(SeekFrom::Start(start))?;

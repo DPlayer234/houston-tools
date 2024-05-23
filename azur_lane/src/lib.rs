@@ -37,6 +37,7 @@ define_data_enum! {
         VichyaDominion("Vichya Dominion", Some("MNF")),
         Tempesta("Tempesta", Some("MOT")),
         META("META", None),
+        Siren("Siren", None),
         CollabNeptunia("Neptunia", None),
         CollabBilibili("Bilibili", None),
         CollabUtawarerumono("Utawarerumono", None),
