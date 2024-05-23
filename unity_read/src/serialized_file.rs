@@ -400,7 +400,7 @@ struct TypeTreeNodeBlob {
 #[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlob {
-    path_id: u32,
+    path_id: i32,
     start: u32,
     size: u32,
     type_id: u32
@@ -409,7 +409,7 @@ struct ObjectBlob {
 #[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlobBigId {
-    path_id: u64,
+    path_id: i64,
     start: u32,
     size: u32,
     type_id: u32
@@ -418,7 +418,7 @@ struct ObjectBlobBigId {
 #[binread]
 #[derive(Debug, Clone)]
 struct ObjectBlobV22 {
-    path_id: u64,
+    path_id: i64,
     start: u64,
     size: u32,
     type_id: u32
@@ -429,7 +429,7 @@ macro_rules! impl_obj_blob_to_info {
         impl From<$Source> for ObjectInfo {
             fn from(value: $Source) -> Self {
                 Self {
-                    path_id: u64::from(value.path_id),
+                    path_id: i64::from(value.path_id),
                     start: u64::from(value.start),
                     size: value.size,
                     type_id: value.type_id,

@@ -8,7 +8,7 @@ use crate::classes::{ClassID, UnityClass};
 /// Internal struct with object data.
 #[derive(Debug, Clone)]
 pub(crate) struct ObjectInfo {
-    pub path_id: u64,
+    pub path_id: i64,
     pub start: u64,
     pub size: u32,
     pub type_id: u32,
@@ -25,7 +25,7 @@ pub struct ObjectRef<'a> {
 
 impl ObjectRef<'_> {
     /// Gets the object's path ID.
-    pub fn path_id(&self) -> u64 {
+    pub fn path_id(&self) -> i64 {
         self.object.path_id
     }
 

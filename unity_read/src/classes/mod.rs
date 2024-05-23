@@ -9,14 +9,18 @@ use crate::{UnityError, UnityMismatch};
 use crate::serialized_file::TypeTreeNode;
 use crate::read_endian;
 
+mod asset_bundle;
 mod class_id;
 mod mesh;
 mod streaming_info;
 mod texture2d;
+mod text_asset;
 
+pub use asset_bundle::*;
 pub use class_id::*;
 pub use mesh::*;
 pub use streaming_info::*;
+pub use text_asset::*;
 pub use texture2d::*;
 
 /// Trait that allows reading Unity object data in a structured form.
@@ -212,7 +216,7 @@ impl<T: UnityClass> UnityClass for Option<T> {
 
 impl<T: UnityClass> UnityClass for Vec<T> {
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
-        if root.type_name.as_str() == "vector" {
+        if matches!(root.type_name.as_str(), "vector" | "string") {
             let (next, children) = tree.split_first()
                 .ok_or(UnityError::InvalidData("vector type data does not contain children"))?;
 

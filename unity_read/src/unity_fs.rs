@@ -126,7 +126,7 @@ struct Node {
 #[bits = 6]
 enum Compression {
     None = 0,
-    _Lzma,
+    Lzma,
     Lz4,
     Lz4Hc,
     _Lzham
@@ -179,7 +179,7 @@ impl<'a> UnityFsFile<'a> {
             let decompressed_data = decompress_data(
                 &compressed_data,
                 header.flags.compression(),
-                Some(header.uncompressed_blocks_info_size as i32)
+                header.uncompressed_blocks_info_size
             )?;
 
             let mut reader = Cursor::new(decompressed_data.deref());
@@ -245,7 +245,7 @@ impl<'a> UnityFsNode<'a> {
             let uncompressed_data = decompress_data(
                 &compressed_data,
                 block.flags.compression(),
-                Some(block.uncompressed_size as i32)
+                block.uncompressed_size
             )?;
 
             // Determine the relative offsets for this file into this block
@@ -291,10 +291,21 @@ impl UnityFsNode<'_> {
     }
 }
 
-fn decompress_data(compressed_data: &[u8], compression: Compression, size: Option<i32>) -> anyhow::Result<Cow<[u8]>> {
+fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> anyhow::Result<Cow<[u8]>> {
     match compression {
         Compression::None => Ok(Cow::Borrowed(compressed_data)),
-        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, size)?)),
+        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, Some(size.try_into()?))?)),
+        Compression::Lzma => {
+            use lzma_rs::decompress::*;
+
+            let mut output = Cursor::new(Vec::with_capacity(size.try_into()?));
+            let mut reader = Cursor::new(compressed_data);
+            lzma_rs::lzma_decompress_with_options(&mut reader, &mut output, &Options {
+                unpacked_size: UnpackedSize::UseProvided(Some(u64::from(size))),
+                ..Default::default()
+            })?;
+            Ok(Cow::Owned(output.into_inner()))
+        }
         _ => Err(UnityError::Unsupported("unsupported compression method"))?
     }
 }
