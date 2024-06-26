@@ -21,6 +21,7 @@
                                 "weapon_id": 163176,
                                 "reload_time": 2.6602895,
                                 "fixed_delay": 0.0,
+                                "kind": "MainGun",
                                 "data": {
                                     "Bullets": {
                                         "damage": 40.0,
@@ -37,6 +38,7 @@
                                                 "ammo": "AP",
                                                 "pierce": 0,
                                                 "velocity": 100.0,
+                                                "delay": 0.0,
                                                 "modifiers": [
                                                     0.7,
                                                     0.9,
@@ -61,6 +63,7 @@
                                 "weapon_id": 163175,
                                 "reload_time": 2.6602895,
                                 "fixed_delay": 0.0,
+                                "kind": "Torpedo",
                                 "data": {
                                     "Bullets": {
                                         "damage": 300.0,
@@ -77,6 +80,7 @@
                                                 "ammo": "AP",
                                                 "pierce": 0,
                                                 "velocity": 100.0,
+                                                "delay": 0.0,
                                                 "modifiers": [
                                                     0.7,
                                                     0.9,

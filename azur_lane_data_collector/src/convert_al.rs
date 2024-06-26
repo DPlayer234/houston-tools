@@ -181,6 +181,44 @@ pub fn to_bullet_kind(num: u32) -> BulletKind {
     }
 }
 
+/// Converts an ID to a weapon kind.
+pub fn to_weapon_kind(num: u32) -> WeaponKind {
+    match num {
+        1 => WeaponKind::MainGun,
+        2 => WeaponKind::SubGun,
+        3 => WeaponKind::Torpedo,
+        4 => WeaponKind::AirToAir,
+        5 => WeaponKind::Armor,
+        6 => WeaponKind::Engine,
+        7 => WeaponKind::Radar,
+        10 => WeaponKind::StrikeAircraft,
+        11 => WeaponKind::InterceptAircraft,
+        12 => WeaponKind::Crew,
+        13 => WeaponKind::Charge,
+        14 => WeaponKind::Special,
+        15 => WeaponKind::MegaCharge,
+        16 => WeaponKind::ManualTorpedo,
+        17 => WeaponKind::AntiSub,
+        18 => WeaponKind::HammerHead,
+        19 => WeaponKind::BomberPreCastAlert,
+        20 => WeaponKind::MultiLock,
+        21 => WeaponKind::ManualSub,
+        22 => WeaponKind::AntiAir,
+        23 => WeaponKind::Bracketing,
+        24 => WeaponKind::Beam,
+        25 => WeaponKind::DepthCharge,
+        26 => WeaponKind::AntiAirRepeater,
+        27 => WeaponKind::DisposableTorpedo,
+        28 => WeaponKind::SpaceLaser,
+        29 => WeaponKind::Missile,
+        30 => WeaponKind::AntiAirFuze,
+        31 => WeaponKind::ManualMissile,
+        32 => WeaponKind::AutoMissile,
+        33 => WeaponKind::Meteor,
+        _ => WeaponKind::Unknown,
+    }
+}
+
 /// Converts an ID to an ammo kind.
 pub fn to_ammo_kind(num: u32) -> AmmoKind {
     match num {
@@ -188,7 +226,7 @@ pub fn to_ammo_kind(num: u32) -> AmmoKind {
         2 => AmmoKind::AP,
         3 => AmmoKind::HE,
         4 => AmmoKind::Torpedo,
-        5 => AmmoKind::Unknown5,
+        5 => AmmoKind::AirToAir,
         6 => AmmoKind::Bomb,
         7 => AmmoKind::SAP,
         8 => AmmoKind::Unknown8,

@@ -54,7 +54,7 @@ impl ViewSkill {
                 embed = embed.fields(self.create_skill_field(skill));
             }
 
-            if !skill.barrages.is_empty() {
+            if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
                 let button = self.button_with_skill(t_index)
                     .label(utils::text::truncate(&skill.name, 25))
                     .style(ButtonStyle::Secondary);
@@ -104,22 +104,33 @@ impl ViewSkill {
     }
 
     /// Creates the embed fields for the selected skill.
-    fn create_ex_skill_fields(&self, skill: &Skill) -> [OwnedCreateEmbedField; 2] {
-        [
-            (
-                format!("{} __{}__", skill.category.emoji(), skill.name),
-                utils::text::truncate(&skill.description, 1000),
-                false
-            ),
-            (
+    fn create_ex_skill_fields(&self, skill: &Skill) -> Vec<OwnedCreateEmbedField> {
+        let mut fields = vec![(
+            format!("{} __{}__", skill.category.emoji(), skill.name),
+            utils::text::truncate(&skill.description, 1000),
+            false
+        )];
+
+        if !skill.barrages.is_empty() {
+            fields.push((
                 "__Barrage__".to_owned(),
                 {
                     let m = get_skills_extra_summary(skill);
                     if m.len() <= 1024 { m } else { println!("barrage:\n{m}"); "<barrage data too long>".to_owned() }
                 },
                 false
-            )
-        ]
+            ));
+        }
+
+        for weapon in &skill.new_weapons {
+            fields.push((
+                "__New Weapon__".to_owned(),
+                super::fmt_shared::WeaponFormat::new(weapon).to_string(),
+                true
+            ))
+        }
+
+        fields
     }
 }
 
@@ -167,7 +178,8 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 get_aircraft_summary(aircraft),
                 "`{: >5} | {: >6} x Aircraft                            `\n{sum}",
                 attack.target.short_name(), aircraft.amount
-            )
+            ),
+            _ => None
         }
     }
 

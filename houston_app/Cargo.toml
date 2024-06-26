@@ -12,12 +12,12 @@ chrono = "0.4.38"
 dashmap = "5.5.3"
 once_cell = "1.19.0"
 poise = "0.6.1"
-urlencoding = "2.1.3"
 rand = "0.8.5"
 serde = "1.0.201"
 serenity = { version = "0.12.1", features = ["simd_json"] }
 simd-json = { version = "0.13.10", features = ["serde"] }
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+urlencoding = "2.1.3"
 
 azur_lane = { path = "../azur_lane" }
 utils = { path = "../utils" }

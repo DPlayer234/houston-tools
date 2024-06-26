@@ -14,6 +14,8 @@ pub struct Skill {
     pub category: SkillCategory,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub barrages: Vec<SkillBarrage>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub new_weapons: Vec<Weapon>,
 }
 
 /// Represents a skill barrage.

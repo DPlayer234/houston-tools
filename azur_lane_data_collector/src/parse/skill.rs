@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::collections::HashSet;
 
 use mlua::prelude::*;
@@ -49,7 +48,8 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         category,
         name,
         description: desc,
-        barrages: context.attacks
+        barrages: context.barrages,
+        new_weapons: context.new_weapons,
     })
 }
 
@@ -100,28 +100,28 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
     let weapon_type: u32 = context!(weapon_data.get("type"); "weapon type in weapon {weapon_id}")?;
     let reload_max: f64 = weapon_data.get("reload_max")?;
+    let mut fixed_delay = weapon_data.get("auto_aftercast")?;
 
+    let kind = convert_al::to_weapon_kind(weapon_type);
     let data = match RoughWeaponType::from(weapon_type) {
         RoughWeaponType::Bullet => {
-            let mut bullets: Vec<Bullet> = Vec::new();
+            WeaponData::Bullets(get_barrage(lua, weapon_id, &weapon_data)?)
+        }
+        RoughWeaponType::AntiAir => {
+            let mut barrage = get_barrage(lua, weapon_id, &weapon_data)?;
 
-            let bullet_ids: Vec<u32> = context!(weapon_data.get("bullet_ID"); "bullet id in weapon {weapon_id}")?;
-            let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
+            if matches!(kind, WeaponKind::AntiAir | WeaponKind::AntiAirFuze) {
+                fixed_delay = 0.8667;
 
-            for (bullet_id, barrage_id) in bullet_ids.into_iter().zip(barrage_ids) {
-                get_sub_barrage(lua, &mut bullets, bullet_id, barrage_id, 1)?;
+                // It appears that AA barrage data indicates AA guns fire twice.
+                // But this doesn't happen because AA guns work way differently.
+                for bullet in &mut barrage.bullets {
+                    bullet.amount = 1;
+                }
             }
 
-            WeaponData::Bullets(Barrage {
-                damage: weapon_data.get("damage")?,
-                coefficient: { let raw: f64 = weapon_data.get("corrected")?; raw * 0.01 },
-                scaling: { let raw: f64 = weapon_data.get("attack_attribute_ratio")?; raw * 0.01 },
-                scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(weapon_data.get("attack_attribute")?),
-                range: weapon_data.get("range")?,
-                firing_angle: weapon_data.get("angle")?,
-                bullets
-            })
-        },
+            WeaponData::AntiAir(barrage)
+        }
         RoughWeaponType::Aircraft => {
             let aircraft_template: LuaTable = context!(pg.get("aircraft_template"); "global pg.aircraft_template")?;
             let aircraft: LuaTable = context!(aircraft_template.get(weapon_id); "aircraft_template for id {weapon_id}")?;
@@ -154,16 +154,37 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 speed,
                 weapons
             })
-        },
+        }
         _ => { return Ok(None); }
     };
 
     Ok(Some(Weapon {
         weapon_id,
         reload_time: reload_max * RLD_MULT_AT_100,
-        fixed_delay: weapon_data.get("recover_time")?,
+        fixed_delay,
+        kind,
         data,
     }))
+}
+
+fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<Barrage> {
+    let mut bullets: Vec<Bullet> = Vec::new();
+    let bullet_ids: Vec<u32> = context!(weapon_data.get("bullet_ID"); "bullet id in weapon {weapon_id}")?;
+    let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
+
+    for (bullet_id, barrage_id) in bullet_ids.into_iter().zip(barrage_ids) {
+        get_sub_barrage(lua, &mut bullets, bullet_id, barrage_id, 1)?;
+    }
+
+    Ok(Barrage {
+        damage: weapon_data.get("damage")?,
+        coefficient: { let raw: f64 = weapon_data.get("corrected")?; raw * 0.01 },
+        scaling: { let raw: f64 = weapon_data.get("attack_attribute_ratio")?; raw * 0.01 },
+        scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(weapon_data.get("attack_attribute")?),
+        range: weapon_data.get("range")?,
+        firing_angle: weapon_data.get("angle")?,
+        bullets
+    })
 }
 
 fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage_id: u32, parent_amount: u32) -> LuaResult<()> {
@@ -246,14 +267,14 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
     Ok(())
 }
 
-fn search_referenced_weapons(barrages: &mut ReferencedWeaponsContext, lua: &Lua, skill: LuaTable, skill_id: u32) -> LuaResult<()> {
+fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, skill: LuaTable, skill_id: u32) -> LuaResult<()> {
     let len = skill.len()?;
     if let Ok(len) = usize::try_from(len) {
         if len != 0 {
             let level_entry: LuaTable = context!(skill.get(len); "level entry {len} of skill/buff")?;
             let effect_list: Option<Vec<LuaTable>> = context!(level_entry.get("effect_list"); "effect_list of skill/buff level entry {len}")?;
             if let Some(effect_list) = effect_list {
-                search_referenced_weapons_in_effect_entry(barrages, lua, effect_list, skill_id)?;
+                search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
                 return Ok(());
             }
         }
@@ -261,13 +282,13 @@ fn search_referenced_weapons(barrages: &mut ReferencedWeaponsContext, lua: &Lua,
 
     let effect_list: Option<Vec<LuaTable>> = context!(skill.get("effect_list"); "effect_list of skill/buff")?;
     if let Some(effect_list) = effect_list {
-        search_referenced_weapons_in_effect_entry(barrages, lua, effect_list, skill_id)?;
+        search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
     }
 
     Ok(())
 }
 
-fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsContext, lua: &Lua, effect_list: Vec<LuaTable>, skill_id: u32) -> LuaResult<()> {
+fn search_referenced_weapons_in_effect_entry(context: &mut ReferencedWeaponsContext, lua: &Lua, effect_list: Vec<LuaTable>, skill_id: u32) -> LuaResult<()> {
     fn get_arg<'a, T: FromLua<'a>>(entry: &LuaTable<'a>, key: &str) -> LuaResult<T> {
         let arg_list: LuaTable = context!(entry.get("arg_list"); "skill/buff effect_list entry arg_list")?;
         context!(arg_list.get(key); "skill/buff effect_list entry arg_list {}", key)
@@ -278,30 +299,30 @@ fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsCon
 
     for entry in effect_list {
         let entry_type: String = context!(entry.get("type"); "skill/buff effect_list entry type: {:#?}", entry)?;
-        match entry_type.borrow() {
+        match entry_type.as_str() {
             "BattleBuffCastSkill" => {
                 let skill_id: u32 = get_arg(&entry, "skill_id")?;
-                if barrages.seen_skills.insert(skill_id) {
+                if context.seen_skills.insert(skill_id) {
                     let skill = require_skill_data(lua, skill_id)?;
-                    search_referenced_weapons(barrages, lua, skill, skill_id)?;
+                    search_referenced_weapons(context, lua, skill, skill_id)?;
                 }
             }
             "BattleBuffCastSkillRandom" => {
                 let skill_id_list: Option<Vec<u32>> = get_arg(&entry, "skill_id_list")?;
                 if let Some(skill_id_list) = skill_id_list {
                     for skill_id in skill_id_list {
-                        if barrages.seen_skills.insert(skill_id) {
+                        if context.seen_skills.insert(skill_id) {
                             let skill = require_skill_data(lua, skill_id)?;
-                            search_referenced_weapons(barrages, lua, skill, skill_id)?;
+                            search_referenced_weapons(context, lua, skill, skill_id)?;
                         }
                     }
                 }
             }
             "BattleBuffAddBuff" | "BattleSkillAddBuff" => {
                 let buff_id: u32 = get_arg(&entry, "buff_id")?;
-                if barrages.seen_buffs.insert(buff_id) {
+                if context.seen_buffs.insert(buff_id) {
                     let buff = require_buff_data(lua, buff_id)?;
-                    search_referenced_weapons(barrages, lua, buff, buff_id)?;
+                    search_referenced_weapons(context, lua, buff, buff_id)?;
                 }
             }
             "BattleSkillFire" => {
@@ -320,12 +341,20 @@ fn search_referenced_weapons_in_effect_entry(barrages: &mut ReferencedWeaponsCon
                     }
                 }
             }
+            "BattleBuffNewWeapon" => {
+                let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
+                if !context.new_weapons.iter().any(|w| w.weapon_id == weapon_id) {
+                    if let Some(weapon) = load_weapon(lua, weapon_id)? {
+                        context.new_weapons.push(weapon);
+                    }
+                }
+            }
             _ => ()
         }
     }
 
     if !attacks.is_empty() {
-        barrages.attacks.push(SkillBarrage {
+        context.barrages.push(SkillBarrage {
             skill_id,
             attacks
         });
@@ -346,7 +375,8 @@ fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
 
 #[derive(Debug, Default)]
 struct ReferencedWeaponsContext {
-    attacks: Vec<SkillBarrage>,
+    barrages: Vec<SkillBarrage>,
+    new_weapons: Vec<Weapon>,
     seen_skills: HashSet<u32>,
     seen_buffs: HashSet<u32>,
 }
@@ -363,6 +393,7 @@ enum RoughWeaponType {
 impl RoughWeaponType {
     fn from(num: u32) -> RoughWeaponType {
         // note: 24 is BEAM, might need other handling
+        // note: 4 is air-to-air attacks
         match num {
             1 | 2 | 3 | 16 | 17 | 19 | 23 | 24 | 25 | 28 | 29 | 31 | 32 | 33 => RoughWeaponType::Bullet,
             10 | 11 => RoughWeaponType::Aircraft,

@@ -86,29 +86,45 @@ impl ViewShip {
 
     fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
         let self_custom_id = self.clone().to_custom_id();
-        let skills = (ship.skills.len() != 0).then(|| {
+        let mut row = Vec::new();
+
+        if !ship.skills.is_empty() {
             let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
             let view_skill = super::skill::ViewSkill::with_back(source, self_custom_id.clone());
-            CreateButton::new(view_skill.to_custom_id())
+            let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
-                .style(ButtonStyle::Secondary)
-        });
+                .style(ButtonStyle::Secondary);
 
-        let augment = data.azur_lane().augment_by_ship_id(ship.group_id).map(|augment| {
+            row.push(button);
+        }
+
+        if !ship.shadow_equip.is_empty() {
+            let view = super::shadow_equip::ViewShadowEquip::new(self.clone());
+            let button = CreateButton::new(view.to_custom_id())
+                .label("Shadow Equip")
+                .style(ButtonStyle::Secondary);
+
+            row.push(button);
+        }
+
+        if let Some(augment) = data.azur_lane().augment_by_ship_id(ship.group_id) {
             let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self_custom_id.clone());
-            CreateButton::new(view_augment.to_custom_id())
+            let button = CreateButton::new(view_augment.to_custom_id())
                 .label("Unique Augment")
-                .style(ButtonStyle::Secondary)
-        });
+                .style(ButtonStyle::Secondary);
 
-        let lines = Some({
+            row.push(button);
+        }
+
+        {
             let view_lines = super::lines::ViewLines::with_back(self.ship_id, self_custom_id.clone());
-            CreateButton::new(view_lines.to_custom_id())
+            let button = CreateButton::new(view_lines.to_custom_id())
                 .label("Lines")
-                .style(ButtonStyle::Secondary)
-        });
+                .style(ButtonStyle::Secondary);
 
-        let row: Vec<_> = lines.into_iter().chain(skills).chain(augment).collect();
+            row.push(button);
+        }
+
         if !row.is_empty() {
             rows.push(CreateActionRow::Buttons(row));
         }
@@ -236,7 +252,12 @@ impl ViewShip {
             }
         }
 
-        [("Equipment", text, true)]
+        for mount in &ship.shadow_equip {
+            if !text.is_empty() { text.push('\n'); }
+            write!(text, "**`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name).discard();
+        }
+
+        [("Equipment", text, false)]
     }
 
     /// Creates the embed field that display the skill summary.
@@ -249,7 +270,7 @@ impl ViewShip {
                     if !text.is_empty() { text.push('\n'); }
                     write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
                 }
-                Some(("Skills", text, true))
+                Some(("Skills", text, false))
             }
         }
     }

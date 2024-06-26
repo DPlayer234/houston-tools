@@ -29,6 +29,7 @@ pub struct Weapon {
     pub weapon_id: u32,
     pub reload_time: f64,
     pub fixed_delay: f64,
+    pub kind: WeaponKind,
     pub data: WeaponData
 }
 
@@ -91,6 +92,8 @@ pub enum WeaponData {
     Bullets(Barrage),
     /// The weapon launches an [`Aircraft`].
     Aircraft(Aircraft),
+    /// The weapon fires anti-air attacks as a [`Barrage`].
+    AntiAir(Barrage),
 }
 
 /// Armor modifiers to apply to the damage.
@@ -188,11 +191,50 @@ define_data_enum! {
         AP("AP", "AP"),
         HE("HE", "HE"),
         Torpedo("Torpedo", "Tor."),
-        Unknown5("5", "?"),
+        AirToAir("Air-to-Air", "Air."),
         Bomb("Bomb", "Bomb"),
         SAP("SAP", "SAP"),
         Unknown8("8", "?"),
         Unknown9("9", "?")
+    }
+}
+
+define_data_enum! {
+    pub enum WeaponKind for WeaponKindData {
+        pub name: &'static str;
+
+        MainGun("Main Gun"),
+        SubGun("Secondary Gun"),
+        Torpedo("Torpedo"),
+        AirToAir("Anti-Air"),
+        Armor("Armor"),
+        Engine("Engine"),
+        Radar("Radar"),
+        StrikeAircraft("Aircraft"),
+        InterceptAircraft("Aircraft (Intercept)"),
+        Crew("Crew"),
+        Charge("Charge"),
+        Special("Special"),
+        MegaCharge("Mega Charge"),
+        ManualTorpedo("Torpedo (Manual)"),
+        AntiSub("Aircraft (Anti-Sub)"),
+        HammerHead("Hammer Head"),
+        BomberPreCastAlert("Bomber Pre-Cast Alert"),
+        MultiLock("Multi-Lock"),
+        ManualSub("Anti-Sub (Manual)"),
+        AntiAir("Anti-Air"),
+        Bracketing("Main Gun (Bracketing)"),
+        Beam("Beam"),
+        DepthCharge("Depth Charge"),
+        AntiAirRepeater("Anti-Air (Repeater)"),
+        DisposableTorpedo("Torpedo (Disposable)"),
+        SpaceLaser("Space Laser"),
+        Missile("Missile??"),
+        AntiAirFuze("Anti-Air (Fuze)"),
+        ManualMissile("Missile (Manual)"),
+        AutoMissile("Missile (Auto)"),
+        Meteor("Meteor"),
+        Unknown("Unknown")
     }
 }
 
