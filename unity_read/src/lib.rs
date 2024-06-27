@@ -5,7 +5,8 @@
 //!
 //! Inspired and made by referencing https://github.com/gameltb/io_unity and https://github.com/yuanyan3060/unity-rs for file formats.
 
-use std::{error::Error, fmt::{Debug, Display}};
+use std::fmt::{Debug, Display};
+use std::error::Error;
 
 pub mod classes;
 pub mod object;

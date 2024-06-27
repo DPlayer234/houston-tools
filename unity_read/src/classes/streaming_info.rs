@@ -33,22 +33,13 @@ impl StreamingInfo {
         let path = self.path.split('/').last().ok_or(UnityError::InvalidData("streaming data path incorrect"))?;
         let node = fs.entries().find(|e| e.path().as_str() == path).ok_or(UnityError::InvalidData("streaming data file not found"))?;
 
-        let mut slice = node.read_raw()?;
-
         let offset = self.offset.0 as usize;
         let size = self.size as usize;
 
-        if offset > slice.len() {
-            Err(UnityError::InvalidData("streaming data offset out of bounds"))?
-        }
+        let slice = node.read_raw()?
+            .get(offset..).ok_or(UnityError::InvalidData("streaming data offset out of bounds"))?
+            .get(..size).ok_or(UnityError::InvalidData("streaming data size out of bounds"))?;
 
-        slice = &slice[offset ..];
-
-        if size > slice.len() {
-            Err(UnityError::InvalidData("streaming data size out of bounds"))?
-        }
-
-        slice = &slice[.. size];
         Ok(slice)
     }
 

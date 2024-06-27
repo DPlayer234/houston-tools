@@ -4,6 +4,7 @@ use num_enum::FromPrimitive;
 
 use crate::serialized_file::{SerializedFile, SerializedType};
 use crate::classes::{ClassID, UnityClass};
+use crate::UnityError;
 
 /// Internal struct with object data.
 #[derive(Debug, Clone)]
@@ -40,8 +41,12 @@ impl ObjectRef<'_> {
     }
 
     /// Gets the block of memory with the object data.
-    pub fn data(&self) -> &[u8] {
-        &self.file.buf[((self.object.start + self.file.data_offset) as usize) ..][.. (self.object.size as usize)]
+    pub fn data(&self) -> anyhow::Result<&[u8]> {
+        let data = self.file.buf
+            .get(((self.object.start + self.file.data_offset) as usize) ..).ok_or(UnityError::InvalidData("object start out of file range"))?
+            .get(.. (self.object.size as usize)).ok_or(UnityError::InvalidData("object size out of file range"))?;
+
+        Ok(data)
     }
 
     /// Tries to read the object into the specified type.

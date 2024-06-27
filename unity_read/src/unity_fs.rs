@@ -2,9 +2,9 @@
 #![allow(dead_code)]
 
 use std::borrow::Cow;
+use std::cell::Cell;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::ops::Deref;
-use std::sync::Mutex;
 
 use binrw::{binread, BinRead, NullString};
 use num_enum::TryFromPrimitive;
@@ -14,10 +14,14 @@ use modular_bitfield::specifiers::*;
 use crate::serialized_file::SerializedFile;
 use crate::UnityError;
 
+// Since UnityFsFile stores a `dyn SeekRead`, it cannot be !Send and !Sync.
+// While that would be nice, short of requiring it for *every* reader there is no nice way around it.
+// Subsequently, none of the code here bothers to support synchronization.
+
 /// A UnityFS file.
 #[derive(Debug)]
 pub struct UnityFsFile<'a> {
-    buf: DebugIgnore<Mutex<&'a mut dyn SeekRead>>,
+    buf: DebugIgnore<Cell<Option<&'a mut dyn SeekRead>>>,
     blocks_info: BlocksInfo,
     data_offset: u64
 }
@@ -116,9 +120,10 @@ struct Node {
     flags: u32,
     path: NullString,
 
-    ///
+    /// Stores the uncompressed bytes for this node.
+    /// This is initialized lazily when [`UnityFsNode::read_raw`] is called.
     #[br(ignore)]
-    uncompressed_cache: std::sync::Arc<once_cell::sync::OnceCell<Vec<u8>>>
+    uncompressed_cache: std::rc::Rc<once_cell::unsync::OnceCell<Vec<u8>>>
 }
 
 #[repr(u32)]
@@ -189,7 +194,7 @@ impl<'a> UnityFsFile<'a> {
         let data_offset = buf.stream_position()?;
 
         Ok(UnityFsFile {
-            buf: DebugIgnore(Mutex::new(buf)),
+            buf: DebugIgnore(Cell::new(Some(buf))),
             blocks_info,
             data_offset
         })
@@ -232,7 +237,14 @@ impl<'a> UnityFsNode<'a> {
         } = self.file.get_block_index_by_offset(uncompressed_start).ok_or(UnityError::InvalidData("compressed data position out of bounds"))?;
 
         let mut result = Vec::new();
-        let mut buf = self.file.buf.0.lock().map_err(|_| UnityError::Unsupported("mutex over reader poisoned"))?;
+
+        // in any reasonable scenario, this expect should be impossible to hit.
+        // however, it's not impossible to construct a scenario where `UnityFsFile -> reader -> UnityFsFile` holds true,
+        // in which case this would trigger. if that wasn't possible, an `UnsafeCell` might be appropriate.
+        //
+        // `buf` is returned after the loop.
+        let buf = self.file.buf.take()
+            .expect("reader passed to UnityFsFile should not access the same UnityFsFile instance");
 
         for block in &self.file.blocks_info.blocks[index ..] {
             // Read and decompress the entire block
@@ -263,6 +275,9 @@ impl<'a> UnityFsNode<'a> {
             compressed_offset += u64::from(block.compressed_size);
             uncompressed_offset += u64::from(block.uncompressed_size);
         }
+
+        // return the buffer so future have access to it again
+        self.file.buf.set(Some(buf));
 
         debug_assert!(result.len() as u64 == self.node.size);
         Ok(result)
@@ -315,12 +330,6 @@ impl<T: Read + Seek> SeekRead for T {}
 
 #[derive(Clone)]
 struct DebugIgnore<T>(pub T);
-
-impl<T> From<T> for DebugIgnore<T> {
-    fn from(value: T) -> Self {
-        DebugIgnore(value)
-    }
-}
 
 impl<T> Deref for DebugIgnore<T> {
     type Target = T;

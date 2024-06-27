@@ -32,7 +32,7 @@ pub trait UnityClass: Default {
 
     /// Tries to load a structure from an object reference.
     fn try_from_obj(obj: &ObjectRef) -> anyhow::Result<Self> {
-        let cursor = &mut Cursor::new(obj.data());
+        let cursor = &mut Cursor::new(obj.data()?);
         if let Some((root, tree)) = obj.ser_type.type_tree.split_first() {
             Self::parse_tree(cursor, obj.is_big_endian(), root, tree)
         } else {
@@ -119,7 +119,7 @@ pub fn split_tree(tree: &[TypeTreeNode]) -> Option<(&TypeTreeNode, &[TypeTreeNod
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// unity_read::define_unity_class! {
 ///     /// Data for Unity's Texture2D class.
 ///     pub class Texture2D = "Texture2D" {
@@ -209,7 +209,8 @@ impl UnityClass for String {
 
 impl<T: UnityClass> UnityClass for Option<T> {
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
-        // Just deletes to the inner type and wraps it in Some
+        // Just delegates to the inner type and wraps it in Some
+        // This is mostly intended for cases when the field might be missing in the data
         T::parse_tree(r, is_big_endian, root, tree).map(Some)
     }
 }
@@ -251,7 +252,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
     }
 }
 
-macro_rules! impl_unity_class_simple {
+macro_rules! impl_unity_class_primitive {
     ($Type:ty, $expected:literal $(| $extra:literal)*) => {
         impl UnityClass for $Type {
             fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, _tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
@@ -268,13 +269,13 @@ macro_rules! impl_unity_class_simple {
     };
 }
 
-impl_unity_class_simple!(i8, "SInt8");
-impl_unity_class_simple!(u8, "UInt8" | "char");
-impl_unity_class_simple!(i16, "SInt16" | "short");
-impl_unity_class_simple!(u16, "UInt16" | "unsigned short");
-impl_unity_class_simple!(i32, "SInt32" | "int");
-impl_unity_class_simple!(u32, "UInt32" | "unsigned int" | "Type*");
-impl_unity_class_simple!(i64, "SInt64" | "long long");
-impl_unity_class_simple!(u64, "UInt64" | "unsigned long long" | "FileSize");
-impl_unity_class_simple!(f32, "float");
-impl_unity_class_simple!(f64, "double");
+impl_unity_class_primitive!(i8, "SInt8");
+impl_unity_class_primitive!(u8, "UInt8" | "char");
+impl_unity_class_primitive!(i16, "SInt16" | "short");
+impl_unity_class_primitive!(u16, "UInt16" | "unsigned short");
+impl_unity_class_primitive!(i32, "SInt32" | "int");
+impl_unity_class_primitive!(u32, "UInt32" | "unsigned int" | "Type*");
+impl_unity_class_primitive!(i64, "SInt64" | "long long");
+impl_unity_class_primitive!(u64, "UInt64" | "unsigned long long" | "FileSize");
+impl_unity_class_primitive!(f32, "float");
+impl_unity_class_primitive!(f64, "double");
