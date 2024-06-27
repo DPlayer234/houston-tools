@@ -73,14 +73,14 @@ impl Texture2DData<'_> {
                     .map_err(UnityError::InvalidData)?;
 
                 // Swap red and green channels
-                #[cfg(target_endian = "little")]
-                for px in buffer.iter_mut() {
-                    *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
-                }
-
-                #[cfg(target_endian = "big")]
-                for px in buffer.iter_mut() {
-                    *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
+                if cfg!(target_endian = "little") {
+                    for px in buffer.iter_mut() {
+                        *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
+                    }
+                } else {
+                    for px in buffer.iter_mut() {
+                        *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
+                    }
                 }
 
                 let image = RgbaImage::from_raw(width, height, as_bytes(&buffer)).unwrap();

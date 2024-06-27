@@ -8,9 +8,9 @@ edition = "2021"
 [dependencies]
 base64 = "0.22.1"
 bitcode = { version = "0.6.0", features = ["derive"] }
-bitflags = "2.5.0"
+bitflags = "2.6.0"
 once_cell = "1.19.0"
 
 [dependencies.serde]
-version = "1.0.201"
+version = "1.0.203"
 features = ["rc", "derive"]
