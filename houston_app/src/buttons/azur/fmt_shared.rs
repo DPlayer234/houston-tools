@@ -12,7 +12,7 @@ impl<'a> WeaponFormat<'a> {
 
 impl Display for WeaponFormat<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let weapon = &self.0;
+        let weapon = self.0;
 
         write!(f, "__*{}*__\n", weapon.kind.name())?;
         format_fire_rate(weapon, f)?;
@@ -26,7 +26,12 @@ impl Display for WeaponFormat<'_> {
 }
 
 fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> FmtResult {
-    let fixed_delay = weapon.fixed_delay;
+    let salvo_time = match &weapon.data {
+        WeaponData::Bullets(b) => b.salvo_time,
+        _ => 0.0
+    };
+
+    let fixed_delay = weapon.fixed_delay + salvo_time;
     write!(
         f,
         "**FR:** {:.2} +{:.2}s (~{:.1}/min)\n",
@@ -50,7 +55,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
         f,
         "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n\
         {indent}**{: >4}:** {:.0}/{:.0}/{:.0}\n\
-        {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1} \u{2E31} **Vel.:** {:.1}\n",
+        {indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
         amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
         bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
         barrage.range, barrage.firing_angle, bullet.velocity

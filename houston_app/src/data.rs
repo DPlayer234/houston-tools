@@ -125,7 +125,6 @@ impl HUserData {
 }
 
 /// Extension trait for the poise context.
-#[serenity::async_trait]
 pub trait HContextExtensions {
     /// Gets a copy of the user data for the current user.
     fn get_user_data(&self) -> HUserData;
@@ -135,12 +134,8 @@ pub trait HContextExtensions {
     fn create_reply(&self) -> CreateReply;
     /// Always creates an ephemeral reply.
     fn create_ephemeral_reply(&self) -> CreateReply;
-
-    /// Defers the result.
-    async fn defer_dynamic(&self) -> Result<(), serenity::Error>;
 }
 
-#[serenity::async_trait]
 impl HContextExtensions for HContext<'_> {
     fn get_user_data(&self) -> HUserData {
         self.data().get_user_data(self.author().id)
@@ -156,14 +151,6 @@ impl HContextExtensions for HContext<'_> {
 
     fn create_ephemeral_reply(&self) -> CreateReply {
         CreateReply::default().ephemeral(true)
-    }
-
-    async fn defer_dynamic(&self) -> Result<(), serenity::Error> {
-        if let Self::Application(ctx) = self {
-            ctx.defer_response(self.get_user_data().ephemeral).await?;
-        }
-
-        Ok(())
     }
 }
 

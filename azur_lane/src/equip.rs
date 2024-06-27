@@ -42,6 +42,7 @@ pub struct Barrage {
     pub scaling_stat: StatKind,
     pub range: f64,
     pub firing_angle: f64,
+    pub salvo_time: f64,
     pub bullets: Vec<Bullet>
 }
 

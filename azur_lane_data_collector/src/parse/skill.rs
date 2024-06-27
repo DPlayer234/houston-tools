@@ -172,9 +172,13 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
     let bullet_ids: Vec<u32> = context!(weapon_data.get("bullet_ID"); "bullet id in weapon {weapon_id}")?;
     let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
 
+    let mut salvo_time = 0.0;
+    let mut bullet_time = 0.0;
     for (bullet_id, barrage_id) in bullet_ids.into_iter().zip(barrage_ids) {
-        get_sub_barrage(lua, &mut bullets, bullet_id, barrage_id, 1)?;
+        bullet_time = get_sub_barrage(lua, &mut bullets, &mut salvo_time, bullet_id, barrage_id, 1)?;
     }
+
+    salvo_time -= bullet_time;
 
     Ok(Barrage {
         damage: weapon_data.get("damage")?,
@@ -183,11 +187,12 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
         scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(weapon_data.get("attack_attribute")?),
         range: weapon_data.get("range")?,
         firing_angle: weapon_data.get("angle")?,
+        salvo_time,
         bullets
     })
 }
 
-fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage_id: u32, parent_amount: u32) -> LuaResult<()> {
+fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, bullet_id: u32, barrage_id: u32, parent_amount: u32) -> LuaResult<f64> {
     let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
     let bullet_template: LuaTable = context!(pg.get("bullet_template"); "global pg.bullet_template")?;
     let barrage_template: LuaTable = context!(pg.get("barrage_template"); "global pg.barrage_template")?;
@@ -195,10 +200,12 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
     let bullet: LuaTable = context!(bullet_template.get(bullet_id); "bullet template for id {bullet_id}")?;
     let barrage: LuaTable = context!(barrage_template.get(barrage_id); "barrage template for id {barrage_id}")?;
 
+    let senior_delay: f64 = context!(barrage.get("senior_delay"); "senior_delay in barrage {barrage_id}")?;
     let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in barrage {barrage_id}")?;
     let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in barrage {barrage_id}")?;
 
     let amount = (senior_repeat + 1) * (primal_repeat + 1) * parent_amount;
+    *salvo_time += f64::from(senior_repeat + 1) * senior_delay;
 
     if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
         let shrapnel: Option<Vec<LuaTable>> = extra_param.get("shrapnel")?;
@@ -206,10 +213,10 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
             for emitter in shrapnel {
                 let bullet_id: u32 = context!(emitter.get("bullet_ID"); "bullet id in emitter for bullet")?;
                 let barrage_id: u32 = context!(emitter.get("barrage_ID"); "barrage id in emitter for bullet")?;
-                get_sub_barrage(lua, bullets, bullet_id, barrage_id, amount)?;
+                get_sub_barrage(lua, bullets, &mut 0.0, bullet_id, barrage_id, amount)?;
             }
 
-            return Ok(());
+            return Ok(senior_delay);
         }
     }
 
@@ -264,7 +271,7 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, bullet_id: u32, barrage
         });
     }
 
-    Ok(())
+    Ok(senior_delay)
 }
 
 fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, skill: LuaTable, skill_id: u32) -> LuaResult<()> {

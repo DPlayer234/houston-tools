@@ -30,6 +30,7 @@
                                         "scaling_stat": "TRP",
                                         "range": 120.0,
                                         "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
                                         "bullets": [
                                             {
                                                 "bullet_id": 163172,
@@ -72,6 +73,7 @@
                                         "scaling_stat": "TRP",
                                         "range": 120.0,
                                         "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
                                         "bullets": [
                                             {
                                                 "bullet_id": 163178,
