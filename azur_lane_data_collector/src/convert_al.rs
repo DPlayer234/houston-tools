@@ -108,6 +108,18 @@ pub fn to_equip_type(num: u32) -> EquipKind {
     }
 }
 
+/// Converts a number to an equip rarity.
+pub fn to_equip_rarity(num: u32) -> EquipRarity {
+    match num {
+        ..=1 => EquipRarity::N1,
+        2 => EquipRarity::N2,
+        3 => EquipRarity::R,
+        4 => EquipRarity::E,
+        5 => EquipRarity::SR,
+        _ => EquipRarity::UR,
+    }
+}
+
 /// Converts a name to a stat kind.
 pub fn to_stat_kind(stat: &str) -> StatKind {
     match stat {

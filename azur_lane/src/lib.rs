@@ -12,8 +12,10 @@ pub mod skill;
 pub struct DefinitionData {
     /// All known ships.
     pub ships: Vec<ship::ShipData>,
+    /// All known equips.
+    pub equips: Vec<equip::Equip>,
     /// All known augments.
-    pub augments: Vec<equip::Augment>
+    pub augments: Vec<equip::Augment>,
 }
 
 define_data_enum! {

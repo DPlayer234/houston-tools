@@ -10,8 +10,11 @@ use super::Faction;
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equip {
+    pub equip_id: u32,
     pub name: String,
+    pub description: String,
     pub kind: EquipKind,
+    pub rarity: EquipRarity,
     pub faction: Faction,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub hull_allowed: Vec<HullType>,
@@ -19,6 +22,8 @@ pub struct Equip {
     pub hull_disallowed: Vec<HullType>,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub weapons: Vec<Weapon>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub skills: Vec<Skill>,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub stat_bonuses: Vec<EquipStatBonus>
 }
@@ -236,6 +241,29 @@ define_data_enum! {
         AutoMissile("Missile (Auto)"),
         Meteor("Meteor"),
         Unknown("Unknown")
+    }
+}
+
+define_data_enum! {
+    /// The rarities for equip.
+    pub enum EquipRarity for EquipRarityData {
+        /// The display name for the rarity.
+        pub stars: u32,
+        /// An RGB color that can be used to represent the rarity.
+        pub color_rgb: u32;
+
+        /// 1* (Common)
+        N1(1, 0xC0C0C0),
+        /// 2* (Common)
+        N2(2, 0xC0C0C0),
+        /// 3* R (Rare)
+        R(3, 0x9FE8FF),
+        /// 4* E (Elite)
+        E(4, 0xC4ADFF),
+        /// 5* SR (Super Rare)
+        SR(5, 0xEDDD76),
+        /// 6* UR (Ultra Rare)
+        UR(6, 0xFF8D8D)
     }
 }
 

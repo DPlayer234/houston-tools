@@ -65,7 +65,9 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     let equip_data: LuaTable = equip_data_statistics.get(equip_id).with_context(context!("equip statistics for id {equip_id}"))?;
     let weapon_ids: Vec<u32> = equip_data.get("weapon_id").with_context(context!("weapon_id for equip with id {equip_id}"))?;
+    let skill_ids: Vec<u32> = equip_data.get("skill_id").with_context(context!("skill_id for equip with id {equip_id}"))?;
     let name: String = equip_data.get("name").with_context(context!("name for equip with id {equip_id}"))?;
+    let description: String = equip_data.get("descrip").with_context(context!("descrip for equip with id {equip_id}"))?;
 
     let mut weapons = Vec::new();
     for weapon_id in weapon_ids {
@@ -74,14 +76,37 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         }
     }
 
+    let skills = skill_ids.into_iter()
+        .map(|id| load_skill(lua, id))
+        .collect::<LuaResult<Vec<_>>>()?;
+
+    macro_rules! stat_bonus {
+        ($index:literal) => {{
+            match equip_data.get(concat!("attribute_", $index)).with_context(context!("attribute_{} for equip with id {equip_id}", $index))? {
+                Some(stat_kind) => {
+                    let stat_kind: String = stat_kind;
+                    Some(EquipStatBonus {
+                        stat_kind: convert_al::to_stat_kind(&stat_kind),
+                        amount: equip_data.get(concat!("value_", $index)).with_context(context!("value_{} for equip with id {equip_id}", $index))?
+                    })
+                }
+                None => None
+            }
+        }};
+    }
+
     Ok(Equip {
+        equip_id,
         name,
+        description,
+        rarity: convert_al::to_equip_rarity(equip_data.get("rarity").with_context(context!("rarity for equip with id {equip_id}"))?),
         kind: convert_al::to_equip_type(equip_data.get("type").with_context(context!("type for equip with id {equip_id}"))?),
         faction: convert_al::to_faction(equip_data.get("nationality").with_context(context!("nationality for equip with id {equip_id}"))?),
         hull_allowed: Vec::new(), // todo
         hull_disallowed: Vec::new(), // todo
         weapons,
-        stat_bonuses: Vec::new() // todo
+        skills,
+        stat_bonuses: [stat_bonus!(1), stat_bonus!(2), stat_bonus!(3)].into_iter().flatten().collect()
     })
 }
 

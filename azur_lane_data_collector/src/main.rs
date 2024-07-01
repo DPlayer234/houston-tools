@@ -197,7 +197,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
             let mlb_max_id = group.id * 10 + 4;
             let Some(raw_mlb) = members.iter().filter(|t| t.id <= mlb_max_id).max_by_key(|t| t.id) else {
-                Err(LuaError::external(DataError::NoMlb).with_context(|_| format!("no mlb for ship with id {}", group.id)))?
+                Err(LuaError::external(DataError::NoMlb).context(format!("no mlb for ship with id {}", group.id)))?
             };
 
             let raw_retrofits: Vec<&ShipSet> = members.iter().filter(|t| t.id > raw_mlb.id).collect();
@@ -246,6 +246,37 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
         ships
     };
 
+    let equips = {
+        let equip_data_template: LuaTable = pg.get("equip_data_template").context("global pg.equip_data_template")?;
+        let equip_data_template_all: LuaTable = equip_data_template.get("all").context("global pg.equip_data_template.all")?;
+        let equip_data_statistics: LuaTable = pg.get("equip_data_statistics").context("global pg.equip_data_statistics")?;
+
+        let mut equips = Vec::new();
+        equip_data_template_all.for_each(|_: u32, id: u32| {
+            let template: LuaTable = equip_data_template.get(id).with_context(context!("equip_data_template with id {id}"))?;
+            let statistics: LuaTable = equip_data_statistics.get(id).with_context(context!("equip_data_statistics with id {id}"))?;
+
+            let next: u32 = template.get("next").with_context(context!("base of equip_data_template with id {id}"))?;
+            let tech: u32 = statistics.get("tech").with_context(context!("tech of equip_data_statistics with id {id}"))?;
+            if next == 0 && matches!(tech, 0 | 3..) {
+                equips.push(id);
+            }
+
+            Ok(())
+        })?;
+
+        println!("Equips: {} ({:.2?})", equips.len(), start.elapsed());
+
+        let mut equips = equips.into_iter().map(|id| {
+            parse::skill::load_equip(&lua, id)
+        }).collect::<LuaResult<Vec<_>>>()?;
+
+        println!("Built Equip data. ({:.2?})", start.elapsed());
+
+        equips.sort_by_key(|t| t.faction);
+        equips
+    };
+
     let augments = {
         let spweapon_data_statistics: LuaTable = pg.get("spweapon_data_statistics").context("global pg.spweapon_data_statistics")?;
         let spweapon_data_statistics_all: LuaTable = spweapon_data_statistics.get("all").context("global pg.spweapon_data_statistics.all")?;
@@ -287,6 +318,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
     Ok(DefinitionData {
         ships,
+        equips,
         augments
     })
 }
@@ -314,6 +346,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
     }
 
     add_missing(&mut main.augments, next.augments, |a, b| a.augment_id == b.augment_id);
+    add_missing(&mut main.equips, next.equips, |a, b| a.equip_id == b.equip_id);
 }
 
 fn add_missing<T>(main: &mut Vec<T>, next: Vec<T>, matches: impl Fn(&T, &T) -> bool) {
