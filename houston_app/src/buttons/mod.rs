@@ -41,6 +41,7 @@ impl ButtonEventHandler {
             ButtonArgs::ViewLines(view_lines) => self.interaction_dispatch_to(ctx, interaction, view_lines).await,
             ButtonArgs::ViewSearchShip(view_filter) => self.interaction_dispatch_to(ctx, interaction, view_filter).await,
             ButtonArgs::ViewShadowEquip(view_shadow) => self.interaction_dispatch_to(ctx, interaction, view_shadow).await,
+            ButtonArgs::ViewEquip(view_equip) => self.interaction_dispatch_to(ctx, interaction, view_equip).await,
         }
     }
 
@@ -103,6 +104,8 @@ pub enum ButtonArgs {
     ViewSearchShip(azur::search_ship::ViewSearchShip),
     /// Open the ship shadow equip details.
     ViewShadowEquip(azur::shadow_equip::ViewShadowEquip),
+    /// Open the equipment details.
+    ViewEquip(azur::equip::ViewEquip),
 }
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.

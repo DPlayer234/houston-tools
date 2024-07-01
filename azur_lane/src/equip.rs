@@ -32,6 +32,7 @@ pub struct Equip {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Weapon {
     pub weapon_id: u32,
+    pub name: Option<String>,
     pub reload_time: f64,
     pub fixed_delay: f64,
     pub kind: WeaponKind,
@@ -136,28 +137,31 @@ pub struct AugmentStatBonus {
     pub random: f64
 }
 
-/// The possible kinds of equipment.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum EquipKind {
-    DestroyerGun,
-    LightCruiserGun,
-    HeavyCruiserGun,
-    LargeCruiserGun,
-    BattleshipGun,
-    SurfaceTorpedo,
-    SubmarineTorpedo,
-    AntiAirGun,
-    FuzeAntiAirGun,
-    Fighter,
-    DiveBomber,
-    TorpedoBomber,
-    SeaPlane,
-    AntiSubWeapon,
-    AntiSubAircraft,
-    Helicopter,
-    Missile,
-    Cargo,
-    Auxiliary,
+define_data_enum! {
+    /// The possible kinds of equipment.
+    pub enum EquipKind for EquipKindData {
+        pub name: &'static str;
+
+        DestroyerGun("DD Gun"),
+        LightCruiserGun("CL Gun"),
+        HeavyCruiserGun("CA Gun"),
+        LargeCruiserGun("CB Gun"),
+        BattleshipGun("BB Gun"),
+        SurfaceTorpedo("Torpedo (Surface)"),
+        SubmarineTorpedo("Torpedo (Submarine)"),
+        AntiAirGun("Anti-Air Gun"),
+        FuzeAntiAirGun("Anti-Air Gun (Fuze)"),
+        Fighter("Fighter"),
+        DiveBomber("Dive Bomber"),
+        TorpedoBomber("Torpedo Bomber"),
+        SeaPlane("Seaplane"),
+        AntiSubWeapon("Anti-Sub Weapon"),
+        AntiSubAircraft("Anti-Sub Aircraft"),
+        Helicopter("Helicopter"),
+        Missile("Missile"),
+        Cargo("Cargo"),
+        Auxiliary("Auxiliary")
+    }
 }
 
 define_data_enum! {

@@ -1,6 +1,7 @@
 use poise::ChoiceParameter;
 
 use azur_lane::ship::*;
+use azur_lane::equip::*;
 use azur_lane::Faction;
 
 use crate::prelude::*;
@@ -11,7 +12,7 @@ use crate::buttons::azur::search_ship::*;
 /// Information about mobile game Azur Lane.
 #[poise::command(
     slash_command,
-    subcommands("ship", "search_ship"),
+    subcommands("ship", "search_ship", "equip"),
     subcommand_required
 )]
 pub async fn azur(_: HContext<'_>) -> HResult {
@@ -23,7 +24,7 @@ pub async fn azur(_: HContext<'_>) -> HResult {
 async fn ship(
     ctx: HContext<'_>,
     #[description = "The ship's name. This supports auto completion."]
-    #[autocomplete = "autocomplete_name"]
+    #[autocomplete = "autocomplete_ship_name"]
     name: String
 ) -> HResult {
     let ship = ctx.data().azur_lane().ships_by_prefix(&name).next().ok_or(buttons::azur::ShipParseError)?;
@@ -61,9 +62,31 @@ async fn search_ship(
     Ok(())
 }
 
-async fn autocomplete_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
+/// Shows information about equipment.
+#[poise::command(slash_command)]
+async fn equip(
+    ctx: HContext<'_>,
+    #[description = "The equipment name. This supports auto completion."]
+    #[autocomplete = "autocomplete_equip_name"]
+    name: String
+) -> HResult {
+    let equip = ctx.data().azur_lane().equips_by_prefix(&name).next().ok_or(buttons::azur::EquipParseError)?;
+    let view = buttons::azur::equip::ViewEquip::new(equip.equip_id);
+    ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
+    Ok(())
+}
+
+async fn autocomplete_ship_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
     ctx.data().azur_lane()
         .ships_by_prefix(partial)
+        .map(|s| (*s.name).to_owned())
+        .take(10)
+        .collect()
+}
+
+async fn autocomplete_equip_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
+    ctx.data().azur_lane()
+        .equips_by_prefix(partial)
         .map(|s| (*s.name).to_owned())
         .take(10)
         .collect()
@@ -142,4 +165,19 @@ make_choice!(EHullType for HullType {
 
 make_choice!(EShipRarity for ShipRarity {
     N, R, E, SR, UR
+});
+
+make_choice!(EEquipRarity for EquipRarity {
+    #[name = "1* Common"]
+    N1,
+    #[name = "2* Common"]
+    N2,
+    #[name = "3* Rare"]
+    R,
+    #[name = "4* Elite"]
+    E,
+    #[name = "5* SR"]
+    SR,
+    #[name = "6* UR"]
+    UR
 });

@@ -14,7 +14,10 @@ impl Display for WeaponFormat<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let weapon = self.0;
 
-        write!(f, "__*{}*__\n", weapon.kind.name())?;
+        if !f.alternate() {
+            write!(f, "__*{}*__\n", weapon.kind.name())?;
+        }
+
         format_fire_rate(weapon, f)?;
 
         match &weapon.data {
@@ -31,11 +34,12 @@ fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> FmtResult {
         _ => 0.0
     };
 
+    let reload_time = weapon.reload_time * if weapon.kind == WeaponKind::StrikeAircraft { 2.2 } else { 1.0 };
     let fixed_delay = weapon.fixed_delay + salvo_time;
     write!(
         f,
         "**FR:** {:.2} +{:.2}s (~{:.1}/min)\n",
-        weapon.reload_time, fixed_delay, 60.0 / (weapon.reload_time + fixed_delay)
+        reload_time, fixed_delay, 60.0 / (reload_time + fixed_delay)
     )
 }
 
@@ -49,30 +53,44 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     let ArmorModifiers(l, m, h) = bullet.modifiers;
 
     // amount x damage
-    // ammo type & mods
-    // range | angle | vel
     write!(
         f,
-        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n\
-        {indent}**{: >4}:** {:.0}/{:.0}/{:.0}\n\
-        {indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
-        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
-        bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
-        barrage.range, barrage.firing_angle, bullet.velocity
+        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n",
+        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name()
+    )?;
+
+    if let Some(spread) = &bullet.spread {
+        write!(
+            f,
+            "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0} \u{2E31} **Vel.:** {:.0}\n",
+            spread.hit_range, spread.spread_x, spread.spread_y, bullet.velocity
+        )?;
+    } else {
+        // range | angle | vel
+        write!(
+            f,
+            "{indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
+            barrage.range, barrage.firing_angle, bullet.velocity
+        )?;
+    }
+
+    // ammo type & mods
+    write!(
+        f,
+        "{indent}**{: >4}:** {:.0}/{:.0}/{:.0}",
+        bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64
     )
 }
 
 fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> FmtResult {
-    let amount: u32 = barrage.bullets.iter().map(|b| b.amount).sum();
-
-    // amount x damage
+    // damage
     // ammo type & mods
     // range | angle
     write!(
         f,
-        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n\
+        "{indent}**Dmg:** {:.1} @ {:.0}% {}\n\
         {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}\n",
-        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+        barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
         barrage.range, barrage.firing_angle,
     )
 }
@@ -81,13 +99,14 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
     const PAD: &str = "> ";
 
     for weapon in &aircraft.weapons {
-        write!(f, "{PAD}__*{}*__\n", weapon.kind.name())?;
+        write!(f, "{PAD}__*{}*__\n", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => {
                 format_barrage(barrage, f, PAD)?;
             }
             WeaponData::AntiAir(barrage) => {
+                f.write_str(PAD)?;
                 format_fire_rate(weapon, f)?;
                 format_anti_air(barrage, f, PAD)?;
             }

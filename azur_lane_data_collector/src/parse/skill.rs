@@ -122,6 +122,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
     let weapon_property: LuaTable = pg.get("weapon_property").context("global pg.weapon_property")?;
     let weapon_data: LuaTable = weapon_property.get(weapon_id).with_context(context!("weapon property for id {weapon_id}"))?;
+    let weapon_name = get_weapon_name(&pg, weapon_id)?;
 
     let weapon_type: u32 = weapon_data.get("type").with_context(context!("weapon type in weapon {weapon_id}"))?;
     let reload_max: f64 = weapon_data.get("reload_max")?;
@@ -135,14 +136,14 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
         RoughWeaponType::AntiAir => {
             let mut barrage = get_barrage(lua, weapon_id, &weapon_data)?;
 
-            if matches!(kind, WeaponKind::AntiAir | WeaponKind::AntiAirFuze) {
+            if !matches!(kind, WeaponKind::AirToAir) {
                 fixed_delay = 0.8667;
+            }
 
-                // It appears that AA barrage data indicates AA guns fire twice.
-                // But this doesn't happen because AA guns work way differently.
-                for bullet in &mut barrage.bullets {
-                    bullet.amount = 1;
-                }
+            // It appears that AA barrage data indicates AA guns fire twice.
+            // But this doesn't happen because AA guns work way differently.
+            for bullet in &mut barrage.bullets {
+                bullet.amount -= 1;
             }
 
             WeaponData::AntiAir(barrage)
@@ -185,11 +186,21 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
     Ok(Some(Weapon {
         weapon_id,
+        name: weapon_name,
         reload_time: reload_max * RLD_MULT_AT_100,
         fixed_delay,
         kind,
         data,
     }))
+}
+
+fn get_weapon_name(pg: &LuaTable, weapon_id: u32) -> LuaResult<Option<String>> {
+    let weapon_name: LuaTable = pg.get("weapon_name").context("global pg.weapon_name")?;
+    let weapon_name: Option<LuaTable> = weapon_name.get(weapon_id).with_context(context!("weapon_name for id {weapon_id}"))?;
+    match weapon_name {
+        Some(weapon_name) => weapon_name.get("name").with_context(context!("name of weapon_name for id {weapon_id}")),
+        None => Ok(None),
+    }
 }
 
 fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<Barrage> {
