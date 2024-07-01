@@ -6,10 +6,10 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use poise::reply::CreateReply;
 use serenity::all::{Color, UserId};
+use simsearch::SimSearch;
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::prefix_map::PrefixMap;
 
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
@@ -46,9 +46,9 @@ pub struct HAzurLane {
     pub equip_list: Vec<Equip>,
     pub augment_list: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
-    ship_prefix_map: PrefixMap<usize>,
+    ship_simsearch: SimSearch<usize>,
     equip_id_to_index: HashMap<u32, usize>,
-    equip_prefix_map: PrefixMap<usize>,
+    equip_simsearch: SimSearch<usize>,
     augment_id_to_index: HashMap<u32, usize>,
     ship_id_to_augment_index: HashMap<u32, usize>,
     chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
@@ -165,40 +165,36 @@ impl HAzurLane {
             Default::default()
         });
 
+        let prefix_options = simsearch::SearchOptions::new()
+            .threshold(0.9);
+
         let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
-        let mut ship_prefix_map = PrefixMap::new();
+        let mut ship_simsearch = SimSearch::new_with(prefix_options.clone());
 
         let mut equip_id_to_index = HashMap::with_capacity(data.equips.len());
-        let mut equip_prefix_map = PrefixMap::new();
+        let mut equip_simsearch = SimSearch::new_with(prefix_options);
 
         let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
         let mut ship_id_to_augment_index = HashMap::with_capacity(data.augments.len());
 
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
-            assert!(ship_prefix_map.insert(&data.name, index), "Duplicate ship name {} @ id {}", data.name, data.group_id);
+            ship_simsearch.insert_tokens(index, &[
+                &data.name,
+                data.faction.name(), data.faction.prefix().unwrap_or("EX"),
+                data.hull_type.name(), data.hull_type.designation(),
+                data.rarity.name()
+            ]);
         }
 
         for (index, data) in data.equips.iter().enumerate() {
             equip_id_to_index.insert(data.equip_id, index);
-
-            let mut insert = || {
-                if equip_prefix_map.insert(&data.name, index) { return }
-
-                let name = format!("{} ({})", data.name, data.faction.name());
-                if equip_prefix_map.insert(&name, index) { return }
-
-                let name = format!("{} ({})", data.name, data.kind.name());
-                if equip_prefix_map.insert(&name, index) { return }
-
-                let name = format!("{} ({} {})", data.name, data.faction.name(), data.kind.name());
-                if equip_prefix_map.insert(&name, index) { return }
-
-                let name = format!("{} ({} {}) [{}]", data.name, data.faction.name(), data.kind.name(), data.equip_id);
-                assert!(equip_prefix_map.insert(&name, index), "Cannot disambiguate equip @ id {}", data.equip_id);
-            };
-
-            insert();
+            equip_simsearch.insert_tokens(index, &[
+                &data.name,
+                data.faction.name(), data.faction.prefix().unwrap_or("EX"),
+                data.kind.name(),
+                data.rarity.name()
+            ]);
         }
 
         for (index, augment) in data.augments.iter().enumerate() {
@@ -214,9 +210,9 @@ impl HAzurLane {
             equip_list: data.equips,
             augment_list: data.augments,
             ship_id_to_index,
-            ship_prefix_map,
+            ship_simsearch,
             equip_id_to_index,
-            equip_prefix_map,
+            equip_simsearch,
             augment_id_to_index,
             ship_id_to_augment_index,
             chibi_sprite_cache: DashMap::new()
@@ -237,7 +233,7 @@ impl HAzurLane {
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.ship_prefix_map.find(prefix).flat_map(|i| self.ship_list.get(*i))
+        self.ship_simsearch.search(prefix).into_iter().flat_map(|i| self.ship_list.get(i))
     }
 
     /// Gets an equip by its ID.
@@ -248,7 +244,7 @@ impl HAzurLane {
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> {
-        self.equip_prefix_map.find(prefix).flat_map(|i| self.equip_list.get(*i))
+        self.equip_simsearch.search(prefix).into_iter().flat_map(|i| self.equip_list.get(i))
     }
 
     /// Gets an augment by its ID.

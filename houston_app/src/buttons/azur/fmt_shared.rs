@@ -53,24 +53,20 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     let ArmorModifiers(l, m, h) = bullet.modifiers;
 
     // amount x damage
+    // range | angle | vel
     write!(
         f,
-        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n",
-        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name()
+        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n\
+        {indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
+        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+        barrage.range, barrage.firing_angle, bullet.velocity
     )?;
 
     if let Some(spread) = &bullet.spread {
         write!(
             f,
-            "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0} \u{2E31} **Vel.:** {:.0}\n",
-            spread.hit_range, spread.spread_x, spread.spread_y, bullet.velocity
-        )?;
-    } else {
-        // range | angle | vel
-        write!(
-            f,
-            "{indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
-            barrage.range, barrage.firing_angle, bullet.velocity
+            "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0}\n",
+            spread.hit_range, spread.spread_x, spread.spread_y
         )?;
     }
 
@@ -78,7 +74,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     write!(
         f,
         "{indent}**{: >4}:** {:.0}/{:.0}/{:.0}",
-        bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64
+        bullet.ammo.name(), l * 100f64, m * 100f64, h * 100f64
     )
 }
 

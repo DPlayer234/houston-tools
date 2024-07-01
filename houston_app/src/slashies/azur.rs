@@ -7,12 +7,11 @@ use azur_lane::Faction;
 use crate::prelude::*;
 use crate::buttons;
 use crate::buttons::ButtonArgsModify;
-use crate::buttons::azur::search_ship::*;
 
 /// Information about mobile game Azur Lane.
 #[poise::command(
     slash_command,
-    subcommands("ship", "search_ship", "equip"),
+    subcommands("ship", "search_ship", "equip", "search_equip"),
     subcommand_required
 )]
 pub async fn azur(_: HContext<'_>) -> HResult {
@@ -27,7 +26,10 @@ async fn ship(
     #[autocomplete = "autocomplete_ship_name"]
     name: String
 ) -> HResult {
-    let ship = ctx.data().azur_lane().ships_by_prefix(&name).next().ok_or(buttons::azur::ShipParseError)?;
+    let ship = name.parse().map(|id| ctx.data().azur_lane().ship_by_id(id))
+        .unwrap_or_else(|_| ctx.data().azur_lane().ships_by_prefix(&name).next())
+        .ok_or(buttons::azur::EquipParseError)?;
+
     let view = buttons::azur::ship::ViewShip::new(ship.group_id);
     ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;
     Ok(())
@@ -37,7 +39,7 @@ async fn ship(
 #[poise::command(slash_command, rename = "search-ship")]
 async fn search_ship(
     ctx: HContext<'_>,
-    #[description = "A name prefix to search for."]
+    #[description = "A name to search for."]
     name: Option<String>,
     #[description = "The faction to select."]
     faction: Option<EFaction>,
@@ -48,6 +50,8 @@ async fn search_ship(
     #[description = "Whether the ships have a unique augment."]
     has_augment: Option<bool>
 ) -> HResult {
+    use crate::buttons::azur::search_ship::*;
+
     let filter = Filter {
         name,
         faction: faction.map(EFaction::convert),
@@ -70,26 +74,53 @@ async fn equip(
     #[autocomplete = "autocomplete_equip_name"]
     name: String
 ) -> HResult {
-    let equip = ctx.data().azur_lane().equips_by_prefix(&name).next().ok_or(buttons::azur::EquipParseError)?;
+    let equip = name.parse().map(|id| ctx.data().azur_lane().equip_by_id(id))
+        .unwrap_or_else(|_| ctx.data().azur_lane().equips_by_prefix(&name).next())
+        .ok_or(buttons::azur::EquipParseError)?;
+
     let view = buttons::azur::equip::ViewEquip::new(equip.equip_id);
     ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
     Ok(())
 }
 
-async fn autocomplete_ship_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
-    ctx.data().azur_lane()
-        .ships_by_prefix(partial)
-        .map(|s| (*s.name).to_owned())
-        .take(10)
-        .collect()
+/// Searches for equipment.
+#[poise::command(slash_command, rename = "search-equip")]
+async fn search_equip(
+    ctx: HContext<'_>,
+    #[description = "A name to search for."]
+    name: Option<String>,
+    #[description = "The faction to select."]
+    faction: Option<EFaction>,
+    #[description = "The kind to select."]
+    kind: Option<EEquipKind>,
+    #[description = "The rarity to select."]
+    rarity: Option<EEquipRarity>
+) -> HResult {
+    use crate::buttons::azur::search_equip::*;
+
+    let filter = Filter {
+        name,
+        faction: faction.map(EFaction::convert),
+        kind: kind.map(EEquipKind::convert),
+        rarity: rarity.map(EEquipRarity::convert),
+    };
+
+    let view = ViewSearchEquip::new(filter);
+    ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
+
+    Ok(())
 }
 
-async fn autocomplete_equip_name(ctx: HContext<'_>, partial: &str) -> Vec<String> {
+async fn autocomplete_ship_name<'a>(ctx: HContext<'a>, partial: &'a str) -> impl Iterator<Item = AutocompleteChoice> + 'a {
+    ctx.data().azur_lane()
+        .ships_by_prefix(partial)
+        .map(|s| AutocompleteChoice::new(s.name.as_str(), s.group_id.to_string()))
+}
+
+async fn autocomplete_equip_name<'a>(ctx: HContext<'a>, partial: &'a str) -> impl Iterator<Item = AutocompleteChoice> + 'a {
     ctx.data().azur_lane()
         .equips_by_prefix(partial)
-        .map(|s| (*s.name).to_owned())
-        .take(10)
-        .collect()
+        .map(|s| AutocompleteChoice::new(s.name.as_str(), s.equip_id.to_string()))
 }
 
 macro_rules! make_choice {
@@ -165,6 +196,47 @@ make_choice!(EHullType for HullType {
 
 make_choice!(EShipRarity for ShipRarity {
     N, R, E, SR, UR
+});
+
+make_choice!(EEquipKind for EquipKind {
+    #[name = "DD Gun"]
+    DestroyerGun,
+    #[name = "CL Gun"]
+    LightCruiserGun,
+    #[name = "CA Gun"]
+    HeavyCruiserGun,
+    #[name = "CB Gun"]
+    LargeCruiserGun,
+    #[name = "BB Gun"]
+    BattleshipGun,
+    #[name = "Torpedo (Surface)"]
+    SurfaceTorpedo,
+    #[name = "Torpedo (Submarine)"]
+    SubmarineTorpedo,
+    #[name = "Anti-Air Gun"]
+    AntiAirGun,
+    #[name = "Anti-Air Gun (Fuze)"]
+    FuzeAntiAirGun,
+    #[name = "Fighter"]
+    Fighter,
+    #[name = "Dive Bomber"]
+    DiveBomber,
+    #[name = "Torpedo Bomber"]
+    TorpedoBomber,
+    #[name = "Seaplane"]
+    SeaPlane,
+    #[name = "Anti-Sub Weapon"]
+    AntiSubWeapon,
+    #[name = "Anti-Sub Aircraft"]
+    AntiSubAircraft,
+    #[name = "Helicopter"]
+    Helicopter,
+    #[name = "Missile"]
+    Missile,
+    #[name = "Cargo"]
+    Cargo,
+    #[name = "Auxiliary"]
+    Auxiliary
 });
 
 make_choice!(EEquipRarity for EquipRarity {

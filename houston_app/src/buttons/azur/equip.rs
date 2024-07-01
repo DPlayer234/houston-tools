@@ -26,9 +26,10 @@ impl ViewEquip {
 
     /// Modifies the create-reply with a preresolved equipment.
     pub fn modify_with_equip(self, create: CreateReply, equip: &Equip) -> CreateReply {
-        let mut description = String::new();
+        let mut description = format!("**{}**", equip.kind.name());
+
         for chunk in equip.stat_bonuses.chunks(3) {
-            if !description.is_empty() { description.push('\n'); }
+            description.push('\n');
             for (index, stat) in chunk.iter().enumerate() {
                 if index != 0 { description.push_str(" \u{2E31} "); }
 
@@ -52,7 +53,7 @@ impl ViewEquip {
                 false,
             )));
 
-        create.embed(embed)
+        create.embed(embed).components(vec![])
     }
 }
 

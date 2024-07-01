@@ -214,7 +214,7 @@ define_data_enum! {
         pub name: &'static str;
 
         MainGun("Main Gun"),
-        SubGun("Secondary Gun"),
+        SubGun("Auto Gun"),
         Torpedo("Torpedo"),
         AirToAir("Anti-Air"),
         Armor("Armor"),
@@ -251,23 +251,24 @@ define_data_enum! {
 define_data_enum! {
     /// The rarities for equip.
     pub enum EquipRarity for EquipRarityData {
-        /// The display name for the rarity.
         pub stars: u32,
+        /// The display name for the rarity.
+        pub name: &'static str,
         /// An RGB color that can be used to represent the rarity.
         pub color_rgb: u32;
 
         /// 1* (Common)
-        N1(1, 0xC0C0C0),
+        N1(1, "N", 0xC0C0C0),
         /// 2* (Common)
-        N2(2, 0xC0C0C0),
+        N2(2, "N", 0xC0C0C0),
         /// 3* R (Rare)
-        R(3, 0x9FE8FF),
+        R(3, "R", 0x9FE8FF),
         /// 4* E (Elite)
-        E(4, 0xC4ADFF),
+        E(4, "E", 0xC4ADFF),
         /// 5* SR (Super Rare)
-        SR(5, 0xEDDD76),
+        SR(5, "SR", 0xEDDD76),
         /// 6* UR (Ultra Rare)
-        UR(6, 0xFF8D8D)
+        UR(6, "UR", 0xFF8D8D)
     }
 }
 

@@ -16,6 +16,7 @@ rand = "0.8.5"
 serde = "1.0.203"
 serenity = { version = "0.12.2", features = ["simd_json"] }
 simd-json = { version = "0.13.10", features = ["serde"] }
+simsearch = "0.2.5"
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 

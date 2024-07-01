@@ -3,6 +3,7 @@ use crate::buttons::*;
 pub mod augment;
 pub mod equip;
 pub mod lines;
+pub mod search_equip;
 pub mod search_ship;
 pub mod shadow_equip;
 pub mod ship;
