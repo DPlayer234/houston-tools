@@ -11,13 +11,13 @@ use crate::convert_al;
 
 /// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
-    let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
-    let skill_data_template: LuaTable = context!(pg.get("skill_data_template"); "global pg.skill_data_template")?;
+    let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
+    let skill_data_template: LuaTable = pg.get("skill_data_template").context("global pg.skill_data_template")?;
 
-    let skill: LuaTable = context!(skill_data_template.get(skill_id); "skill with id {}", skill_id)?;
-    let name: String = context!(skill.get("name"); "name of skill with id {}", skill_id)?;
-    let mut desc: String = context!(skill.get("desc"); "desc of skill with id {}", skill_id)?;
-    let desc_add: Vec<Vec<Vec<String>>> = context!(skill.get("desc_add"); "desc_add of skill with id {}", skill_id)?;
+    let skill: LuaTable = skill_data_template.get(skill_id).with_context(context!("skill with id {}", skill_id))?;
+    let name: String = skill.get("name").with_context(context!("name of skill with id {}", skill_id))?;
+    let mut desc: String = skill.get("desc").with_context(context!("desc of skill with id {}", skill_id))?;
+    let desc_add: Vec<Vec<Vec<String>>> = skill.get("desc_add").with_context(context!("desc_add of skill with id {}", skill_id))?;
 
     for (slot, data_set) in desc_add.iter().enumerate() {
         if let Some(last) = data_set.last() {
@@ -36,7 +36,7 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         return Ok(skill);
     }
 
-    let category: u32 = context!(skill.get("type"); "type of skill with id {skill_id}")?;
+    let category: u32 = skill.get("type").with_context(context!("type of skill with id {skill_id}"))?;
     let category = convert_al::to_skill_category(category);
 
     let buff = require_buff_data(lua, skill_id)?;
@@ -60,12 +60,12 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
 
 /// Loads a piece of equipment from the Lua state.
 pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
-    let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
-    let equip_data_statistics: LuaTable = context!(pg.get("equip_data_statistics"); "global pg.equip_data_statistics")?;
+    let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
+    let equip_data_statistics: LuaTable = pg.get("equip_data_statistics").context("global pg.equip_data_statistics")?;
 
-    let equip_data: LuaTable = context!(equip_data_statistics.get(equip_id); "equip statistics for id {equip_id}")?;
-    let weapon_ids: Vec<u32> = context!(equip_data.get("weapon_id"); "weapon_id for equip with id {equip_id}")?;
-    let name: String = context!(equip_data.get("name"); "name for equip with id {equip_id}")?;
+    let equip_data: LuaTable = equip_data_statistics.get(equip_id).with_context(context!("equip statistics for id {equip_id}"))?;
+    let weapon_ids: Vec<u32> = equip_data.get("weapon_id").with_context(context!("weapon_id for equip with id {equip_id}"))?;
+    let name: String = equip_data.get("name").with_context(context!("name for equip with id {equip_id}"))?;
 
     let mut weapons = Vec::new();
     for weapon_id in weapon_ids {
@@ -76,8 +76,8 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     Ok(Equip {
         name,
-        kind: convert_al::to_equip_type(context!(equip_data.get("type"); "type for equip with id {equip_id}")?),
-        faction: convert_al::to_faction(context!(equip_data.get("nationality"); "nationality for equip with id {equip_id}")?),
+        kind: convert_al::to_equip_type(equip_data.get("type").with_context(context!("type for equip with id {equip_id}"))?),
+        faction: convert_al::to_faction(equip_data.get("nationality").with_context(context!("nationality for equip with id {equip_id}"))?),
         hull_allowed: Vec::new(), // todo
         hull_disallowed: Vec::new(), // todo
         weapons,
@@ -94,11 +94,11 @@ pub fn load_equips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<Equip>> {
 pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
     const RLD_MULT_AT_100: f64 = 0.006650724;
 
-    let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
-    let weapon_property: LuaTable = context!(pg.get("weapon_property"); "global pg.weapon_property")?;
-    let weapon_data: LuaTable = context!(weapon_property.get(weapon_id); "weapon property for id {weapon_id}")?;
+    let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
+    let weapon_property: LuaTable = pg.get("weapon_property").context("global pg.weapon_property")?;
+    let weapon_data: LuaTable = weapon_property.get(weapon_id).with_context(context!("weapon property for id {weapon_id}"))?;
 
-    let weapon_type: u32 = context!(weapon_data.get("type"); "weapon type in weapon {weapon_id}")?;
+    let weapon_type: u32 = weapon_data.get("type").with_context(context!("weapon type in weapon {weapon_id}"))?;
     let reload_max: f64 = weapon_data.get("reload_max")?;
     let mut fixed_delay = weapon_data.get("auto_aftercast")?;
 
@@ -123,18 +123,18 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
             WeaponData::AntiAir(barrage)
         }
         RoughWeaponType::Aircraft => {
-            let aircraft_template: LuaTable = context!(pg.get("aircraft_template"); "global pg.aircraft_template")?;
-            let aircraft: LuaTable = context!(aircraft_template.get(weapon_id); "aircraft_template for id {weapon_id}")?;
+            let aircraft_template: LuaTable = pg.get("aircraft_template").context("global pg.aircraft_template")?;
+            let aircraft: LuaTable = aircraft_template.get(weapon_id).with_context(context!("aircraft_template for id {weapon_id}"))?;
 
-            let barrage_template: LuaTable = context!(pg.get("barrage_template"); "global pg.barrage_template")?;
-            let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
+            let barrage_template: LuaTable = pg.get("barrage_template").context("global pg.barrage_template")?;
+            let barrage_ids: Vec<u32> = weapon_data.get("barrage_ID").with_context(context!("barrage id in weapon {weapon_id}"))?;
 
             let mut amount = 0u32;
             for barrage_id in barrage_ids {
-                let barrage: LuaTable = context!(barrage_template.get(barrage_id); "barrage template for id {barrage_id}")?;
+                let barrage: LuaTable = barrage_template.get(barrage_id).with_context(context!("barrage template for id {barrage_id}"))?;
 
-                let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in barrage {barrage_id}")?;
-                let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in barrage {barrage_id}")?;
+                let senior_repeat: u32 = barrage.get("senior_repeat").with_context(context!("senior_repeat in barrage {barrage_id}"))?;
+                let primal_repeat: u32 = barrage.get("primal_repeat").with_context(context!("primal_repeat in barrage {barrage_id}"))?;
 
                 amount += (senior_repeat + 1) * (primal_repeat + 1);
             }
@@ -169,8 +169,8 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
 fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<Barrage> {
     let mut bullets: Vec<Bullet> = Vec::new();
-    let bullet_ids: Vec<u32> = context!(weapon_data.get("bullet_ID"); "bullet id in weapon {weapon_id}")?;
-    let barrage_ids: Vec<u32> = context!(weapon_data.get("barrage_ID"); "barrage id in weapon {weapon_id}")?;
+    let bullet_ids: Vec<u32> = weapon_data.get("bullet_ID").with_context(context!("bullet id in weapon {weapon_id}"))?;
+    let barrage_ids: Vec<u32> = weapon_data.get("barrage_ID").with_context(context!("barrage id in weapon {weapon_id}"))?;
 
     let mut salvo_time = 0.0;
     let mut bullet_time = 0.0;
@@ -193,16 +193,16 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
 }
 
 fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, bullet_id: u32, barrage_id: u32, parent_amount: u32) -> LuaResult<f64> {
-    let pg: LuaTable = context!(lua.globals().get("pg"); "global pg")?;
-    let bullet_template: LuaTable = context!(pg.get("bullet_template"); "global pg.bullet_template")?;
-    let barrage_template: LuaTable = context!(pg.get("barrage_template"); "global pg.barrage_template")?;
+    let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
+    let bullet_template: LuaTable = pg.get("bullet_template").context("global pg.bullet_template")?;
+    let barrage_template: LuaTable = pg.get("barrage_template").context("global pg.barrage_template")?;
 
-    let bullet: LuaTable = context!(bullet_template.get(bullet_id); "bullet template for id {bullet_id}")?;
-    let barrage: LuaTable = context!(barrage_template.get(barrage_id); "barrage template for id {barrage_id}")?;
+    let bullet: LuaTable = bullet_template.get(bullet_id).with_context(context!("bullet template for id {bullet_id}"))?;
+    let barrage: LuaTable = barrage_template.get(barrage_id).with_context(context!("barrage template for id {barrage_id}"))?;
 
-    let senior_delay: f64 = context!(barrage.get("senior_delay"); "senior_delay in barrage {barrage_id}")?;
-    let senior_repeat: u32 = context!(barrage.get("senior_repeat"); "senior_repeat in barrage {barrage_id}")?;
-    let primal_repeat: u32 = context!(barrage.get("primal_repeat"); "primal_repeat in barrage {barrage_id}")?;
+    let senior_delay: f64 = barrage.get("senior_delay").with_context(context!("senior_delay in barrage {barrage_id}"))?;
+    let senior_repeat: u32 = barrage.get("senior_repeat").with_context(context!("senior_repeat in barrage {barrage_id}"))?;
+    let primal_repeat: u32 = barrage.get("primal_repeat").with_context(context!("primal_repeat in barrage {barrage_id}"))?;
 
     let amount = (senior_repeat + 1) * (primal_repeat + 1) * parent_amount;
     *salvo_time += f64::from(senior_repeat + 1) * senior_delay;
@@ -211,8 +211,8 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
         let shrapnel: Option<Vec<LuaTable>> = extra_param.get("shrapnel")?;
         if let Some(shrapnel) = shrapnel {
             for emitter in shrapnel {
-                let bullet_id: u32 = context!(emitter.get("bullet_ID"); "bullet id in emitter for bullet")?;
-                let barrage_id: u32 = context!(emitter.get("barrage_ID"); "barrage id in emitter for bullet")?;
+                let bullet_id: u32 = emitter.get("bullet_ID").context("bullet id in emitter for bullet")?;
+                let barrage_id: u32 = emitter.get("barrage_ID").context("barrage id in emitter for bullet")?;
                 get_sub_barrage(lua, bullets, &mut 0.0, bullet_id, barrage_id, amount)?;
             }
 
@@ -224,11 +224,11 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
         existing.amount += amount;
     } else {
         let armor_mods: [f64; 3] = bullet.get("damage_type")?;
-        let pierce: Option<u32> = context!(bullet.get("pierce_amount"); "pierce_amount in bullet {bullet_id}")?;
+        let pierce: Option<u32> = bullet.get("pierce_amount").with_context(context!("pierce_amount in bullet {bullet_id}"))?;
         let kind = convert_al::to_bullet_kind(bullet.get("type")?);
 
         let mut attach_buff = Vec::new();
-        let attach_buff_raw: Option<Vec<LuaTable>> = context!(bullet.get("attach_buff"); "attach_buff in bullet {bullet_id}")?;
+        let attach_buff_raw: Option<Vec<LuaTable>> = bullet.get("attach_buff").with_context(context!("attach_buff in bullet {bullet_id}"))?;
         if let Some(attach_buff_raw) = attach_buff_raw {
             for buff in attach_buff_raw {
                 let buff_id: u32 = buff.get("buff_id")?;
@@ -254,16 +254,16 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
             attach_buff,
 
             spread: if kind == BulletKind::Bomb {
-                let hit_type: LuaTable = context!(bullet.get("hit_type"); "hit_type in bullet {bullet_id}")?;
-                let extra_param: LuaTable = context!(bullet.get("extra_param"); "extra_param in bullet {bullet_id}")?;
+                let hit_type: LuaTable = bullet.get("hit_type").with_context(context!("hit_type in bullet {bullet_id}"))?;
+                let extra_param: LuaTable = bullet.get("extra_param").with_context(context!("extra_param in bullet {bullet_id}"))?;
 
-                let spread_x: Option<f64> = context!(extra_param.get("randomOffsetX"); "randomOffsetX in bullet {bullet_id}")?;
-                let spread_y: Option<f64> = context!(extra_param.get("randomOffsetZ"); "randomOffsetZ in bullet {bullet_id}")?;
+                let spread_x: Option<f64> = extra_param.get("randomOffsetX").with_context(context!("randomOffsetX in bullet {bullet_id}"))?;
+                let spread_y: Option<f64> = extra_param.get("randomOffsetZ").with_context(context!("randomOffsetZ in bullet {bullet_id}"))?;
 
                 Some(BulletSpread {
                     spread_x: spread_x.unwrap_or_default(),
                     spread_y: spread_y.unwrap_or_default(),
-                    hit_range: context!(hit_type.get("range"); "range in bullet {bullet_id}")?
+                    hit_range: hit_type.get("range").with_context(context!("range in bullet {bullet_id}"))?
                 })
             } else {
                 None
@@ -278,8 +278,8 @@ fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, 
     let len = skill.len()?;
     if let Ok(len) = usize::try_from(len) {
         if len != 0 {
-            let level_entry: LuaTable = context!(skill.get(len); "level entry {len} of skill/buff")?;
-            let effect_list: Option<Vec<LuaTable>> = context!(level_entry.get("effect_list"); "effect_list of skill/buff level entry {len}")?;
+            let level_entry: LuaTable = skill.get(len).with_context(context!("level entry {len} of skill/buff"))?;
+            let effect_list: Option<Vec<LuaTable>> = level_entry.get("effect_list").with_context(context!("effect_list of skill/buff level entry {len}"))?;
             if let Some(effect_list) = effect_list {
                 search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
                 return Ok(());
@@ -287,7 +287,7 @@ fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, 
         }
     }
 
-    let effect_list: Option<Vec<LuaTable>> = context!(skill.get("effect_list"); "effect_list of skill/buff")?;
+    let effect_list: Option<Vec<LuaTable>> = skill.get("effect_list").context("effect_list of skill/buff")?;
     if let Some(effect_list) = effect_list {
         search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
     }
@@ -297,15 +297,15 @@ fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, 
 
 fn search_referenced_weapons_in_effect_entry(context: &mut ReferencedWeaponsContext, lua: &Lua, effect_list: Vec<LuaTable>, skill_id: u32) -> LuaResult<()> {
     fn get_arg<'a, T: FromLua<'a>>(entry: &LuaTable<'a>, key: &str) -> LuaResult<T> {
-        let arg_list: LuaTable = context!(entry.get("arg_list"); "skill/buff effect_list entry arg_list")?;
-        context!(arg_list.get(key); "skill/buff effect_list entry arg_list {}", key)
+        let arg_list: LuaTable = entry.get("arg_list").context("skill/buff effect_list entry arg_list")?;
+        arg_list.get(key).with_context(context!("skill/buff effect_list entry arg_list {}", key))
     }
 
     let mut seen_weapons = HashSet::new();
     let mut attacks = Vec::new();
 
     for entry in effect_list {
-        let entry_type: String = context!(entry.get("type"); "skill/buff effect_list entry type: {:#?}", entry)?;
+        let entry_type: String = entry.get("type").with_context(context!("skill/buff effect_list entry type: {:#?}", entry))?;
         match entry_type.as_str() {
             "BattleBuffCastSkill" => {
                 let skill_id: u32 = get_arg(&entry, "skill_id")?;

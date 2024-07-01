@@ -12,7 +12,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     /// Reads a value from the statistics; target-typed.
     macro_rules! read {
         ($field:expr) => {
-            context!(set.statistics.get($field); "{} of augment with id {}", $field, set.id)?
+            set.statistics.get($field).with_context(context!("{} of augment with id {}", $field, set.id))?
         };
     }
 
@@ -37,7 +37,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     let skill_upgrade: Vec<LuaTable> = read!("skill_upgrade");
     let skill_upgrade = match skill_upgrade.into_iter().next() {
         Some(skill_upgrade) => {
-            let skill_id: u32 = context!(skill_upgrade.get(2); "skill_upgrade id for augment {}", set.id)?;
+            let skill_id: u32 = skill_upgrade.get(2).with_context(context!("skill_upgrade id for augment {}", set.id))?;
             Some(parse::skill::load_skill(lua, skill_id)?)
         }
         None => None,

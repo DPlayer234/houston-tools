@@ -13,7 +13,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     /// Reads a single value; target-typed.
     macro_rules! read {
         ($table:expr, $field:expr) => {
-            context!($table.get($field); "{} of ship with id {}", $field, set.id)?
+            $table.get($field).with_context(context!("{} of ship with id {}", $field, set.id))?
         };
     }
 
@@ -64,7 +64,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             let allow: Vec<u32> = read!(set.template, $allowed_at);
             let mut mounts: u8 = read!(base_list, $index);
             if $index == 1 { mounts *= main_mount_mult; }
-            
+
             EquipSlot {
                 allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
                 mount: Some(EquipWeaponMount {
@@ -86,7 +86,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
 
     let mut ship = ShipData {
         group_id: read!(set.template, "group_type"),
-        name: read!(set.statistics, "name"), 
+        name: read!(set.statistics, "name"),
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),
         faction: convert_al::to_faction(read!(set.statistics, "nationality")),
         hull_type: convert_al::to_hull_type(read!(set.statistics, "type")),
@@ -142,7 +142,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             ship.enhance_kind = EnhanceKind::Normal;
 
             fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n) }
-            
+
             // Up the base value. This makes stat calc below level 100 inaccurate
             // but I don't really care about that.
             let extra: LuaTable = read!(data, "durability");

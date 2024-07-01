@@ -1,7 +1,7 @@
-/// Includes contextual information with a Lua error/result.
+/// Essentially a lazy format format.
 #[macro_export]
 macro_rules! context {
-    ($val:expr; $($arg:tt)*) => {
-        $val.with_context(|_| format!($($arg)*))
-    };
+    ($($arg:tt)*) => {{
+        |_| format!($($arg)*)
+    }};
 }
