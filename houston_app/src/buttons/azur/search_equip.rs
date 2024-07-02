@@ -63,13 +63,13 @@ impl View {
         if self.page > 0 || has_next {
             rows.insert(0, CreateActionRow::Buttons(vec![
                 if self.page > 0 {
-                    self.new_button(utils::field!(Self: page), self.page - 1, || Sentinel::new(0, 1))
+                    self.new_button(utils::field_mut!(Self: page), self.page - 1, || Sentinel::new(0, 1))
                 } else {
                     CreateButton::new("#no-back").disabled(true)
                 }.emoji('◀'),
 
                 if has_next {
-                    self.new_button(utils::field!(Self: page), self.page + 1, || Sentinel::new(0, 2))
+                    self.new_button(utils::field_mut!(Self: page), self.page + 1, || Sentinel::new(0, 2))
                 } else {
                     CreateButton::new("#no-forward").disabled(true)
                 }.emoji('▶')

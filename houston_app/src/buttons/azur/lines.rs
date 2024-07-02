@@ -103,18 +103,18 @@ impl View {
 
     /// Creates a button that redirects to a different Base/EX state.
     fn button_with_extra(&self, extra: bool) -> CreateButton {
-        self.new_button(utils::field!(Self: extra), extra, || Sentinel::new(0, extra as u32))
+        self.new_button(utils::field_mut!(Self: extra), extra, || Sentinel::new(0, extra as u32))
     }
 
     /// Creates a button that redirects to a different viewed part.
     fn button_with_part(&self, part: ViewPart, words: &ShipSkinWords) -> CreateButton {
         let disabled = self.part == part || !part.has_texts(words);
-        self.new_button(utils::field!(Self: part), part, || Sentinel::new(1, part as u32)).disabled(disabled)
+        self.new_button(utils::field_mut!(Self: part), part, || Sentinel::new(1, part as u32)).disabled(disabled)
     }
 
     /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index(&self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
-        self.new_select_option(&skin.name, utils::field!(Self: skin_index), index as u32)
+        self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u32)
     }
 }
 

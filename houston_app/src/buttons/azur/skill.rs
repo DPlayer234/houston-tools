@@ -91,7 +91,7 @@ impl View {
 
     /// Creates a button that redirects to a skill index.
     fn button_with_skill(&self, index: usize) -> CreateButton {
-        self.new_button(utils::field!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
+        self.new_button(utils::field_mut!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
     }
 
     /// Creates the embed field for a skill.

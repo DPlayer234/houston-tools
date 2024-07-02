@@ -14,7 +14,7 @@ pub fn to_titlecase(value: &mut String) {
 	// SAFETY: `to_titlecase_u8` only transforms
 	// ASCII characters into other ASCII characters.
 	unsafe {
-		let slice =  value.as_bytes_mut();
+		let slice = value.as_bytes_mut();
 		to_titlecase_u8(slice);
 	}
 }
@@ -115,19 +115,12 @@ macro_rules! titlecase {
 /// ```
 #[macro_export]
 macro_rules! join {
-	($a:expr, $b:expr) => {{
-		const A: &str = $a;
-		const B: &str = $b;
-		const N: usize = A.len() + B.len();
-		const JOIN: [u8; N] = $crate::text::__private::join_const(A.as_bytes(), B.as_bytes());
+	($($str:expr),*) => {{
+		const STRS: &[&str] = &[$($str),*];
+		const N: usize = $crate::text::__private::count_str_const(STRS);
+		const JOIN: [u8; N] = $crate::text::__private::join_str_const(STRS);
 		const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&JOIN) };
 		RESULT
-	}};
-	($a:expr, $b:expr, $c:expr) => {{
-		$crate::join!($crate::join!($a, $b), $c)
-	}};
-	($a:expr, $b:expr, $c:expr, $($rest:expr),*) => {{
-		$crate::join!($crate::join!($a, $b), $crate::join!($c, $($rest),*))
 	}};
 }
 
@@ -161,30 +154,55 @@ pub mod __private {
 		value
 	}
 
-	/// Provides a way to join two [`u8`] slices into a single array.
+	/// Counts the total length of all [`str`] slices.
+	///
+	/// # Panic
+	///
+	/// Panics if the total length of all slices overflows [`usize`].
+	#[must_use]
+	pub const fn count_str_const(slices: &[&str]) -> usize {
+		let mut offset = 0usize;
+
+		let mut slice_index = 0usize;
+		while slice_index < slices.len() {
+			offset = match offset.checked_add(slices[slice_index].len()) {
+				Some(value) => value,
+				None => panic!("total length overflows usize"),
+			};
+			slice_index += 1;
+		}
+
+		offset
+	}
+
+	/// Provides a way to join several [`str`] slices into a single UTF8 byte array.
+	/// The resulting array is safe to transmute into a [`str`].
 	///
 	/// This function is generally not useful and exists primarily to support the [`join`] macro.
 	///
 	/// # Panic
 	///
-	/// Panics if `N` is not equal to sum of the length of `a` and `b`.
+	/// Panics if `N` is not equal to sum of the length of all slices.
 	#[must_use]
-	pub const fn join_const<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
-		assert!(N == (a.len() + b.len()));
+	pub const fn join_str_const<const N: usize>(slices: &[&str]) -> [u8; N] {
+		let mut out = [0u8; N];
+		let mut offset = 0usize;
 
-		const fn copy_slice<const N: usize>(mut out: [u8; N], slice: &[u8], offset: usize) -> [u8; N] {
+		let mut slice_index = 0usize;
+		while slice_index < slices.len() {
+			let slice = slices[slice_index].as_bytes();
+
 			let mut index = 0usize;
 			while index < slice.len() {
 				out[offset + index] = slice[index];
 				index += 1;
 			}
 
-			out
+			offset += slice.len();
+			slice_index += 1;
 		}
 
-		let out = [0u8; N];
-		let out = copy_slice(out, a, 0);
-		let out = copy_slice(out, b, a.len());
+		assert!(offset == N);
 		out
 	}
 }

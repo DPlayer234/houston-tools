@@ -163,17 +163,17 @@ impl View {
 
     /// Gets a button that redirects to a different level.
     fn button_with_level(&self, level: u8) -> CreateButton {
-        self.new_button(utils::field!(Self: level), level, || Sentinel::new(0, u32::from(level)))
+        self.new_button(utils::field_mut!(Self: level), level, || Sentinel::new(0, u32::from(level)))
     }
 
     /// Gets a button that redirects to a different affinity.
     fn button_with_affinity(&self, affinity: ViewAffinity) -> CreateButton {
-        self.new_button(utils::field!(Self: affinity), affinity, || Sentinel::new(1, affinity as u32))
+        self.new_button(utils::field_mut!(Self: affinity), affinity, || Sentinel::new(1, affinity as u32))
     }
 
     /// Creates a button that redirects to a retrofit state.
     fn button_with_retrofit(&self, retrofit: Option<u8>) -> CreateButton {
-        self.new_button(utils::field!(Self: retrofit), retrofit, || Sentinel::new(2, retrofit.map(u32::from).unwrap_or(u32::MAX)))
+        self.new_button(utils::field_mut!(Self: retrofit), retrofit, || Sentinel::new(2, retrofit.map(u32::from).unwrap_or(u32::MAX)))
     }
 
     /// Creates the embed field that display the stats.

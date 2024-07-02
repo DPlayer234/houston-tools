@@ -1,7 +1,9 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
+pub mod fields;
 pub mod prefix_map;
+pub mod range;
+pub mod str_as_data;
 pub mod text;
 pub mod time;
 
@@ -28,6 +30,19 @@ pub const fn as_with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
     }
 }
 
+/// Convenience method to calculate the hash of a value with the [`std::hash::DefaultHasher`].
+#[inline]
+pub fn hash_default<T: std::hash::Hash>(value: &T) -> u64 {
+    hash(value, std::hash::DefaultHasher::new())
+}
+
+/// Convenience method to feed a value to a hasher and then return its value.
+#[inline]
+pub fn hash<T: std::hash::Hash, H: std::hash::Hasher>(value: &T, mut hasher: H) -> u64 {
+    value.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// Trait that allows discarding values.
 pub trait Discard {
     /// Consumes and discards the value.
@@ -39,70 +54,17 @@ impl<T, E: Debug> Discard for Result<T, E> {
     /// Consumes and discards the value.
     /// If debug assertions are enabled, panics if it holds an error.
     fn discard(self) {
-        #[cfg(debug_assertions)]
-        drop(self.unwrap());
-
-        #[cfg(not(debug_assertions))]
-        drop(self);
-    }
-}
-
-/// Represents a field of a struct. Provides methods to access the field.
-#[must_use]
-pub trait Field<S: ?Sized, F: ?Sized> {
-    /// Gets a reference to the field.
-    #[must_use]
-    fn get<'r>(&self, obj: &'r S) -> &'r F;
-
-    /// Gets a mutable reference to the field.
-    #[must_use]
-    fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F;
-}
-
-/// Provides a [`Field`] implementation that uses lambdas.
-#[must_use]
-pub struct LambdaField<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> {
-    get: Get,
-    get_mut: GetMut,
-    _phantom_s: PhantomData<S>,
-    _phantom_f: PhantomData<F>,
-}
-
-impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> LambdaField<S, F, Get, GetMut> {
-    pub const fn new(get: Get, get_mut: GetMut) -> Self {
-        LambdaField {
-            get, get_mut,
-            _phantom_s: PhantomData,
-            _phantom_f: PhantomData
+        if cfg!(debug_assertions) {
+            drop(self.unwrap());
         }
     }
-}
-
-impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> Field<S, F> for LambdaField<S, F, Get, GetMut> {
-    fn get<'r>(&self, obj: &'r S) -> &'r F {
-        (self.get)(obj)
-    }
-
-    fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F {
-        (self.get_mut)(obj)
-    }
-}
-
-/// Gets a [`Field`] that refers to the provided info.
-#[macro_export]
-macro_rules! field {
-    ($type:ty : $field:ident) => {{
-        $crate::LambdaField::new(
-            |s: &$type| &s.$field,
-            |s: &mut $type| &mut s.$field
-        )
-    }};
 }
 
 #[macro_export]
 macro_rules! define_simple_error {
     ($type:ident : $message:literal) => {
         #[derive(Debug, Clone)]
+        #[must_use]
         pub struct $type;
 
         impl std::error::Error for $type {}

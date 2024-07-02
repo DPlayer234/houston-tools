@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use serenity::prelude::*;
+use utils::fields::FieldMut;
 
 pub use crate::prelude::*;
 
@@ -128,7 +129,7 @@ pub trait ToButtonArgsId {
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
-    fn new_button<T: PartialEq>(&self, field: impl utils::Field<Self, T>, value: T, sentinel: impl FnOnce() -> Sentinel) -> CreateButton
+    fn new_button<T: PartialEq>(&self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce() -> Sentinel) -> CreateButton
     where Self: Clone {
         let mut new_state = self.clone();
         *field.get_mut(&mut new_state) = value;
@@ -142,7 +143,7 @@ pub trait ToButtonArgsId {
     }
 
     /// Creates a new select option that would switch to a state where one field is changed.
-    fn new_select_option<T: PartialEq>(&self, label: impl Into<String>, field: impl utils::Field<Self, T>, value: T) -> CreateSelectMenuOption
+    fn new_select_option<T: PartialEq>(&self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption
     where Self: Clone {
         let mut new_state = self.clone();
         *field.get_mut(&mut new_state) = value;
@@ -164,7 +165,7 @@ impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
     #[must_use]
     pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
-        let bytes = from_base256_string(id)?;
+        let bytes = utils::str_as_data::from_b65536(id)?;
         let args = bitcode::decode(&bytes)?;
         Ok(args)
     }
@@ -175,7 +176,7 @@ impl<T: Into<ButtonArgs>> ToButtonArgsId for T {
     fn to_custom_id(self) -> String {
         let args: ButtonArgs = self.into();
         let encoded = bitcode::encode(&args);
-        to_base256_string(&encoded)
+        utils::str_as_data::to_b65536(&encoded)
     }
 }
 
@@ -184,12 +185,4 @@ impl Sentinel {
     pub fn new(key: u32, value: u32) -> Self {
         Self { key, value }
     }
-}
-
-fn to_base256_string(bytes: &[u8]) -> String {
-    bytes.into_iter().map(|b| char::from(*b)).collect()
-}
-
-fn from_base256_string(str: &str) -> Result<Vec<u8>, std::char::TryFromCharError> {
-    str.chars().map(|c| u8::try_from(c)).collect()
 }
