@@ -4,7 +4,7 @@ use azur_lane::equip::*;
 use crate::buttons::*;
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewSearchEquip {
+pub struct View {
     page: u16,
     filter: Filter
 }
@@ -17,17 +17,17 @@ pub struct Filter {
     pub rarity: Option<EquipRarity>,
 }
 
-impl From<ViewSearchEquip> for ButtonArgs {
-    fn from(value: ViewSearchEquip) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewSearchEquip(value)
     }
 }
 
 const PAGE_SIZE: usize = 15;
 
-impl ViewSearchEquip {
+impl View {
     pub fn new(filter: Filter) -> Self {
-        ViewSearchEquip { page: 0, filter }
+        View { page: 0, filter }
     }
 
     pub fn modify_with_iter<'a>(self, create: CreateReply, iter: impl Iterator<Item = &'a Equip>) -> CreateReply {
@@ -45,7 +45,7 @@ impl ViewSearchEquip {
             desc.push_str(&equip.name);
             desc.push('\n');
 
-            let view_equip = super::equip::ViewEquip::new(equip.equip_id);
+            let view_equip = super::equip::View::new(equip.equip_id);
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
@@ -80,7 +80,7 @@ impl ViewSearchEquip {
     }
 }
 
-impl ButtonArgsModify for ViewSearchEquip {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let filtered = self.filter
             .iterate(data.azur_lane())

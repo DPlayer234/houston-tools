@@ -4,7 +4,7 @@ use azur_lane::Faction;
 use crate::buttons::*;
 
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewSearchShip {
+pub struct View {
     page: u16,
     filter: Filter
 }
@@ -18,17 +18,17 @@ pub struct Filter {
     pub has_augment: Option<bool>
 }
 
-impl From<ViewSearchShip> for ButtonArgs {
-    fn from(value: ViewSearchShip) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewSearchShip(value)
     }
 }
 
 const PAGE_SIZE: usize = 15;
 
-impl ViewSearchShip {
-    pub fn new(filter: Filter) -> ViewSearchShip {
-        ViewSearchShip { page: 0, filter }
+impl View {
+    pub fn new(filter: Filter) -> View {
+        View { page: 0, filter }
     }
 
     pub fn modify_with_iter<'a>(self, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
@@ -46,7 +46,7 @@ impl ViewSearchShip {
             desc.push_str(&ship.name);
             desc.push('\n');
 
-            let view_ship = super::ship::ViewShip::new(ship.group_id);
+            let view_ship = super::ship::View::new(ship.group_id);
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
         }
 
@@ -81,7 +81,7 @@ impl ViewSearchShip {
     }
 }
 
-impl ButtonArgsModify for ViewSearchShip {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let filtered = self.filter
             .iterate(data.azur_lane())

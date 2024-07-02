@@ -8,17 +8,17 @@ use super::ShipParseError;
 
 /// Views ship lines.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewLines {
+pub struct View {
     pub ship_id: u32,
     pub skin_index: u32,
-    pub part: ViewLinesPart,
+    pub part: ViewPart,
     pub extra: bool,
     pub back: Option<String>
 }
 
 /// Which part of the lines to display.
 #[derive(Debug, Clone, Copy, bitcode::Encode, bitcode::Decode, PartialEq, Eq)]
-pub enum ViewLinesPart {
+pub enum ViewPart {
     Info,
     Main1,
     Main2,
@@ -26,28 +26,28 @@ pub enum ViewLinesPart {
     Combat
 }
 
-impl From<ViewLines> for ButtonArgs {
-    fn from(value: ViewLines) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewLines(value)
     }
 }
 
-impl ViewLines {
+impl View {
     /// Creates a new instance.
     #[allow(dead_code)] // planned for future use
     pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: None }
+        Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back: None }
     }
 
     /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(ship_id: u32, back: String) -> Self {
-        Self { ship_id, skin_index: 0, part: ViewLinesPart::Info, extra: false, back: Some(back) }
+        Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back: Some(back) }
     }
 
     /// Modifies the create-reply with preresolved ship and skin data.
     pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
         let words = match (&self, skin) {
-            (ViewLines { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
+            (View { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
         };
 
@@ -73,11 +73,11 @@ impl ViewLines {
         }
 
         components.push(CreateActionRow::Buttons(vec![
-            self.button_with_part(ViewLinesPart::Info, words).label("1").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Main1, words).label("2").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Main2, words).label("3").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Affinity, words).label("4").style(ButtonStyle::Secondary),
-            self.button_with_part(ViewLinesPart::Combat, words).label("5").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Info, words).label("1").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Main1, words).label("2").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Main2, words).label("3").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Affinity, words).label("4").style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Combat, words).label("5").style(ButtonStyle::Secondary),
         ]));
 
         if ship.skins.len() > 1 {
@@ -107,7 +107,7 @@ impl ViewLines {
     }
 
     /// Creates a button that redirects to a different viewed part.
-    fn button_with_part(&self, part: ViewLinesPart, words: &ShipSkinWords) -> CreateButton {
+    fn button_with_part(&self, part: ViewPart, words: &ShipSkinWords) -> CreateButton {
         let disabled = self.part == part || !part.has_texts(words);
         self.new_button(utils::field!(Self: part), part, || Sentinel::new(1, part as u32)).disabled(disabled)
     }
@@ -118,7 +118,7 @@ impl ViewLines {
     }
 }
 
-impl ViewLinesPart {
+impl ViewPart {
     /// Creates the embed description for the current state.
     fn get_description(self, data: &HBotData, words: &ShipSkinWords) -> String {
         let mut result = String::new();
@@ -139,12 +139,12 @@ impl ViewLinesPart {
         }
 
         match self {
-            ViewLinesPart::Info => {
+            ViewPart::Info => {
                 add!("Description", description);
                 add!("Profile", introduction);
                 add!("Acquisition", acquisition);
             }
-            ViewLinesPart::Main1 => {
+            ViewPart::Main1 => {
                 add!("Login", login);
 
                 for line in &words.main_screen {
@@ -155,14 +155,14 @@ impl ViewLinesPart {
                 add!("Special Touch", special_touch);
                 add!("Rub", rub);
             }
-            ViewLinesPart::Main2 => {
+            ViewPart::Main2 => {
                 add!("Mission Reminder", mission_reminder);
                 add!("Mission Complete", mission_complete);
                 add!("Mail Reminder", mail_reminder);
                 add!("Return to Port", return_to_port);
                 add!("Commission Complete", commission_complete);
             }
-            ViewLinesPart::Affinity => {
+            ViewPart::Affinity => {
                 add!("Details", details);
                 add!("Disappointed", disappointed);
                 add!("Stranger", stranger);
@@ -171,7 +171,7 @@ impl ViewLinesPart {
                 add!("Love", love);
                 add!("Oath", oath);
             }
-            ViewLinesPart::Combat => {
+            ViewPart::Combat => {
                 add!("Enhance", enhance);
                 add!("Flagship Fight", flagship_fight);
                 add!("Victory", victory);
@@ -205,12 +205,12 @@ impl ViewLinesPart {
         }
 
         match self {
-            ViewLinesPart::Info => {
+            ViewPart::Info => {
                 check!(description);
                 check!(introduction);
                 check!(acquisition);
             }
-            ViewLinesPart::Main1 => {
+            ViewPart::Main1 => {
                 check!(login);
 
                 if !words.main_screen.is_empty() {
@@ -221,14 +221,14 @@ impl ViewLinesPart {
                 check!(special_touch);
                 check!(rub);
             }
-            ViewLinesPart::Main2 => {
+            ViewPart::Main2 => {
                 check!(mission_reminder);
                 check!(mission_complete);
                 check!(mail_reminder);
                 check!(return_to_port);
                 check!(commission_complete);
             }
-            ViewLinesPart::Affinity => {
+            ViewPart::Affinity => {
                 check!(details);
                 check!(disappointed);
                 check!(stranger);
@@ -237,7 +237,7 @@ impl ViewLinesPart {
                 check!(love);
                 check!(oath);
             }
-            ViewLinesPart::Combat => {
+            ViewPart::Combat => {
                 check!(enhance);
                 check!(flagship_fight);
                 check!(victory);
@@ -255,7 +255,7 @@ impl ViewLinesPart {
     }
 }
 
-impl ButtonArgsModify for ViewLines {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         let skin = ship.skins.get(self.skin_index as usize).ok_or(ShipParseError)?;

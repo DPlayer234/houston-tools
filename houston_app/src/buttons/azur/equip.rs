@@ -8,17 +8,17 @@ use super::EquipParseError;
 
 /// Views an augment.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewEquip {
+pub struct View {
     pub equip_id: u32,
 }
 
-impl From<ViewEquip> for ButtonArgs {
-    fn from(value: ViewEquip) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewEquip(value)
     }
 }
 
-impl ViewEquip {
+impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
         Self { equip_id }
@@ -44,7 +44,7 @@ impl ViewEquip {
             .description(description)
             .fields(equip.weapons.iter().map(|weapon| (
                 weapon.kind.name(),
-                format!("{:#}", super::fmt_shared::WeaponFormat::new(weapon)),
+                super::fmt_shared::WeaponFormat::new(weapon).to_alternate_string(),
                 true,
             )))
             .fields(equip.skills.iter().map(|skill| (
@@ -57,7 +57,7 @@ impl ViewEquip {
     }
 }
 
-impl ButtonArgsModify for ViewEquip {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let equip = data.azur_lane().equip_by_id(self.equip_id).ok_or(EquipParseError)?;
         Ok(self.modify_with_equip(create, equip))

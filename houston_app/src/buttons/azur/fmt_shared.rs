@@ -8,6 +8,10 @@ impl<'a> WeaponFormat<'a> {
     pub fn new(weapon: &'a Weapon) -> Self {
         Self(weapon)
     }
+
+    pub fn to_alternate_string(&self) -> String {
+        format!("{:#}", self)
+    }
 }
 
 impl Display for WeaponFormat<'_> {
@@ -15,7 +19,7 @@ impl Display for WeaponFormat<'_> {
         let weapon = self.0;
 
         if !f.alternate() {
-            write!(f, "__*{}*__\n", weapon.kind.name())?;
+            write!(f, "**Kind:** {}\n", weapon.kind.name())?;
         }
 
         format_fire_rate(weapon, f)?;
@@ -95,7 +99,7 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
     const PAD: &str = "> ";
 
     for weapon in &aircraft.weapons {
-        write!(f, "{PAD}__*{}*__\n", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
+        write!(f, "__**{}:**__\n", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => {

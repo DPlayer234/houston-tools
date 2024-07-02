@@ -26,11 +26,11 @@ async fn ship(
     #[autocomplete = "autocomplete_ship_name"]
     name: String
 ) -> HResult {
-    let ship = name.parse().map(|id| ctx.data().azur_lane().ship_by_id(id))
-        .unwrap_or_else(|_| ctx.data().azur_lane().ships_by_prefix(&name).next())
+    let ship = parse_id_input(&name).map(|id| ctx.data().azur_lane().ship_by_id(id))
+        .unwrap_or_else(|| ctx.data().azur_lane().ships_by_prefix(&name).next())
         .ok_or(buttons::azur::EquipParseError)?;
 
-    let view = buttons::azur::ship::ViewShip::new(ship.group_id);
+    let view = buttons::azur::ship::View::new(ship.group_id);
     ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;
     Ok(())
 }
@@ -60,7 +60,7 @@ async fn search_ship(
         has_augment
     };
 
-    let view = ViewSearchShip::new(filter);
+    let view = View::new(filter);
     ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
 
     Ok(())
@@ -74,11 +74,11 @@ async fn equip(
     #[autocomplete = "autocomplete_equip_name"]
     name: String
 ) -> HResult {
-    let equip = name.parse().map(|id| ctx.data().azur_lane().equip_by_id(id))
-        .unwrap_or_else(|_| ctx.data().azur_lane().equips_by_prefix(&name).next())
+    let equip = parse_id_input(&name).map(|id| ctx.data().azur_lane().equip_by_id(id))
+        .unwrap_or_else(|| ctx.data().azur_lane().equips_by_prefix(&name).next())
         .ok_or(buttons::azur::EquipParseError)?;
 
-    let view = buttons::azur::equip::ViewEquip::new(equip.equip_id);
+    let view = buttons::azur::equip::View::new(equip.equip_id);
     ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
     Ok(())
 }
@@ -105,22 +105,26 @@ async fn search_equip(
         rarity: rarity.map(EEquipRarity::convert),
     };
 
-    let view = ViewSearchEquip::new(filter);
+    let view = View::new(filter);
     ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
 
     Ok(())
 }
 
+fn parse_id_input(input: &str) -> Option<u32> {
+    input.strip_prefix("/id:")?.parse().ok()
+}
+
 async fn autocomplete_ship_name<'a>(ctx: HContext<'a>, partial: &'a str) -> impl Iterator<Item = AutocompleteChoice> + 'a {
     ctx.data().azur_lane()
         .ships_by_prefix(partial)
-        .map(|s| AutocompleteChoice::new(s.name.as_str(), s.group_id.to_string()))
+        .map(|s| AutocompleteChoice::new(s.name.as_str(), format!("/id:{}", s.group_id)))
 }
 
 async fn autocomplete_equip_name<'a>(ctx: HContext<'a>, partial: &'a str) -> impl Iterator<Item = AutocompleteChoice> + 'a {
     ctx.data().azur_lane()
         .equips_by_prefix(partial)
-        .map(|s| AutocompleteChoice::new(s.name.as_str(), s.equip_id.to_string()))
+        .map(|e| AutocompleteChoice::new(e.name.as_str(), format!("/id:{}", e.equip_id)))
 }
 
 macro_rules! make_choice {

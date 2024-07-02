@@ -94,21 +94,21 @@ pub enum ButtonArgs {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
     None(Sentinel),
     /// Open the ship detail view.
-    ViewShip(azur::ship::ViewShip),
+    ViewShip(azur::ship::View),
     /// Open the augment detail view.
-    ViewAugment(azur::augment::ViewAugment),
+    ViewAugment(azur::augment::View),
     /// Open the skill detail view.
-    ViewSkill(azur::skill::ViewSkill),
+    ViewSkill(azur::skill::View),
     /// Open the ship lines detail view.
-    ViewLines(azur::lines::ViewLines),
+    ViewLines(azur::lines::View),
     /// Open the ship filter list view.
-    ViewSearchShip(azur::search_ship::ViewSearchShip),
+    ViewSearchShip(azur::search_ship::View),
     /// Open the ship shadow equip details.
-    ViewShadowEquip(azur::shadow_equip::ViewShadowEquip),
+    ViewShadowEquip(azur::shadow_equip::View),
     /// Open the equipment details.
-    ViewEquip(azur::equip::ViewEquip),
+    ViewEquip(azur::equip::View),
     /// Open the equipment search.
-    ViewSearchEquip(azur::search_equip::ViewSearchEquip),
+    ViewSearchEquip(azur::search_equip::View),
 }
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.

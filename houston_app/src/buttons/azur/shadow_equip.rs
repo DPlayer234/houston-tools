@@ -5,22 +5,22 @@ use utils::Discard;
 
 use crate::buttons::*;
 use super::ShipParseError;
-use super::ship::ViewShip;
+use super::ship::View as ShipView;
 
 /// View a ship's shadow equip.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewShadowEquip {
-    pub inner: ViewShip,
+pub struct View {
+    pub inner: ShipView,
 }
 
-impl From<ViewShadowEquip> for ButtonArgs {
-    fn from(value: ViewShadowEquip) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewShadowEquip(value)
     }
 }
 
-impl ViewShadowEquip {
-    pub fn new(inner: ViewShip) -> Self {
+impl View {
+    pub fn new(inner: ShipView) -> Self {
         Self {
             inner
         }
@@ -61,7 +61,7 @@ impl ViewShadowEquip {
     }
 }
 
-impl ButtonArgsModify for ViewShadowEquip {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(ShipParseError)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {

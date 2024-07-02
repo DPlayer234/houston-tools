@@ -10,30 +10,30 @@ use super::ShipParseError;
 
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewSkill {
-    pub source: ViewSkillSource,
+pub struct View {
+    pub source: ViewSource,
     pub skill_index: Option<u8>,
     pub back: Option<String>
 }
 
 /// Where to load the skills from.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub enum ViewSkillSource {
+pub enum ViewSource {
     Ship(u32, Option<u8>),
     Augment(u32),
 }
 
-impl From<ViewSkill> for ButtonArgs {
-    fn from(value: ViewSkill) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewSkill(value)
     }
 }
 
 type OwnedCreateEmbedField = (String, String, bool);
 
-impl ViewSkill {
+impl View {
     /// Creates a new instance including a button to go back with some custom ID.
-    pub fn with_back(source: ViewSkillSource, back: String) -> Self {
+    pub fn with_back(source: ViewSource, back: String) -> Self {
         Self { source, skill_index: None, back: Some(back) }
     }
 
@@ -124,7 +124,7 @@ impl ViewSkill {
 
         for weapon in &skill.new_weapons {
             fields.push((
-                "__New Weapon__".to_owned(),
+                format!("__{}__", weapon.name.as_deref().unwrap_or("Special Weapon")),
                 super::fmt_shared::WeaponFormat::new(weapon).to_string(),
                 true
             ))
@@ -134,15 +134,15 @@ impl ViewSkill {
     }
 }
 
-impl ButtonArgsModify for ViewSkill {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         match self.source {
-            ViewSkillSource::Ship(ship_id, retro_index) => {
+            ViewSource::Ship(ship_id, retro_index) => {
                 let base_ship = data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
                 let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
                 Ok(self.modify_with_ship(create, ship, Some(base_ship)))
             }
-            ViewSkillSource::Augment(augment_id) => {
+            ViewSource::Augment(augment_id) => {
                 let augment = data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
                 Ok(self.modify_with_augment(create, augment))
             }

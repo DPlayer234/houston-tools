@@ -9,7 +9,7 @@ use super::ShipParseError;
 
 /// View general ship details.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewShip {
+pub struct View {
     pub ship_id: u32,
     pub level: u8,
     pub affinity: ViewAffinity,
@@ -24,13 +24,13 @@ pub enum ViewAffinity {
     Oath
 }
 
-impl From<ViewShip> for ButtonArgs {
-    fn from(value: ViewShip) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewShip(value)
     }
 }
 
-impl ViewShip {
+impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
         Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None }
@@ -89,8 +89,8 @@ impl ViewShip {
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
-            let source = super::skill::ViewSkillSource::Ship(self.ship_id, self.retrofit);
-            let view_skill = super::skill::ViewSkill::with_back(source, self_custom_id.clone());
+            let source = super::skill::ViewSource::Ship(self.ship_id, self.retrofit);
+            let view_skill = super::skill::View::with_back(source, self_custom_id.clone());
             let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
@@ -99,7 +99,7 @@ impl ViewShip {
         }
 
         if !ship.shadow_equip.is_empty() {
-            let view = super::shadow_equip::ViewShadowEquip::new(self.clone());
+            let view = super::shadow_equip::View::new(self.clone());
             let button = CreateButton::new(view.to_custom_id())
                 .label("Shadow Equip")
                 .style(ButtonStyle::Secondary);
@@ -108,7 +108,7 @@ impl ViewShip {
         }
 
         if let Some(augment) = data.azur_lane().augment_by_ship_id(ship.group_id) {
-            let view_augment = super::augment::ViewAugment::with_back(augment.augment_id, self_custom_id.clone());
+            let view_augment = super::augment::View::with_back(augment.augment_id, self_custom_id.clone());
             let button = CreateButton::new(view_augment.to_custom_id())
                 .label("Unique Augment")
                 .style(ButtonStyle::Secondary);
@@ -117,7 +117,7 @@ impl ViewShip {
         }
 
         {
-            let view_lines = super::lines::ViewLines::with_back(self.ship_id, self_custom_id.clone());
+            let view_lines = super::lines::View::with_back(self.ship_id, self_custom_id.clone());
             let button = CreateButton::new(view_lines.to_custom_id())
                 .label("Lines")
                 .style(ButtonStyle::Secondary);
@@ -276,7 +276,7 @@ impl ViewShip {
     }
 }
 
-impl ButtonArgsModify for ViewShip {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {

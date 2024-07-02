@@ -10,18 +10,18 @@ use super::AugmentParseError;
 
 /// Views an augment.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct ViewAugment {
+pub struct View {
     pub augment_id: u32,
     pub back: Option<String>
 }
 
-impl From<ViewAugment> for ButtonArgs {
-    fn from(value: ViewAugment) -> Self {
+impl From<View> for ButtonArgs {
+    fn from(value: View) -> Self {
         ButtonArgs::ViewAugment(value)
     }
 }
 
-impl ViewAugment {
+impl View {
     /// Creates a new instance.
     #[allow(dead_code)] // planned for future use
     pub fn new(augment_id: u32) -> Self {
@@ -56,8 +56,8 @@ impl ViewAugment {
         let mut components = Vec::new();
 
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
-            let source = super::skill::ViewSkillSource::Augment(augment.augment_id);
-            let view_skill = super::skill::ViewSkill::with_back(source, self.clone().to_custom_id());
+            let source = super::skill::ViewSource::Augment(augment.augment_id);
+            let view_skill = super::skill::View::with_back(source, self.clone().to_custom_id());
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
@@ -76,7 +76,7 @@ impl ViewAugment {
     }
 }
 
-impl ButtonArgsModify for ViewAugment {
+impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let augment = data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
         Ok(self.modify_with_augment(create, augment))
