@@ -17,7 +17,7 @@ pub async fn upload(
             .color(ERROR_EMBED_COLOR)
             .description("You aren't listed in `trusted_users`.");
 
-        ctx.send(ctx.create_reply().embed(embed)).await?;
+        ctx.send(ctx.create_ephemeral_reply().embed(embed)).await?;
         return Ok(());
     }
 
@@ -30,7 +30,7 @@ pub async fn upload(
         .color(DEFAULT_EMBED_COLOR)
         .description(format!("Saving to {filename:?}."));
 
-    let reply = ctx.send(ctx.create_reply().embed(embed)).await?;
+    let reply = ctx.send(ctx.create_ephemeral_reply().embed(embed)).await?;
 
     {
         let mut file = std::fs::OpenOptions::new().create_new(true).write(true).open(&filename)?;
@@ -42,10 +42,10 @@ pub async fn upload(
         .color(DEFAULT_EMBED_COLOR)
         .description(format!("Saved as {filename:?}!"));
 
-    reply.edit(ctx, ctx.create_reply().embed(embed)).await?;
+    reply.edit(ctx, ctx.create_ephemeral_reply().embed(embed)).await?;
 	Ok(())
 }
 
 fn sanitize(name: &str) -> String {
-    name.replace(|c: char| !c.is_alphanumeric(), "_")
+    name.replace(|c: char| c != '.' && !c.is_alphanumeric(), "_")
 }
