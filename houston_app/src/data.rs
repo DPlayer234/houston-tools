@@ -11,6 +11,8 @@ use simsearch::SimSearch;
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 
+use crate::config::HBotConfig;
+
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 
@@ -26,6 +28,8 @@ pub type HResult = Result<(), HError>;
 
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
+    /// The bot configuration.
+    config: HBotConfig,
     /// A concurrent hash map to user data.
     user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
@@ -39,7 +43,7 @@ pub struct HUserData {
 }
 
 /// Extended Azur Lane game data for quicker access.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct HAzurLane {
     data_path: PathBuf,
     pub ship_list: Vec<ShipData>,
@@ -77,11 +81,15 @@ impl std::fmt::Debug for HBotData {
 
 impl HBotData {
     /// Creates a new instance.
-    pub fn at<P: AsRef<Path>>(data_path: P) -> Self {
-        let data_path = data_path.as_ref().to_owned();
+    pub fn new(config: HBotConfig) -> Self {
+        let data_path = config.azur_lane_data.clone();
         HBotData {
+            config,
             user_data: DashMap::new(),
-            azur_lane: Lazy::new(Box::new(move || HAzurLane::load_from( data_path)))
+            azur_lane: Lazy::new(match data_path {
+                Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
+                None => Box::new(HAzurLane::default),
+            })
         }
     }
 
@@ -89,17 +97,11 @@ impl HBotData {
     pub fn force_init(&self) {
         let _ = self.azur_lane();
     }
-}
 
-impl Default for HUserData {
-    fn default() -> Self {
-        HUserData {
-            ephemeral: true
-        }
+    pub fn config(&self) -> &HBotConfig {
+        &self.config
     }
-}
 
-impl HBotData {
     /// Gets a copy of the user data for the specified user.
     pub fn get_user_data(&self, user_id: UserId) -> HUserData {
         match self.user_data.get(&user_id) {
@@ -116,6 +118,14 @@ impl HBotData {
     /// Gets the Azur Lane game data.
     pub fn azur_lane(&self) -> &HAzurLane {
         Lazy::force(&self.azur_lane)
+    }
+}
+
+impl Default for HUserData {
+    fn default() -> Self {
+        HUserData {
+            ephemeral: true
+        }
     }
 }
 

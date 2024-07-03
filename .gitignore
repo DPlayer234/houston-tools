@@ -2,4 +2,7 @@
 .env
 
 # Generated output
-azur_lane_data
+/azur_lane_data
+
+# App config
+/houston_app.toml

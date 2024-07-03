@@ -16,7 +16,7 @@ use data::*;
 
 #[tokio::main]
 async fn main() {
-    let token = std::env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN env var expected.");
+    let config = build_config();
     let intents = GatewayIntents::empty();
 
     // SAFETY: No other code running that accesses this yet.
@@ -25,23 +25,24 @@ async fn main() {
     println!("Starting...");
 
     let start = std::time::Instant::now();
-
-    let bot_data_path = std::env::var("AZUR_LANE_DATA");
-    let bot_data_path = bot_data_path.as_deref().unwrap_or("azur_lane_data");
-    let bot_data = Arc::new(HBotData::at(bot_data_path));
+    let bot_data = Arc::new(HBotData::new(config.bot));
 
     let loader = tokio::task::spawn({
         let bot_data = Arc::clone(&bot_data);
         async move {
-            println!("Loading Azur Lane data...");
-            bot_data.force_init();
-            println!("Loaded Azur Lane data. ({:.2?})", start.elapsed());
+            if bot_data.config().azur_lane_data.is_some() {
+                println!("Loading Azur Lane data...");
+                bot_data.force_init();
+                println!("Loaded Azur Lane data. ({:.2?})", start.elapsed());
+            } else {
+                println!("Disabled Azur Lane module.");
+            }
         }
     });
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: slashies::get_commands(),
+            commands: slashies::get_commands(bot_data.config()),
             pre_command: |ctx| Box::pin(slashies::pre_command(ctx)),
             on_error: |err| Box::pin(slashies::error_handler(err)),
             ..Default::default()
@@ -61,7 +62,7 @@ async fn main() {
         })
         .build();
 
-    let mut client = Client::builder(token, intents)
+    let mut client = Client::builder(config.discord.token, intents)
         .framework(framework)
         .event_handler(buttons::ButtonEventHandler::new(bot_data))
         .await.unwrap();
@@ -77,4 +78,20 @@ async fn create_commands(ctx: &Context, framework: &poise::framework::Framework<
     res?;
 
     Ok(())
+}
+
+fn build_config() -> config::HConfig {
+    use config_rs::{Config, File, FileFormat, Environment};
+
+    Config::builder()
+        .add_source(
+            File::new("houston_app.toml", FileFormat::Toml)
+                .required(false)
+        )
+        .add_source(
+            Environment::default()
+                .separator("__")
+        )
+        .build().unwrap()
+        .try_deserialize().unwrap()
 }

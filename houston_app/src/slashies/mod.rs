@@ -8,18 +8,28 @@ mod coin;
 mod config;
 mod dice;
 mod timestamp;
+mod upload;
 mod who;
 
 /// Gets all poise commands.
-pub fn get_commands() -> Vec<poise::Command<Arc<HBotData>, HError>> {
-    vec![
-        azur::azur(),
+pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Arc<HBotData>, HError>> {
+    let mut result = vec![
         coin::coin(),
         config::config(),
         dice::dice(),
         timestamp::timestamp(),
         who::who(),
-    ]
+    ];
+
+    if config.azur_lane_data.is_some() {
+        result.push(azur::azur());
+    }
+
+    if config.upload_dir.is_some() {
+        result.push(upload::upload());
+    }
+
+    result
 }
 
 /// Pre-command execution hook.
