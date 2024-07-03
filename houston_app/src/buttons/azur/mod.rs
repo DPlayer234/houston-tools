@@ -8,7 +8,6 @@ pub mod search_ship;
 pub mod shadow_equip;
 pub mod ship;
 pub mod skill;
-mod fmt_shared;
 
 utils::define_simple_error!(ShipParseError: "Unknown ship.");
 utils::define_simple_error!(EquipParseError: "Unknown equipment.");

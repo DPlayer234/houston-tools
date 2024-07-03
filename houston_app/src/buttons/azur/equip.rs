@@ -44,7 +44,7 @@ impl View {
             .description(description)
             .fields(equip.weapons.iter().map(|weapon| (
                 weapon.kind.name(),
-                super::fmt_shared::WeaponFormat::new(weapon).to_alternate_string(),
+                crate::fmt::azur::WeaponFormat::new(weapon).to_string_no_kind(),
                 true,
             )))
             .fields(equip.skills.iter().map(|skill| (

@@ -7,8 +7,8 @@ use serenity::prelude::*;
 mod buttons;
 mod slashies;
 mod config;
-mod discord_fmt;
 mod data;
+mod fmt;
 mod prelude;
 mod poise_command_builder;
 

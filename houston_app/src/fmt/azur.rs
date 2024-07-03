@@ -9,7 +9,7 @@ impl<'a> WeaponFormat<'a> {
         Self(weapon)
     }
 
-    pub fn to_alternate_string(&self) -> String {
+    pub fn to_string_no_kind(&self) -> String {
         format!("{:#}", self)
     }
 }
@@ -97,6 +97,12 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fm
 
 fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
     const PAD: &str = "> ";
+
+    write!(
+        f,
+        "**Speed:** {:.0} \u{2E31} **HP:** {:.0} \u{2E31} {}\n",
+        aircraft.speed, aircraft.health.calc(120, 1.0), aircraft.dodge_limit
+    )?;
 
     for weapon in &aircraft.weapons {
         write!(f, "__**{}:**__\n", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;

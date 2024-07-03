@@ -89,7 +89,9 @@ pub struct Aircraft {
     pub aircraft_id: u32,
     pub amount: u32,
     pub speed: f64,
-    pub weapons: Vec<Weapon>
+    pub health: ShipStat,
+    pub dodge_limit: u32,
+    pub weapons: Vec<Weapon>,
 }
 
 /// The possible data a [`Weapon`] can hold.

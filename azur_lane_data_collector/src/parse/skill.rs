@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use azur_lane::ship::ShipStat;
 use mlua::prelude::*;
 
 use azur_lane::skill::*;
@@ -166,6 +167,12 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
             }
 
             let speed: f64 = aircraft.get("speed")?;
+            let dodge_limit: u32 = aircraft.get("dodge_limit")?;
+
+            let health = ShipStat::new()
+                .set_base(aircraft.get("max_hp")?)
+                .set_growth(aircraft.get("hp_growth")?);
+
             let weapons: Vec<u32> = aircraft.get("weapon_ID")?;
             let weapons = weapons.into_iter()
                 .map(|id| load_weapon(lua, id))
@@ -178,6 +185,8 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 aircraft_id: weapon_id,
                 amount,
                 speed,
+                health,
+                dodge_limit,
                 weapons
             })
         }
