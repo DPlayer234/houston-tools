@@ -7,7 +7,7 @@ use utils::time::{parse_date_time, get_creation_time};
 
 use crate::prelude::*;
 
-/// Provides methods to help with timestamps.
+/// Provides methods for localized timestamps.
 #[poise::command(
     slash_command,
     subcommands("timestamp_in", "timestamp_at", "timestamp_of"),

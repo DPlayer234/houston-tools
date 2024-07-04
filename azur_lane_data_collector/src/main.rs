@@ -20,7 +20,7 @@ use model::*;
 #[derive(Debug, Parser)]
 struct Cli {
     /// The path that the game scripts live in.
-    #[arg(short, long, num_args = 1..)]
+    #[arg(short, long, num_args = 1.., required = true)]
     inputs: Vec<String>,
     /// The output directory.
     #[arg(short, long)]
