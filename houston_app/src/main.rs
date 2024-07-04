@@ -1,4 +1,4 @@
-use std::num::NonZeroU16;
+use std::num::NonZero;
 use std::sync::Arc;
 
 use serenity::model::prelude::*;
@@ -53,7 +53,7 @@ async fn main() {
                 Box::pin(async move {
                     create_commands(ctx, framework).await?;
 
-                    let discriminator = ready.user.discriminator.map_or(0u16, NonZeroU16::get);
+                    let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
                     println!("Logged in as: {}#{:04} ({:.2?})", ready.user.name, discriminator, start.elapsed());
 
                     Ok(bot_data)

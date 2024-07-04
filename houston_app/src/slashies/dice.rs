@@ -1,4 +1,4 @@
-use std::num::{NonZeroU16, NonZeroU8};
+use std::num::NonZero;
 use std::str::FromStr;
 use std::fmt::Write;
 
@@ -67,8 +67,8 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> Result<String, HError> {
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub struct DiceSet {
-    pub count: NonZeroU8,
-    pub faces: NonZeroU16
+    pub count: NonZero<u8>,
+    pub faces: NonZero<u16>
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +79,7 @@ pub struct DiceParseError;
 
 impl DiceSet {
     #[must_use]
-    pub fn new(count: NonZeroU8, faces: NonZeroU16) -> Self {
+    pub fn new(count: NonZero<u8>, faces: NonZero<u16>) -> Self {
         Self { count, faces }
     }
 }
@@ -88,8 +88,15 @@ impl FromStr for DiceSet {
     type Err = DiceParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        fn parse_inner(args: (&str, &str)) -> Option<DiceSet> {
+            let (l, r) = args;
+            let l = NonZero::from_str(l).ok()?;
+            let r = NonZero::from_str(r).ok()?;
+            Some(DiceSet::new(l, r))
+        }
+
         s.split_once(['d', 'D'])
-            .and_then(|(l, r)| NonZeroU8::from_str(l).and_then(|l| NonZeroU16::from_str(r).map(|r| DiceSet::new(l, r))).ok())
+            .and_then(parse_inner)
             .ok_or(DiceParseError)
     }
 }
