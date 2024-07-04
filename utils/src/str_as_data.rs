@@ -1,3 +1,6 @@
+crate::define_simple_error!(Base256Error: "base256 data is invalid");
+crate::define_simple_error!(Base65536Error: "base65536 data is invalid");
+
 #[must_use]
 pub fn to_b256(bytes: &[u8]) -> String {
     use std::iter::once;
@@ -7,21 +10,29 @@ pub fn to_b256(bytes: &[u8]) -> String {
 }
 
 #[must_use]
-pub fn from_b256(str: &str) -> anyhow::Result<Vec<u8>> {
-    if str.len() < 2 || !str.starts_with('#') || !str.ends_with('&') {
-        crate::define_simple_error!(InvalidBase256: "base256 data magic invalid");
-        Err(InvalidBase256)?
-    }
+pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
+    let str = str
+        // strip the start marker
+        .strip_prefix('#')
+        // strip the end marker
+        .and_then(|s| s.strip_suffix('&'))
+        .ok_or(Base256Error)?;
 
-    let range = 1 .. (str.len() - 1);
-    Ok(str[range].chars().map(u8::try_from).collect::<Result<Vec<u8>, _>>()?)
+    str.chars().map(u8::try_from)
+        .collect::<Result<Vec<u8>, _>>()
+        .map_err(|_| Base256Error)
 }
-
-crate::define_simple_error!(Base65536Error: "base65536 data is invalid");
 
 #[must_use]
 pub fn to_b65536(bytes: &[u8]) -> String {
-    let mut result = String::new();
+    // A little testing indicates that the output
+    // generally takes 25%-50% more bytes.
+    let expected_size = 2 + bytes.len() + bytes.len() >> 1;
+
+    let mut result = String::with_capacity(expected_size);
+
+    // Note that this '&' is unsafely assumed
+    // to be present later in this function.
     result.push('&');
 
     let mut iter = bytes.chunks_exact(2);
@@ -58,16 +69,14 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
         })
         .ok_or(Base65536Error)?;
 
-    let mut result = Vec::new();
-
-    for c in str.chars() {
-        let chunk = char_to_bytes(c);
-        result.extend(chunk);
-    }
+    let mut result: Vec<u8> = str
+        .chars()
+        .flat_map(char_to_bytes)
+        .collect();
 
     if skip_last {
         if result.len() == 0 {
-            Err(Base65536Error)?;
+            return Err(Base65536Error);
         }
 
         result.remove(result.len() - 1);
@@ -88,6 +97,7 @@ fn char_to_bytes(c: char) -> [u8; 2] {
 }
 
 fn bytes_to_char(bytes: [u8; 2]) -> char {
+    // SAFETY: Reverse of `char_to_bytes`.
     let int = u16::from_le_bytes(bytes) as u32;
     match int {
         0 ..= 0xD7FF => unsafe { char::from_u32_unchecked(int) },
