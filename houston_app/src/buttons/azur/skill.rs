@@ -23,12 +23,6 @@ pub enum ViewSource {
     Augment(u32),
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewSkill(value)
-    }
-}
-
 type OwnedCreateEmbedField = (String, String, bool);
 
 impl View {

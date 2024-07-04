@@ -13,12 +13,6 @@ pub struct View {
     pub inner: ShipView,
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewShadowEquip(value)
-    }
-}
-
 impl View {
     pub fn new(inner: ShipView) -> Self {
         Self {

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -17,11 +18,9 @@ pub struct HDiscordConfig {
 #[derive(Debug, Deserialize)]
 pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
-    pub upload_dir: Option<PathBuf>,
     pub trusted_users: HashSet<u64>,
 }
 
-#[allow(dead_code)]
 pub mod azur_lane {
     /// The base URL to the Azur Lane wiki.
     pub const WIKI_BASE_URL: &str = "https://azurlane.koumakan.jp/wiki/";

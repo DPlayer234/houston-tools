@@ -18,12 +18,6 @@ pub struct Filter {
     pub has_augment: Option<bool>
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewSearchShip(value)
-    }
-}
-
 const PAGE_SIZE: usize = 15;
 
 impl View {
@@ -46,7 +40,7 @@ impl View {
             desc.push_str(&ship.name);
             desc.push('\n');
 
-            let view_ship = super::ship::View::new(ship.group_id);
+            let view_ship = AsNewMessage::new(super::ship::View::new(ship.group_id));
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
         }
 

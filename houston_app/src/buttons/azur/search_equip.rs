@@ -17,12 +17,6 @@ pub struct Filter {
     pub rarity: Option<EquipRarity>,
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewSearchEquip(value)
-    }
-}
-
 const PAGE_SIZE: usize = 15;
 
 impl View {
@@ -45,7 +39,7 @@ impl View {
             desc.push_str(&equip.name);
             desc.push('\n');
 
-            let view_equip = super::equip::View::new(equip.equip_id);
+            let view_equip = AsNewMessage::new(super::equip::View::new(equip.equip_id));
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 

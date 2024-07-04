@@ -19,14 +19,11 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Ar
         dice::dice(),
         timestamp::timestamp(),
         who::who(),
+        upload::upload(),
     ];
 
     if config.azur_lane_data.is_some() {
         result.push(azur::azur());
-    }
-
-    if config.upload_dir.is_some() {
-        result.push(upload::upload());
     }
 
     result

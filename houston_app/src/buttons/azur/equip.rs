@@ -12,12 +12,6 @@ pub struct View {
     pub equip_id: u32,
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewEquip(value)
-    }
-}
-
 impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {

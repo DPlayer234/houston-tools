@@ -15,12 +15,6 @@ pub struct View {
     pub back: Option<String>
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewAugment(value)
-    }
-}
-
 impl View {
     /// Creates a new instance.
     #[allow(dead_code)] // planned for future use

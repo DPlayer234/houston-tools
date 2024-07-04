@@ -24,12 +24,6 @@ pub enum ViewAffinity {
     Oath
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewShip(value)
-    }
-}
-
 impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {

@@ -9,6 +9,72 @@ pub mod azur;
 
 utils::define_simple_error!(InvalidInteractionError: "Invalid interaction.");
 
+macro_rules! define_button_args {
+    ($($(#[$attr:meta])* $name:ident($Ty:ty)),* $(,)?) => {
+        /// The supported button interaction arguments.
+        #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+        pub enum ButtonArgs {
+            /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
+            None(Sentinel),
+            $(
+                $(#[$attr])*
+                $name($Ty),
+            )*
+        }
+
+        $(
+            impl From<$Ty> for ButtonArgs {
+                fn from(value: $Ty) -> Self {
+                    Self::$name(value)
+                }
+            }
+        )*
+
+        impl ButtonArgsModify for ButtonArgs {
+            fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+                match self {
+                    ButtonArgs::None(_) => Ok(create),
+                    $(
+                        ButtonArgs::$name(args) => args.modify(data, create),
+                    )*
+                }
+            }
+        }
+
+        impl ButtonEventHandler {
+            async fn interaction_dispatch_dyn(&self, ctx: &Context, interaction: &ComponentInteraction, args: ButtonArgs) -> HResult {
+                match args {
+                    ButtonArgs::None(_) => Ok(()),
+                    $(
+                        ButtonArgs::$name(args) => self.interaction_dispatch_to(ctx, interaction, args).await,
+                    )*
+                }
+            }
+        }
+    };
+}
+
+define_button_args! {
+    /// Creates a new message.
+    AsNewMessage(AsNewMessage),
+    /// Open the ship detail view.
+    ViewShip(azur::ship::View),
+    /// Open the augment detail view.
+    ViewAugment(azur::augment::View),
+    /// Open the skill detail view.
+    ViewSkill(azur::skill::View),
+    /// Open the ship lines detail view.
+    ViewLines(azur::lines::View),
+    /// Open the ship filter list view.
+    ViewSearchShip(azur::search_ship::View),
+    /// Open the ship shadow equip details.
+    ViewShadowEquip(azur::shadow_equip::View),
+    /// Open the equipment details.
+    ViewEquip(azur::equip::View),
+    /// Open the equipment search.
+    ViewSearchEquip(azur::search_equip::View),
+}
+
 /// Event handler for custom button menus.
 #[derive(Debug, Clone)]
 pub struct ButtonEventHandler {
@@ -34,25 +100,15 @@ impl ButtonEventHandler {
             }
         };
 
-        match args {
-            ButtonArgs::None(_) => Ok(()),
-            ButtonArgs::ViewShip(view_ship) => self.interaction_dispatch_to(ctx, interaction, view_ship).await,
-            ButtonArgs::ViewAugment(view_augment) => self.interaction_dispatch_to(ctx, interaction, view_augment).await,
-            ButtonArgs::ViewSkill(view_skill) => self.interaction_dispatch_to(ctx, interaction, view_skill).await,
-            ButtonArgs::ViewLines(view_lines) => self.interaction_dispatch_to(ctx, interaction, view_lines).await,
-            ButtonArgs::ViewSearchShip(view_filter) => self.interaction_dispatch_to(ctx, interaction, view_filter).await,
-            ButtonArgs::ViewShadowEquip(view_shadow) => self.interaction_dispatch_to(ctx, interaction, view_shadow).await,
-            ButtonArgs::ViewEquip(view_equip) => self.interaction_dispatch_to(ctx, interaction, view_equip).await,
-            ButtonArgs::ViewSearchEquip(view_filter) => self.interaction_dispatch_to(ctx, interaction, view_filter).await,
-        }
+        self.interaction_dispatch_dyn(ctx, interaction, args).await
     }
 
     /// Dispatches the component interaction to specified arguments.
     async fn interaction_dispatch_to<T: ButtonArgsModify>(&self, ctx: &Context, interaction: &ComponentInteraction, args: T) -> HResult {
         let user_data = self.bot_data.get_user_data(interaction.user.id);
         let reply = args.modify(&self.bot_data, user_data.create_reply())?;
-        let response_message = reply.to_slash_initial_response(Default::default());
-        interaction.create_response(ctx, CreateInteractionResponse::UpdateMessage(response_message)).await?;
+        let reply = T::make_interaction_response(reply);
+        interaction.create_response(ctx, reply).await?;
         Ok(())
     }
 
@@ -89,35 +145,17 @@ impl serenity::client::EventHandler for ButtonEventHandler {
     }
 }
 
-/// The supported button interaction arguments.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub enum ButtonArgs {
-    /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-    None(Sentinel),
-    /// Open the ship detail view.
-    ViewShip(azur::ship::View),
-    /// Open the augment detail view.
-    ViewAugment(azur::augment::View),
-    /// Open the skill detail view.
-    ViewSkill(azur::skill::View),
-    /// Open the ship lines detail view.
-    ViewLines(azur::lines::View),
-    /// Open the ship filter list view.
-    ViewSearchShip(azur::search_ship::View),
-    /// Open the ship shadow equip details.
-    ViewShadowEquip(azur::shadow_equip::View),
-    /// Open the equipment details.
-    ViewEquip(azur::equip::View),
-    /// Open the equipment search.
-    ViewSearchEquip(azur::search_equip::View),
-}
-
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct Sentinel {
     pub key: u32,
     pub value: u32
 }
+
+/// Wraps another [`ButtonArgs`] value and makes it
+/// send a new message rather than using its default behavior.
+#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+pub struct AsNewMessage(String);
 
 /// Provides a way to convert an object into a component custom ID.
 ///
@@ -159,6 +197,11 @@ pub trait ButtonArgsModify: Sized {
     /// Modifies the create-reply payload.
     #[must_use]
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
+
+    fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
+        let edit = create.to_slash_initial_response(Default::default());
+        CreateInteractionResponse::UpdateMessage(edit)
+    }
 }
 
 impl ButtonArgs {
@@ -184,5 +227,23 @@ impl Sentinel {
     /// Create a new sentinel value.
     pub fn new(key: u32, value: u32) -> Self {
         Self { key, value }
+    }
+}
+
+impl AsNewMessage {
+    pub fn new(value: impl Into<ButtonArgs>) -> Self {
+        Self(value.to_custom_id())
+    }
+}
+
+impl ButtonArgsModify for AsNewMessage {
+    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+        let args = ButtonArgs::from_custom_id(&self.0)?;
+        args.modify(data, create)
+    }
+
+    fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
+        let edit = create.to_slash_initial_response(Default::default());
+        CreateInteractionResponse::Message(edit)
     }
 }

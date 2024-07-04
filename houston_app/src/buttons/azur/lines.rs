@@ -26,12 +26,6 @@ pub enum ViewPart {
     Combat
 }
 
-impl From<View> for ButtonArgs {
-    fn from(value: View) -> Self {
-        ButtonArgs::ViewLines(value)
-    }
-}
-
 impl View {
     /// Creates a new instance.
     #[allow(dead_code)] // planned for future use
