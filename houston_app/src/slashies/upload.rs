@@ -7,7 +7,7 @@ use crate::prelude::*;
 pub async fn upload(
     ctx: HContext<'_>,
     #[description = "The file to upload."]
-	attachment: Attachment
+    attachment: Attachment
 ) -> HResult {
     let description = format!(
         "**{}**\n> {}",
@@ -33,7 +33,7 @@ pub async fn upload(
         .components(vec![components]);
 
     ctx.send(reply).await?;
-	Ok(())
+    Ok(())
 }
 
 struct StorageSize(u32);

@@ -23,7 +23,7 @@ static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 /// This function is unsafe as the underlying memory is static.
 /// This must not be called concurrently with itself or [`get_startup_time`].
 pub unsafe fn mark_startup_time() {
-	STARTUP_TIME = Utc::now();
+    STARTUP_TIME = Utc::now();
 }
 
 /// Gets the marked startup time of the application.
@@ -31,7 +31,7 @@ pub unsafe fn mark_startup_time() {
 /// If the program setup never called [`mark_startup_time`], this will be the unix epoch.
 #[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
-	unsafe { STARTUP_TIME }
+    unsafe { STARTUP_TIME }
 }
 
 /// Gets the creation time from a snowflake
@@ -43,19 +43,19 @@ pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
 
 /// Allows mentioning a timestamp in Discord messages.
 pub trait TimestampMention {
-	/// Formats a mention for a timestamp.
+    /// Formats a mention for a timestamp.
     #[must_use]
-	fn mention(&self, format: Option<char>) -> String;
+    fn mention(&self, format: Option<char>) -> String;
 }
 
 impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
-	fn mention(&self, format: Option<char>) -> String {
-		if let Some(format_raw) = format {
-			format!("<t:{}:{}>", self.timestamp(), format_raw).into()
-		} else {
-			format!("<t:{}>", self.timestamp()).into()
-		}
-	}
+    fn mention(&self, format: Option<char>) -> String {
+        if let Some(format_raw) = format {
+            format!("<t:{}:{}>", self.timestamp(), format_raw).into()
+        } else {
+            format!("<t:{}>", self.timestamp()).into()
+        }
+    }
 }
 
 #[must_use]

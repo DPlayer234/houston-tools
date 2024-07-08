@@ -297,9 +297,9 @@ impl ChannelInfo {
 
     fn element_size(&self) -> u8 {
         /* Copied from UABE:
-		0  : Float32; 1  : Float16; 2  : UNorm8; 3  : UNorm8; 4  : SNorm8; 5  : UNorm16; 6  : SNorm16;
-		7  : UInt8;   8  : SInt8;   9  : UInt16; 10 : SInt16; 11 : UInt32; 12 : SInt32;
-		*/
+        0  : Float32; 1  : Float16; 2  : UNorm8; 3  : UNorm8; 4  : SNorm8; 5  : UNorm16; 6  : SNorm16;
+        7  : UInt8;   8  : SInt8;   9  : UInt16; 10 : SInt16; 11 : UInt32; 12 : SInt32;
+        */
         const FORMATS: [u8; 13] = [4, 2, 1, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
         FORMATS.get(self.format as usize).copied().unwrap_or_default()

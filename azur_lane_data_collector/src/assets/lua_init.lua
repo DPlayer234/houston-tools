@@ -9,17 +9,17 @@ cs = {}
 HXSet = {}
 
 function HXSet.hxLan(text)
-	return string.gsub(text or "", "{namecode:(%d+).-}", function (match)
+    return string.gsub(text or "", "{namecode:(%d+).-}", function (match)
         local name_data = pg.name_code[tonumber(match)];
-		return name_data and name_data.name
-	end)
+        return name_data and name_data.name
+    end)
 end
 
 local function translate_equip_data_code(text)
     return string.gsub(text or "", "<%[(.-)%]>", function (match)
         local name_data = pg.equip_data_code[match]
-		return name_data and name_data.text
-	end)
+        return name_data and name_data.text
+    end)
 end
 
 local function lazy_load(mode, allow_name_code)
@@ -82,13 +82,13 @@ end
 
 -- These tables are used as metatable by the resource lookup tables.
 confSP = { -- Use sublist files
-	__index = lazy_load(2, true)
+    __index = lazy_load(2, true)
 }
 confMT = { -- Load sharecfgdata file first
-	__index = lazy_load(1, true)
+    __index = lazy_load(1, true)
 }
 confHX = { -- Immediately accessible
-	__index = lazy_load(0, true)
+    __index = lazy_load(0, true)
 }
 
 -- Accessed by some loaded scripts and dummied out
@@ -112,12 +112,12 @@ require("skillcfg")
 
 -- Enable lazy-loading the resource tables themselves.
 setmetatable(pg, {
-	__index = function (self, index)
-		if ShareCfg["ShareCfg." .. index] then
-			require("sharecfg." .. index)
-			return rawget(self, index)
-		end
-	end
+    __index = function (self, index)
+        if ShareCfg["ShareCfg." .. index] then
+            require("sharecfg." .. index)
+            return rawget(self, index)
+        end
+    end
 })
 
 -- Used by our code to load a buff/skill.

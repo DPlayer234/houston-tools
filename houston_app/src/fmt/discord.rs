@@ -19,9 +19,9 @@ struct DisplayResolvedOption<'a>(&'a ResolvedOption<'a>);
 ///
 /// This will either be the pomelo username or include the discriminator.
 pub fn get_unique_username(user: &User) -> String {
-	user.discriminator
-		.map(|d| format!("{}#{:04}", user.name, d))
-		.unwrap_or_else(|| user.name.to_owned())
+    user.discriminator
+        .map(|d| format!("{}#{:04}", user.name, d))
+        .unwrap_or_else(|| user.name.to_owned())
 }
 
 impl DisplayResolvedArgs<'_> {
