@@ -67,10 +67,10 @@ macro_rules! define_simple_error {
         #[must_use]
         pub struct $type;
 
-        impl std::error::Error for $type {}
+        impl ::std::error::Error for $type {}
 
-        impl std::fmt::Display for $type {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl ::std::fmt::Display for $type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, $message)
             }
         }
@@ -80,7 +80,7 @@ macro_rules! define_simple_error {
 #[macro_export]
 macro_rules! join_path {
     [$root:expr, $($parts:expr),* $(; $ext:expr)?] => {{
-        let mut path = std::path::PathBuf::from($root);
+        let mut path = ::std::path::PathBuf::from($root);
         $(
             path.push($parts);
         )*

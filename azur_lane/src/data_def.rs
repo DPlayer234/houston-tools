@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! define_data_enum {
     {
         $(#[$attr:meta])*
@@ -53,6 +52,8 @@ macro_rules! define_data_enum {
         }
     };
 }
+
+pub(crate) use define_data_enum;
 
 #[must_use]
 pub fn is_default<T: Default + PartialEq>(value: &T) -> bool {

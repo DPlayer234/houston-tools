@@ -36,7 +36,6 @@ impl Display for UnityError {
 
 impl Error for UnityError {}
 
-#[macro_export]
 macro_rules! read_endian {
     ($Type:ty, $endian:expr, $cursor:expr) => {
         if $endian {
@@ -46,3 +45,5 @@ macro_rules! read_endian {
         }
     };
 }
+
+pub(crate) use read_endian;

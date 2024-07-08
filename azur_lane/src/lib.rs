@@ -7,6 +7,8 @@ pub mod equip;
 pub mod ship;
 pub mod skill;
 
+use data_def::define_data_enum;
+
 /// Definition data to be saved/loaded in bulk.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {

@@ -9,8 +9,15 @@
 /// utils::text::to_titlecase(&mut s);
 /// assert_eq!(&s, "Hello New World");
 /// ```
+///
+/// Or, with a byte string:
+/// ```
+/// let mut s = b"HELLO_NEW_WORLD".to_vec();
+/// utils::text::to_titlecase(&mut s);
+/// assert_eq!(&s, b"Hello New World");
+/// ```
 #[must_use]
-pub fn to_titlecase(value: &mut String) {
+pub fn to_titlecase<S: MutStrLike>(value: &mut S) {
 	// SAFETY: `to_titlecase_u8` only transforms
 	// ASCII characters into other ASCII characters.
 	unsafe {
@@ -21,15 +28,7 @@ pub fn to_titlecase(value: &mut String) {
 
 /// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
 /// The slice is mutated in-place.
-///
-/// # Examples
-///
-/// ```
-/// let mut s = b"HELLO_NEW_WORLD".to_vec();
-/// utils::text::to_titlecase_u8(&mut s);
-/// assert_eq!(&s, b"Hello New World");
-/// ```
-pub fn to_titlecase_u8(slice: &mut [u8]) {
+fn to_titlecase_u8(slice: &mut [u8]) {
 	let mut is_start = true;
 
 	for item in slice.iter_mut() {
@@ -73,30 +72,24 @@ const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 macro_rules! titlecase {
 	($input:expr) => {{
 		// Ensure input is a `&'static str`
-		const INPUT: &str = $input;
+		const INPUT_STR: &str = $input;
 
-		// Reusable const for byte length
-		const N: usize = INPUT.len();
-
-		// Include length in constant for next call.
-		// This is also in part necessary to satisfy the borrow checker.
-		// This value has to exist during the call to `from_utf8_unchecked`, and inlining it wouldn't allow that.
-        const CLONE: [u8; N] = *$crate::as_with_size(INPUT.as_bytes());
-
-		// Modify and convert back to str
-        const RESULT: &str = unsafe { ::std::str::from_utf8_unchecked(&$crate::text::__private::to_titlecase_u8_array(CLONE)) };
-        RESULT
+		// Transmute result back to a str.
+		const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
+        unsafe { ::std::str::from_utf8_unchecked(BYTES) }
 	}};
 	(b: $input:expr) => {{
 		// Ensure input is a `&'static [u8]`
 		const INPUT: &[u8] = $input;
 
-		// See above
+		// Reusable const for byte length
 		const N: usize = INPUT.len();
+
+		// Include length in constant for next call.
         const CLONE: [u8; N] = *$crate::as_with_size(INPUT);
 		const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
 		&RESULT
-	}}
+	}};
 }
 
 /// Joins an arbitrary amount of const [`str`] values.
@@ -134,6 +127,43 @@ pub fn truncate(str: impl Into<String>, len: usize) -> String {
 	str.chars().take(len - 1)
 		.chain(std::iter::once('\u{2026}'))
 		.collect()
+}
+
+/// Allows conversion of a type to a byte slice, indicating the bytes hold some sort of string data.
+///
+/// These byte slices do not have to hold UTF8 data, but replacing ASCII codes with other ASCII codes must not invalidate it.
+///
+/// This exists solely as support [`to_titlecase`].
+#[doc(hidden)]
+pub unsafe trait MutStrLike {
+	unsafe fn as_bytes_mut(&mut self) -> &mut [u8];
+}
+
+// Ideally there'd be blanket implementations for DerefMut<Target = str> and DerefMut<Target = [u8]>
+// but that's not currently allowed.
+
+unsafe impl MutStrLike for String {
+	unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
+		self.as_mut_str().as_bytes_mut()
+	}
+}
+
+unsafe impl MutStrLike for str {
+	unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
+		self.as_bytes_mut()
+	}
+}
+
+unsafe impl MutStrLike for [u8] {
+	unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
+		self
+	}
+}
+
+unsafe impl MutStrLike for Vec<u8> {
+	unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
+		self.as_mut_slice()
+	}
 }
 
 #[doc(hidden)]
