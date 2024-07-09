@@ -46,7 +46,7 @@ impl View {
 
         let components = vec![
             CreateActionRow::Buttons(vec![{
-                let back = self.inner.to_custom_id();
+                let back = self.inner.into_custom_id();
                 CreateButton::new(back).emoji('⏪').label("Back")
             }])
         ];

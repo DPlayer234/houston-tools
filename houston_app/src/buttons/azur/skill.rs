@@ -13,7 +13,7 @@ use super::ShipParseError;
 pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
-    pub back: Option<String>
+    pub back: Option<CustomData>
 }
 
 /// Where to load the skills from.
@@ -27,7 +27,7 @@ type OwnedCreateEmbedField = (String, String, bool);
 
 impl View {
     /// Creates a new instance including a button to go back with some custom ID.
-    pub fn with_back(source: ViewSource, back: String) -> Self {
+    pub fn with_back(source: ViewSource, back: CustomData) -> Self {
         Self { source, skill_index: None, back: Some(back) }
     }
 
@@ -37,7 +37,7 @@ impl View {
         let mut components = Vec::new();
 
         if let Some(ref back) = self.back {
-            components.push(CreateButton::new(back.as_str()).emoji('⏪').label("Back"));
+            components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 
         for (t_index, skill) in iterator.enumerate().take(4) {

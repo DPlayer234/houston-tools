@@ -247,8 +247,7 @@ impl MeshVertexData<'_> {
         let vertex_data = &self.mesh.vertex_data;
 
         let mut streams = vertex_data.streams
-            .as_ref()
-            .map(|s| s.clone())
+            .clone()
             .unwrap_or_else(Vec::new);
 
         let max_stream = vertex_data.channels.iter()

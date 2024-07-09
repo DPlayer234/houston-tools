@@ -13,7 +13,7 @@ pub struct View {
     pub skin_index: u32,
     pub part: ViewPart,
     pub extra: bool,
-    pub back: Option<String>
+    pub back: Option<CustomData>
 }
 
 /// Which part of the lines to display.
@@ -34,7 +34,7 @@ impl View {
     }
 
     /// Creates a new instance including a button to go back with some custom ID.
-    pub fn with_back(ship_id: u32, back: String) -> Self {
+    pub fn with_back(ship_id: u32, back: CustomData) -> Self {
         Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back: Some(back) }
     }
 
@@ -54,7 +54,7 @@ impl View {
 
         let mut top_row = Vec::new();
         if let Some(ref back) = self.back {
-            top_row.push(CreateButton::new(back).emoji('⏪').label("Back"));
+            top_row.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 
         if skin.words_extra.is_some() {
@@ -81,7 +81,7 @@ impl View {
                     .collect()
             };
 
-            let select = CreateSelectMenu::new(self.clone().to_custom_id(), options)
+            let select = CreateSelectMenu::new(self.into_custom_id(), options)
                 .placeholder(&skin.name);
 
             components.push(CreateActionRow::SelectMenu(select));

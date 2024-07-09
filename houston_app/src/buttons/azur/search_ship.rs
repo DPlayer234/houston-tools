@@ -41,7 +41,7 @@ impl View {
             desc.push('\n');
 
             let view_ship = AsNewMessage::new(super::ship::View::new(ship.group_id));
-            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
+            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.into_custom_id()));
         }
 
         let embed = CreateEmbed::new()
@@ -52,7 +52,7 @@ impl View {
 
         let options = CreateSelectMenuKind::String { options };
         let mut rows = vec![
-            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().to_custom_id(), options).placeholder("View ship..."))
+            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().into_custom_id(), options).placeholder("View ship..."))
         ];
 
         if self.page > 0 || has_next {

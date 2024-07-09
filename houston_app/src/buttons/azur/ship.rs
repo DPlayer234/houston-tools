@@ -79,13 +79,14 @@ impl View {
     }
 
     fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
-        let self_custom_id = self.clone().to_custom_id();
+        let self_custom_data = self.clone().into_custom_data();
+
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
             let source = super::skill::ViewSource::Ship(self.ship_id, self.retrofit);
-            let view_skill = super::skill::View::with_back(source, self_custom_id.clone());
-            let button = CreateButton::new(view_skill.to_custom_id())
+            let view_skill = super::skill::View::with_back(source, self_custom_data.clone());
+            let button = CreateButton::new(view_skill.into_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
 
@@ -94,7 +95,7 @@ impl View {
 
         if !ship.shadow_equip.is_empty() {
             let view = super::shadow_equip::View::new(self.clone());
-            let button = CreateButton::new(view.to_custom_id())
+            let button = CreateButton::new(view.into_custom_id())
                 .label("Shadow Equip")
                 .style(ButtonStyle::Secondary);
 
@@ -102,8 +103,8 @@ impl View {
         }
 
         if let Some(augment) = data.azur_lane().augment_by_ship_id(ship.group_id) {
-            let view_augment = super::augment::View::with_back(augment.augment_id, self_custom_id.clone());
-            let button = CreateButton::new(view_augment.to_custom_id())
+            let view_augment = super::augment::View::with_back(augment.augment_id, self_custom_data.clone());
+            let button = CreateButton::new(view_augment.into_custom_id())
                 .label("Unique Augment")
                 .style(ButtonStyle::Secondary);
 
@@ -111,8 +112,8 @@ impl View {
         }
 
         {
-            let view_lines = super::lines::View::with_back(self.ship_id, self_custom_id.clone());
-            let button = CreateButton::new(view_lines.to_custom_id())
+            let view_lines = super::lines::View::with_back(self.ship_id, self_custom_data);
+            let button = CreateButton::new(view_lines.into_custom_id())
                 .label("Lines")
                 .style(ButtonStyle::Secondary);
 

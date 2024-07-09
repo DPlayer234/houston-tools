@@ -155,28 +155,39 @@ pub struct Sentinel {
 /// Wraps another [`ButtonArgs`] value and makes it
 /// send a new message rather than using its default behavior.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
-pub struct AsNewMessage(String);
+pub struct AsNewMessage(CustomData);
+
+/// Represents custom data for another menu.
+#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+pub struct CustomData(Vec<u8>);
 
 /// Provides a way to convert an object into a component custom ID.
 ///
 /// This is auto-implemented for all [`Into<ButtonArgs>`].
-pub trait ToButtonArgsId {
+pub trait ToButtonArgsId: Sized {
     /// Converts this instance to a component custom ID.
-    fn to_custom_id(self) -> String;
+    #[must_use]
+    fn into_custom_id(self) -> String {
+        self.into_custom_data().to_custom_id()
+    }
+
+    /// Converts this instance to custom data.
+    #[must_use]
+    fn into_custom_data(self) -> CustomData;
 
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
     fn new_button<T: PartialEq>(&self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce() -> Sentinel) -> CreateButton
     where Self: Clone {
-        let mut new_state = self.clone();
-        *field.get_mut(&mut new_state) = value;
-
-        let disabled = field.get(&self) == field.get(&new_state);
+        let disabled = *field.get(&self) == value;
         if disabled {
-            CreateButton::new(ButtonArgs::None(sentinel()).to_custom_id()).disabled(true)
+            CreateButton::new(ButtonArgs::None(sentinel()).into_custom_id()).disabled(true)
         } else {
-            CreateButton::new(new_state.to_custom_id())
+            let mut new_state = self.clone();
+            *field.get_mut(&mut new_state) = value;
+
+            CreateButton::new(new_state.into_custom_id())
         }
     }
 
@@ -187,7 +198,7 @@ pub trait ToButtonArgsId {
         *field.get_mut(&mut new_state) = value;
 
         let default = field.get(&self) == field.get(&new_state);
-        CreateSelectMenuOption::new(label, new_state.to_custom_id())
+        CreateSelectMenuOption::new(label, new_state.into_custom_id())
             .default_selection(default)
     }
 }
@@ -209,17 +220,15 @@ impl ButtonArgs {
     #[must_use]
     pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
         let bytes = utils::str_as_data::from_b65536(id)?;
-        let args = bitcode::decode(&bytes)?;
-        Ok(args)
+        CustomData(bytes).to_button_args()
     }
 }
 
 impl<T: Into<ButtonArgs>> ToButtonArgsId for T {
     #[must_use]
-    fn to_custom_id(self) -> String {
+    fn into_custom_data(self) -> CustomData {
         let args: ButtonArgs = self.into();
-        let encoded = bitcode::encode(&args);
-        utils::str_as_data::to_b65536(&encoded)
+        CustomData::from_button_args(&args)
     }
 }
 
@@ -232,18 +241,38 @@ impl Sentinel {
 
 impl AsNewMessage {
     pub fn new(value: impl Into<ButtonArgs>) -> Self {
-        Self(value.to_custom_id())
+        Self(value.into_custom_data())
     }
 }
 
 impl ButtonArgsModify for AsNewMessage {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let args = ButtonArgs::from_custom_id(&self.0)?;
+        let args = self.0.to_button_args()?;
         args.modify(data, create)
     }
 
     fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
         let edit = create.to_slash_initial_response(Default::default());
         CreateInteractionResponse::Message(edit)
+    }
+}
+
+impl CustomData {
+    /// Converts this instance to a component custom ID.
+    #[must_use]
+    pub fn to_custom_id(&self) -> String {
+        utils::str_as_data::to_b65536(&self.0)
+    }
+
+    /// Converts this instance to [`ButtonArgs`].
+    #[must_use]
+    pub fn to_button_args(&self) -> anyhow::Result<ButtonArgs> {
+        Ok(bitcode::decode(&self.0)?)
+    }
+
+    /// Creates an instance from [`ButtonArgs`].
+    #[must_use]
+    pub fn from_button_args(args: &ButtonArgs) -> Self {
+        Self(bitcode::encode(args))
     }
 }

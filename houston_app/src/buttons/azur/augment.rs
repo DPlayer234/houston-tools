@@ -12,7 +12,7 @@ use super::AugmentParseError;
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub struct View {
     pub augment_id: u32,
-    pub back: Option<String>
+    pub back: Option<CustomData>
 }
 
 impl View {
@@ -23,7 +23,7 @@ impl View {
     }
 
     /// Creates a new instance including a button to go back with some custom ID.
-    pub fn with_back(augment_id: u32, back: String) -> Self {
+    pub fn with_back(augment_id: u32, back: CustomData) -> Self {
         Self { augment_id, back: Some(back) }
     }
 
@@ -48,15 +48,16 @@ impl View {
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
 
         let mut components = Vec::new();
+        let back = self.back.clone();
 
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
-            let view_skill = super::skill::View::with_back(source, self.clone().to_custom_id());
-            components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
+            let view_skill = super::skill::View::with_back(source, self.into_custom_data());
+            components.push(CreateButton::new(view_skill.into_custom_id()).label("Effect"));
         }
 
-        if let Some(back) = self.back {
-            components.insert(0, CreateButton::new(back).emoji('⏪').label("Back"));
+        if let Some(back) = back {
+            components.insert(0, CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 
         create.embed(embed).components(vec![CreateActionRow::Buttons(components)])

@@ -40,7 +40,7 @@ impl View {
             desc.push('\n');
 
             let view_equip = AsNewMessage::new(super::equip::View::new(equip.equip_id));
-            options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
+            options.push(CreateSelectMenuOption::new(&equip.name, view_equip.into_custom_id()));
         }
 
         let embed = CreateEmbed::new()
@@ -51,7 +51,7 @@ impl View {
 
         let options = CreateSelectMenuKind::String { options };
         let mut rows = vec![
-            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().to_custom_id(), options).placeholder("View equipment..."))
+            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().into_custom_id(), options).placeholder("View equipment..."))
         ];
 
         if self.page > 0 || has_next {
