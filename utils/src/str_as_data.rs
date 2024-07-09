@@ -74,12 +74,8 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
         .flat_map(char_to_bytes)
         .collect();
 
-    if skip_last {
-        if result.len() == 0 {
-            return Err(Base65536Error);
-        }
-
-        result.remove(result.len() - 1);
+    if skip_last && result.pop().is_none() {
+        return Err(Base65536Error);
     }
 
     Ok(result)
@@ -87,15 +83,20 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
 
 const OFFSET: u32 = 0xE000 - 0xD800;
 
+#[must_use]
 fn char_to_bytes(c: char) -> [u8; 2] {
     let int = match c {
         '\0' ..= '\u{D7FF}' => u32::from(c),
         '\u{E000}' ..= '\u{10FFFF}' => u32::from(c) - OFFSET,
     };
 
+    // char codes greater than 0x107FF will end up wrapping around
+    // due to the u16 truncation here. while this could be checked,
+    // it's not worth having another failure branch.
     (int as u16).to_le_bytes()
 }
 
+#[must_use]
 fn bytes_to_char(bytes: [u8; 2]) -> char {
     // SAFETY: Reverse of `char_to_bytes`.
     let int = u16::from_le_bytes(bytes) as u32;
@@ -111,23 +112,21 @@ mod test {
     use super::*;
 
     static DATA: &[u8] = {
-        assert!(std::mem::size_of::<u16>() == 2);
-
-        const DATA_SIZE: usize = (u16::MAX as usize) * 2;
-        const fn create_data() -> [u8; DATA_SIZE] {
-            let mut result = [0u8; DATA_SIZE];
+        const MAX: usize = u16::MAX as usize;
+        const fn create_data() -> [u16; MAX] {
+            let mut result = [0u16; MAX];
             let mut index = 0usize;
             while index < result.len() {
-                let num = (index / 2) as u16;
-                result[index] = num as u8;
-                result[index + 1] = (num >> 8) as u8;
-                index += 2;
+                result[index] = index as u16;
+                index += 1;
             }
 
             result
         }
 
-        &create_data()
+        unsafe {
+            crate::mem::as_bytes(&create_data())
+        }
     };
 
     #[test]

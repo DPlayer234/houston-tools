@@ -25,6 +25,7 @@ impl<T: Display> Display for OutOfRange<T> {
 macro_rules! impl_range {
     ($Type:ident, $Num:ty) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        #[must_use]
         pub struct $Type<const MIN: $Num, const MAX: $Num>($Num, $Num);
 
         impl<const MIN: $Num, const MAX: $Num> $Type<MIN, MAX> {

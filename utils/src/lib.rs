@@ -1,34 +1,12 @@
 use std::fmt::Debug;
 
 pub mod fields;
+pub mod mem;
 pub mod prefix_map;
 pub mod range;
 pub mod str_as_data;
 pub mod text;
 pub mod time;
-
-/// Converts a slice to an array reference of size `N`.
-/// This is a const-friendly alternative to `<&[T; N]>::try_from`.
-///
-/// # Panics
-///
-/// Panics if the slice is shorter than `N`. Longer slices are allowed.
-///
-/// # Examples
-///
-/// ```
-/// let x: &[u8] = &[1, 2, 3, 4];
-/// let y: &[u8; 4] = utils::as_with_size(x);
-/// assert_eq!(x, y);
-/// ```
-#[must_use]
-pub const fn as_with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
-    assert!(slice.len() >= N);
-    unsafe {
-        // SAFETY: The length has already been validated.
-        &*(slice.as_ptr() as *const [T; N])
-    }
-}
 
 /// Convenience method to calculate the hash of a value with the [`std::hash::DefaultHasher`].
 #[inline]

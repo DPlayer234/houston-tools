@@ -16,7 +16,6 @@
 /// utils::text::to_titlecase(&mut s);
 /// assert_eq!(&s, b"Hello New World");
 /// ```
-#[must_use]
 pub fn to_titlecase<S: MutStrLike>(value: &mut S) {
     // SAFETY: `to_titlecase_u8` only transforms
     // ASCII characters into other ASCII characters.
@@ -86,9 +85,9 @@ macro_rules! titlecase {
         const N: usize = INPUT.len();
 
         // Include length in constant for next call.
-        const CLONE: [u8; N] = *$crate::as_with_size(INPUT);
+        const CLONE: [u8; N] = *$crate::mem::with_size(INPUT);
         const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
-        &RESULT
+        &RESULT as &[u8]
     }};
 }
 
@@ -136,6 +135,7 @@ pub fn truncate(str: impl Into<String>, len: usize) -> String {
 /// This exists solely as support [`to_titlecase`].
 #[doc(hidden)]
 pub unsafe trait MutStrLike {
+    #[must_use]
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8];
 }
 

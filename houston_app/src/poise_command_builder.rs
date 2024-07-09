@@ -11,8 +11,8 @@ pub struct CustomCreateCommand {
     options: Vec<CreateCommandOption>,
     #[serde(rename = "type")]
     kind: CommandType,
-    contexts: Vec<u8>,
-    integration_types: Vec<u8>,
+    contexts: [u8; 3],
+    integration_types: [u8; 2],
     nsfw: bool,
 }
 
@@ -66,8 +66,8 @@ fn create_as_slash_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCreateComm
         description: cmd.description.clone().unwrap_or_else(|| "---".to_string()),
         options,
         kind: CommandType::ChatInput,
-        contexts: vec![0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
-        integration_types: vec![0, 1], // GUILD_INSTALL, USER_INSTALL
+        contexts: [0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
+        integration_types: [0, 1], // GUILD_INSTALL, USER_INSTALL
         nsfw: cmd.nsfw_only
     })
 }
@@ -86,8 +86,8 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
         description: String::new(),
         options: Vec::new(),
         kind,
-        contexts: vec![0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
-        integration_types: vec![0, 1], // GUILD_INSTALL, USER_INSTALL
+        contexts: [0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
+        integration_types: [0, 1], // GUILD_INSTALL, USER_INSTALL
         nsfw: cmd.nsfw_only
     })
 }
