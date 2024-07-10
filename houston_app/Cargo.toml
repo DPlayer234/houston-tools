@@ -7,13 +7,13 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
-bitcode = { version = "0.6.0", features = ["derive"] }
 chrono = "0.4.38"
 dashmap = "5.5.3"
 once_cell = "1.19.0"
 poise = "0.6.1"
 rand = "0.8.5"
 serde = "1.0.203"
+serde_bare = "0.5.0"
 serenity = { version = "0.12.2", features = ["simd_json"] }
 simd-json = { version = "0.13.10", features = ["serde"] }
 simsearch = "0.2.5"

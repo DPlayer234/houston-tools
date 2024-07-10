@@ -9,7 +9,7 @@ use super::AugmentParseError;
 use super::ShipParseError;
 
 /// View skill details of a ship or augment.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
@@ -17,7 +17,7 @@ pub struct View {
 }
 
 /// Where to load the skills from.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ViewSource {
     Ship(u32, Option<u8>),
     Augment(u32),
@@ -32,7 +32,7 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved list of skills and a base embed.
-    fn modify_with_skills<'a>(self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> CreateReply {
+    fn modify_with_skills<'a>(mut self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> CreateReply {
         let index = self.skill_index.map(usize::from);
         let mut components = Vec::new();
 
@@ -84,8 +84,8 @@ impl View {
     }
 
     /// Creates a button that redirects to a skill index.
-    fn button_with_skill(&self, index: usize) -> CreateButton {
-        self.new_button(utils::field_mut!(Self: skill_index), Some(index as u8), || Sentinel::new(1, index as u32))
+    fn button_with_skill(&mut self, index: usize) -> CreateButton {
+        self.new_button(utils::field_mut!(Self: skill_index), Some(index as u8), |u| u.unwrap_or_default().into())
     }
 
     /// Creates the embed field for a skill.

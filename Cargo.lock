@@ -150,7 +150,6 @@ name = "azur_lane"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "bitcode",
  "bitflags 2.6.0",
  "once_cell",
  "serde",
@@ -231,27 +230,6 @@ name = "bit_field"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
-
-[[package]]
-name = "bitcode"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48bc1c27654127a24c476d40198746860ef56475f41a601bfa5c4d0f832968f0"
-dependencies = [
- "bitcode_derive",
- "bytemuck",
-]
-
-[[package]]
-name = "bitcode_derive"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2966755a19aad59ee2aae91e2d48842c667a99d818ec72168efdab07200701cc"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.61",
-]
 
 [[package]]
 name = "bitflags"
@@ -954,7 +932,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "azur_lane",
- "bitcode",
  "chrono",
  "config",
  "dashmap",
@@ -962,6 +939,7 @@ dependencies = [
  "poise",
  "rand",
  "serde",
+ "serde_bare",
  "serenity",
  "simd-json",
  "simsearch",
@@ -1969,6 +1947,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_bare"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51c55386eed0f1ae957b091dc2ca8122f287b60c79c774cbe3d5f2b69fded660"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

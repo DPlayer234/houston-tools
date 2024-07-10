@@ -7,7 +7,7 @@ use crate::buttons::*;
 use super::EquipParseError;
 
 /// Views an augment.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub equip_id: u32,
 }

@@ -9,10 +9,14 @@ pub mod azur;
 
 utils::define_simple_error!(InvalidInteractionError: "Invalid interaction.");
 
+/// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
 macro_rules! define_button_args {
     ($($(#[$attr:meta])* $name:ident($Ty:ty)),* $(,)?) => {
         /// The supported button interaction arguments.
-        #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+        ///
+        /// This is owned data that can be deserialized into.
+        /// To serialize it, call [`ButtonArgs::borrow`] first.
+        #[derive(Debug, Clone, serde::Deserialize)]
         pub enum ButtonArgs {
             /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
             None(Sentinel),
@@ -22,13 +26,50 @@ macro_rules! define_button_args {
             )*
         }
 
+        /// The supported button interaction arguments.
+        ///
+        /// This is borrowed data that can be serialized.
+        #[derive(Debug, Clone, Copy, serde::Serialize)]
+        pub enum ButtonArgsRef<'a> {
+            /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
+            None(&'a Sentinel),
+            $(
+                $(#[$attr])*
+                $name(&'a $Ty),
+            )*
+        }
+
         $(
             impl From<$Ty> for ButtonArgs {
                 fn from(value: $Ty) -> Self {
                     Self::$name(value)
                 }
             }
+
+            impl<'a> From<&'a $Ty> for ButtonArgsRef<'a> {
+                fn from(value: &'a $Ty) -> Self {
+                    Self::$name(value)
+                }
+            }
         )*
+
+        impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
+            fn from(value: &'a ButtonArgs) -> Self {
+                value.borrow()
+            }
+        }
+
+        impl ButtonArgs {
+            /// Borrows the inner data.
+            pub const fn borrow(&self) -> ButtonArgsRef {
+                match self {
+                    ButtonArgs::None(v) => ButtonArgsRef::None(v),
+                    $(
+                        ButtonArgs::$name(v) => ButtonArgsRef::$name(v),
+                    )*
+                }
+            }
+        }
 
         impl ButtonArgsModify for ButtonArgs {
             fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
@@ -83,7 +124,7 @@ pub struct ButtonEventHandler {
 
 impl ButtonEventHandler {
     /// Creates a new handler.
-    pub fn new(bot_data: Arc<HBotData>) -> Self {
+    pub const fn new(bot_data: Arc<HBotData>) -> Self {
         ButtonEventHandler {
             bot_data
         }
@@ -146,61 +187,75 @@ impl serenity::client::EventHandler for ButtonEventHandler {
 }
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Sentinel {
-    pub key: u32,
-    pub value: u32
+    pub key: u16,
+    pub value: u16
 }
 
 /// Wraps another [`ButtonArgs`] value and makes it
 /// send a new message rather than using its default behavior.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AsNewMessage(CustomData);
 
 /// Represents custom data for another menu.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CustomData(Vec<u8>);
 
 /// Provides a way to convert an object into a component custom ID.
 ///
-/// This is auto-implemented for all [`Into<ButtonArgs>`].
+/// This is auto-implemented for every type held by [`ButtonArgs`].
 pub trait ToButtonArgsId: Sized {
     /// Converts this instance to a component custom ID.
     #[must_use]
-    fn into_custom_id(self) -> String {
-        self.into_custom_data().to_custom_id()
+    fn to_custom_id(&self) -> String {
+        self.to_custom_data().to_custom_id()
     }
 
     /// Converts this instance to custom data.
     #[must_use]
-    fn into_custom_data(self) -> CustomData;
+    fn to_custom_data(&self) -> CustomData;
 
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
-    fn new_button<T: PartialEq>(&self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce() -> Sentinel) -> CreateButton
-    where Self: Clone {
-        let disabled = *field.get(&self) == value;
+    fn new_button<T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton {
+        let disabled = *field.get(self) == value;
         if disabled {
-            CreateButton::new(ButtonArgs::None(sentinel()).into_custom_id()).disabled(true)
+            let sentinel = Sentinel::new(field_sentinel_key(self, field), sentinel(value));
+            CreateButton::new(ButtonArgs::None(sentinel).to_custom_id()).disabled(true)
         } else {
-            let mut new_state = self.clone();
-            *field.get_mut(&mut new_state) = value;
-
-            CreateButton::new(new_state.into_custom_id())
+            let custom_id = self.to_custom_id_with(field, value);
+            CreateButton::new(custom_id)
         }
     }
 
     /// Creates a new select option that would switch to a state where one field is changed.
-    fn new_select_option<T: PartialEq>(&self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption
-    where Self: Clone {
-        let mut new_state = self.clone();
-        *field.get_mut(&mut new_state) = value;
+    fn new_select_option<T: PartialEq>(&mut self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption {
+        let default = *field.get(self) == value;
+        let custom_id = self.to_custom_id_with(field, value);
 
-        let default = field.get(&self) == field.get(&new_state);
-        CreateSelectMenuOption::new(label, new_state.into_custom_id())
+        CreateSelectMenuOption::new(label, custom_id)
             .default_selection(default)
     }
+
+    /// Creates a custom ID with one field replaced.
+    fn to_custom_id_with<T>(&mut self, field: impl FieldMut<Self, T>, mut value: T) -> String {
+        // Swap new value into the field
+        std::mem::swap(field.get_mut(self), &mut value);
+        // Create the custom ID
+        let custom_id = self.to_custom_id();
+        // Move original value back into field, dropping the new value.
+        *field.get_mut(self) = value;
+
+        custom_id
+    }
+}
+
+fn field_sentinel_key<S, T>(obj: &S, field: impl FieldMut<S, T>) -> u16 {
+    // The value returned here is intended to be unique for a given object.
+    // It isn't used in any way other than as a discriminator.
+    field.get(obj) as *const T as u16
 }
 
 /// Provides a way for button arguments to modify the create-reply payload.
@@ -224,24 +279,23 @@ impl ButtonArgs {
     }
 }
 
-impl<T: Into<ButtonArgs>> ToButtonArgsId for T {
-    #[must_use]
-    fn into_custom_data(self) -> CustomData {
-        let args: ButtonArgs = self.into();
-        CustomData::from_button_args(&args)
+impl<T> ToButtonArgsId for T
+where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
+    fn to_custom_data(&self) -> CustomData {
+        CustomData::from_button_args(self)
     }
 }
 
 impl Sentinel {
     /// Create a new sentinel value.
-    pub fn new(key: u32, value: u32) -> Self {
+    pub const fn new(key: u16, value: u16) -> Self {
         Self { key, value }
     }
 }
 
 impl AsNewMessage {
-    pub fn new(value: impl Into<ButtonArgs>) -> Self {
-        Self(value.into_custom_data())
+    pub fn new<'a>(value: impl Into<ButtonArgsRef<'a>>) -> Self {
+        Self(CustomData::from_button_args(value))
     }
 }
 
@@ -267,12 +321,19 @@ impl CustomData {
     /// Converts this instance to [`ButtonArgs`].
     #[must_use]
     pub fn to_button_args(&self) -> anyhow::Result<ButtonArgs> {
-        Ok(bitcode::decode(&self.0)?)
+        Ok(serde_bare::from_slice(&self.0)?)
     }
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
-    pub fn from_button_args(args: &ButtonArgs) -> Self {
-        Self(bitcode::encode(args))
+    pub fn from_button_args<'a>(args: impl Into<ButtonArgsRef<'a>>) -> Self {
+        let args: ButtonArgsRef = args.into();
+        match serde_bare::to_vec(&args) {
+            Ok(data) => Self(data),
+            Err(err) => {
+                println!("Error [{err:?}] serializing: {args:?}");
+                Self(Vec::new())
+            }
+        }
     }
 }

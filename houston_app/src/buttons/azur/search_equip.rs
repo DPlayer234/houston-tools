@@ -3,13 +3,13 @@ use azur_lane::equip::*;
 
 use crate::buttons::*;
 
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
     filter: Filter
 }
 
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Filter {
     pub name: Option<String>,
     pub faction: Option<Faction>,
@@ -24,7 +24,7 @@ impl View {
         View { page: 0, filter }
     }
 
-    pub fn modify_with_iter<'a>(self, create: CreateReply, iter: impl Iterator<Item = &'a Equip>) -> CreateReply {
+    pub fn modify_with_iter<'a>(mut self, create: CreateReply, iter: impl Iterator<Item = &'a Equip>) -> CreateReply {
         let mut desc = String::new();
         let mut options = Vec::new();
         let mut has_next = false;
@@ -39,8 +39,8 @@ impl View {
             desc.push_str(&equip.name);
             desc.push('\n');
 
-            let view_equip = AsNewMessage::new(super::equip::View::new(equip.equip_id));
-            options.push(CreateSelectMenuOption::new(&equip.name, view_equip.into_custom_id()));
+            let view_equip = AsNewMessage::new(&super::equip::View::new(equip.equip_id));
+            options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
         let embed = CreateEmbed::new()
@@ -51,19 +51,19 @@ impl View {
 
         let options = CreateSelectMenuKind::String { options };
         let mut rows = vec![
-            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.clone().into_custom_id(), options).placeholder("View equipment..."))
+            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.to_custom_id(), options).placeholder("View equipment..."))
         ];
 
         if self.page > 0 || has_next {
             rows.insert(0, CreateActionRow::Buttons(vec![
                 if self.page > 0 {
-                    self.new_button(utils::field_mut!(Self: page), self.page - 1, || Sentinel::new(0, 1))
+                    self.new_button(utils::field_mut!(Self: page), self.page - 1, |_| 1)
                 } else {
                     CreateButton::new("#no-back").disabled(true)
                 }.emoji('◀'),
 
                 if has_next {
-                    self.new_button(utils::field_mut!(Self: page), self.page + 1, || Sentinel::new(0, 2))
+                    self.new_button(utils::field_mut!(Self: page), self.page + 1, |_| 2)
                 } else {
                     CreateButton::new("#no-forward").disabled(true)
                 }.emoji('▶')

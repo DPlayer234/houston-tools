@@ -9,7 +9,7 @@ use crate::buttons::*;
 use super::AugmentParseError;
 
 /// Views an augment.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub augment_id: u32,
     pub back: Option<CustomData>
@@ -48,15 +48,14 @@ impl View {
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
 
         let mut components = Vec::new();
-        let back = self.back.clone();
 
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
-            let view_skill = super::skill::View::with_back(source, self.into_custom_data());
-            components.push(CreateButton::new(view_skill.into_custom_id()).label("Effect"));
+            let view_skill = super::skill::View::with_back(source, self.to_custom_data());
+            components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
-        if let Some(back) = back {
+        if let Some(back) = self.back {
             components.insert(0, CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 

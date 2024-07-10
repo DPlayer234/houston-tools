@@ -8,7 +8,7 @@ use crate::buttons::*;
 use super::ShipParseError;
 
 /// View general ship details.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub ship_id: u32,
     pub level: u8,
@@ -17,7 +17,7 @@ pub struct View {
 }
 
 /// The affinity used to calculate stat values.
-#[derive(Debug, Clone, Copy, bitcode::Encode, bitcode::Decode, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ViewAffinity {
     Neutral,
     Love,
@@ -31,7 +31,7 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship(self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
@@ -63,7 +63,7 @@ impl View {
         create.embed(embed).components(rows)
     }
 
-    fn add_upgrade_row(&self, rows: &mut Vec<CreateActionRow>) {
+    fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow>) {
         rows.push(
             CreateActionRow::Buttons(vec![
                 self.button_with_level(120)
@@ -79,14 +79,14 @@ impl View {
     }
 
     fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
-        let self_custom_data = self.clone().into_custom_data();
+        let self_custom_data = self.to_custom_data();
 
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
             let source = super::skill::ViewSource::Ship(self.ship_id, self.retrofit);
             let view_skill = super::skill::View::with_back(source, self_custom_data.clone());
-            let button = CreateButton::new(view_skill.into_custom_id())
+            let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
 
@@ -95,7 +95,7 @@ impl View {
 
         if !ship.shadow_equip.is_empty() {
             let view = super::shadow_equip::View::new(self.clone());
-            let button = CreateButton::new(view.into_custom_id())
+            let button = CreateButton::new(view.to_custom_id())
                 .label("Shadow Equip")
                 .style(ButtonStyle::Secondary);
 
@@ -104,7 +104,7 @@ impl View {
 
         if let Some(augment) = data.azur_lane().augment_by_ship_id(ship.group_id) {
             let view_augment = super::augment::View::with_back(augment.augment_id, self_custom_data.clone());
-            let button = CreateButton::new(view_augment.into_custom_id())
+            let button = CreateButton::new(view_augment.to_custom_id())
                 .label("Unique Augment")
                 .style(ButtonStyle::Secondary);
 
@@ -113,7 +113,7 @@ impl View {
 
         {
             let view_lines = super::lines::View::with_back(self.ship_id, self_custom_data);
-            let button = CreateButton::new(view_lines.into_custom_id())
+            let button = CreateButton::new(view_lines.to_custom_id())
                 .label("Lines")
                 .style(ButtonStyle::Secondary);
 
@@ -125,7 +125,7 @@ impl View {
         }
     }
 
-    fn add_retro_state_row(&self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
+    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
         let base_button = self.button_with_retrofit(None)
             .label("Base");
 
@@ -157,18 +157,18 @@ impl View {
     }
 
     /// Gets a button that redirects to a different level.
-    fn button_with_level(&self, level: u8) -> CreateButton {
-        self.new_button(utils::field_mut!(Self: level), level, || Sentinel::new(0, u32::from(level)))
+    fn button_with_level(&mut self, level: u8) -> CreateButton {
+        self.new_button(utils::field_mut!(Self: level), level, u8::into)
     }
 
     /// Gets a button that redirects to a different affinity.
-    fn button_with_affinity(&self, affinity: ViewAffinity) -> CreateButton {
-        self.new_button(utils::field_mut!(Self: affinity), affinity, || Sentinel::new(1, affinity as u32))
+    fn button_with_affinity(&mut self, affinity: ViewAffinity) -> CreateButton {
+        self.new_button(utils::field_mut!(Self: affinity), affinity, |u| u as u16)
     }
 
     /// Creates a button that redirects to a retrofit state.
-    fn button_with_retrofit(&self, retrofit: Option<u8>) -> CreateButton {
-        self.new_button(utils::field_mut!(Self: retrofit), retrofit, || Sentinel::new(2, retrofit.map(u32::from).unwrap_or(u32::MAX)))
+    fn button_with_retrofit(&mut self, retrofit: Option<u8>) -> CreateButton {
+        self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| u.map(u16::from).unwrap_or(u16::MAX))
     }
 
     /// Creates the embed field that display the stats.

@@ -16,7 +16,7 @@ macro_rules! define_data_enum {
         }
 
         $(#[$attr])*
-        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, bitcode::Encode, bitcode::Decode)]
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
         $v enum $name {
             $(
                 $(#[$field_attr])*

@@ -8,7 +8,7 @@ use super::ShipParseError;
 use super::ship::View as ShipView;
 
 /// View a ship's shadow equip.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub inner: ShipView,
 }
@@ -46,7 +46,7 @@ impl View {
 
         let components = vec![
             CreateActionRow::Buttons(vec![{
-                let back = self.inner.into_custom_id();
+                let back = self.inner.to_custom_id();
                 CreateButton::new(back).emoji('⏪').label("Back")
             }])
         ];

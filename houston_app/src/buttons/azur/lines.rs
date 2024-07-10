@@ -7,7 +7,7 @@ use crate::buttons::*;
 use super::ShipParseError;
 
 /// Views ship lines.
-#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub ship_id: u32,
     pub skin_index: u32,
@@ -17,7 +17,7 @@ pub struct View {
 }
 
 /// Which part of the lines to display.
-#[derive(Debug, Clone, Copy, bitcode::Encode, bitcode::Decode, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub enum ViewPart {
     Info,
     Main1,
@@ -81,7 +81,7 @@ impl View {
                     .collect()
             };
 
-            let select = CreateSelectMenu::new(self.into_custom_id(), options)
+            let select = CreateSelectMenu::new(self.to_custom_id(), options)
                 .placeholder(&skin.name);
 
             components.push(CreateActionRow::SelectMenu(select));
@@ -96,18 +96,18 @@ impl View {
     }
 
     /// Creates a button that redirects to a different Base/EX state.
-    fn button_with_extra(&self, extra: bool) -> CreateButton {
-        self.new_button(utils::field_mut!(Self: extra), extra, || Sentinel::new(0, extra as u32))
+    fn button_with_extra(&mut self, extra: bool) -> CreateButton {
+        self.new_button(utils::field_mut!(Self: extra), extra, bool::into)
     }
 
     /// Creates a button that redirects to a different viewed part.
-    fn button_with_part(&self, part: ViewPart, words: &ShipSkinWords) -> CreateButton {
+    fn button_with_part(&mut self, part: ViewPart, words: &ShipSkinWords) -> CreateButton {
         let disabled = self.part == part || !part.has_texts(words);
-        self.new_button(utils::field_mut!(Self: part), part, || Sentinel::new(1, part as u32)).disabled(disabled)
+        self.new_button(utils::field_mut!(Self: part), part, |u| u as u16).disabled(disabled)
     }
 
     /// Creates a button that redirects to a different skin's lines.
-    fn select_with_skin_index(&self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
+    fn select_with_skin_index(&mut self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
         self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u32)
     }
 }
