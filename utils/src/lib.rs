@@ -55,6 +55,24 @@ macro_rules! define_simple_error {
     };
 }
 
+/// Joins multiple path segments into a [`PathBuf`](`std::path::PathBuf`).
+///
+/// An extension may be specified at the end. If specified, it will override the extension of the last segment.
+///
+/// This is equivalent to creating a [`PathBuf`](`std::path::PathBuf`) from the first segment and then repeatedly
+/// calling `push`, then finishing with `set_extension` if an extension is specified.
+///
+/// # Example
+///
+/// ```
+/// # use std::path::Path;
+/// let path = utils::join_path!["C:", "Windows", "System32", "notepad"; "exe"];
+/// # #[cfg(windows)]
+/// assert_eq!(
+///     &path,
+///     Path::new(r#"C:\Windows\System32\notepad.exe"#)
+/// )
+/// ```
 #[macro_export]
 macro_rules! join_path {
     [$root:expr, $($parts:expr),* $(; $ext:expr)?] => {{
@@ -67,4 +85,67 @@ macro_rules! join_path {
         )?
         path
     }};
+}
+
+/// Helper trait to define an async function within a trait or implementation,
+/// allowing specifying additional bounds for the returned future by adding them to the `async` keyword.
+///
+/// It expands to an equivalent function without the async keyword, instead returning a [`Future`](`core::future::Future`).
+///
+/// # Example
+///
+/// ```no_run
+/// # use utils::async_trait_fn;
+/// # struct Data;
+/// # struct Store;
+///
+/// // Specify that futures must be `Send`.
+/// trait Async {
+///     async_trait_fn! {
+///         async + Send fn get(id: u64) -> Data;
+///     }
+///
+///     async_trait_fn! {
+///         async + Send fn store(id: u64, data: Data);
+///     }
+/// }
+///
+/// impl Async for Store {
+///     // You may use raw `async fn` to implement these methods, but this may leak additional
+///     // auto-traits to direct consumers of this implementation, which may be a semver hazard.
+///     async fn get(id: u64) -> Data {
+///         # let _ = stringify! {
+///         ...
+///         # };
+///         # Data
+///     }
+///
+///     // Alternatively, use the macro in the implementation too.
+///     async_trait_fn! {
+///         async + Send fn store(id: u64, data: Data) {
+///             # let _ = stringify! {
+///             ...
+///             # };
+///         }
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! async_trait_fn {
+    {
+        $(#[$attr:meta])*
+        $v:vis async $(+ $bounds:tt)* fn $name:ident ( $($args:tt)* ) $(-> $ret:ty)? ;
+    } => {
+        $(#[$attr])*
+        $v fn $name ( $($args)* ) -> impl ::core::future::Future $(<Output = $ret>)? $(+ $bounds)* ;
+    };
+    {
+        $(#[$attr:meta])*
+        $v:vis async $(+ $bounds:tt)* fn $name:ident ( $($args:tt)* ) $(-> $ret:ty)? $body:block
+    } => {
+        $(#[$attr])*
+        $v fn $name ( $($args)* ) -> impl ::core::future::Future $(<Output = $ret>)? $(+ $bounds)* {
+            async $body
+        }
+    };
 }

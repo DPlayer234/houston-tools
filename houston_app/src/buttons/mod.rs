@@ -132,15 +132,15 @@ impl ButtonEventHandler {
 
     /// Handles the component interaction dispatch.
     async fn interaction_dispatch(&self, ctx: &Context, interaction: &ComponentInteraction) -> HResult {
-        let args = match &interaction.data.kind {
-            ComponentInteractionDataKind::StringSelect { values } => {
-                ButtonArgs::from_custom_id(&values.iter().next().ok_or(InvalidInteractionError)?)?
-            }
-            _ => {
-                ButtonArgs::from_custom_id(&interaction.data.custom_id)?
-            }
+        use ComponentInteractionDataKind as Kind;
+
+        let custom_id = match &interaction.data.kind {
+            Kind::StringSelect { values } if values.len() == 1 => &values[0],
+            Kind::Button => &interaction.data.custom_id,
+            _ => Err(InvalidInteractionError)?,
         };
 
+        let args = ButtonArgs::from_custom_id(custom_id)?;
         self.interaction_dispatch_dyn(ctx, interaction, args).await
     }
 

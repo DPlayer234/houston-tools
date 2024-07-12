@@ -269,13 +269,18 @@ impl HAzurLane {
         self.augment_list.get(index)
     }
 
+    /// Gets a chibi's image data.
     pub fn get_chibi_image(&self, image_key: &str) -> Option<Arc<[u8]>> {
         // Consult the cache first. If the image has been seen already, it will be stored here.
         // It may also have a None entry if the image was requested but not found.
-        if let Some(entry) = self.chibi_sprite_cache.get(image_key) {
-            return entry.clone();
+        match self.chibi_sprite_cache.get(image_key) {
+            Some(entry) => entry.clone(),
+            _ => self.load_and_cache_chibi_image(image_key),
         }
+    }
 
+    #[cold]
+    fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<Arc<[u8]>> {
         // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
         // files outside of `data_path`. Currently, this doesn't take user-input, but this should
         // be considered for the future.
