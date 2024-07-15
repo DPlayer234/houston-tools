@@ -66,7 +66,7 @@ macro_rules! define_simple_error {
 ///
 /// ```
 /// # use std::path::Path;
-/// let path = utils::join_path!["C:", "Windows", "System32", "notepad"; "exe"];
+/// let path = utils::join_path!["C:\\", "Windows", "System32", "notepad"; "exe"];
 /// # #[cfg(windows)]
 /// assert_eq!(
 ///     &path,

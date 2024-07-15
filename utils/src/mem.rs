@@ -51,10 +51,6 @@ pub const fn with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
 ///     assert_eq!(bytes, not_bytes);
 /// }
 /// ```
-///
-/// # Example
-///
-///
 #[must_use]
 pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
     let ptr = slice.as_ptr_range();

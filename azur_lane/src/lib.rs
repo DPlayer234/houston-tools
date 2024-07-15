@@ -39,6 +39,7 @@ define_data_enum! {
         NorthernParliament("Northern Parliament", Some("SN")),
         IrisLibre("Iris Libre", Some("FFNF")),
         VichyaDominion("Vichya Dominion", Some("MNF")),
+        IrisOrthodoxy("Iris Orthodoxy", Some("NF")),
         Tempesta("Tempesta", Some("MOT")),
         META("META", None),
         Siren("Siren", None),

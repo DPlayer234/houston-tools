@@ -128,7 +128,7 @@ async fn autocomplete_equip_name<'a>(ctx: HContext<'a>, partial: &'a str) -> imp
 }
 
 macro_rules! make_choice {
-    ($NewType:ident for $OrigType:ident { $($(#[$attr:meta])* $name:ident),* }) => {
+    ($NewType:ident for $OrigType:ident { $($(#[$attr:meta])* $name:ident),* $(,)? }) => {
         #[derive(ChoiceParameter)]
         enum $NewType {
             $(
@@ -138,7 +138,7 @@ macro_rules! make_choice {
         }
 
         impl $NewType {
-            fn convert(self) -> $OrigType {
+            const fn convert(self) -> $OrigType {
                 match self {
                     $(
                         Self::$name => $OrigType::$name
@@ -161,6 +161,7 @@ make_choice!(EFaction for Faction {
     #[name = "Northern Parliament"] NorthernParliament,
     #[name = "Iris Libre"] IrisLibre,
     #[name = "Vichya Dominion"] VichyaDominion,
+    #[name = "Iris Orthodoxy"] IrisOrthodoxy,
     Tempesta,
     META,
     #[name = "Collab: Neptunia"] CollabNeptunia,
@@ -172,7 +173,7 @@ make_choice!(EFaction for Faction {
     #[name = "Collab: Idolm@ster"] CollabIdolmaster,
     #[name = "Collab: SSSS"] CollabSSSS,
     #[name = "Collab: Atelier Ryza"] CollabAtelierRyza,
-    #[name = "Collab: Senran Kagura"] CollabSenranKagura
+    #[name = "Collab: Senran Kagura"] CollabSenranKagura,
 });
 
 make_choice!(EHullType for HullType {
@@ -195,65 +196,40 @@ make_choice!(EHullType for HullType {
     #[name = "Missile Destroyer M"] MissileDestroyerM,
     #[name = "Sailing Frigate S"] FrigateS,
     #[name = "Sailing Frigate V"] FrigateV,
-    #[name = "Sailing Frigate M"] FrigateM
+    #[name = "Sailing Frigate M"] FrigateM,
 });
 
 make_choice!(EShipRarity for ShipRarity {
-    N, R, E, SR, UR
+    N, R, E, SR, UR,
 });
 
 make_choice!(EEquipKind for EquipKind {
-    #[name = "DD Gun"]
-    DestroyerGun,
-    #[name = "CL Gun"]
-    LightCruiserGun,
-    #[name = "CA Gun"]
-    HeavyCruiserGun,
-    #[name = "CB Gun"]
-    LargeCruiserGun,
-    #[name = "BB Gun"]
-    BattleshipGun,
-    #[name = "Torpedo (Surface)"]
-    SurfaceTorpedo,
-    #[name = "Torpedo (Submarine)"]
-    SubmarineTorpedo,
-    #[name = "Anti-Air Gun"]
-    AntiAirGun,
-    #[name = "Anti-Air Gun (Fuze)"]
-    FuzeAntiAirGun,
-    #[name = "Fighter"]
-    Fighter,
-    #[name = "Dive Bomber"]
-    DiveBomber,
-    #[name = "Torpedo Bomber"]
-    TorpedoBomber,
-    #[name = "Seaplane"]
-    SeaPlane,
-    #[name = "Anti-Sub Weapon"]
-    AntiSubWeapon,
-    #[name = "Anti-Sub Aircraft"]
-    AntiSubAircraft,
-    #[name = "Helicopter"]
-    Helicopter,
-    #[name = "Missile"]
-    Missile,
-    #[name = "Cargo"]
-    Cargo,
-    #[name = "Auxiliary"]
-    Auxiliary
+    #[name = "DD Gun"] DestroyerGun,
+    #[name = "CL Gun"] LightCruiserGun,
+    #[name = "CA Gun"] HeavyCruiserGun,
+    #[name = "CB Gun"] LargeCruiserGun,
+    #[name = "BB Gun"] BattleshipGun,
+    #[name = "Torpedo (Surface)"] SurfaceTorpedo,
+    #[name = "Torpedo (Submarine)"] SubmarineTorpedo,
+    #[name = "Anti-Air Gun"] AntiAirGun,
+    #[name = "Anti-Air Gun (Fuze)"] FuzeAntiAirGun,
+    #[name = "Fighter"] Fighter,
+    #[name = "Dive Bomber"] DiveBomber,
+    #[name = "Torpedo Bomber"] TorpedoBomber,
+    #[name = "Seaplane"] SeaPlane,
+    #[name = "Anti-Sub Weapon"] AntiSubWeapon,
+    #[name = "Anti-Sub Aircraft"] AntiSubAircraft,
+    #[name = "Helicopter"] Helicopter,
+    #[name = "Missile"] Missile,
+    #[name = "Cargo"] Cargo,
+    #[name = "Auxiliary"] Auxiliary,
 });
 
 make_choice!(EEquipRarity for EquipRarity {
-    #[name = "1* Common"]
-    N1,
-    #[name = "2* Common"]
-    N2,
-    #[name = "3* Rare"]
-    R,
-    #[name = "4* Elite"]
-    E,
-    #[name = "5* SR"]
-    SR,
-    #[name = "6* UR"]
-    UR
+    #[name = "1* Common"] N1,
+    #[name = "2* Common"] N2,
+    #[name = "3* Rare"] R,
+    #[name = "4* Elite"] E,
+    #[name = "5* SR"] SR,
+    #[name = "6* UR"] UR,
 });

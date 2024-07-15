@@ -1,5 +1,8 @@
+use std::fmt::Write;
+
 use azur_lane::Faction;
 use azur_lane::equip::*;
+use utils::Discard;
 
 use crate::buttons::*;
 
@@ -35,12 +38,22 @@ impl View {
                 break
             }
 
-            desc.push_str("- ");
-            desc.push_str(&equip.name);
-            desc.push('\n');
+            writeln!(
+                desc,
+                "- **{}** [{} {} {}]",
+                equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
+            ).discard();
 
             let view_equip = AsNewMessage::new(&super::equip::View::new(equip.equip_id));
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
+        }
+
+        if options.is_empty() {
+            let embed = CreateEmbed::new()
+                .color(ERROR_EMBED_COLOR)
+                .description("No results for that filter.");
+
+            return create.embed(embed);
         }
 
         let embed = CreateEmbed::new()

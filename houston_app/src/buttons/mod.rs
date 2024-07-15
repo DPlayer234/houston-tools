@@ -205,7 +205,7 @@ pub struct CustomData(Vec<u8>);
 /// Provides a way to convert an object into a component custom ID.
 ///
 /// This is auto-implemented for every type held by [`ButtonArgs`].
-pub trait ToButtonArgsId: Sized {
+pub trait ToButtonArgsId {
     /// Converts this instance to a component custom ID.
     #[must_use]
     fn to_custom_id(&self) -> String {
@@ -252,7 +252,7 @@ pub trait ToButtonArgsId: Sized {
     }
 }
 
-fn field_sentinel_key<S, T>(obj: &S, field: impl FieldMut<S, T>) -> u16 {
+fn field_sentinel_key<S: ?Sized, T>(obj: &S, field: impl FieldMut<S, T>) -> u16 {
     // The value returned here is intended to be unique for a given object.
     // It isn't used in any way other than as a discriminator.
     field.get(obj) as *const T as u16

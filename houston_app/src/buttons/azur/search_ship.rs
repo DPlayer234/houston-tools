@@ -1,5 +1,8 @@
-use azur_lane::ship::*;
+use std::fmt::Write;
+
 use azur_lane::Faction;
+use azur_lane::ship::*;
+use utils::Discard;
 
 use crate::buttons::*;
 
@@ -36,12 +39,22 @@ impl View {
                 break
             }
 
-            desc.push_str("- ");
-            desc.push_str(&ship.name);
-            desc.push('\n');
+            writeln!(
+                desc,
+                "- **{}** [{} {} {}]",
+                ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
+            ).discard();
 
             let view_ship = AsNewMessage::new(&super::ship::View::new(ship.group_id));
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
+        }
+
+        if options.is_empty() {
+            let embed = CreateEmbed::new()
+                .color(ERROR_EMBED_COLOR)
+                .description("No results for that filter.");
+
+            return create.embed(embed);
         }
 
         let embed = CreateEmbed::new()

@@ -16,7 +16,7 @@
 /// utils::text::to_titlecase(&mut s);
 /// assert_eq!(&s, b"Hello New World");
 /// ```
-pub fn to_titlecase<S: MutStrLike>(value: &mut S) {
+pub fn to_titlecase<S: MutStrLike + ?Sized>(value: &mut S) {
     // SAFETY: `to_titlecase_u8` only transforms
     // ASCII characters into other ASCII characters.
     unsafe {
@@ -132,7 +132,7 @@ pub fn truncate(str: impl Into<String>, len: usize) -> String {
 ///
 /// These byte slices do not have to hold UTF8 data, but replacing ASCII codes with other ASCII codes must not invalidate it.
 ///
-/// This exists solely as support [`to_titlecase`].
+/// This exists solely as support for [`to_titlecase`].
 #[doc(hidden)]
 pub unsafe trait MutStrLike {
     #[must_use]
