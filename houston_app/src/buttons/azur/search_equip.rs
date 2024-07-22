@@ -44,7 +44,7 @@ impl View {
                 equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
             ).discard();
 
-            let view_equip = AsNewMessage::new(&super::equip::View::new(equip.equip_id));
+            let view_equip = common::AsNewMessage::new(&super::equip::View::new(equip.equip_id));
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 

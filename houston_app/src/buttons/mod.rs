@@ -6,6 +6,7 @@ use utils::fields::FieldMut;
 pub use crate::prelude::*;
 
 pub mod azur;
+pub mod common;
 
 utils::define_simple_error!(InvalidInteractionError: "Invalid interaction.");
 
@@ -18,8 +19,6 @@ macro_rules! define_button_args {
         /// To serialize it, call [`ButtonArgs::borrow`] first.
         #[derive(Debug, Clone, serde::Deserialize)]
         pub enum ButtonArgs {
-            /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-            None(Sentinel),
             $(
                 $(#[$attr])*
                 $name($Ty),
@@ -31,8 +30,6 @@ macro_rules! define_button_args {
         /// This is borrowed data that can be serialized.
         #[derive(Debug, Clone, Copy, serde::Serialize)]
         pub enum ButtonArgsRef<'a> {
-            /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-            None(&'a Sentinel),
             $(
                 $(#[$attr])*
                 $name(&'a $Ty),
@@ -53,17 +50,10 @@ macro_rules! define_button_args {
             }
         )*
 
-        impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
-            fn from(value: &'a ButtonArgs) -> Self {
-                value.borrow()
-            }
-        }
-
         impl ButtonArgs {
             /// Borrows the inner data.
             pub const fn borrow(&self) -> ButtonArgsRef {
                 match self {
-                    ButtonArgs::None(v) => ButtonArgsRef::None(v),
                     $(
                         ButtonArgs::$name(v) => ButtonArgsRef::$name(v),
                     )*
@@ -74,7 +64,6 @@ macro_rules! define_button_args {
         impl ButtonArgsModify for ButtonArgs {
             fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
                 match self {
-                    ButtonArgs::None(_) => Ok(create),
                     $(
                         ButtonArgs::$name(args) => args.modify(data, create),
                     )*
@@ -85,7 +74,6 @@ macro_rules! define_button_args {
         impl ButtonEventHandler {
             async fn interaction_dispatch_dyn(&self, ctx: &Context, interaction: &ComponentInteraction, args: ButtonArgs) -> HResult {
                 match args {
-                    ButtonArgs::None(_) => Ok(()),
                     $(
                         ButtonArgs::$name(args) => self.interaction_dispatch_to(ctx, interaction, args).await,
                     )*
@@ -96,8 +84,10 @@ macro_rules! define_button_args {
 }
 
 define_button_args! {
+    /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
+    None(common::None),
     /// Creates a new message.
-    AsNewMessage(AsNewMessage),
+    AsNewMessage(common::AsNewMessage),
     /// Open the ship detail view.
     ViewShip(azur::ship::View),
     /// Open the augment detail view.
@@ -114,6 +104,21 @@ define_button_args! {
     ViewEquip(azur::equip::View),
     /// Open the equipment search.
     ViewSearchEquip(azur::search_equip::View),
+}
+
+impl ButtonArgs {
+    /// Constructs button arguments from a component custom ID.
+    #[must_use]
+    pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
+        let bytes = utils::str_as_data::from_b65536(id)?;
+        CustomData(bytes).to_button_args()
+    }
+}
+
+impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
+    fn from(value: &'a ButtonArgs) -> Self {
+        value.borrow()
+    }
 }
 
 /// Event handler for custom button menus.
@@ -186,26 +191,10 @@ impl serenity::client::EventHandler for ButtonEventHandler {
     }
 }
 
-/// A sentinel value that can be used to create unique non-overlapping custom IDs.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Sentinel {
-    pub key: u16,
-    pub value: u16
-}
-
-/// Wraps another [`ButtonArgs`] value and makes it
-/// send a new message rather than using its default behavior.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct AsNewMessage(CustomData);
-
-/// Represents custom data for another menu.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CustomData(Vec<u8>);
-
 /// Provides a way to convert an object into a component custom ID.
 ///
 /// This is auto-implemented for every type held by [`ButtonArgs`].
-pub trait ToButtonArgsId {
+pub trait ToCustomData {
     /// Converts this instance to a component custom ID.
     #[must_use]
     fn to_custom_id(&self) -> String {
@@ -222,7 +211,7 @@ pub trait ToButtonArgsId {
     fn new_button<T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton {
         let disabled = *field.get(self) == value;
         if disabled {
-            let sentinel = Sentinel::new(field_sentinel_key(self, field), sentinel(value));
+            let sentinel = common::None::new(field_sentinel_key(self, field), sentinel(value));
             CreateButton::new(ButtonArgs::None(sentinel).to_custom_id()).disabled(true)
         } else {
             let custom_id = self.to_custom_id_with(field, value);
@@ -258,60 +247,34 @@ fn field_sentinel_key<S: ?Sized, T>(obj: &S, field: impl FieldMut<S, T>) -> u16 
     field.get(obj) as *const T as u16
 }
 
-/// Provides a way for button arguments to modify the create-reply payload.
-pub trait ButtonArgsModify: Sized {
-    /// Modifies the create-reply payload.
-    #[must_use]
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
-
-    fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
-        let edit = create.to_slash_initial_response(Default::default());
-        CreateInteractionResponse::UpdateMessage(edit)
-    }
-}
-
-impl ButtonArgs {
-    /// Constructs button arguments from a component custom ID.
-    #[must_use]
-    pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
-        let bytes = utils::str_as_data::from_b65536(id)?;
-        CustomData(bytes).to_button_args()
-    }
-}
-
-impl<T> ToButtonArgsId for T
+impl<T> ToCustomData for T
 where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
     fn to_custom_data(&self) -> CustomData {
         CustomData::from_button_args(self)
     }
 }
 
-impl Sentinel {
-    /// Create a new sentinel value.
-    pub const fn new(key: u16, value: u16) -> Self {
-        Self { key, value }
-    }
-}
+/// Provides a way for button arguments to modify the create-reply payload.
+pub trait ButtonArgsModify: Sized {
+    /// Modifies the create-reply payload.
+    #[must_use]
+    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
 
-impl AsNewMessage {
-    pub fn new<'a>(value: impl Into<ButtonArgsRef<'a>>) -> Self {
-        Self(CustomData::from_button_args(value))
-    }
-}
-
-impl ButtonArgsModify for AsNewMessage {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let args = self.0.to_button_args()?;
-        args.modify(data, create)
-    }
-
+    #[must_use]
     fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
         let edit = create.to_slash_initial_response(Default::default());
-        CreateInteractionResponse::Message(edit)
+        CreateInteractionResponse::UpdateMessage(edit)
     }
 }
 
+/// Represents custom data for another menu.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CustomData(Vec<u8>);
+
 impl CustomData {
+    /// Gets an empty value.
+    pub const EMPTY: Self = Self(Vec::new());
+
     /// Converts this instance to a component custom ID.
     #[must_use]
     pub fn to_custom_id(&self) -> String {
@@ -332,7 +295,7 @@ impl CustomData {
             Ok(data) => Self(data),
             Err(err) => {
                 println!("Error [{err:?}] serializing: {args:?}");
-                Self(Vec::new())
+                Self::EMPTY
             }
         }
     }

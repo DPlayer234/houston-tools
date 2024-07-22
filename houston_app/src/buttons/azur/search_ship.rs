@@ -45,7 +45,7 @@ impl View {
                 ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             ).discard();
 
-            let view_ship = AsNewMessage::new(&super::ship::View::new(ship.group_id));
+            let view_ship = common::AsNewMessage::new(&super::ship::View::new(ship.group_id));
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
         }
 

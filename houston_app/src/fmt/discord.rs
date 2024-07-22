@@ -1,6 +1,6 @@
 //! Provides utilities for formatting Discord data.
 
-use std::fmt::{Display, Formatter, Result as FmtResult, Write};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 
@@ -51,10 +51,7 @@ impl Display for DisplayResolvedArgs<'_> {
 impl Display for DisplayResolvedOptions<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         for o in self.0 {
-            f.write_str(o.name)?;
-            f.write_char(':')?;
-            DisplayResolvedOption(o).fmt(f)?;
-            f.write_char(' ')?;
+            write!(f, "{}: {} ", o.name, DisplayResolvedOption(o))?;
         }
 
         Ok(())
@@ -64,15 +61,15 @@ impl Display for DisplayResolvedOptions<'_> {
 impl Display for DisplayResolvedOption<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self.0.value {
-            ResolvedValue::Boolean(v) => { write!(f, "{}", v) },
-            ResolvedValue::Integer(v) => { write!(f, "{}", v) },
-            ResolvedValue::Number(v) => { write!(f, "{}", v) },
-            ResolvedValue::String(v) => { f.write_char('"')?; f.write_str(&v)?; f.write_char('"') },
-            ResolvedValue::Attachment(v) => { f.write_str(&v.filename) },
-            ResolvedValue::Channel(v) => { if let Some(ref name) = v.name { f.write_str(name) } else { write!(f, "{}", v.id) } },
-            ResolvedValue::Role(v) => { f.write_str(&v.name) },
-            ResolvedValue::User(v, _) => { f.write_str(&v.name) },
-            _ => { f.write_str("<unknown>") },
+            ResolvedValue::Boolean(v) => write!(f, "{v}"),
+            ResolvedValue::Integer(v) => write!(f, "{v}"),
+            ResolvedValue::Number(v) => write!(f, "{v}"),
+            ResolvedValue::String(v) => write!(f, "\"{v}\""),
+            ResolvedValue::Attachment(v) => f.write_str(&v.filename),
+            ResolvedValue::Channel(v) => match &v.name { Some(name) => f.write_str(name), None => write!(f, "{}", v.id) },
+            ResolvedValue::Role(v) => f.write_str(&v.name),
+            ResolvedValue::User(v, _) => f.write_str(&v.name),
+            _ => f.write_str("<unknown>"),
         }
     }
 }
