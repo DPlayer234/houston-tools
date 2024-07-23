@@ -83,7 +83,7 @@ fn who_user_info(user: &User) -> String {
         }
     }
 
-    builder.build()
+    builder.0
 }
 
 fn who_user_public_flags(user: &User) -> Option<SimpleEmbedFieldCreate> {

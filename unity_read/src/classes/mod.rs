@@ -40,6 +40,7 @@ pub trait UnityClass: Default {
         }
     }
 
+    /// Aligns the reader to the next 4-byte boundary.
     #[doc(hidden)]
     fn align_reader(r: &mut Cursor<&[u8]>) -> anyhow::Result<()> {
         let pos = r.position();
@@ -51,6 +52,7 @@ pub trait UnityClass: Default {
         Ok(())
     }
 
+    /// Skips the object the current reader is at.
     #[doc(hidden)]
     fn skip(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<()> {
         if root.size >= 0 {
@@ -79,7 +81,7 @@ pub trait UnityClass: Default {
             }
         }
 
-        if (root.meta_flags & 0x4000) != 0 {
+        if root.needs_align_after() {
             Self::align_reader(r)?;
         }
 
@@ -223,7 +225,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
 
             let result = Self::parse_tree(r, is_big_endian, next, children)?;
 
-            if (root.meta_flags & 0x4000) != 0 {
+            if root.needs_align_after() {
                 Self::align_reader(r)?;
             }
 
@@ -244,7 +246,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
             result.push(T::parse_tree(r, is_big_endian, next, children)?);
         }
 
-        if (root.meta_flags & 0x4000) != 0 {
+        if root.needs_align_after() {
             Self::align_reader(r)?;
         }
 

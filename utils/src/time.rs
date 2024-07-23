@@ -18,7 +18,7 @@ static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 
 /// Marks the current time as the startup time of the application.
 ///
-/// # SAFETY
+/// # Safety
 ///
 /// This function is unsafe as the underlying memory is static.
 /// This must not be called concurrently with itself or [`get_startup_time`].
@@ -50,10 +50,9 @@ pub trait TimestampMention {
 
 impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
     fn mention(&self, format: Option<char>) -> String {
-        if let Some(format_raw) = format {
-            format!("<t:{}:{}>", self.timestamp(), format_raw).into()
-        } else {
-            format!("<t:{}>", self.timestamp()).into()
+        match format {
+            Some(format) => format!("<t:{}:{}>", self.timestamp(), format).into(),
+            None => format!("<t:{}>", self.timestamp()).into(),
         }
     }
 }

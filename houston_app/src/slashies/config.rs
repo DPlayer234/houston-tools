@@ -33,7 +33,7 @@ async fn config_hide(
     content.push(" to other users.");
 
     let embed = CreateEmbed::new()
-        .description(content.build())
+        .description(content.0)
         .color(DEFAULT_EMBED_COLOR);
 
     ctx.send(ctx.create_ephemeral_reply().embed(embed)).await?;

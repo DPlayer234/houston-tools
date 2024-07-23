@@ -323,6 +323,13 @@ impl<'a> SerializedFile<'a> {
     }
 }
 
+impl TypeTreeNode {
+    /// Whether the reader needs to be aligned after reading this node.
+    pub(crate) fn needs_align_after(&self) -> bool {
+        (self.meta_flags & 0x4000) != 0
+    }
+}
+
 type LocalCursor<'a> = Cursor<&'a [u8]>;
 
 fn align_cursor(cursor: &mut LocalCursor) -> anyhow::Result<()> {

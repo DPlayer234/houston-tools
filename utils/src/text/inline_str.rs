@@ -1,5 +1,5 @@
 /// Represents a [`str`] with a fixed length and ownership semantics.
-/// Essentially, it is to [`&str`](str) what `[T; N]` is to `&[T]`.
+/// Essentially, it is to [`&str`](str) what `[T; LEN]` is to `&[T]`.
 ///
 /// `LEN` represents the size in bytes, using the same semantics as [`str::len`].
 ///
@@ -8,16 +8,19 @@
 /// Generally, [`String`] is more useful but this is can be useful
 /// for working with strings in a const context.
 ///
-// Note: These derives are fine since `str` itself only delegates to `as_bytes`.
-//       `Debug` and `Hash` are manually implemented to delegate to `as_str`.
+// Note: These derives are fine since `str` itself only delegates to `as_bytes` for `Eq` and `Ord`.
+// `Debug` and `Hash` are manually implemented to delegate to `as_str` to give the right `Borrow` semantics.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct InlineStr<const LEN: usize>([u8; LEN]);
+
+crate::define_simple_error!(FromStrError: "length of input does not match result length");
 
 impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].
     ///
     /// This has the same semantics as [`std::str::from_utf8`].
+    #[must_use]
     pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, std::str::Utf8Error> {
         match std::str::from_utf8(&bytes) {
             Ok(..) => Ok(unsafe {
@@ -35,17 +38,39 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// # Safety
     ///
     /// All bytes passed in must be valid UTF-8.
+    #[must_use]
     pub const unsafe fn from_utf8_unchecked(bytes: [u8; LEN]) -> Self {
         // SAFETY: Caller has to ensure the bytes are valid UTF-8
         Self(bytes)
     }
 
+    /// Creates a reference to an [`InlineStr`] from a [`&str`](str).
+    /// The returned reference points to the same memory.
+    ///
+    /// Returns an error if the length does not match.
+    #[must_use]
+    pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
+        let slice = str.as_bytes();
+        if slice.len() == LEN {
+            let slice: &[u8; LEN] = crate::mem::with_size(slice);
+
+            Ok(unsafe {
+                // SAFETY: InlineStr<LEN> is a transparent wrapper around [u8; LEN].
+                std::mem::transmute(slice)
+            })
+        } else {
+            Err(FromStrError)
+        }
+    }
+
     /// Always returns `LEN`.
+    #[must_use]
     pub const fn len(&self) -> usize {
         LEN
     }
 
     /// Converts this value to a [`str`] slice.
+    #[must_use]
     pub const fn as_str(&self) -> &str {
         unsafe {
             // SAFETY: Only constructed with valid UTF-8
@@ -54,6 +79,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     }
 
     /// Converts this value to a mutable [`str`] slice.
+    #[must_use]
     pub fn as_mut_str(&mut self) -> &mut str {
         unsafe {
             // SAFETY: Only constructed with valid UTF-8
@@ -62,6 +88,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     }
 
     /// Converts a string to a byte array.
+    #[must_use]
     pub const fn as_bytes(&self) -> &[u8; LEN] {
         &self.0
     }
@@ -74,14 +101,21 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// and the underlying data is used as a [`str`].
     ///
     /// Also refer to [`str::as_bytes_mut`].
+    #[must_use]
     pub unsafe fn as_bytes_mut(&mut self) -> &mut [u8; LEN] {
         &mut self.0
     }
-}
 
-impl Default for InlineStr<0> {
-    fn default() -> Self {
-        Self([])
+    /// Joins two fixed-size strings into a new fixed-size string.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the FINAL length doesn't match the total length of the inputs.
+    /// This will happen at compile time rather than runtime.
+    #[must_use]
+    pub const fn join<const OTHER: usize, const FINAL: usize>(self, other: InlineStr<OTHER>) -> InlineStr<FINAL> {
+        const { assert!(LEN + OTHER == FINAL, "length of inputs doesn't match result length"); }
+        super::__private::join_str_const(&[self.as_str(), other.as_str()])
     }
 }
 
@@ -126,5 +160,19 @@ impl<const LEN: usize> std::fmt::Debug for InlineStr<LEN> {
 impl<const LEN: usize> std::hash::Hash for InlineStr<LEN> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::hash::Hash::hash(self.as_str(), state)
+    }
+}
+
+impl<'a, const LEN: usize> From<&'a InlineStr<LEN>> for &'a str {
+    fn from(value: &'a InlineStr<LEN>) -> Self {
+        value.as_str()
+    }
+}
+
+impl<'a, const LEN: usize> TryFrom<&'a str> for &'a InlineStr<LEN> {
+    type Error = FromStrError;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        InlineStr::from_str(value)
     }
 }

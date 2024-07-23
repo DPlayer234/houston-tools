@@ -112,6 +112,10 @@ macro_rules! titlecase {
 /// ```
 #[macro_export]
 macro_rules! join {
+    ($str:expr) => {{
+        const STR: &str = $str;
+        STR
+    }};
     ($($str:expr),*) => {{
         const STRS: &[&str] = &[$($str),*];
         const N: usize = $crate::text::__private::count_str_const(STRS);
