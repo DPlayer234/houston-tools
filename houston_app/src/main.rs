@@ -1,5 +1,6 @@
 use std::num::NonZero;
 use std::sync::Arc;
+use std::time::Instant;
 
 use serenity::model::prelude::*;
 use serenity::prelude::*;
@@ -14,6 +15,8 @@ mod poise_command_builder;
 
 use data::*;
 
+type HFramework = poise::framework::Framework<Arc<HBotData>, HError>;
+
 #[tokio::main]
 async fn main() {
     let config = build_config();
@@ -24,23 +27,14 @@ async fn main() {
 
     println!("Starting...");
 
-    let start = std::time::Instant::now();
+    let start = Instant::now();
     let bot_data = Arc::new(HBotData::new(config.bot));
 
-    let loader = tokio::task::spawn({
-        let bot_data = Arc::clone(&bot_data);
-        async move {
-            if bot_data.config().azur_lane_data.is_some() {
-                println!("Loading Azur Lane data...");
-                bot_data.force_init();
-                println!("Loaded Azur Lane data. ({:.2?})", start.elapsed());
-            } else {
-                println!("Disabled Azur Lane module.");
-            }
-        }
-    });
+    let loader = tokio::task::spawn(
+        load_azur_lane(Arc::clone(&bot_data), start)
+    );
 
-    let framework = poise::Framework::builder()
+    let framework = HFramework::builder()
         .options(poise::FrameworkOptions {
             commands: slashies::get_commands(bot_data.config()),
             pre_command: |ctx| Box::pin(slashies::pre_command(ctx)),
@@ -49,16 +43,14 @@ async fn main() {
         })
         .setup({
             let bot_data = Arc::clone(&bot_data);
-            move |ctx, ready, framework| {
-                Box::pin(async move {
-                    create_commands(ctx, framework).await?;
+            move |ctx, ready, framework| Box::pin(async move {
+                create_commands(ctx, framework).await?;
 
-                    let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
-                    println!("Logged in as: {}#{:04} ({:.2?})", ready.user.name, discriminator, start.elapsed());
+                let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
+                println!("Logged in as: {}#{:04} ({:.2?})", ready.user.name, discriminator, start.elapsed());
 
-                    Ok(bot_data)
-                })
-            }
+                Ok(bot_data)
+            })
         })
         .build();
 
@@ -71,13 +63,24 @@ async fn main() {
     loader.await.unwrap();
 }
 
-async fn create_commands(ctx: &Context, framework: &poise::framework::Framework<Arc<HBotData>, HError>) -> HResult {
+async fn create_commands(ctx: &Context, framework: &HFramework) -> HResult {
     let cmds = poise_command_builder::build_commands(&framework.options().commands);
-    let res = ctx.http().create_global_commands(&cmds).await;
-    if res.is_err() { println!("{res:?}"); }
-    res?;
+    if let Err(err) = ctx.http().create_global_commands(&cmds).await {
+        println!("{err:?}");
+        return Err(err.into());
+    }
 
     Ok(())
+}
+
+async fn load_azur_lane(bot_data: Arc<HBotData>, start: Instant) {
+    if bot_data.config().azur_lane_data.is_some() {
+        println!("Loading Azur Lane data...");
+        bot_data.force_init();
+        println!("Loaded Azur Lane data. ({:.2?})", start.elapsed());
+    } else {
+        println!("Disabled Azur Lane module.");
+    }
 }
 
 fn build_config() -> config::HConfig {

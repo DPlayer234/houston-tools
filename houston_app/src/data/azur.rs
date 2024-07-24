@@ -3,44 +3,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
-use poise::reply::CreateReply;
-use serenity::all::{Color, UserId};
 use simsearch::SimSearch;
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-
-use crate::config::HBotConfig;
-
-/// A general color that can be used for various embeds.
-pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
-
-/// A general color that can be used for embeds indicating errors.
-pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
-
-/// The error type used for the poise context.
-pub type HError = anyhow::Error;
-/// The full poise context type.
-pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
-/// The poise command result type.
-pub type HResult = Result<(), HError>;
-
-/// The global bot data. Only one instance exists per bot.
-pub struct HBotData {
-    /// The bot configuration.
-    config: HBotConfig,
-    /// A concurrent hash map to user data.
-    user_data: DashMap<UserId, HUserData>,
-    /// Lazily initialized Azur Lane data.
-    azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>
-}
-
-/// User-specific data.
-#[derive(Debug, Clone)]
-pub struct HUserData {
-    pub ephemeral: bool
-}
 
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug, Default)]
@@ -58,118 +24,9 @@ pub struct HAzurLane {
     chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
 }
 
-/// A simple error that can return any error message.
-#[derive(Debug, Clone)]
-pub struct HArgError(
-    /// The error message
-    pub &'static str
-);
-
-impl std::error::Error for HArgError {}
-
-impl std::fmt::Display for HArgError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.0)
-    }
-}
-
-impl std::fmt::Debug for HBotData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct(stringify!(HBotData)).finish()
-    }
-}
-
-impl HBotData {
-    /// Creates a new instance.
-    pub fn new(config: HBotConfig) -> Self {
-        let data_path = config.azur_lane_data.clone();
-        HBotData {
-            config,
-            user_data: DashMap::new(),
-            azur_lane: Lazy::new(match data_path {
-                Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
-                None => Box::new(HAzurLane::default),
-            })
-        }
-    }
-
-    /// Forces initialization of held lazy data.
-    pub fn force_init(&self) {
-        let _ = self.azur_lane();
-    }
-
-    pub fn config(&self) -> &HBotConfig {
-        &self.config
-    }
-
-    /// Gets a copy of the user data for the specified user.
-    pub fn get_user_data(&self, user_id: UserId) -> HUserData {
-        match self.user_data.get(&user_id) {
-            None => HUserData::default(),
-            Some(guard) => guard.clone()
-        }
-    }
-
-    /// Replaces the user data for the specified user.
-    pub fn set_user_data(&self, user_id: UserId, data: HUserData) {
-        self.user_data.insert(user_id, data);
-    }
-
-    /// Gets the Azur Lane game data.
-    pub fn azur_lane(&self) -> &HAzurLane {
-        Lazy::force(&self.azur_lane)
-    }
-}
-
-impl Default for HUserData {
-    fn default() -> Self {
-        HUserData {
-            ephemeral: true
-        }
-    }
-}
-
-impl HUserData {
-    /// Creates a reply matching the user data.
-    pub fn create_reply(&self) -> CreateReply {
-        CreateReply::default()
-            .ephemeral(self.ephemeral)
-    }
-}
-
-/// Extension trait for the poise context.
-pub trait HContextExtensions {
-    /// Gets a copy of the user data for the current user.
-    fn get_user_data(&self) -> HUserData;
-    /// Replaces the user data for the current user.
-    fn set_user_data(&self, data: HUserData);
-    /// Creates a reply matching the user data.
-    fn create_reply(&self) -> CreateReply;
-    /// Always creates an ephemeral reply.
-    fn create_ephemeral_reply(&self) -> CreateReply;
-}
-
-impl HContextExtensions for HContext<'_> {
-    fn get_user_data(&self) -> HUserData {
-        self.data().get_user_data(self.author().id)
-    }
-
-    fn set_user_data(&self, data: HUserData) {
-        self.data().set_user_data(self.author().id, data)
-    }
-
-    fn create_reply(&self) -> CreateReply {
-        self.get_user_data().create_reply()
-    }
-
-    fn create_ephemeral_reply(&self) -> CreateReply {
-        CreateReply::default().ephemeral(true)
-    }
-}
-
 impl HAzurLane {
     /// Constructs extended data from definitions.
-    fn load_from(data_path: PathBuf) -> Self {
+    pub fn load_from(data_path: PathBuf) -> Self {
         let data = Self::load_definitions(&data_path).unwrap_or_else(|err| {
             eprintln!("No Azur Lane data: {err}");
             Default::default()

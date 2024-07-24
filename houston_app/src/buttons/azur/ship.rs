@@ -249,7 +249,7 @@ impl View {
 
         for mount in &ship.shadow_equip {
             if !text.is_empty() { text.push('\n'); }
-            write!(text, "**`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name).discard();
+            write!(text, "-# **`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name).discard();
         }
 
         [("Equipment", text, false)]
