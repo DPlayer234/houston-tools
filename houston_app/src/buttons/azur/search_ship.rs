@@ -28,7 +28,7 @@ impl View {
         View { page: 0, filter }
     }
 
-    pub fn modify_with_iter<'a>(mut self, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
+    pub fn modify_with_iter<'a>(mut self, data: &HBotData, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
         let mut desc = String::new();
         let mut options = Vec::new();
         let mut has_next = false;
@@ -41,8 +41,8 @@ impl View {
 
             writeln!(
                 desc,
-                "- **{}** [{} {} {}]",
-                ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
+                "- {} **{}** [{} {} {}]",
+                data.app_emojis().hull(ship.hull_type), ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             ).discard();
 
             let view_ship = common::AsNewMessage::new(&super::ship::View::new(ship.group_id));
@@ -94,7 +94,7 @@ impl ButtonArgsModify for View {
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        Ok(self.modify_with_iter(create, filtered))
+        Ok(self.modify_with_iter(data, create, filtered))
     }
 }
 

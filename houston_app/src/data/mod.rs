@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 use poise::reply::CreateReply;
-use serenity::all::{Color, UserId};
+use serenity::all::{Color, Http, UserId};
 
+mod app_emojis;
 mod azur;
 
 use crate::config::HBotConfig;
@@ -20,18 +21,21 @@ pub type HError = anyhow::Error;
 /// The full poise context type.
 pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
 /// The poise command result type.
-pub type HResult = Result<(), HError>;
+pub type HResult<T = ()> = Result<T, HError>;
 
 pub use azur::HAzurLane;
+pub use app_emojis::HAppEmojis;
 
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
     /// The bot configuration.
     config: HBotConfig,
+    /// The loaded application emojis.
+    app_emojis: OnceCell<app_emojis::HAppEmojiStore>,
     /// A concurrent hash map to user data.
     user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
-    azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>
+    azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
 }
 
 /// User-specific data.
@@ -67,6 +71,7 @@ impl HBotData {
         let data_path = config.azur_lane_data.clone();
         HBotData {
             config,
+            app_emojis: OnceCell::new(),
             user_data: DashMap::new(),
             azur_lane: Lazy::new(match data_path {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
@@ -82,6 +87,18 @@ impl HBotData {
 
     pub fn config(&self) -> &HBotConfig {
         &self.config
+    }
+
+    pub fn app_emojis(&self) -> HAppEmojis {
+        HAppEmojis(self.app_emojis.get())
+    }
+
+    pub async fn load_app_emojis(&self, ctx: &Http) -> HResult {
+        if self.app_emojis.get().is_none() {
+            let _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(ctx).await?);
+        }
+
+        Ok(())
     }
 
     /// Gets a copy of the user data for the specified user.

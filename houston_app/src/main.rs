@@ -45,6 +45,7 @@ async fn main() {
             let bot_data = Arc::clone(&bot_data);
             move |ctx, ready, framework| Box::pin(async move {
                 create_commands(ctx, framework).await?;
+                bot_data.load_app_emojis(ctx.http()).await?;
 
                 let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
                 println!("Logged in as: {}#{:04} ({:.2?})", ready.user.name, discriminator, start.elapsed());

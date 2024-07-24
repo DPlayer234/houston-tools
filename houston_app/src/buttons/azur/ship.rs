@@ -35,8 +35,9 @@ impl View {
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
-            "[{}] {:★<star_pad$}\n[{}] {} {}",
-            ship.rarity.name(), '★', ship.hull_type.designation(), ship.faction.name(), ship.hull_type.name(),
+            "[{}] {:★<star_pad$}\n{} {} {}",
+            ship.rarity.name(), '★',
+            data.app_emojis().hull(ship.hull_type), ship.faction.name(), ship.hull_type.name(),
             star_pad = usize::from(ship.stars)
         );
 
@@ -297,15 +298,15 @@ fn to_equip_slot_display(kind: EquipKind) -> &'static str {
     use config::azur_lane::equip::*;
 
     match kind {
-        EquipKind::DestroyerGun => join!("[DD](", DD_GUN_LIST_URL, ")"),
-        EquipKind::LightCruiserGun => join!("[CL](", CL_GUN_LIST_URL, ")"),
-        EquipKind::HeavyCruiserGun => join!("[CA](", CA_GUN_LIST_URL, ")"),
-        EquipKind::LargeCruiserGun => join!("[CB](", CB_GUN_LIST_URL, ")"),
-        EquipKind::BattleshipGun => join!("[BB](", BB_GUN_LIST_URL, ")"),
+        EquipKind::DestroyerGun => join!("[DD Gun](", DD_GUN_LIST_URL, ")"),
+        EquipKind::LightCruiserGun => join!("[CL Gun](", CL_GUN_LIST_URL, ")"),
+        EquipKind::HeavyCruiserGun => join!("[CA Gun](", CA_GUN_LIST_URL, ")"),
+        EquipKind::LargeCruiserGun => join!("[CB Gun](", CB_GUN_LIST_URL, ")"),
+        EquipKind::BattleshipGun => join!("[BB Gun](", BB_GUN_LIST_URL, ")"),
         EquipKind::SurfaceTorpedo => join!("[Torpedo](", SURFACE_TORPEDO_LIST_URL, ")"),
         EquipKind::SubmarineTorpedo => join!("[Torpedo](", SUB_TORPEDO_LIST_URL, ")"),
-        EquipKind::AntiAirGun => join!("[AA](", AA_GUN_LIST_URL, ")"),
-        EquipKind::FuzeAntiAirGun => join!("[AA (Fuze)](", FUZE_AA_GUN_LIST_URL, ")"),
+        EquipKind::AntiAirGun => join!("[AA Gun](", AA_GUN_LIST_URL, ")"),
+        EquipKind::FuzeAntiAirGun => join!("[AA Gun (Fuze)](", FUZE_AA_GUN_LIST_URL, ")"),
         EquipKind::Fighter => join!("[Fighter](", FIGHTER_LIST_URL, ")"),
         EquipKind::DiveBomber => join!("[Dive Bomber](", DIVE_BOMBER_LIST_URL, ")"),
         EquipKind::TorpedoBomber => join!("[Torpedo Bomber](", TORPEDO_BOMBER_LIST_URL, ")"),
