@@ -1,20 +1,14 @@
 use azur_lane::ship::HullType;
 use once_cell::sync::Lazy;
-use serenity::all::{Http, EmojiIdentifier, ReactionType};
-use crate::prelude::*;
+use serenity::all::{Http, ReactionType};
 
-async fn update_emoji(_ctx: &Http, _image_data: &[u8]) -> HResult<ReactionType> {
-    // todo: update for app
-    Ok(DEFAULT_REACTION_TYPE.clone())
-}
-
-static DEFAULT_REACTION_TYPE: Lazy<ReactionType> = Lazy::new(|| ReactionType::from('❔'));
+use super::HBotConfig;
 
 macro_rules! generate {
-    ($($emoji:ident),* $(,)?) => {
+    ({ $($key:ident = $name:literal $(if $condition:path)?;)* }) => {
         #[derive(Debug)]
         pub struct HAppEmojiStore {
-            $(pub $emoji: ReactionType,)*
+            $(pub $key: ReactionType,)*
         }
 
         #[derive(Debug, Clone, Copy)]
@@ -24,44 +18,40 @@ macro_rules! generate {
         impl<'a> HAppEmojis<'a> {
             $(
                 #[must_use]
-                pub fn $emoji(self) -> &'a ReactionType {
+                pub fn $key(self) -> &'a ReactionType {
                     match self.0 {
-                        Some(e) => &e.$emoji,
-                        None => &*DEFAULT_REACTION_TYPE
+                        Some(e) => &e.$key,
+                        None => &*FALLBACK_EMOJI
                     }
                 }
             )*
         }
 
         impl HAppEmojiStore {
-            pub async fn load_and_update(ctx: &Http) -> HResult<HAppEmojiStore> {
-                // todo: request from context
-                let emojis: Vec<EmojiIdentifier> = vec![
-                    "<:hull_dd:1265681972139659449>".parse()?
-                ];
+            pub async fn load_and_update(config: &HBotConfig, ctx: &Http) -> anyhow::Result<HAppEmojiStore> {
+                let emojis = load_emojis(ctx).await?;
 
                 struct Temp {
-                    $($emoji: Option<ReactionType>,)*
+                    $($key: Option<ReactionType>,)*
                 }
 
                 let mut exist = Temp {
-                    $($emoji: None,)*
+                    $($key: None,)*
                 };
 
                 for emoji in emojis {
                     match emoji.name.as_str() {
-                        $(stringify!($emoji) => exist.$emoji = Some(emoji.into()),)*
+                        $($name => exist.$key = Some(emoji.into()),)*
                         _ => (),
                     }
                 }
 
                 Ok(Self {
                     $(
-                        $emoji: match exist.$emoji {
+                        $key: match exist.$key {
                             Some(e) => e,
-                            // todo: actual include should be:
-                            // include_bytes!(concat!("../../assets/", stringify!($emoji), ".png"))
-                            None => update_emoji(ctx, b"todo").await?
+                            $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
+                            None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $name, ".png"))).await?,
                         },
                     )*
                 })
@@ -70,39 +60,100 @@ macro_rules! generate {
     };
 }
 
-generate!(
-    hull_dd,
-    hull_cl,
-    hull_ca,
-    hull_bb,
-    hull_cvl,
-    hull_cv,
-    hull_ss,
-    hull_bbv,
-    hull_ar,
-    hull_bm,
-    hull_ssv,
-    hull_cb,
-    hull_ae,
-    hull_ddgv,
-    hull_ddgm,
-    hull_ixs,
-    hull_ixv,
-    hull_ixm,
-);
+fn azur(config: &HBotConfig) -> bool {
+    config.azur_lane_data.is_some()
+}
+
+generate!({
+    hull_dd   = "Hull_DD"   if azur;
+    hull_cl   = "Hull_CL"   if azur;
+    hull_ca   = "Hull_CA"   if azur;
+    hull_bc   = "Hull_BC"   if azur;
+    hull_bb   = "Hull_BB"   if azur;
+    hull_cvl  = "Hull_CVL"  if azur;
+    hull_cv   = "Hull_CV"   if azur;
+    hull_ss   = "Hull_SS"   if azur;
+    hull_bbv  = "Hull_BBV"  if azur;
+    hull_ar   = "Hull_AR"   if azur;
+    hull_bm   = "Hull_BM"   if azur;
+    hull_ssv  = "Hull_SSV"  if azur;
+    hull_cb   = "Hull_CB"   if azur;
+    hull_ae   = "Hull_AE"   if azur;
+    hull_ddgv = "Hull_DDGv" if azur;
+    hull_ddgm = "Hull_DDGm" if azur;
+    hull_ixs  = "Hull_IXs"  if azur;
+    hull_ixv  = "Hull_IXv"  if azur;
+    hull_ixm  = "Hull_IXm"  if azur;
+});
+
+static FALLBACK_EMOJI: Lazy<ReactionType> = Lazy::new(|| ReactionType::from('❔'));
+
+async fn load_emojis(_ctx: &Http) -> anyhow::Result<Vec<EmojiTemp>> {
+    // todo: request from context
+    macro_rules! make {
+        ($name:literal, $id:literal) => { EmojiTemp {
+            id: $id,
+            name: $name.to_owned(),
+        } };
+    }
+
+    Ok(vec![
+        make!("Hull_AE", 1265947482756481074),
+        make!("Hull_AR", 1265947498216685581),
+        make!("Hull_BB", 1265947510610989057),
+        make!("Hull_BBV", 1265947521558122519),
+        make!("Hull_BC", 1265947532480217171),
+        make!("Hull_BM", 1265947543397732433),
+        make!("Hull_CA", 1265947555150168114),
+        make!("Hull_CB", 1265947565552042035),
+        make!("Hull_CL", 1265947576251977789),
+        make!("Hull_CV", 1265947588075458611),
+        make!("Hull_CVL", 1265947599194816585),
+        make!("Hull_DD", 1265947608384278590),
+        make!("Hull_DDGm", 1265947617884635147),
+        make!("Hull_DDGv", 1265947630853292072),
+        make!("Hull_IXm", 1265947646967676999),
+        make!("Hull_IXs", 1265947656530694196),
+        make!("Hull_IXv", 1265947665338728449),
+        make!("Hull_SS", 1265947673832325164),
+        make!("Hull_SSV", 1265947682787037245),
+    ])
+}
+
+// temp: has minimum required contract for `generate`
+// to be removed when serenity supports requesting app emojis
+struct EmojiTemp {
+    id: u64,
+    name: String,
+}
+
+impl EmojiTemp {
+    fn into(self) -> ReactionType {
+        ReactionType::Custom {
+            animated: false,
+            id: self.id.into(),
+            name: Some(self.name)
+        }
+    }
+}
+
+async fn update_emoji(_ctx: &Http, _name: &str, _image_data: &[u8]) -> anyhow::Result<ReactionType> {
+    // todo: update for app
+    Ok(FALLBACK_EMOJI.clone())
+}
 
 impl<'a> HAppEmojis<'a> {
     pub fn hull(self, hull_type: HullType) -> &'a ReactionType {
         let Some(s) = self.0 else {
-            return &*DEFAULT_REACTION_TYPE
+            return &FALLBACK_EMOJI
         };
 
         match hull_type {
-            HullType::Unknown => &*DEFAULT_REACTION_TYPE,
+            HullType::Unknown => &FALLBACK_EMOJI,
             HullType::Destroyer => &s.hull_dd,
             HullType::LightCruiser => &s.hull_cl,
             HullType::HeavyCruiser => &s.hull_ca,
-            HullType::Battlecruiser => &s.hull_cb,
+            HullType::Battlecruiser => &s.hull_bc,
             HullType::Battleship => &s.hull_bb,
             HullType::LightCarrier => &s.hull_cvl,
             HullType::AircraftCarrier => &s.hull_cv,

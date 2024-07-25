@@ -21,7 +21,7 @@ pub type HError = anyhow::Error;
 /// The full poise context type.
 pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
 /// The poise command result type.
-pub type HResult<T = ()> = Result<T, HError>;
+pub type HResult = Result<(), HError>;
 
 pub use azur::HAzurLane;
 pub use app_emojis::HAppEmojis;
@@ -95,7 +95,7 @@ impl HBotData {
 
     pub async fn load_app_emojis(&self, ctx: &Http) -> HResult {
         if self.app_emojis.get().is_none() {
-            let _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(ctx).await?);
+            let _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
         }
 
         Ok(())
@@ -116,7 +116,7 @@ impl HBotData {
 
     /// Gets the Azur Lane game data.
     pub fn azur_lane(&self) -> &HAzurLane {
-        Lazy::force(&self.azur_lane)
+        &self.azur_lane
     }
 }
 
