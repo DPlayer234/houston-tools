@@ -46,12 +46,7 @@ impl HAzurLane {
 
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
-            ship_simsearch.insert_tokens(index, &[
-                &data.name,
-                data.faction.name(), data.faction.prefix().unwrap_or("EX"),
-                data.hull_type.name(), data.hull_type.designation(),
-                data.rarity.name()
-            ]);
+            ship_simsearch.insert(index, &data.name);
         }
 
         for (index, data) in data.equips.iter().enumerate() {
