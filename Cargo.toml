@@ -11,3 +11,6 @@ resolver = "1"
 [profile.release]
 lto = true
 panic = 'abort'
+
+[patch.crates-io]
+serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "c7540cd3ee97662a7494516ce58a26c83fcf9419" }

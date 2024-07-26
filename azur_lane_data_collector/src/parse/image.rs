@@ -10,7 +10,6 @@ use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 // - tex: full sprite, background 1:1
 // - n_tex: full sprite, no background 0/1:1
 
-#[must_use]
 pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
     let name = name.to_ascii_lowercase();
     let Ok(mut file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {

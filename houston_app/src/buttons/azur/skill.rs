@@ -119,7 +119,7 @@ impl View {
         for weapon in &skill.new_weapons {
             fields.push((
                 format!("__{}__", weapon.name.as_deref().unwrap_or("Special Weapon")),
-                crate::fmt::azur::WeaponFormat::new(weapon).to_string(),
+                crate::fmt::azur::DisplayWeapon::new(weapon).to_string(),
                 true
             ))
         }

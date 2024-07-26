@@ -349,35 +349,32 @@ impl ShipStat {
 
     /// Sets the base value, aka the level 1 stats.
     #[must_use]
-    pub const fn set_base(mut self, base: f64) -> Self {
+    pub const fn with_base(mut self, base: f64) -> Self {
         self.0 = base;
         self
     }
 
     /// Sets the level growth value.
     #[must_use]
-    pub const fn set_growth(mut self, growth: f64) -> Self {
+    pub const fn with_growth(mut self, growth: f64) -> Self {
         self.1 = growth;
         self
     }
 
     /// Sets the fixed addition unaffected by affinity.
     #[must_use]
-    pub const fn set_fixed(mut self, fixed: f64) -> Self {
+    pub const fn with_fixed(mut self, fixed: f64) -> Self {
         self.2 = fixed;
         self
     }
 
     /// The base value, aka the level 1 stats.
-    #[must_use]
     pub const fn base(&self) -> f64 { self.0 }
 
     /// The level growth value.
-    #[must_use]
     pub const fn growth(&self) -> f64 { self.1 }
 
     /// A fixed addition unaffected by affinity.
-    #[must_use]
     pub const fn fixed(&self) -> f64 { self.2 }
 
     /// Calculates the actual value.
@@ -417,20 +414,18 @@ impl ShipMainScreenLine {
     }
 
     /// Gets the index for the line. Relevant for replacement.
-    #[must_use]
     pub fn index(&self) -> usize {
         self.0
     }
 
     /// Gets the text associated with the line.
-    #[must_use]
     pub fn text(&self) -> &str {
         &self.1
     }
 
     /// Sets the index for the line.
     #[must_use]
-    pub fn set_index(self, index: usize) -> Self {
+    pub fn with_index(self, index: usize) -> Self {
         Self(index, self.1)
     }
 }

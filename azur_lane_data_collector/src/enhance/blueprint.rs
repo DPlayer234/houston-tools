@@ -9,7 +9,7 @@ use crate::parse;
 ///
 /// This refers to a single enhance/fate simulation level.
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n * 0.01) }
+    fn b(n: f64) -> ShipStat { ShipStat::new().with_base(n * 0.01) }
 
     let effect: LuaTable = table.get("effect")?;
     ship.stats.fp += b(effect.get(1)?);

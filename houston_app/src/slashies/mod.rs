@@ -34,11 +34,11 @@ pub async fn pre_command(ctx: HContext<'_>) {
     println!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
         HContext::Application(ctx) => {
             ctx.interaction.data.target()
-                .map(DisplayResolvedArgs::from_target)
-                .unwrap_or_else(|| DisplayResolvedArgs::from_options(ctx.args))
+                .map(DisplayResolvedArgs::Target)
+                .unwrap_or_else(|| DisplayResolvedArgs::Options(ctx.args))
         },
         HContext::Prefix(ctx) => {
-            DisplayResolvedArgs::from_str(ctx.args)
+            DisplayResolvedArgs::String(ctx.args)
         }
     })
 }

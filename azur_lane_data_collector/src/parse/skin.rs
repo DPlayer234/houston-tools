@@ -90,7 +90,7 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
 
     main_screen.extend(
         to_main_screen(get!("main_extra").as_deref())
-            .map(|line| { let index = line.index(); line.set_index(index + base.main_screen.len()) })
+            .map(|line| { let index = line.index(); line.with_index(index + base.main_screen.len()) })
     );
 
     Ok(ShipSkinWords {

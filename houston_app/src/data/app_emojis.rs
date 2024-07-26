@@ -1,6 +1,6 @@
 use azur_lane::ship::HullType;
 use once_cell::sync::Lazy;
-use serenity::all::{Http, ReactionType};
+use serenity::all::{Emoji, Http, ReactionType};
 
 use super::HBotConfig;
 
@@ -88,61 +88,35 @@ generate!({
 
 static FALLBACK_EMOJI: Lazy<ReactionType> = Lazy::new(|| ReactionType::from('❔'));
 
-async fn load_emojis(_ctx: &Http) -> anyhow::Result<Vec<EmojiTemp>> {
-    // todo: request from context
-    macro_rules! make {
-        ($name:literal, $id:literal) => { EmojiTemp {
-            id: $id,
-            name: $name.to_owned(),
-        } };
-    }
-
-    Ok(vec![
-        make!("Hull_AE", 1265947482756481074),
-        make!("Hull_AR", 1265947498216685581),
-        make!("Hull_BB", 1265947510610989057),
-        make!("Hull_BBV", 1265947521558122519),
-        make!("Hull_BC", 1265947532480217171),
-        make!("Hull_BM", 1265947543397732433),
-        make!("Hull_CA", 1265947555150168114),
-        make!("Hull_CB", 1265947565552042035),
-        make!("Hull_CL", 1265947576251977789),
-        make!("Hull_CV", 1265947588075458611),
-        make!("Hull_CVL", 1265947599194816585),
-        make!("Hull_DD", 1265947608384278590),
-        make!("Hull_DDGm", 1265947617884635147),
-        make!("Hull_DDGv", 1265947630853292072),
-        make!("Hull_IXm", 1265947646967676999),
-        make!("Hull_IXs", 1265947656530694196),
-        make!("Hull_IXv", 1265947665338728449),
-        make!("Hull_SS", 1265947673832325164),
-        make!("Hull_SSV", 1265947682787037245),
-    ])
+async fn load_emojis(ctx: &Http) -> anyhow::Result<Vec<Emoji>> {
+    Ok(ctx.get_application_emojis().await?)
 }
 
-// temp: has minimum required contract for `generate`
-// to be removed when serenity supports requesting app emojis
-struct EmojiTemp {
-    id: u64,
-    name: String,
+#[inline(never)]
+async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> anyhow::Result<ReactionType> {
+    let map = serenity::json::json!({
+        "name": name,
+        "image": png_to_data_url(image_data),
+    });
+
+    let emoji = ctx.create_application_emoji(&map).await?;
+
+    println!("Added Application Emoji: {}", emoji);
+    Ok(emoji.into())
 }
 
-impl EmojiTemp {
-    fn into(self) -> ReactionType {
-        ReactionType::Custom {
-            animated: false,
-            id: self.id.into(),
-            name: Some(self.name)
-        }
-    }
-}
+fn png_to_data_url(png: &[u8]) -> String {
+    use base64::prelude::*;
 
-async fn update_emoji(_ctx: &Http, _name: &str, _image_data: &[u8]) -> anyhow::Result<ReactionType> {
-    // todo: update for app
-    Ok(FALLBACK_EMOJI.clone())
+    let mut res = String::new();
+    res.push_str("data:image/png;base64,");
+    BASE64_STANDARD.encode_string(png, &mut res);
+
+    res
 }
 
 impl<'a> HAppEmojis<'a> {
+    #[must_use]
     pub fn hull(self, hull_type: HullType) -> &'a ReactionType {
         let Some(s) = self.0 else {
             return &FALLBACK_EMOJI

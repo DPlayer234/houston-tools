@@ -34,7 +34,7 @@ impl View {
 
             let mut value = String::new();
             for weapon in &mount.weapons {
-                write!(value, "{}\n\n", crate::fmt::azur::WeaponFormat::new(weapon)).discard();
+                write!(value, "{}\n\n", crate::fmt::azur::DisplayWeapon::new(weapon)).discard();
             }
 
             embed = embed.field(

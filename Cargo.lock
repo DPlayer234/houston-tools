@@ -911,6 +911,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "azur_lane",
+ "base64 0.22.1",
  "chrono",
  "config",
  "dashmap",
@@ -1977,8 +1978,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "880a04106592d0a8f5bdacb1d935889bfbccb4a14f7074984d9cd857235d34ac"
+source = "git+https://github.com/serenity-rs/serenity.git?rev=c7540cd3ee97662a7494516ce58a26c83fcf9419#c7540cd3ee97662a7494516ce58a26c83fcf9419"
 dependencies = [
  "arrayvec",
  "async-trait",

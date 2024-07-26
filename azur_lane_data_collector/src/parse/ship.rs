@@ -24,8 +24,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     macro_rules! get_stat {
         ($index:literal) => {{
             ShipStat::new()
-                .set_base(attrs.get($index)?)
-                .set_growth(attrs_growth.get($index)?)
+                .with_base(attrs.get($index)?)
+                .with_growth(attrs_growth.get($index)?)
         }};
     }
 
@@ -141,7 +141,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             // ship_data_strengthen
             ship.enhance_kind = EnhanceKind::Normal;
 
-            fn b(n: f64) -> ShipStat { ShipStat::new().set_base(n) }
+            fn b(n: f64) -> ShipStat { ShipStat::new().with_base(n) }
 
             // Up the base value. This makes stat calc below level 100 inaccurate
             // but I don't really care about that.

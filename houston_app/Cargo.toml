@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+base64 = "0.22.1"
 chrono = "0.4.38"
 dashmap = "5.5.3"
 once_cell = "1.19.0"
@@ -22,6 +23,8 @@ azur_lane = { path = "../azur_lane" }
 utils = { path = "../utils" }
 
 [dependencies.serenity]
+# note: the workspace currently overrides this dependency to a specific commit
+# so that we get new features without having poise select a different version
 version = "0.12.2"
 default-features = false
 features = [

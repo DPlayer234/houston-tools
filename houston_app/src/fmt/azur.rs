@@ -2,19 +2,25 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use azur_lane::equip::*;
 
-pub struct WeaponFormat<'a>(&'a Weapon);
+/// Implements [`Display`] to nicely format a weapon.
+///
+/// Alternate formatting (`{:#}`) omits the weapon kind.
+#[must_use]
+pub struct DisplayWeapon<'a>(&'a Weapon);
 
-impl<'a> WeaponFormat<'a> {
+impl<'a> DisplayWeapon<'a> {
+    /// Creates a new value.
     pub fn new(weapon: &'a Weapon) -> Self {
         Self(weapon)
     }
 
+    /// Formats the weapon without the kind.
     pub fn to_string_no_kind(&self) -> String {
         format!("{:#}", self)
     }
 }
 
-impl Display for WeaponFormat<'_> {
+impl Display for DisplayWeapon<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let weapon = self.0;
 

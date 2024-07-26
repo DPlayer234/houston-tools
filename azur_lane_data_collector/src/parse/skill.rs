@@ -170,8 +170,8 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
             let dodge_limit: u32 = aircraft.get("dodge_limit")?;
 
             let health = ShipStat::new()
-                .set_base(aircraft.get("max_hp")?)
-                .set_growth(aircraft.get("hp_growth")?);
+                .with_base(aircraft.get("max_hp")?)
+                .with_growth(aircraft.get("hp_growth")?);
 
             let weapons: Vec<u32> = aircraft.get("weapon_ID")?;
             let weapons = weapons.into_iter()

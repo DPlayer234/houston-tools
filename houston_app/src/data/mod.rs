@@ -67,6 +67,7 @@ impl std::fmt::Debug for HBotData {
 
 impl HBotData {
     /// Creates a new instance.
+    #[must_use]
     pub fn new(config: HBotConfig) -> Self {
         let data_path = config.azur_lane_data.clone();
         HBotData {
@@ -85,10 +86,12 @@ impl HBotData {
         let _ = self.azur_lane();
     }
 
+    #[must_use]
     pub fn config(&self) -> &HBotConfig {
         &self.config
     }
 
+    #[must_use]
     pub fn app_emojis(&self) -> HAppEmojis {
         HAppEmojis(self.app_emojis.get())
     }
@@ -102,6 +105,7 @@ impl HBotData {
     }
 
     /// Gets a copy of the user data for the specified user.
+    #[must_use]
     pub fn get_user_data(&self, user_id: UserId) -> HUserData {
         match self.user_data.get(&user_id) {
             None => HUserData::default(),
@@ -115,6 +119,7 @@ impl HBotData {
     }
 
     /// Gets the Azur Lane game data.
+    #[must_use]
     pub fn azur_lane(&self) -> &HAzurLane {
         &self.azur_lane
     }
@@ -130,6 +135,7 @@ impl Default for HUserData {
 
 impl HUserData {
     /// Creates a reply matching the user data.
+    #[must_use]
     pub fn create_reply(&self) -> CreateReply {
         CreateReply::default()
             .ephemeral(self.ephemeral)
@@ -139,12 +145,18 @@ impl HUserData {
 /// Extension trait for the poise context.
 pub trait HContextExtensions {
     /// Gets a copy of the user data for the current user.
+    #[must_use]
     fn get_user_data(&self) -> HUserData;
+
     /// Replaces the user data for the current user.
     fn set_user_data(&self, data: HUserData);
+
     /// Creates a reply matching the user data.
+    #[must_use]
     fn create_reply(&self) -> CreateReply;
+
     /// Always creates an ephemeral reply.
+    #[must_use]
     fn create_ephemeral_reply(&self) -> CreateReply;
 }
 

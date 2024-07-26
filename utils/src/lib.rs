@@ -9,12 +9,14 @@ pub mod text;
 pub mod time;
 
 /// Convenience method to calculate the hash of a value with the [`std::hash::DefaultHasher`].
+#[must_use]
 #[inline]
 pub fn hash_default<T: std::hash::Hash>(value: &T) -> u64 {
     hash(value, std::hash::DefaultHasher::new())
 }
 
 /// Convenience method to feed a value to a hasher and then return its value.
+#[must_use]
 #[inline]
 pub fn hash<T: std::hash::Hash, H: std::hash::Hasher>(value: &T, mut hasher: H) -> u64 {
     value.hash(&mut hasher);

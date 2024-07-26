@@ -9,7 +9,6 @@ pub fn to_b256(bytes: &[u8]) -> String {
     once('#').chain(input).chain(once('&')).collect()
 }
 
-#[must_use]
 pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
     let str = str
         // strip the start marker
@@ -55,7 +54,6 @@ pub fn to_b65536(bytes: &[u8]) -> String {
     result
 }
 
-#[must_use]
 pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
     let (skip_last, str) = str
         // strip the end marker

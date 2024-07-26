@@ -52,6 +52,7 @@ macro_rules! define_button_args {
 
         impl ButtonArgs {
             /// Borrows the inner data.
+            #[must_use]
             pub const fn borrow(&self) -> ButtonArgsRef {
                 match self {
                     $(
@@ -108,7 +109,6 @@ define_button_args! {
 
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
-    #[must_use]
     pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
         let bytes = utils::str_as_data::from_b65536(id)?;
         CustomData(bytes).to_button_args()
@@ -129,6 +129,7 @@ pub struct ButtonEventHandler {
 
 impl ButtonEventHandler {
     /// Creates a new handler.
+    #[must_use]
     pub const fn new(bot_data: Arc<HBotData>) -> Self {
         ButtonEventHandler {
             bot_data
@@ -208,10 +209,15 @@ pub trait ToCustomData {
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
+    #[must_use]
     fn new_button<T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton {
         let disabled = *field.get(self) == value;
         if disabled {
-            let sentinel = common::None::new(field_sentinel_key(self, field), sentinel(value));
+            // This value is intended to be unique for a given object.
+            // It isn't used in any way other than as a discriminator.
+            let sentinel_key = field.get(self) as *const T as u16;
+
+            let sentinel = common::None::new(sentinel_key, sentinel(value));
             CreateButton::new(ButtonArgs::None(sentinel).to_custom_id()).disabled(true)
         } else {
             let custom_id = self.to_custom_id_with(field, value);
@@ -220,6 +226,7 @@ pub trait ToCustomData {
     }
 
     /// Creates a new select option that would switch to a state where one field is changed.
+    #[must_use]
     fn new_select_option<T: PartialEq>(&mut self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption {
         let default = *field.get(self) == value;
         let custom_id = self.to_custom_id_with(field, value);
@@ -229,6 +236,7 @@ pub trait ToCustomData {
     }
 
     /// Creates a custom ID with one field replaced.
+    #[must_use]
     fn to_custom_id_with<T>(&mut self, field: impl FieldMut<Self, T>, mut value: T) -> String {
         // Swap new value into the field
         std::mem::swap(field.get_mut(self), &mut value);
@@ -241,12 +249,6 @@ pub trait ToCustomData {
     }
 }
 
-fn field_sentinel_key<S: ?Sized, T>(obj: &S, field: impl FieldMut<S, T>) -> u16 {
-    // The value returned here is intended to be unique for a given object.
-    // It isn't used in any way other than as a discriminator.
-    field.get(obj) as *const T as u16
-}
-
 impl<T> ToCustomData for T
 where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
     fn to_custom_data(&self) -> CustomData {
@@ -257,7 +259,6 @@ where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
 /// Provides a way for button arguments to modify the create-reply payload.
 pub trait ButtonArgsModify: Sized {
     /// Modifies the create-reply payload.
-    #[must_use]
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
 
     #[must_use]
@@ -282,7 +283,6 @@ impl CustomData {
     }
 
     /// Converts this instance to [`ButtonArgs`].
-    #[must_use]
     pub fn to_button_args(&self) -> anyhow::Result<ButtonArgs> {
         Ok(serde_bare::from_slice(&self.0)?)
     }

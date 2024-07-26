@@ -20,7 +20,6 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].
     ///
     /// This has the same semantics as [`std::str::from_utf8`].
-    #[must_use]
     pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, std::str::Utf8Error> {
         match std::str::from_utf8(&bytes) {
             Ok(..) => Ok(unsafe {
@@ -48,7 +47,6 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// The returned reference points to the same memory.
     ///
     /// Returns an error if the length does not match.
-    #[must_use]
     pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
         let slice = str.as_bytes();
         if slice.len() == LEN {

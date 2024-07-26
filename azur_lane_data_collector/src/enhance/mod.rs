@@ -8,12 +8,12 @@ pub mod retrofit;
 
 /// Adds to the base amount of the named stat.
 pub fn add_to_stats_base(stats: &mut ShipStatBlock, stat: &str, amount: f64) -> bool {
-    add_to_stats_intl(stats, stat, amount, ShipStat::new().set_base(amount))
+    add_to_stats_intl(stats, stat, amount, ShipStat::new().with_base(amount))
 }
 
 /// Adds to the fixed amount of the named stat.
 pub fn add_to_stats_fixed(stats: &mut ShipStatBlock, stat: &str, amount: f64) -> bool {
-    add_to_stats_intl(stats, stat, amount, ShipStat::new().set_fixed(amount))
+    add_to_stats_intl(stats, stat, amount, ShipStat::new().with_fixed(amount))
 }
 
 fn add_to_stats_intl(stats: &mut ShipStatBlock, stat: &str, amount: f64, amount_as_stat: ShipStat) -> bool {

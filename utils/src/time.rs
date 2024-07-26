@@ -57,6 +57,7 @@ impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
     }
 }
 
+/// Tries to parse a date time from some default formats, in the context of a specific time zone.
 #[must_use]
 pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
     for f in DATE_TIME_FORMATS {

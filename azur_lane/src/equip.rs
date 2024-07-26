@@ -276,8 +276,7 @@ define_data_enum! {
 
 impl ArmorModifiers {
     /// Gets the modifier for a specific kind of armor.
-    #[must_use]
-    pub fn get_modifier(&self, armor_kind: ShipArmor) -> f64 {
+    pub fn modifier(&self, armor_kind: ShipArmor) -> f64 {
         match armor_kind {
             ShipArmor::Light => self.0,
             ShipArmor::Medium => self.1,
@@ -287,7 +286,7 @@ impl ArmorModifiers {
 
     /// Sets the modifier for a specific kind of armor.
     #[must_use]
-    pub fn set_modifier(mut self, armor_kind: ShipArmor, value: f64) -> Self {
+    pub fn with_modifier(mut self, armor_kind: ShipArmor, value: f64) -> Self {
         *match armor_kind {
             ShipArmor::Light => &mut self.0,
             ShipArmor::Medium => &mut self.1,
