@@ -14,7 +14,20 @@ pub async fn who(
     #[description = "The user to get info about."]
     user: User
 ) -> HResult {
-    let embed = who_user_embed(&user);
+    let mut embed = who_user_embed(&user);
+
+    // while the resolved params would have the member, that's not available
+    // in context menu commands. in the interest of still supporting that,
+    // manually look up the member in the resolved collection here.
+    // plus, it's more code to implement a custom parameter type that's User + Option<PartialMember>.
+    if let HContext::Application(ctx) = &ctx {
+        if let Some(member) = ctx.interaction.data.resolved.members.get(&user.id) {
+            embed = embed.field("Server Member Info", who_member_info(member), false);
+        }
+    }
+
+    embed = embed.fields(who_user_public_flags(&user));
+
     ctx.send(ctx.create_reply().embed(embed)).await?;
     Ok(())
 }
@@ -23,10 +36,9 @@ pub async fn who(
 
 fn who_user_embed(user: &User) -> CreateEmbed {
     CreateEmbed::new()
-    .author(CreateEmbedAuthor::new(get_unique_username(user)))
+        .author(CreateEmbedAuthor::new(get_unique_username(user)))
         .thumbnail(user.face())
         .description(who_user_info(user))
-        .fields(who_user_public_flags(user))
         .color(DEFAULT_EMBED_COLOR)
 }
 
@@ -90,6 +102,46 @@ fn who_user_public_flags(user: &User) -> Option<SimpleEmbedFieldCreate> {
     user.public_flags
         .filter(|s| !s.is_empty())
         .map(|f| ("Public Flags", to_string_public_flags(f), true))
+}
+
+/* Additional server member info */
+
+fn who_member_info(member: &PartialMember) -> String {
+    // role ids are also present, but not useful since there is no guild info.
+
+    let mut builder = MessageBuilder::new();
+
+    if let Some(nick) = &member.nick {
+        builder.push_bold("Nickname:")
+            .push(' ')
+            .push_mono_line(nick);
+    }
+
+    if let Some(joined_at) = member.joined_at {
+        builder.push_bold("Joined At:")
+            .push(' ')
+            .push_line(joined_at.mention(SHORT_DATE_TIME));
+    }
+
+    if let Some(premium_since) = member.premium_since {
+        builder.push_bold("Boosting Since:")
+            .push(' ')
+            .push_line(premium_since.mention(SHORT_DATE_TIME));
+    }
+
+    if let Some(permissions) = member.permissions {
+        // these are channel scoped.
+        builder.push_bold("Permissions:");
+        write!(builder.0, " Raw: `{:#x}`\n> -# ", permissions.bits()).discard();
+
+        if permissions.administrator() {
+            builder.push("Administrator, *");
+        } else {
+            builder.push(permissions.get_permission_names().join(", "));
+        }
+    }
+
+    builder.0
 }
 
 /* Local utilities */

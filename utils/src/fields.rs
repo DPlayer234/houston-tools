@@ -23,6 +23,10 @@ pub trait FieldMut<S: ?Sized, F: ?Sized>: Field<S, F> {
 /// the [`FieldMut`] trait and [`field_mut`] macro.
 ///
 /// Note that the trait bounds for this type's generic parameters are only present for its impl blocks.
+//
+// The reason this type even exists rather than providing implementations in the macros
+// is that it allows inferring the field type. Sadly, there isn't a good way to also
+// infer the input type.
 #[derive(Debug, Clone, Copy)]
 #[must_use]
 pub struct LambdaField<Get, GetMut = ()> {

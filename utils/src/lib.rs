@@ -40,18 +40,77 @@ impl<T, E: Debug> Discard for Result<T, E> {
     }
 }
 
+/// Defines a simple, public error type with an error message.
+///
+/// The resulting type will, by default, only implement [`Error`](std::error::Error), [`Debug`](std::fmt::Debug), and [`Display`](std::fmt::Display).
+/// Additional derives may be added as needed.
+///
+/// # Examples
+///
+/// The simplest type is declared with just a type name and error message:
+///
+/// ```no_run
+/// utils::define_simple_error!(MyError: "error happened");
+/// println!("{:?}", MyError);
+/// ```
+///
+/// You can further add fields and include their values in the error message:
+///
+/// ```no_run
+/// utils::define_simple_error!(MyError(String): s => "error '{}' happened", s.0);
+/// println!("{:?}", MyError("user fault".into()));
+/// ```
+///
+/// Named fields are also supported:
+///
+/// ```no_run
+/// utils::define_simple_error!(MyError { code: u8 }: s => "error '{}' happened", s.code);
+/// println!("{:?}", MyError { code: 42 });
+/// ```
+///
+/// You may also use attributes on the error type:
+///
+/// ```no_run
+/// utils::define_simple_error!(
+///     #[derive(Clone)]
+///     MyError(u8):
+///     s => "error '{}' happened", s.0
+/// );
+/// ```
 #[macro_export]
 macro_rules! define_simple_error {
-    ($type:ident : $message:literal) => {
-        #[derive(Debug, Clone)]
-        #[must_use]
+    ($(#[$attr:meta])* $type:ident : $($message:tt)*) => {
+        $(#[$attr])*
+        #[derive(Debug)]
         pub struct $type;
-
+        $crate::define_simple_error!(@main $type: $($message)*);
+    };
+    ($(#[$attr:meta])* $type:ident { $($body:tt)* } : $($message:tt)*) => {
+        $(#[$attr])*
+        #[derive(Debug)]
+        pub struct $type { $($body)* }
+        $crate::define_simple_error!(@main $type: $($message)*);
+    };
+    ($(#[$attr:meta])* $type:ident ( $($body:tt)* ) : $($message:tt)*) => {
+        $(#[$attr])*
+        #[derive(Debug)]
+        pub struct $type ( $($body)* );
+        $crate::define_simple_error!(@main $type: $($message)*);
+    };
+    (@main $type:ident: $message:expr) => {
         impl ::std::error::Error for $type {}
-
         impl ::std::fmt::Display for $type {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, $message)
+            }
+        }
+    };
+    (@main $type:ident: $s:ident => $($message:tt)*) => {
+        impl ::std::error::Error for $type {}
+        impl ::std::fmt::Display for $type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                let $s = self;
+                write!(f, $($message)*)
             }
         }
     };

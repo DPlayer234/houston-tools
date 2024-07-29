@@ -1,5 +1,14 @@
-crate::define_simple_error!(Base256Error: "base256 data is invalid");
-crate::define_simple_error!(Base65536Error: "base65536 data is invalid");
+crate::define_simple_error!(
+    /// Error decoding base256 data in [`from_b256`].
+    Base256Error(()):
+    "base256 data is invalid"
+);
+
+crate::define_simple_error!(
+    /// Error decoding base65536 data in [`from_b65536`].
+    Base65536Error(()):
+    "base65536 data is invalid"
+);
 
 #[must_use]
 pub fn to_b256(bytes: &[u8]) -> String {
@@ -15,11 +24,11 @@ pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
         .strip_prefix('#')
         // strip the end marker
         .and_then(|s| s.strip_suffix('&'))
-        .ok_or(Base256Error)?;
+        .ok_or(Base256Error(()))?;
 
     str.chars().map(u8::try_from)
         .collect::<Result<Vec<u8>, _>>()
-        .map_err(|_| Base256Error)
+        .map_err(|_| Base256Error(()))
 }
 
 #[must_use]
@@ -65,7 +74,7 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
             // otherwise, % may be used to indicate the last byte is skipped
             .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
         })
-        .ok_or(Base65536Error)?;
+        .ok_or(Base65536Error(()))?;
 
     let mut result: Vec<u8> = str
         .chars()
@@ -73,7 +82,7 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
         .collect();
 
     if skip_last && result.pop().is_none() {
-        return Err(Base65536Error);
+        return Err(Base65536Error(()));
     }
 
     Ok(result)

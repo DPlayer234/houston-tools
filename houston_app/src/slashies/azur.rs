@@ -28,7 +28,7 @@ async fn ship(
 ) -> HResult {
     let ship = parse_id_input(&name).map(|id| ctx.data().azur_lane().ship_by_id(id))
         .unwrap_or_else(|| ctx.data().azur_lane().ships_by_prefix(&name).next())
-        .ok_or(buttons::azur::EquipParseError)?;
+        .ok_or(buttons::azur::ShipParseError)?;
 
     let view = buttons::azur::ship::View::new(ship.group_id);
     ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;

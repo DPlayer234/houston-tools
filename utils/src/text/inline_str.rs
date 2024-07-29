@@ -14,7 +14,11 @@
 #[repr(transparent)]
 pub struct InlineStr<const LEN: usize>([u8; LEN]);
 
-crate::define_simple_error!(FromStrError: "length of input does not match result length");
+crate::define_simple_error!(
+    /// Converting to [`InlineStr`] from [`str`] failed because of a length mismatch.
+    FromStrError(()):
+    "length of input does not match result length"
+);
 
 impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].
@@ -57,7 +61,7 @@ impl<const LEN: usize> InlineStr<LEN> {
                 std::mem::transmute(slice)
             })
         } else {
-            Err(FromStrError)
+            Err(FromStrError(()))
         }
     }
 

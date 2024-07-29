@@ -14,3 +14,4 @@ panic = 'abort'
 
 [patch.crates-io]
 serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "c7540cd3ee97662a7494516ce58a26c83fcf9419" }
+poise = { git = "https://github.com/serenity-rs/poise.git", rev = "575025909b063c3b998659abf9d241c8790404ee" }
