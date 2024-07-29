@@ -39,14 +39,16 @@ impl View {
                 break
             }
 
+            let emoji = data.app_emojis().hull(ship.hull_type);
+
             writeln!(
                 desc,
-                "- {} **{}** [{} {} {}]",
-                data.app_emojis().hull(ship.hull_type), ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
+                "- {emoji} **{}** [{} {} {}]",
+                ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             ).discard();
 
             let view_ship = common::AsNewMessage::new(&super::ship::View::new(ship.group_id));
-            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()));
+            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
         }
 
         if options.is_empty() {

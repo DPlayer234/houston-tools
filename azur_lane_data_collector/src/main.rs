@@ -105,7 +105,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
     let lua = Lua::new();
 
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
-    lua.load(include_str!("assets/lua_init.lua"))
+    lua.load(include_str!("../assets/lua_init.lua"))
         .set_name("main")
         .set_mode(mlua::ChunkMode::Text)
         .exec()?;

@@ -20,7 +20,7 @@ pub struct Config {
 
 /// The app config. Statically embed as JSON.
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
-    serde_json::from_str(include_str!("assets/config.json")).unwrap()
+    serde_json::from_str(include_str!("../assets/config.json")).unwrap()
 });
 
 /// A group of ships.
