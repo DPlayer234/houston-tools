@@ -31,7 +31,7 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Ar
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
-    println!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
+    log::info!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
         HContext::Application(ctx) => {
             ctx.interaction.data.target()
                 .map(DisplayResolvedArgs::Target)
@@ -53,12 +53,12 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
         poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
             context_error(ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.as_deref().unwrap_or_default())).await
         },
-        _ => println!("Oh noes, we got an error: {error:?}"),
+        _ => log::error!("Oh noes, we got an error: {error:?}"),
     }
 
     async fn context_error(ctx: &HContext<'_>, feedback: String) {
         match ctx.send(ctx.create_ephemeral_reply().embed(CreateEmbed::new().description(feedback).color(ERROR_EMBED_COLOR))).await {
-            Err(err) => println!("Error in error handler: {err:?}"),
+            Err(err) => log::error!("Error in error handler: {err:?}"),
             _ => () // All good here!
         };
     }

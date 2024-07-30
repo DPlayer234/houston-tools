@@ -110,7 +110,7 @@ impl View {
                 "__Barrage__".to_owned(),
                 {
                     let m = get_skills_extra_summary(skill);
-                    if m.len() <= 1024 { m } else { println!("barrage:\n{m}"); "<barrage data too long>".to_owned() }
+                    if m.len() <= 1024 { m } else { log::warn!("barrage:\n{m}"); "<barrage data too long>".to_owned() }
                 },
                 false
             ));

@@ -101,7 +101,7 @@ async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> anyhow::Resu
 
     let emoji = ctx.create_application_emoji(&map).await?;
 
-    println!("Added Application Emoji: {}", emoji);
+    log::info!("Added Application Emoji: {}", emoji);
     Ok(emoji.into())
 }
 

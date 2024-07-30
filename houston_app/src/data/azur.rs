@@ -29,7 +29,7 @@ impl HAzurLane {
     #[must_use]
     pub fn load_from(data_path: PathBuf) -> Self {
         let data = Self::load_definitions(&data_path).unwrap_or_else(|err| {
-            eprintln!("No Azur Lane data: {err}");
+            log::error!("No Azur Lane data: {err}");
             Default::default()
         });
 

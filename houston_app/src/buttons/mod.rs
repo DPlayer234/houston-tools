@@ -147,6 +147,8 @@ impl ButtonEventHandler {
         };
 
         let args = ButtonArgs::from_custom_id(custom_id)?;
+        log::trace!("{}: {:?}", interaction.user.name, args);
+
         self.interaction_dispatch_dyn(ctx, interaction, args).await
     }
 
@@ -162,18 +164,18 @@ impl ButtonEventHandler {
     #[cold]
     async fn handle_dispatch_error(&self, ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
         if let Some(err) = err.downcast_ref::<serenity::Error>() {
-            println!("Discord interaction error: {}", err);
+            log::warn!("Discord interaction error: {err}");
         } else {
-            println!("Component error: {}", err);
+            log::warn!("Component error: {err}");
 
-            let err_text = format!("Button error: ```{}```", err);
+            let err_text = format!("Button error: ```{err}```");
             let reply = CreateReply::default().ephemeral(true)
                 .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
             let response = reply.to_slash_initial_response(Default::default());
 
             let res = interaction.create_response(ctx, CreateInteractionResponse::Message(response)).await;
             if let Err(res) = res {
-                println!("Error sending component error: {}", res);
+                log::warn!("Error sending component error: {res}");
             }
         }
     }
@@ -294,7 +296,7 @@ impl CustomData {
         match serde_bare::to_vec(&args) {
             Ok(data) => Self(data),
             Err(err) => {
-                println!("Error [{err:?}] serializing: {args:?}");
+                log::error!("Error [{err:?}] serializing: {args:?}");
                 Self::EMPTY
             }
         }

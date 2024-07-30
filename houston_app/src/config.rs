@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -8,6 +8,8 @@ use serde::Deserialize;
 pub struct HConfig {
     pub discord: HDiscordConfig,
     pub bot: HBotConfig,
+    #[serde(default)]
+    pub log: HLogConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +21,38 @@ pub struct HDiscordConfig {
 pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
     pub trusted_users: HashSet<u64>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct HLogConfig {
+    pub default: Option<HLogLevel>,
+    #[serde(flatten)]
+    pub modules: HashMap<String, HLogLevel>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HLogLevel {
+    Off,
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl From<HLogLevel> for log::LevelFilter {
+    fn from(value: HLogLevel) -> log::LevelFilter {
+        use log::LevelFilter;
+        match value {
+            HLogLevel::Off => LevelFilter::Off,
+            HLogLevel::Error => LevelFilter::Error,
+            HLogLevel::Warn => LevelFilter::Warn,
+            HLogLevel::Info => LevelFilter::Info,
+            HLogLevel::Debug => LevelFilter::Debug,
+            HLogLevel::Trace => LevelFilter::Trace,
+        }
+    }
 }
 
 pub mod azur_lane {
