@@ -89,6 +89,39 @@ pub trait UnityClass: Default {
     }
 }
 
+/// Support trait to reduce code needed to implement [`UnityClass`].
+///
+/// If this trait is implemented, a blanket implementation will cover the actual [`UnityClass`] implementation.
+#[doc(hidden)]
+pub trait AutoUnityClass: UnityClass {
+    /// The type name for this Unity class.
+    const TYPE_NAME: &'static str;
+
+    /// Like [`UnityClass::parse_tree`], but fills an existing object.
+    fn parse_tree_into(&mut self, r: &mut Cursor<&[u8]>, is_big_endian: bool, tree: &[TypeTreeNode]) -> anyhow::Result<()>;
+}
+
+impl<T: AutoUnityClass> UnityClass for T {
+    // blanket implementation for `define_unity_class` generates types.
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+        if root.type_name.as_str() != Self::TYPE_NAME {
+            Err(UnityError::Mismatch(UnityMismatch {
+                expected: Self::TYPE_NAME.to_string(),
+                received: root.type_name.clone()
+            }))?
+        }
+
+        let mut result = Self::default();
+        result.parse_tree_into(r, is_big_endian, tree)?;
+
+        if (root.meta_flags & 0x4000) != 0 {
+            Self::align_reader(r)?;
+        }
+
+        Ok(result)
+    }
+}
+
 /// Splits the tree into:
 ///
 /// - The next root node
@@ -150,34 +183,23 @@ macro_rules! define_unity_class {
             ),*
         }
 
-        impl $crate::classes::UnityClass for $Type {
-            fn parse_tree(r: &mut std::io::Cursor<&[u8]>, is_big_endian: bool, root: &$crate::serialized_file::TypeTreeNode, tree: &[$crate::serialized_file::TypeTreeNode]) -> anyhow::Result<Self> {
-                if root.type_name.as_str() != $type_key {
-                    ::core::result::Result::Err($crate::UnityError::Mismatch($crate::UnityMismatch {
-                        expected: $type_key.to_string(),
-                        received: root.type_name.clone()
-                    }))?
-                }
+        impl $crate::classes::AutoUnityClass for $Type {
+            const TYPE_NAME: &'static str = $type_key;
 
-                let mut result = <Self as Default>::default();
-
+            fn parse_tree_into(&mut self, r: &mut ::std::io::Cursor<&[u8]>, is_big_endian: bool, tree: &[$crate::serialized_file::TypeTreeNode]) -> anyhow::Result<()> {
                 let mut rest = tree;
                 while let Some((next, children, siblings)) = $crate::classes::split_tree(rest) {
                     match next.name.as_str() {
                         $(
-                            $key => { result.$field_name = <$FieldType as $crate::classes::UnityClass>::parse_tree(r, is_big_endian, next, children)?; },
+                            $key => { self.$field_name = <$FieldType as $crate::classes::UnityClass>::parse_tree(r, is_big_endian, next, children)?; },
                         )*
-                        _ => { Self::skip(r, is_big_endian, next, children)?; }
+                        _ => { <Self as $crate::classes::UnityClass>::skip(r, is_big_endian, next, children)?; }
                     }
 
                     rest = siblings;
                 }
 
-                if (root.meta_flags & 0x4000) != 0 {
-                    Self::align_reader(r)?;
-                }
-
-                ::core::result::Result::Ok(result)
+                ::core::result::Result::Ok(())
             }
         }
     };
