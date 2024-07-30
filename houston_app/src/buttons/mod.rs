@@ -166,7 +166,7 @@ impl ButtonEventHandler {
         if let Some(err) = err.downcast_ref::<serenity::Error>() {
             log::warn!("Discord interaction error: {err}");
         } else {
-            log::warn!("Component error: {err}");
+            log::warn!("Component error: {err:?}");
 
             let err_text = format!("Button error: ```{err}```");
             let reply = CreateReply::default().ephemeral(true)

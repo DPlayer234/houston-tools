@@ -7,6 +7,10 @@ use utils::time::{parse_date_time, get_creation_time};
 
 use crate::prelude::*;
 
+const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
+const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
+const SNOWFLAKE_INVALID: HArgError = HArgError("The Discord snowflake is invalid.");
+
 /// Provides methods for localized timestamps.
 #[poise::command(
     slash_command,
@@ -58,7 +62,7 @@ async fn timestamp_at(
     date_time: String
 ) -> HResult {
     let timestamp = parse_date_time(&date_time, Utc)
-        .ok_or_else(|| DATE_TIME_INVALID)?;
+        .ok_or(DATE_TIME_INVALID)?;
 
     show_timestamp(&ctx, timestamp).await
 }
@@ -71,8 +75,8 @@ async fn timestamp_of(
     snowflake: String
 ) -> HResult {
     let timestamp = u64::from_str(&snowflake).ok()
-        .and_then(|u| get_creation_time(u))
-        .ok_or_else(|| SNOWFLAKE_INVALID)?;
+        .and_then(get_creation_time)
+        .ok_or(SNOWFLAKE_INVALID)?;
 
     show_timestamp(&ctx, timestamp).await
 }
@@ -92,7 +96,3 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
     ctx.send(ctx.create_reply().embed(embed)).await?;
     Ok(())
 }
-
-const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
-const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
-const SNOWFLAKE_INVALID: HArgError = HArgError("The Discord snowflake is invalid.");

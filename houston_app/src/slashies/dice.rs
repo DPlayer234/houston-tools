@@ -22,7 +22,7 @@ pub async fn dice(
         Err(HArgError("Too many dice in total."))?;
     }
 
-    let content = get_dice_roll_result(sets)?;
+    let content = get_dice_roll_result(sets);
     let embed = CreateEmbed::new()
         .description(content)
         .color(DEFAULT_EMBED_COLOR);
@@ -31,7 +31,7 @@ pub async fn dice(
     Ok(())
 }
 
-fn get_dice_roll_result(sets: Vec<DiceSet>) -> Result<String, HError> {
+fn get_dice_roll_result(sets: Vec<DiceSet>) -> String {
     let mut content = String::new();
     let mut rng = thread_rng();
 
@@ -62,7 +62,7 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> Result<String, HError> {
     let header = format!("### Total \u{2211}{}\n", total_sum);
     content.insert_str(0, &header);
 
-    Ok(content)
+    content
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]

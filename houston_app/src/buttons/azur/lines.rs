@@ -10,7 +10,7 @@ use super::ShipParseError;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub ship_id: u32,
-    pub skin_index: u32,
+    pub skin_index: u8,
     pub part: ViewPart,
     pub extra: bool,
     pub back: Option<CustomData>
@@ -76,7 +76,7 @@ impl View {
 
         if ship.skins.len() > 1 {
             let options = CreateSelectMenuKind::String {
-                options: ship.skins.iter().enumerate()
+                options: ship.skins.iter().take(25).enumerate()
                     .map(|(index, skin)| self.select_with_skin_index(skin, index))
                     .collect()
             };
@@ -108,7 +108,8 @@ impl View {
 
     /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index(&mut self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
-        self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u32)
+        // Just as-cast the index to u8 since we'd have problems long before an overflow.
+        self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
     }
 }
 
@@ -117,8 +118,8 @@ impl ViewPart {
     fn get_description(self, data: &HBotData, words: &ShipSkinWords) -> String {
         let mut result = String::new();
 
-        fn norm(input: impl AsRef<str>) -> String {
-            input.as_ref().replace('*', "\\*").replace('`', "\\`").replace('_', "\\_")
+        fn norm(input: &str) -> String {
+            input.replace('*', "\\*").replace('`', "\\`").replace('_', "\\_")
         }
 
         macro_rules! add {
@@ -252,7 +253,7 @@ impl ViewPart {
 impl ButtonArgsModify for View {
     fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
         let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
-        let skin = ship.skins.get(self.skin_index as usize).ok_or(ShipParseError)?;
+        let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(ShipParseError)?;
         Ok(self.modify_with_ship(data, create, ship, skin))
     }
 }
@@ -265,7 +266,7 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
                 .flat_map(|&id| data.azur_lane().ship_by_id(id))
                 .map(|ship| ship.name.as_str());
 
-            if opt.amount as usize == ship_ids.len() {
+            if ship_ids.len() == opt.amount.try_into().unwrap_or(0) {
                 format!("Sortie with {}", join_natural_and(ships))
             } else {
                 format!(
@@ -279,42 +280,32 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
             let hull_types = hull_types.iter()
                 .map(|hull_type| hull_type.designation());
 
-            let label = if opt.amount != 1 { "s" } else { "" };
-            format!(
-                "Sortie with {} more {}{}",
-                opt.amount,
-                join_natural_or(hull_types),
-                label
-            )
+            fmt_sortie_count("", opt.amount, hull_types)
         }
         ShipCouple::Rarity(rarities) => {
             let rarities = rarities.iter()
                 .map(|rarity| rarity.name());
 
-            let label = if opt.amount != 1 { "s" } else { "" };
-            format!(
-                "Sortie with {} more {} ship{}",
-                opt.amount,
-                join_natural_or(rarities),
-                label
-            )
+            fmt_sortie_count(" ship", opt.amount, rarities)
         }
         ShipCouple::Faction(factions) => {
             let factions = factions.iter()
                 .map(|faction| faction.name());
 
-            let label = if opt.amount != 1 { "s" } else { "" };
-            format!(
-                "Sortie with {} more {} ship{}",
-                opt.amount,
-                join_natural_or(factions),
-                label
-            )
+            fmt_sortie_count(" ship", opt.amount, factions)
         }
         ShipCouple::Illustrator => {
             format!("Sortie with {} more ships by the same illustrator", opt.amount)
         }
     }
+}
+
+fn fmt_sortie_count<'a>(label: &str, amount: u32, iter: impl Iterator<Item = &'a str>) -> String {
+    let plural = if amount != 1 { "s" } else { "" };
+    format!(
+        "Sortie with {} more {}{}{}",
+        amount, join_natural_or(iter), label, plural,
+    )
 }
 
 fn join_natural_and<'a>(iter: impl Iterator<Item = &'a str>) -> String {

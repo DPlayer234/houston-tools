@@ -48,7 +48,7 @@ pub async fn pre_command(ctx: HContext<'_>) {
 pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HError>) {
     match &error {
         poise::FrameworkError::Command { error, ctx, .. } => {
-            context_error(ctx, format_error(error)).await
+            command_error(ctx, error).await
         },
         poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
             context_error(ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.as_deref().unwrap_or_default())).await
@@ -56,14 +56,24 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
         _ => log::error!("Oh noes, we got an error: {error:?}"),
     }
 
+    async fn command_error(ctx: &HContext<'_>, err: &HError) {
+        let message = match err.downcast_ref::<HArgError>() {
+            Some(err) => {
+                format!("Command error: ```{err}```")
+            }
+            None => {
+                log::error!("Error in command: {err:?}");
+                format!("Internal error: ```{err}```")
+            }
+        };
+
+        context_error(ctx, message).await
+    }
+
     async fn context_error(ctx: &HContext<'_>, feedback: String) {
         match ctx.send(ctx.create_ephemeral_reply().embed(CreateEmbed::new().description(feedback).color(ERROR_EMBED_COLOR))).await {
             Err(err) => log::error!("Error in error handler: {err:?}"),
             _ => () // All good here!
         };
-    }
-
-    fn format_error(err: &HError) -> String {
-        format!("Command error: ```{err}```")
     }
 }

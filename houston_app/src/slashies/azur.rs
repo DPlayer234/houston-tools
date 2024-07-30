@@ -28,7 +28,7 @@ async fn ship(
 ) -> HResult {
     let ship = parse_id_input(&name).map(|id| ctx.data().azur_lane().ship_by_id(id))
         .unwrap_or_else(|| ctx.data().azur_lane().ships_by_prefix(&name).next())
-        .ok_or(buttons::azur::ShipParseError)?;
+        .ok_or(HArgError("Unknown ship."))?;
 
     let view = buttons::azur::ship::View::new(ship.group_id);
     ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;
@@ -76,7 +76,7 @@ async fn equip(
 ) -> HResult {
     let equip = parse_id_input(&name).map(|id| ctx.data().azur_lane().equip_by_id(id))
         .unwrap_or_else(|| ctx.data().azur_lane().equips_by_prefix(&name).next())
-        .ok_or(buttons::azur::EquipParseError)?;
+        .ok_or(HArgError("Unknown equipment."))?;
 
     let view = buttons::azur::equip::View::new(equip.equip_id);
     ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
