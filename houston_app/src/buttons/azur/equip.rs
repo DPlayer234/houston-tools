@@ -10,16 +10,24 @@ use super::EquipParseError;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub equip_id: u32,
+    new_message: bool,
 }
 
 impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
-        Self { equip_id }
+        Self { equip_id, new_message: false }
+    }
+
+    /// Makes the button send a new message.
+    pub fn as_new_message(mut self) -> Self {
+        self.new_message = true;
+        self
     }
 
     /// Modifies the create-reply with a preresolved equipment.
-    pub fn modify_with_equip(self, create: CreateReply, equip: &Equip) -> CreateReply {
+    pub fn modify_with_equip(mut self, create: CreateReply, equip: &Equip) -> CreateReply {
+        self.new_message = false;
         let mut description = format!("**{}**", equip.kind.name());
 
         for chunk in equip.stat_bonuses.chunks(3) {
@@ -51,9 +59,11 @@ impl View {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let equip = data.azur_lane().equip_by_id(self.equip_id).ok_or(EquipParseError)?;
-        Ok(self.modify_with_equip(create, equip))
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(EquipParseError)?;
+        Ok(self.modify_with_equip(ctx.create_reply(), equip))
     }
 }
+
+impl_message_reply!(View, create_conditional_response, |s| s.new_message);

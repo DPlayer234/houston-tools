@@ -128,21 +128,23 @@ impl View {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
         match self.source {
             ViewSource::Ship(ship_id, retro_index) => {
-                let base_ship = data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
+                let base_ship = ctx.data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
                 let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                Ok(self.modify_with_ship(create, ship, Some(base_ship)))
+                Ok(self.modify_with_ship(ctx.create_reply(), ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
-                let augment = data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
-                Ok(self.modify_with_augment(create, augment))
+                let augment = ctx.data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
+                Ok(self.modify_with_augment(ctx.create_reply(), augment))
             }
         }
     }
 }
+
+impl_message_reply!(View);
 
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {

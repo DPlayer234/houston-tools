@@ -55,12 +55,14 @@ impl View {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let ship = data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(ShipParseError)?;
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(ShipParseError)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(create, ship, None),
-            Some(retrofit) => self.modify_with_ship(create, retrofit, Some(ship))
+            None => self.modify_with_ship(ctx.create_reply(), ship, None),
+            Some(retrofit) => self.modify_with_ship(ctx.create_reply(), retrofit, Some(ship))
         })
     }
 }
+
+impl_message_reply!(View);

@@ -13,7 +13,8 @@ pub struct View {
     pub ship_id: u32,
     pub level: u8,
     pub affinity: ViewAffinity,
-    pub retrofit: Option<u8>
+    pub retrofit: Option<u8>,
+    new_message: bool,
 }
 
 /// The affinity used to calculate stat values.
@@ -27,11 +28,18 @@ pub enum ViewAffinity {
 impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None }
+        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, new_message: false }
+    }
+
+    /// Makes the button send a new message.
+    pub fn as_new_message(mut self) -> Self {
+        self.new_message = true;
+        self
     }
 
     /// Modifies the create-reply with preresolved ship data.
     pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+        self.new_message = false;
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
@@ -272,15 +280,17 @@ impl View {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(data, create, ship, None),
-            Some(retrofit) => self.modify_with_ship(data,create, retrofit, Some(ship))
+            None => self.modify_with_ship(ctx.data, ctx.create_reply(), ship, None),
+            Some(retrofit) => self.modify_with_ship(ctx.data, ctx.create_reply(), retrofit, Some(ship))
         })
     }
 }
+
+impl_message_reply!(View, create_conditional_response, |s| s.new_message);
 
 impl ViewAffinity {
     /// Converts the affinity to a stat multiplier.

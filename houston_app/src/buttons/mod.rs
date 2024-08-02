@@ -60,23 +60,11 @@ macro_rules! define_button_args {
                     )*
                 }
             }
-        }
 
-        impl ButtonArgsModify for ButtonArgs {
-            fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+            pub async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
                 match self {
                     $(
-                        ButtonArgs::$name(args) => args.modify(data, create),
-                    )*
-                }
-            }
-        }
-
-        impl ButtonEventHandler {
-            async fn interaction_dispatch_dyn(&self, ctx: &Context, interaction: &ComponentInteraction, args: ButtonArgs) -> HResult {
-                match args {
-                    $(
-                        ButtonArgs::$name(args) => self.interaction_dispatch_to(ctx, interaction, args).await,
+                        ButtonArgs::$name(args) => args.reply(ctx).await,
                     )*
                 }
             }
@@ -87,8 +75,6 @@ macro_rules! define_button_args {
 define_button_args! {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
     None(common::None),
-    /// Creates a new message.
-    AsNewMessage(common::AsNewMessage),
     /// Open the ship detail view.
     ViewShip(azur::ship::View),
     /// Open the augment detail view.
@@ -149,16 +135,11 @@ impl ButtonEventHandler {
         let args = ButtonArgs::from_custom_id(custom_id)?;
         log::trace!("{}: {:?}", interaction.user.name, args);
 
-        self.interaction_dispatch_dyn(ctx, interaction, args).await
-    }
-
-    /// Dispatches the component interaction to specified arguments.
-    async fn interaction_dispatch_to<T: ButtonArgsModify>(&self, ctx: &Context, interaction: &ComponentInteraction, args: T) -> HResult {
-        let user_data = self.bot_data.get_user_data(interaction.user.id);
-        let reply = args.modify(&self.bot_data, user_data.create_reply())?;
-        let reply = T::make_interaction_response(reply);
-        interaction.create_response(ctx, reply).await?;
-        Ok(())
+        args.reply(ButtonContext {
+            interaction,
+            http: &ctx.http,
+            data: &self.bot_data
+        }).await
     }
 
     #[cold]
@@ -258,16 +239,36 @@ where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
     }
 }
 
-/// Provides a way for button arguments to modify the create-reply payload.
-pub trait ButtonArgsModify: Sized {
-    /// Modifies the create-reply payload.
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply>;
+/// Execution context for [`ButtonArgsReply`].
+#[derive(Debug, Clone)]
+pub struct ButtonContext<'a> {
+    pub interaction: &'a ComponentInteraction,
+    pub http: &'a serenity::all::Http,
+    pub data: &'a HBotData,
+}
 
-    #[must_use]
-    fn make_interaction_response(create: CreateReply) -> CreateInteractionResponse {
-        let edit = create.to_slash_initial_response(Default::default());
-        CreateInteractionResponse::UpdateMessage(edit)
+impl ButtonContext<'_> {
+    /// Replies to the interaction.
+    pub async fn reply(&self, create: CreateInteractionResponse) -> HResult {
+        Ok(self.interaction.create_response(self.http, create).await?)
     }
+
+    /// Creates a fitting base reply.
+    pub fn create_reply(&self) -> CreateReply {
+        self.data.get_user_data(self.interaction.user.id).create_reply()
+    }
+}
+
+/// Provides a way for button arguments to reply to the interaction.
+pub trait ButtonArgsReply: Sized {
+    /// Replies to the interaction.
+    async fn reply(self, ctx: ButtonContext<'_>) -> HResult;
+}
+
+/// Provides a way for button arguments to modify the create-reply payload.
+pub trait ButtonMessage: Sized {
+    /// Modifies the create-reply payload.
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply>;
 }
 
 /// Represents custom data for another menu.
@@ -300,5 +301,50 @@ impl CustomData {
                 Self::EMPTY
             }
         }
+    }
+}
+
+macro_rules! impl_message_reply {
+    ($Type:ty) => {
+        $crate::buttons::impl_message_reply!($Type, create_update_response, ());
+    };
+    ($Type:ty, $fn:ident, $e:expr) => {
+        impl $crate::buttons::ButtonArgsReply for $Type {
+            async fn reply(self, ctx: $crate::buttons::ButtonContext<'_>) -> $crate::data::HResult {
+                let reply = $crate::buttons::button_message_mode::$fn(self, ::std::clone::Clone::clone(&ctx), $e)?;
+                Ok(ctx.reply(reply).await?)
+            }
+        }
+    };
+}
+
+pub(crate) use impl_message_reply;
+
+#[doc(hidden)]
+#[allow(dead_code)]
+pub(crate) mod button_message_mode {
+    use super::*;
+
+    pub fn create_update_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, _: ()) -> anyhow::Result<CreateInteractionResponse> {
+        let reply = msg.create_reply(ctx)?;
+        let reply = reply.to_slash_initial_response(Default::default());
+        Ok(CreateInteractionResponse::UpdateMessage(reply))
+    }
+
+    pub fn create_new_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, _: ()) -> anyhow::Result<CreateInteractionResponse> {
+        let reply = msg.create_reply(ctx)?;
+        let reply = reply.to_slash_initial_response(Default::default());
+        Ok(CreateInteractionResponse::Message(reply))
+    }
+
+    pub fn create_conditional_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, is_new: impl Fn(&T) -> bool) -> anyhow::Result<CreateInteractionResponse> {
+        let is_new = is_new(&msg);
+        let reply = msg.create_reply(ctx)?;
+        let reply = reply.to_slash_initial_response(Default::default());
+        Ok(if is_new {
+            CreateInteractionResponse::Message(reply)
+        } else {
+            CreateInteractionResponse::UpdateMessage(reply)
+        })
     }
 }

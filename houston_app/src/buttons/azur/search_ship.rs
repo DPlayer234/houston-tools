@@ -47,7 +47,7 @@ impl View {
                 ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             ).discard();
 
-            let view_ship = common::AsNewMessage::new(&super::ship::View::new(ship.group_id));
+            let view_ship = super::ship::View::new(ship.group_id).as_new_message();
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
         }
 
@@ -88,17 +88,23 @@ impl View {
 
         create.embed(embed).components(rows)
     }
-}
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+    pub fn modify(self, data: &HBotData, create: CreateReply) -> CreateReply {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        Ok(self.modify_with_iter(data, create, filtered))
+        self.modify_with_iter(data, create, filtered)
     }
 }
+
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        Ok(self.modify(ctx.data, ctx.create_reply()))
+    }
+}
+
+impl_message_reply!(View);
 
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {

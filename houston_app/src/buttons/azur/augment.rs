@@ -70,9 +70,11 @@ impl View {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let augment = data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
-        Ok(self.modify_with_augment(create, augment))
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
+        Ok(self.modify_with_augment(ctx.create_reply(), augment))
     }
 }
+
+impl_message_reply!(View);

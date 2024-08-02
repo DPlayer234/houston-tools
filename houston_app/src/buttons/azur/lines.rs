@@ -250,13 +250,15 @@ impl ViewPart {
     }
 }
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
-        let ship = data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
         let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(ShipParseError)?;
-        Ok(self.modify_with_ship(data, create, ship, skin))
+        Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, skin))
     }
 }
+
+impl_message_reply!(View);
 
 /// Creates a label for a couple line.
 fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourage) -> String {

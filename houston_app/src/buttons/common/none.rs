@@ -21,12 +21,8 @@ impl None {
     }
 }
 
-impl ButtonArgsModify for None {
-    fn modify(self, _data: &HBotData, _create: CreateReply) -> anyhow::Result<CreateReply> {
+impl ButtonArgsReply for None {
+    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
         Err(Unused)?
-    }
-
-    fn make_interaction_response(_create: CreateReply) -> CreateInteractionResponse {
-        CreateInteractionResponse::Acknowledge
     }
 }

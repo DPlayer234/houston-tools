@@ -6,7 +6,6 @@ use azur_lane::Faction;
 
 use crate::prelude::*;
 use crate::buttons;
-use crate::buttons::ButtonArgsModify;
 
 /// Information about mobile game Azur Lane.
 #[poise::command(
@@ -61,7 +60,7 @@ async fn search_ship(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
+    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
 
     Ok(())
 }
@@ -106,7 +105,7 @@ async fn search_equip(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(ctx.data(), ctx.create_reply())?).await?;
+    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
 
     Ok(())
 }

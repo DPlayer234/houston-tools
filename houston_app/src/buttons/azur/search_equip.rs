@@ -44,7 +44,7 @@ impl View {
                 equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
             ).discard();
 
-            let view_equip = common::AsNewMessage::new(&super::equip::View::new(equip.equip_id));
+            let view_equip = super::equip::View::new(equip.equip_id).as_new_message();
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
@@ -85,17 +85,23 @@ impl View {
 
         create.embed(embed).components(rows)
     }
-}
 
-impl ButtonArgsModify for View {
-    fn modify(self, data: &HBotData, create: CreateReply) -> anyhow::Result<CreateReply> {
+    pub fn modify(self, data: &HBotData, create: CreateReply) -> CreateReply {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        Ok(self.modify_with_iter(create, filtered))
+        self.modify_with_iter(create, filtered)
     }
 }
+
+impl ButtonMessage for View {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+        Ok(self.modify(ctx.data, ctx.create_reply()))
+    }
+}
+
+impl_message_reply!(View);
 
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
