@@ -65,21 +65,21 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> String {
     content
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub struct DiceSet {
+#[derive(Debug, Clone, Copy)]
+struct DiceSet {
     pub count: NonZero<u8>,
     pub faces: NonZero<u16>
 }
 
 #[derive(Debug, Clone)]
-pub struct DiceSetVec(Vec<DiceSet>);
+struct DiceSetVec(Vec<DiceSet>);
 
 #[derive(Debug, Clone, Copy)]
-pub struct DiceParseError;
+struct DiceParseError;
 
 impl DiceSet {
     #[must_use]
-    pub fn new(count: NonZero<u8>, faces: NonZero<u16>) -> Self {
+    fn new(count: NonZero<u8>, faces: NonZero<u16>) -> Self {
         Self { count, faces }
     }
 }
@@ -109,12 +109,12 @@ impl std::fmt::Display for DiceSet {
 
 impl DiceSetVec {
     #[must_use]
-    pub fn from_vec(vec: Vec<DiceSet>) -> Self {
+    fn from_vec(vec: Vec<DiceSet>) -> Self {
         Self(vec)
     }
 
     #[must_use]
-    pub fn to_vec(self) -> Vec<DiceSet> {
+    fn to_vec(self) -> Vec<DiceSet> {
         self.0
     }
 }

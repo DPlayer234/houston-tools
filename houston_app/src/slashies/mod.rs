@@ -7,6 +7,7 @@ mod azur;
 mod coin;
 mod config;
 mod dice;
+mod quote;
 mod timestamp;
 mod upload;
 mod who;
@@ -17,6 +18,7 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Ar
         coin::coin(),
         config::config(),
         dice::dice(),
+        quote::quote(),
         timestamp::timestamp(),
         who::who(),
         upload::upload(),
@@ -71,7 +73,12 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
     }
 
     async fn context_error(ctx: &HContext<'_>, feedback: String) {
-        match ctx.send(ctx.create_ephemeral_reply().embed(CreateEmbed::new().description(feedback).color(ERROR_EMBED_COLOR))).await {
+        let embed = CreateEmbed::new()
+            .description(feedback)
+            .color(ERROR_EMBED_COLOR);
+
+        let reply = ctx.create_ephemeral_reply().embed(embed);
+        match ctx.send(reply).await {
             Err(err) => log::error!("Error in error handler: {err:?}"),
             _ => () // All good here!
         };

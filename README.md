@@ -40,6 +40,13 @@ Here is a quick overview of the supported commands:
 | upload       | Uploads a file to an ephemeral message. Allows sharing if you are logged into multiple devices. |
 | who          | Returns basic information about the provided user. |
 
+The following commands are supported in context menus:
+
+| Command      | Description |
+|:------------ |:----------- |
+| Get as Quote | (Message) Copies a format that is appropriate to use as a quote to crosspost. |
+| User Info    | (User) Equivalent to `/who`. |
+
 Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
 
 | Command           | Description |
