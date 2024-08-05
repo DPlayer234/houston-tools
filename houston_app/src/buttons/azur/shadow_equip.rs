@@ -64,5 +64,3 @@ impl ButtonMessage for View {
         })
     }
 }
-
-impl_message_reply!(View);

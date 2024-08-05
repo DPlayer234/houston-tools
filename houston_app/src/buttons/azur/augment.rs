@@ -76,5 +76,3 @@ impl ButtonMessage for View {
         Ok(self.modify_with_augment(ctx.create_reply(), augment))
     }
 }
-
-impl_message_reply!(View);

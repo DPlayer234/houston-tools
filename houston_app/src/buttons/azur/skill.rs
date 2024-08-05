@@ -144,8 +144,6 @@ impl ButtonMessage for View {
     }
 }
 
-impl_message_reply!(View);
-
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
     return join("\n\n", skill.barrages.iter().filter_map(get_skill_barrage_summary)).unwrap_or_else(String::new);

@@ -269,6 +269,31 @@ pub trait ButtonArgsReply: Sized {
 pub trait ButtonMessage: Sized {
     /// Modifies the create-reply payload.
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply>;
+
+    /// How to post the message. Defaults to [`ButtonMessageMode::Edit`]
+    fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }
+}
+
+/// The mode a [`ButtonMessage`] uses to post its message.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ButtonMessageMode {
+    #[default] Edit,
+    New,
+}
+
+impl<T: ButtonMessage> ButtonArgsReply for T {
+    async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+        let mode = self.message_mode();
+        let reply = self.create_reply(ctx.clone())?;
+        let reply = reply.to_slash_initial_response(Default::default());
+
+        let reply = match mode {
+            ButtonMessageMode::New => CreateInteractionResponse::Message(reply),
+            ButtonMessageMode::Edit => CreateInteractionResponse::UpdateMessage(reply),
+        };
+
+        Ok(ctx.reply(reply).await?)
+    }
 }
 
 /// Represents custom data for another menu.
@@ -301,50 +326,5 @@ impl CustomData {
                 Self::EMPTY
             }
         }
-    }
-}
-
-macro_rules! impl_message_reply {
-    ($Type:ty) => {
-        $crate::buttons::impl_message_reply!($Type, create_update_response, ());
-    };
-    ($Type:ty, $fn:ident, $e:expr) => {
-        impl $crate::buttons::ButtonArgsReply for $Type {
-            async fn reply(self, ctx: $crate::buttons::ButtonContext<'_>) -> $crate::data::HResult {
-                let reply = $crate::buttons::button_message_mode::$fn(self, ::std::clone::Clone::clone(&ctx), $e)?;
-                Ok(ctx.reply(reply).await?)
-            }
-        }
-    };
-}
-
-pub(crate) use impl_message_reply;
-
-#[doc(hidden)]
-#[allow(dead_code)]
-pub(crate) mod button_message_mode {
-    use super::*;
-
-    pub fn create_update_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, _: ()) -> anyhow::Result<CreateInteractionResponse> {
-        let reply = msg.create_reply(ctx)?;
-        let reply = reply.to_slash_initial_response(Default::default());
-        Ok(CreateInteractionResponse::UpdateMessage(reply))
-    }
-
-    pub fn create_new_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, _: ()) -> anyhow::Result<CreateInteractionResponse> {
-        let reply = msg.create_reply(ctx)?;
-        let reply = reply.to_slash_initial_response(Default::default());
-        Ok(CreateInteractionResponse::Message(reply))
-    }
-
-    pub fn create_conditional_response<T: ButtonMessage>(msg: T, ctx: ButtonContext<'_>, is_new: impl Fn(&T) -> bool) -> anyhow::Result<CreateInteractionResponse> {
-        let is_new = is_new(&msg);
-        let reply = msg.create_reply(ctx)?;
-        let reply = reply.to_slash_initial_response(Default::default());
-        Ok(if is_new {
-            CreateInteractionResponse::Message(reply)
-        } else {
-            CreateInteractionResponse::UpdateMessage(reply)
-        })
     }
 }

@@ -258,8 +258,6 @@ impl ButtonMessage for View {
     }
 }
 
-impl_message_reply!(View);
-
 /// Creates a label for a couple line.
 fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourage) -> String {
     match &opt.condition {

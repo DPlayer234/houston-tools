@@ -4,7 +4,7 @@ utils::define_simple_error!(Unused: "this button is not intended to be used");
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.
 ///
-/// Its [`ButtonArgsModify`] implementation will always return an error.
+/// Its [`ButtonArgsReply`] implementation will always return an error.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct None {
     key: u16,

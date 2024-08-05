@@ -14,7 +14,7 @@ pub struct View {
     pub level: u8,
     pub affinity: ViewAffinity,
     pub retrofit: Option<u8>,
-    new_message: bool,
+    mode: ButtonMessageMode,
 }
 
 /// The affinity used to calculate stat values.
@@ -28,18 +28,18 @@ pub enum ViewAffinity {
 impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, new_message: false }
+        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, mode: ButtonMessageMode::Edit }
     }
 
     /// Makes the button send a new message.
     pub fn as_new_message(mut self) -> Self {
-        self.new_message = true;
+        self.mode = ButtonMessageMode::New;
         self
     }
 
     /// Modifies the create-reply with preresolved ship data.
     pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
-        self.new_message = false;
+        self.mode = ButtonMessageMode::Edit;
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
@@ -288,9 +288,11 @@ impl ButtonMessage for View {
             Some(retrofit) => self.modify_with_ship(ctx.data, ctx.create_reply(), retrofit, Some(ship))
         })
     }
-}
 
-impl_message_reply!(View, create_conditional_response, |s| s.new_message);
+    fn message_mode(&self) -> ButtonMessageMode {
+        self.mode
+    }
+}
 
 impl ViewAffinity {
     /// Converts the affinity to a stat multiplier.

@@ -101,8 +101,6 @@ impl ButtonMessage for View {
     }
 }
 
-impl_message_reply!(View);
-
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
         let predicate = self.predicate(data);

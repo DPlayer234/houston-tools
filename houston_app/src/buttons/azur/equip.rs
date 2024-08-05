@@ -10,24 +10,24 @@ use super::EquipParseError;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub equip_id: u32,
-    new_message: bool,
+    mode: ButtonMessageMode,
 }
 
 impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
-        Self { equip_id, new_message: false }
+        Self { equip_id, mode: ButtonMessageMode::Edit }
     }
 
     /// Makes the button send a new message.
     pub fn as_new_message(mut self) -> Self {
-        self.new_message = true;
+        self.mode = ButtonMessageMode::New;
         self
     }
 
     /// Modifies the create-reply with a preresolved equipment.
     pub fn modify_with_equip(mut self, create: CreateReply, equip: &Equip) -> CreateReply {
-        self.new_message = false;
+        self.mode = ButtonMessageMode::Edit;
         let mut description = format!("**{}**", equip.kind.name());
 
         for chunk in equip.stat_bonuses.chunks(3) {
@@ -64,6 +64,8 @@ impl ButtonMessage for View {
         let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(EquipParseError)?;
         Ok(self.modify_with_equip(ctx.create_reply(), equip))
     }
-}
 
-impl_message_reply!(View, create_conditional_response, |s| s.new_message);
+    fn message_mode(&self) -> ButtonMessageMode {
+        self.mode
+    }
+}
