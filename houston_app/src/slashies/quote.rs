@@ -8,8 +8,8 @@ pub async fn quote(
     message: Message,
 ) -> HResult {
     let content = format!(
-        "```\n{}\n```",
-        QuoteContent::new(&ctx, &message)
+        "-# Quote: {t:x}\n```\n{t}\n```",
+        t = QuoteTarget::new(&ctx, &message)
     );
 
     let embed = CreateEmbed::new()
@@ -20,18 +20,31 @@ pub async fn quote(
     Ok(())
 }
 
-struct QuoteContent<'a> {
+struct QuoteTarget<'a> {
     ctx: &'a HContext<'a>,
     message: &'a Message
 }
 
-impl<'a> QuoteContent<'a> {
+impl<'a> QuoteTarget<'a> {
     fn new(ctx: &'a HContext<'a>, message: &'a Message) -> Self {
         Self { ctx, message }
     }
 }
 
-impl std::fmt::Display for QuoteContent<'_> {
+impl std::fmt::LowerHex for QuoteTarget<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let channel_id = self.ctx.channel_id();
+        let message_id = self.message.id;
+
+        if let Some(guild_id) = self.ctx.guild_id() {
+            write!(f, "https://discord.com/channels/{guild_id}/{channel_id}/{message_id}")
+        } else {
+            write!(f, "https://discord.com/channels/@me/{channel_id}/{message_id}")
+        }
+    }
+}
+
+impl std::fmt::Display for QuoteTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for line in self.message.content.lines() {
             f.write_str("> ")?;
@@ -41,10 +54,12 @@ impl std::fmt::Display for QuoteContent<'_> {
 
         write!(
             f,
-            "-# \\- {} @ <t:{}> {}",
+            "-# \\- {} @ <t:{}> {:x}",
             get_unique_username(&self.message.author),
             self.message.timestamp.unix_timestamp(),
-            self.message.id.link(self.ctx.channel_id(), self.ctx.guild_id()),
+            *self,
         )
     }
 }
+
+
