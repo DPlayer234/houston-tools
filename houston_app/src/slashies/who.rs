@@ -26,8 +26,6 @@ pub async fn who(
         }
     }
 
-    embed = embed.fields(who_user_public_flags(&user));
-
     ctx.send(ctx.create_reply().embed(embed)).await?;
     Ok(())
 }
@@ -43,65 +41,41 @@ fn who_user_embed(user: &User) -> CreateEmbed {
 }
 
 fn who_user_info(user: &User) -> String {
-    let mut builder = MessageBuilder::new();
+    let mut f = String::new();
 
     if let Some(ref global_name) = user.global_name {
-        builder.push_bold("Display Name:")
-            .push(' ')
-            .push_mono_line(global_name);
+        write!(f, "**Display Name:** {global_name}\n").discard();
     }
 
-    builder.push_bold("Snowflake:")
-        .push(' ')
-        .push_mono_line(user.id.to_string());
-
-    builder.push_bold("Created At:")
-        .push(' ')
-        .push_line(user.created_at().mention(SHORT_DATE_TIME));
+    write!(
+        f,
+        "**Snowflake:** `{}`\n\
+        **Created At:** {}\n",
+        user.id,
+        user.created_at().short_date_time(),
+    ).discard();
 
     if let Some(avatar_url) = user.avatar_url() {
-        builder.push_bold("Avatar:")
-            .push(' ')
-            .push_named_link_safe("Click", avatar_url)
-            .push('\n');
+        write!(f, "**Avatar:** [Click]({avatar_url})\n").discard();
     }
 
-    // Bots don't actually get this as far as I can tell
-    if let Some(banner_url) = user.banner_url() {
-        builder.push_bold("Banner:")
-            .push(' ')
-            .push_named_link_safe("Click", banner_url)
-            .push('\n');
-    } else if let Some(accent_color) = user.accent_colour {
-        builder.push_bold("Accent Color:")
-            .push(" #")
-            .push_line(accent_color.hex());
+    // Bots don't get banners.
+
+    if let Some(public_flags) = user.public_flags.filter(|p| !p.is_empty()) {
+        write_public_flags(&mut f, public_flags);
     }
 
-    if user.bot {
-        builder.push_bold("Bot Account");
+    let label = if user.bot {
+        "Bot Account"
     } else if user.system {
-        builder.push_bold("System Account");
+        "System Account"
     } else {
-        builder.push_bold("User Account");
+        "User Account"
+    };
 
-        // Apparently bots don't get this either
-        match user.premium_type {
-            PremiumType::None => (),
-            PremiumType::NitroClassic => { builder.push(" w/ Nitro Classic"); },
-            PremiumType::Nitro => { builder.push(" w/ Nitro"); },
-            PremiumType::NitroBasic => { builder.push(" w/ Nitro Basic"); },
-            _ => { builder.push(format!(" w/ Premium Type {}", u8::from(user.premium_type))); },
-        }
-    }
+    write!(f, "**{label}**\n").discard();
 
-    builder.0
-}
-
-fn who_user_public_flags(user: &User) -> Option<SimpleEmbedFieldCreate> {
-    user.public_flags
-        .filter(|s| !s.is_empty())
-        .map(|f| ("Public Flags", to_string_public_flags(f), true))
+    f
 }
 
 /* Additional server member info */
@@ -109,82 +83,85 @@ fn who_user_public_flags(user: &User) -> Option<SimpleEmbedFieldCreate> {
 fn who_member_info(member: &PartialMember) -> String {
     // role ids are also present, but not useful since there is no guild info.
 
-    let mut builder = MessageBuilder::new();
+    let mut f = String::new();
 
     if let Some(nick) = &member.nick {
-        builder.push_bold("Nickname:")
-            .push(' ')
-            .push_mono_line(nick);
+        write!(f, "**Nickname:** `{nick}`\n").discard();
     }
 
     if let Some(joined_at) = member.joined_at {
-        builder.push_bold("Joined At:")
-            .push(' ')
-            .push_line(joined_at.mention(SHORT_DATE_TIME));
+        write!(f, "**Joined At:** {}\n", joined_at.short_date_time()).discard();
     }
 
     if let Some(premium_since) = member.premium_since {
-        builder.push_bold("Boosting Since:")
-            .push(' ')
-            .push_line(premium_since.mention(SHORT_DATE_TIME));
+        write!(f, "**Boosting Since:** {}\n", premium_since.short_date_time()).discard();
     }
 
-    if let Some(permissions) = member.permissions {
+    if let Some(permissions) = member.permissions.filter(|p| !p.is_empty()) {
         // these are channel scoped.
-        builder.push_bold("Permissions:");
-        write!(builder.0, " Raw: `{:#x}`\n> -# ", permissions.bits()).discard();
-
-        if permissions.administrator() {
-            builder.push("Administrator, *");
-        } else {
-            builder.push(permissions.get_permission_names().join(", "));
-        }
+        write_permissions(&mut f, permissions);
     }
 
-    builder.0
+    f
 }
 
 /* Local utilities */
 
-fn to_string_public_flags(public_flags: UserPublicFlags) -> String {
-    let mut buffer = String::new();
-
-    macro_rules! append_flag {
+fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
+    macro_rules! flag {
         ($flag:ident) => {
-            if public_flags.contains(UserPublicFlags::$flag) {
-                if !buffer.is_empty() {
-                    buffer.push('\n');
-                }
-
-                buffer.push('`');
-                buffer.push_str(titlecase!(stringify!($flag)));
-                buffer.push('`');
-            }
+            (UserPublicFlags::$flag, titlecase!(stringify!($flag)))
         };
     }
 
-    append_flag!(DISCORD_EMPLOYEE);
-    append_flag!(PARTNERED_SERVER_OWNER);
-    append_flag!(HYPESQUAD_EVENTS);
-    append_flag!(BUG_HUNTER_LEVEL_1);
-    append_flag!(HOUSE_BRAVERY);
-    append_flag!(HOUSE_BRILLIANCE);
-    append_flag!(HOUSE_BALANCE);
-    append_flag!(EARLY_SUPPORTER);
-    append_flag!(TEAM_USER);
-    append_flag!(SYSTEM);
-    append_flag!(BUG_HUNTER_LEVEL_2);
-    append_flag!(VERIFIED_BOT);
-    append_flag!(EARLY_VERIFIED_BOT_DEVELOPER);
-    append_flag!(DISCORD_CERTIFIED_MODERATOR);
-    append_flag!(BOT_HTTP_INTERACTIONS);
-    append_flag!(ACTIVE_DEVELOPER);
+    const FLAGS: &[(UserPublicFlags, &str)] = &[
+        flag!(DISCORD_EMPLOYEE),
+        flag!(PARTNERED_SERVER_OWNER),
+        flag!(HYPESQUAD_EVENTS),
+        flag!(BUG_HUNTER_LEVEL_1),
+        flag!(HOUSE_BRAVERY),
+        flag!(HOUSE_BRILLIANCE),
+        flag!(HOUSE_BALANCE),
+        flag!(EARLY_SUPPORTER),
+        flag!(TEAM_USER),
+        flag!(SYSTEM),
+        flag!(BUG_HUNTER_LEVEL_2),
+        flag!(VERIFIED_BOT),
+        flag!(EARLY_VERIFIED_BOT_DEVELOPER),
+        flag!(DISCORD_CERTIFIED_MODERATOR),
+        flag!(BOT_HTTP_INTERACTIONS),
+        flag!(ACTIVE_DEVELOPER),
+    ];
 
-    if !buffer.is_empty() {
-        buffer.push('\n');
+    write!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits()).discard();
+
+    let mut first = true;
+    for (flag, label) in FLAGS {
+        if public_flags.contains(*flag) {
+            if !first {
+                f.push_str(", ");
+            }
+
+            f.push_str(label);
+            first = false;
+        }
     }
 
-    write!(buffer, "Raw: `{:#x}`", public_flags.bits()).discard();
+    if first {
+        f.push_str("<None?>");
+    }
 
-    buffer
+    f.push_str("\n");
+}
+
+fn write_permissions(f: &mut String, permissions: Permissions) {
+    write!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits()).discard();
+
+    if permissions.administrator() {
+        f.push_str("Administrator, *");
+    } else if !permissions.is_empty() {
+        f.push_str(&permissions.get_permission_names().join(", "));
+    }
+
+    f.push_str("\n");
 }

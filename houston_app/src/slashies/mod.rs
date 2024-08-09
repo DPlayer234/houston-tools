@@ -33,7 +33,7 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Ar
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
-    log::info!("{}: /{} {}", &ctx.author().name, &ctx.command().qualified_name, match ctx {
+    log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {
         HContext::Application(ctx) => {
             ctx.interaction.data.target()
                 .map(DisplayResolvedArgs::Target)
@@ -78,9 +78,8 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
             .color(ERROR_EMBED_COLOR);
 
         let reply = ctx.create_ephemeral_reply().embed(embed);
-        match ctx.send(reply).await {
-            Err(err) => log::error!("Error in error handler: {err:?}"),
-            _ => () // All good here!
+        if let Err(err) = ctx.send(reply).await {
+            log::error!("Error in error handler: {err:?}")
         };
     }
 }

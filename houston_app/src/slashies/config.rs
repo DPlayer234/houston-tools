@@ -21,19 +21,13 @@ async fn config_hide(
     data.ephemeral = hidden.unwrap_or(!data.ephemeral);
     ctx.set_user_data(data.clone());
 
-    let mut content = MessageBuilder::new();
-    content.push("Your command usage is now ");
-
-    content.push_bold(if data.ephemeral {
-        "hidden"
-    } else {
-        "visible"
-    });
-
-    content.push(" to other users.");
+    let content = format!(
+        "Your command usage is now **{}** to other users.",
+        if data.ephemeral { "hidden" } else { "visible" }
+    );
 
     let embed = CreateEmbed::new()
-        .description(content.0)
+        .description(content)
         .color(DEFAULT_EMBED_COLOR);
 
     ctx.send(ctx.create_ephemeral_reply().embed(embed)).await?;

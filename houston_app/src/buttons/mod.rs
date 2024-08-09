@@ -8,7 +8,7 @@ pub use crate::prelude::*;
 pub mod azur;
 pub mod common;
 
-utils::define_simple_error!(InvalidInteractionError: "Invalid interaction.");
+utils::define_simple_error!(InvalidInteractionError(()): "Invalid interaction.");
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
 macro_rules! define_button_args {
@@ -129,7 +129,7 @@ impl ButtonEventHandler {
         let custom_id = match &interaction.data.kind {
             Kind::StringSelect { values } if values.len() == 1 => &values[0],
             Kind::Button => &interaction.data.custom_id,
-            _ => Err(InvalidInteractionError)?,
+            _ => Err(InvalidInteractionError(()))?,
         };
 
         let args = ButtonArgs::from_custom_id(custom_id)?;
@@ -146,18 +146,19 @@ impl ButtonEventHandler {
     async fn handle_dispatch_error(&self, ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
         if let Some(err) = err.downcast_ref::<serenity::Error>() {
             log::warn!("Discord interaction error: {err}");
-        } else {
-            log::warn!("Component error: {err:?}");
+            return;
+        }
 
-            let err_text = format!("Button error: ```{err}```");
-            let reply = CreateReply::default().ephemeral(true)
-                .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
-            let response = reply.to_slash_initial_response(Default::default());
+        log::warn!("Component error: {err:?}");
 
-            let res = interaction.create_response(ctx, CreateInteractionResponse::Message(response)).await;
-            if let Err(res) = res {
-                log::warn!("Error sending component error: {res}");
-            }
+        let err_text = format!("Button error: ```{err}```");
+        let reply = CreateReply::default().ephemeral(true)
+            .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
+        let response = reply.to_slash_initial_response(Default::default());
+
+        let res = interaction.create_response(ctx, CreateInteractionResponse::Message(response)).await;
+        if let Err(res) = res {
+            log::warn!("Error sending component error: {res}");
         }
     }
 }
@@ -235,15 +236,18 @@ pub trait ToCustomData {
 impl<T> ToCustomData for T
 where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
     fn to_custom_data(&self) -> CustomData {
-        CustomData::from_button_args(self)
+        CustomData::from_button_args(self.into())
     }
 }
 
 /// Execution context for [`ButtonArgsReply`].
 #[derive(Debug, Clone)]
 pub struct ButtonContext<'a> {
+    /// The source interaction.
     pub interaction: &'a ComponentInteraction,
+    /// The HTTP API that may be used.
     pub http: &'a serenity::all::Http,
+    /// The bot data.
     pub data: &'a HBotData,
 }
 
@@ -277,7 +281,9 @@ pub trait ButtonMessage: Sized {
 /// The mode a [`ButtonMessage`] uses to post its message.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ButtonMessageMode {
+    /// Edit the existing message of the button.
     #[default] Edit,
+    /// Create a new message.
     New,
 }
 
@@ -317,8 +323,7 @@ impl CustomData {
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
-    pub fn from_button_args<'a>(args: impl Into<ButtonArgsRef<'a>>) -> Self {
-        let args: ButtonArgsRef = args.into();
+    pub fn from_button_args<'a>(args: ButtonArgsRef<'a>) -> Self {
         match serde_bare::to_vec(&args) {
             Ok(data) => Self(data),
             Err(err) => {

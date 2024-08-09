@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -20,7 +20,6 @@ pub struct HDiscordConfig {
 #[derive(Debug, Deserialize)]
 pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
-    pub trusted_users: HashSet<u64>,
 }
 
 #[derive(Debug, Deserialize, Default)]

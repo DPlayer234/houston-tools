@@ -2,14 +2,6 @@
 
 use chrono::prelude::*;
 
-pub const SHORT_TIME: Option<char> = Some('t');
-pub const LONG_TIME: Option<char> = Some('T');
-pub const SHORT_DATE: Option<char> = Some('d');
-pub const LONG_DATE: Option<char> = Some('D');
-pub const SHORT_DATE_TIME: Option<char> = Some('f');
-pub const LONG_DATE_TIME: Option<char> = Some('F');
-pub const RELATIVE: Option<char> = Some('R');
-
 /// Discord's epoch starts at "2015-01-01T00:00:00+00:00"
 const DISCORD_EPOCH: u64 = 1_420_070_400_000;
 
@@ -42,18 +34,38 @@ pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
 }
 
 /// Allows mentioning a timestamp in Discord messages.
-pub trait TimestampMention {
+pub trait TimeMentionable {
     /// Formats a mention for a timestamp.
-    #[must_use]
-    fn mention(&self, format: Option<char>) -> String;
+    fn mention(&self, format: &'static str) -> TimeMention;
+
+    fn short_time(&self) -> TimeMention { self.mention("t") }
+    fn long_time(&self) -> TimeMention { self.mention("T") }
+    fn short_date(&self) -> TimeMention { self.mention("d") }
+    fn long_date(&self) -> TimeMention { self.mention("D") }
+    fn short_date_time(&self) -> TimeMention { self.mention("f") }
+    fn long_date_time(&self) -> TimeMention { self.mention("F") }
+    fn relative(&self) -> TimeMention { self.mention("R") }
 }
 
-impl<Tz: TimeZone> TimestampMention for DateTime<Tz> {
-    fn mention(&self, format: Option<char>) -> String {
-        match format {
-            Some(format) => format!("<t:{}:{}>", self.timestamp(), format).into(),
-            None => format!("<t:{}>", self.timestamp()).into(),
+impl<Tz: TimeZone> TimeMentionable for DateTime<Tz> {
+    fn mention(&self, format: &'static str) -> TimeMention {
+        TimeMention {
+            timestamp: self.timestamp(),
+            format,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct TimeMention {
+    timestamp: i64,
+    format: &'static str,
+}
+
+impl std::fmt::Display for TimeMention {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<t:{}:{}>", self.timestamp, self.format)
     }
 }
 

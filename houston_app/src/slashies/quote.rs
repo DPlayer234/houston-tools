@@ -1,3 +1,5 @@
+use utils::time::*;
+
 use crate::prelude::*;
 use crate::fmt::discord::get_unique_username;
 
@@ -5,11 +7,15 @@ use crate::fmt::discord::get_unique_username;
 #[poise::command(context_menu_command = "Get as Quote")]
 pub async fn quote(
     ctx: HContext<'_>,
-    message: Message,
+    mut message: Message,
 ) -> HResult {
+    // seemingly not always correctly set for messages received in interactions
+    message.channel_id = ctx.channel_id();
+    message.guild_id = ctx.guild_id();
+
     let content = format!(
         "-# Quote: {t:x}\n```\n{t}\n```",
-        t = QuoteTarget::new(&ctx, &message)
+        t = QuoteTarget::new(&message)
     );
 
     let embed = CreateEmbed::new()
@@ -21,22 +27,21 @@ pub async fn quote(
 }
 
 struct QuoteTarget<'a> {
-    ctx: &'a HContext<'a>,
-    message: &'a Message
+    message: &'a Message,
 }
 
 impl<'a> QuoteTarget<'a> {
-    fn new(ctx: &'a HContext<'a>, message: &'a Message) -> Self {
-        Self { ctx, message }
+    fn new(message: &'a Message) -> Self {
+        Self { message }
     }
 }
 
 impl std::fmt::LowerHex for QuoteTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let channel_id = self.ctx.channel_id();
+        let channel_id = self.message.channel_id;
         let message_id = self.message.id;
 
-        if let Some(guild_id) = self.ctx.guild_id() {
+        if let Some(guild_id) = self.message.guild_id {
             write!(f, "https://discord.com/channels/{guild_id}/{channel_id}/{message_id}")
         } else {
             write!(f, "https://discord.com/channels/@me/{channel_id}/{message_id}")
@@ -54,10 +59,10 @@ impl std::fmt::Display for QuoteTarget<'_> {
 
         write!(
             f,
-            "-# \\- {} @ <t:{}> {:x}",
-            get_unique_username(&self.message.author),
-            self.message.timestamp.unix_timestamp(),
-            *self,
+            "-# \\- {name} @ {time} {link:x}",
+            name = get_unique_username(&self.message.author),
+            time = self.message.timestamp.short_date_time(),
+            link = *self,
         )
     }
 }
