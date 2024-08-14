@@ -14,9 +14,9 @@ use crate::prelude::*;
 pub async fn dice(
     ctx: HContext<'_>,
     #[description = "The sets of dice to roll, in a format like '2d6'."]
-    sets: DiceSetVec
+    sets: DiceSetVec,
 ) -> HResult {
-    let sets = sets.to_vec();
+    let sets = sets.into_vec();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
     if dice_count > 255 {
         Err(HArgError("Too many dice in total."))?;
@@ -114,7 +114,7 @@ impl DiceSetVec {
     }
 
     #[must_use]
-    fn to_vec(self) -> Vec<DiceSet> {
+    fn into_vec(self) -> Vec<DiceSet> {
         self.0
     }
 }

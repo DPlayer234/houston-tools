@@ -4,6 +4,7 @@ use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
 mod azur;
+mod calc;
 mod coin;
 mod config;
 mod dice;
@@ -18,6 +19,7 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Ar
         coin::coin(),
         config::config(),
         dice::dice(),
+        calc::calc(),
         quote::quote(),
         timestamp::timestamp(),
         who::who(),

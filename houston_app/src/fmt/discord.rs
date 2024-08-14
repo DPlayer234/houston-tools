@@ -11,7 +11,7 @@ use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 pub fn get_unique_username(user: &User) -> String {
     user.discriminator
         .map(|d| format!("{}#{:04}", user.name, d))
-        .unwrap_or_else(|| user.name.to_owned())
+        .unwrap_or_else(|| user.name.clone())
 }
 
 /// Implements [`Display`] to format resolved command arguments.

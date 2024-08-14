@@ -7,6 +7,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
     pub discord: HDiscordConfig,
+    #[serde(default)]
     pub bot: HBotConfig,
     #[serde(default)]
     pub log: HLogConfig,
@@ -17,7 +18,7 @@ pub struct HDiscordConfig {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
 }

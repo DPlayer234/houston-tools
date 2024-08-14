@@ -29,6 +29,7 @@ Here is a quick overview of the supported commands:
 
 | Command      | Description |
 |:------------ |:----------- |
+| calc         | Evaluates a mathematical equation. |
 | config       | Provides (temporary) configuration for this app. |
 | config hide  | Configures whether responses to your commands are hidden from other users. |
 | coin         | Flips a coin. |

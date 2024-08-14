@@ -274,7 +274,7 @@ pub trait ButtonMessage: Sized {
     /// Modifies the create-reply payload.
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply>;
 
-    /// How to post the message. Defaults to [`ButtonMessageMode::Edit`]
+    /// How to post the message. Defaults to [`ButtonMessageMode::Edit`].
     fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }
 }
 

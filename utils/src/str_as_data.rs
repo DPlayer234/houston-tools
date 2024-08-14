@@ -45,6 +45,7 @@ pub fn to_b65536(bytes: &[u8]) -> String {
 
     let mut iter = bytes.chunks_exact(2);
     while let Some(chunk) = iter.next() {
+        // Conversion cannot fail and check is optimized out.
         let chunk = <[u8; 2]>::try_from(chunk).unwrap();
         result.push(bytes_to_char(chunk));
     }

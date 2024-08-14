@@ -147,6 +147,18 @@ impl<const LEN: usize> std::borrow::BorrowMut<str> for InlineStr<LEN> {
     }
 }
 
+impl<const LEN: usize> AsRef<str> for InlineStr<LEN> {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl<const LEN: usize> AsMut<str> for InlineStr<LEN> {
+    fn as_mut(&mut self) -> &mut str {
+        self.as_mut_str()
+    }
+}
+
 impl<const LEN: usize> std::fmt::Display for InlineStr<LEN> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(self.as_str(), f)

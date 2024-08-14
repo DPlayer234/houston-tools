@@ -40,14 +40,13 @@ pub const fn count_str_const(slices: &[&str]) -> usize {
     offset
 }
 
-/// Provides a way to join several [`str`] slices into a single UTF8 byte array.
-/// The resulting array is safe to transmute into a [`str`].
+/// Provides a way to join several [`str`] slices.
 ///
 /// This function is generally not useful and exists primarily to support the [`join`] macro.
 ///
 /// # Panic
 ///
-/// Panics if `N` is not equal to sum of the length of all slices.
+/// Panics if `N` is not equal to the sum of the length of all slices.
 #[must_use]
 pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     let mut out = [0u8; N];
