@@ -125,6 +125,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
                 weapons: equip.weapons
             }))
             .collect::<LuaResult<Vec<_>>>()?,
+        depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?,
         skills: parse::skill::load_skills(lua, buff_list)?,
         retrofits: Vec::new(), // Added by caller.
         skins: Vec::new() // Added by caller.

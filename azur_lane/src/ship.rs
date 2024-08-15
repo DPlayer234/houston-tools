@@ -23,10 +23,15 @@ pub struct ShipData {
     pub stats: ShipStatBlock,
     pub default_skin_id: u32,
     pub equip_slots: Vec<EquipSlot>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub shadow_equip: Vec<ShadowEquip>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub depth_charges: Vec<Equip>,
     pub skills: Vec<Skill>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub retrofits: Vec<ShipData>,
-    pub skins: Vec<ShipSkin>
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub skins: Vec<ShipSkin>,
 }
 
 /// Provides stat block information for a ship.

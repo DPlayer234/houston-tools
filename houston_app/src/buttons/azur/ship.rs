@@ -102,7 +102,7 @@ impl View {
             row.push(button);
         }
 
-        if !ship.shadow_equip.is_empty() {
+        if !ship.shadow_equip.is_empty() || !ship.depth_charges.is_empty() {
             let view = super::shadow_equip::View::new(self.clone());
             let button = CreateButton::new(view.to_custom_id())
                 .label("Shadow Equip")
@@ -259,6 +259,11 @@ impl View {
         for mount in &ship.shadow_equip {
             if !text.is_empty() { text.push('\n'); }
             write!(text, "-# **`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name).discard();
+        }
+
+        for equip in &ship.depth_charges {
+            if !text.is_empty() { text.push('\n'); }
+            write!(text, "-# **`ASW:`** {}", equip.name).discard();
         }
 
         [("Equipment", text, false)]
