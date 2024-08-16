@@ -6,11 +6,13 @@ use crate::prelude::*;
 #[poise::command(slash_command)]
 pub async fn calc(
     ctx: HContext<'_>,
-    equation: String,
+    mut equation: String,
 ) -> HResult {
+    equation.make_ascii_lowercase();
+
     let mut tokens = tokenize(equation.as_bytes());
-    let expr = read_expr(&mut tokens)?;
-    let result = eval(expr);
+    let expr = read_expr(&mut tokens, &|t| t.is_none())?.expr;
+    let result = eval(expr)?;
 
     let embed = CreateEmbed::new()
         .description(format!(
@@ -22,20 +24,38 @@ pub async fn calc(
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Token<'a> {
     text: &'a [u8],
 }
 
-#[derive(Debug, Clone)]
-enum Expr {
-    Number(f64),
-    BinaryOp(Box<BinaryOpExpr>),
-    UnaryOp(Box<UnaryOpExpr>),
-    Call(Box<CallExpr>),
+impl Token<'static> {
+    const OPEN: Token<'static> = Self::new(b"(");
+    const CLOSE: Token<'static> = Self::new(b")");
+    const COMMA: Token<'static> = Self::new(b",");
 }
 
-impl Default for Expr {
+impl<'a> Token<'a> {
+    const fn new(text: &'a [u8]) -> Self {
+        Self { text }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ExprSuccess<'a> {
+    expr: Expr<'a>,
+    terminator: Option<Token<'a>>,
+}
+
+#[derive(Debug, Clone)]
+enum Expr<'a> {
+    Number(f64),
+    BinaryOp(Box<BinaryOpExpr<'a>>),
+    UnaryOp(Box<UnaryOpExpr<'a>>),
+    Call(Box<CallExpr<'a>>),
+}
+
+impl Default for Expr<'_> {
     fn default() -> Self {
         Self::Number(0.0)
     }
@@ -62,14 +82,14 @@ impl BinaryOp {
 }
 
 #[derive(Debug, Clone)]
-struct BinaryOpExpr {
+struct BinaryOpExpr<'a> {
     kind: BinaryOp,
-    lhs: Expr,
-    rhs: Expr,
+    lhs: Expr<'a>,
+    rhs: Expr<'a>,
 }
 
-impl BinaryOpExpr {
-    fn expr(self) -> Expr {
+impl<'a> BinaryOpExpr<'a> {
+    fn expr(self) -> Expr<'a> {
         Expr::BinaryOp(Box::new(self))
     }
 }
@@ -80,31 +100,25 @@ enum UnaryOp {
 }
 
 #[derive(Debug, Clone)]
-struct UnaryOpExpr {
+struct UnaryOpExpr<'a> {
     kind: UnaryOp,
-    operand: Expr,
+    operand: Expr<'a>,
 }
 
-impl UnaryOpExpr {
-    fn expr(self) -> Expr {
+impl<'a> UnaryOpExpr<'a> {
+    fn expr(self) -> Expr<'a> {
         Expr::UnaryOp(Box::new(self))
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum CallMethod {
-    Abs,
-    Sqrt,
-}
-
 #[derive(Debug, Clone)]
-struct CallExpr {
-    method: CallMethod,
-    parameter: Expr,
+struct CallExpr<'a> {
+    method: Token<'a>,
+    parameters: Vec<Expr<'a>>,
 }
 
-impl CallExpr {
-    fn expr(self) -> Expr {
+impl<'a> CallExpr<'a> {
+    fn expr(self) -> Expr<'a> {
         Expr::Call(Box::new(self))
     }
 }
@@ -115,6 +129,7 @@ enum MathErrorKind {
     ExprExpected,
     InvalidBinaryOperand,
     InvalidMethod,
+    InvalidParameterCount,
 }
 
 utils::define_simple_error!(
@@ -141,41 +156,48 @@ fn tokenize<'a>(text: &'a [u8]) -> impl Iterator<Item = Token<'a>> {
             _ => std::iter::once(s).chain(None),
         })
         .filter(|s| !s.is_empty())
-        .map(|s| Token { text: s })
+        .map(Token::new)
         .fuse()
 }
 
-fn read_expr<'a>(tokens: &mut impl Iterator<Item = Token<'a>>) -> Result<Expr> {
-    struct ExprPair {
-        value: Expr,
+fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn Fn(Option<Token<'a>>) -> bool) -> Result<ExprSuccess<'a>> {
+    struct ExprPair<'a> {
+        value: Expr<'a>,
         operator: Option<BinaryOp>,
     }
 
     enum SubExpr<'a> {
-        Expr(Expr),
+        Expr(Expr<'a>),
         Name(Token<'a>),
     }
 
-    fn read_sub_expr<'a>(tokens: &mut impl Iterator<Item = Token<'a>>) -> Result<Option<SubExpr<'a>>> {
+    fn read_sub_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>) -> Result<Option<SubExpr<'a>>> {
         let Some(token) = tokens.next() else {
             return Ok(None);
         };
 
+        fn number(f: f64) -> Option<SubExpr<'static>> {
+            Some(SubExpr::Expr(Expr::Number(f)))
+        }
+
         // reads a sub expression, like `5`, `-2`, or parenthised expressions
         Ok(match token.text {
-            b"(" => Some(SubExpr::Expr(read_expr(tokens)?)),
+            b"(" => Some(SubExpr::Expr(read_expr(tokens, &|t| t == Some(Token::CLOSE))?.expr)),
             b"+" => Some(SubExpr::Expr(read_required_sub_expr(tokens)?)),
             b"-" => Some(SubExpr::Expr(UnaryOpExpr { kind: UnaryOp::Minus, operand: read_required_sub_expr(tokens)? }.expr())),
-            [b'0'..=b'9', ..] => Some(SubExpr::Expr(Expr::Number(
+            b"pi" => number(std::f64::consts::PI),
+            b"e" => number(std::f64::consts::E),
+            b"tau" => number(std::f64::consts::TAU),
+            [b'0'..=b'9', ..] => number(
                 std::str::from_utf8(token.text).ok()
                     .and_then(|s| f64::from_str(s).ok())
                     .ok_or_else(|| MathError(MathErrorKind::ParseFailed))?
-            ))),
+            ),
             _ => Some(SubExpr::Name(token)),
         })
     }
 
-    fn read_required_sub_expr<'a>(tokens: &mut impl Iterator<Item = Token<'a>>) -> Result<Expr> {
+    fn read_required_sub_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>) -> Result<Expr<'a>> {
         read_sub_expr(tokens).and_then(|f| match f {
             Some(SubExpr::Expr(expr)) => Ok(expr),
             _ => Err(MathError(MathErrorKind::ExprExpected)),
@@ -242,28 +264,35 @@ fn read_expr<'a>(tokens: &mut impl Iterator<Item = Token<'a>>) -> Result<Expr> {
             match (value, tokens.next()) {
                 // a name is currently only valid for a call
                 // in this case, the call becomes the sub expression
-                (SubExpr::Name(name), Some(Token { text: b"(" })) => {
-                    let method = match name.text {
-                        b"abs" => CallMethod::Abs,
-                        b"sqrt" => CallMethod::Sqrt,
-                        _ => return Err(MathError(MathErrorKind::InvalidMethod)),
-                    };
+                (SubExpr::Name(method), Some(Token::OPEN)) => {
+                    let mut parameters = Vec::new();
+                    loop {
+                        let parameter = read_expr(tokens, &|t| matches!(t, Some(Token::CLOSE | Token::COMMA)))?;
+                        parameters.push(parameter.expr);
+                        if parameter.terminator == Some(Token::CLOSE) {
+                            break;
+                        }
+                    }
 
-                    let parameter = read_expr(tokens)?;
                     value = SubExpr::Expr(CallExpr {
                         method,
-                        parameter,
+                        parameters,
                     }.expr());
                 },
 
-                // followed by nothing or ")" means this is the end of the expression
-                (SubExpr::Expr(expr), None | Some(Token { text: b")" })) => {
-                    if pairs.is_empty() {
-                        return Ok(expr);
-                    }
+                // followed by terminator means this expression ends
+                (SubExpr::Expr(expr), token) if terminate_on(token) => {
+                    let expr = if !pairs.is_empty() {
+                        pairs.push(ExprPair { value: expr, operator: None });
+                        finish(pairs)?
+                    } else {
+                        expr
+                    };
 
-                    pairs.push(ExprPair { value: expr, operator: None });
-                    return finish(pairs);
+                    return Ok(ExprSuccess {
+                        expr,
+                        terminator: token,
+                    });
                 },
 
                 // otherwise a binary operator follows
@@ -284,12 +313,12 @@ fn read_expr<'a>(tokens: &mut impl Iterator<Item = Token<'a>>) -> Result<Expr> {
     Err(MathError(MathErrorKind::ParseFailed))
 }
 
-fn eval(expr: Expr) -> f64 {
-    match expr {
+fn eval(expr: Expr) -> Result<f64> {
+    Ok(match expr {
         Expr::Number(num) => num,
         Expr::BinaryOp(expr) => {
-            let lhs = eval(expr.lhs);
-            let rhs = eval(expr.rhs);
+            let lhs = eval(expr.lhs)?;
+            let rhs = eval(expr.rhs)?;
             match expr.kind {
                 BinaryOp::Add => lhs + rhs,
                 BinaryOp::Sub => lhs - rhs,
@@ -300,17 +329,50 @@ fn eval(expr: Expr) -> f64 {
             }
         },
         Expr::UnaryOp(expr) => {
-            let value = eval(expr.operand);
+            let value = eval(expr.operand)?;
             match expr.kind {
                 UnaryOp::Minus => -value,
             }
         },
         Expr::Call(expr) => {
-            let value = eval(expr.parameter);
-            match expr.method {
-                CallMethod::Abs => value.abs(),
-                CallMethod::Sqrt => value.sqrt(),
+            match expr.method.text {
+                b"abs" => eval_one(expr.parameters)?.abs(),
+                b"sqrt" => eval_one(expr.parameters)?.sqrt(),
+                b"sin" => eval_one(expr.parameters)?.sin(),
+                b"cos" => eval_one(expr.parameters)?.cos(),
+                b"tan" => eval_one(expr.parameters)?.tan(),
+                b"asin" => eval_one(expr.parameters)?.asin(),
+                b"acos" => eval_one(expr.parameters)?.acos(),
+                b"atan" => eval_one(expr.parameters)?.atan(),
+                b"log" => {
+                    let [a, b] = eval_many::<2>(expr.parameters)?;
+                    a.log(b)
+                },
+                _ => Err(MathError(MathErrorKind::InvalidMethod))?,
             }
+        }
+    })
+}
+
+fn eval_one(exprs: Vec<Expr>) -> Result<f64> {
+    match <[Expr; 1]>::try_from(exprs) {
+        Err(_) => Err(MathError(MathErrorKind::InvalidParameterCount)),
+        Ok([expr]) => {
+            eval(expr)
+        }
+    }
+}
+
+fn eval_many<const N: usize>(exprs: Vec<Expr>) -> Result<[f64; N]> {
+    match <[Expr; N]>::try_from(exprs) {
+        Err(_) => Err(MathError(MathErrorKind::InvalidParameterCount)),
+        Ok(exprs) => {
+            let mut result = [0f64; N];
+            for (index, expr) in exprs.into_iter().enumerate() {
+                result[index] = eval(expr)?;
+            }
+
+            Ok(result)
         }
     }
 }
