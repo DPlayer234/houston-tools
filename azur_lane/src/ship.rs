@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use serde::*;
+use serde::{Serialize, Deserialize};
 
 use crate::define_data_enum;
 use super::equip::*;

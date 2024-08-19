@@ -1,5 +1,5 @@
 use num_enum::FromPrimitive;
-use image::*;
+use image::RgbaImage;
 
 use crate::{define_unity_class, UnityError};
 use crate::unity_fs::UnityFsFile;

@@ -1,6 +1,6 @@
 //! Defines a data model that a subset of Azur Lane's game data can be represented as.
 
-use serde::*;
+use serde::{Serialize, Deserialize};
 
 mod data_def;
 pub mod equip;

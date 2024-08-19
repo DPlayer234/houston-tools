@@ -7,6 +7,7 @@
 
 use std::fmt::{Debug, Display};
 use std::error::Error;
+use std::io::{Read, Seek};
 
 pub mod classes;
 pub mod object;
@@ -36,14 +37,22 @@ impl Display for UnityError {
 
 impl Error for UnityError {}
 
-macro_rules! read_endian {
-    ($Type:ty, $endian:expr, $cursor:expr) => {
-        if $endian {
-            <$Type>::read_be($cursor)
-        } else {
-            <$Type>::read_le($cursor)
-        }
-    };
+/// Extension type to allow specifying the endianness of the read with a bool.
+trait BinReadEndian: Sized {
+    /// Reads `Self` from the reader, given whether to read as big-endian.
+    fn read_endian<R: Read + Seek>(reader: &mut R, is_big_endian: bool) -> binrw::BinResult<Self>;
 }
 
-pub(crate) use read_endian;
+impl<T: binrw::BinRead> BinReadEndian for T
+where
+    for<'a> T::Args<'a>: Default,
+{
+    fn read_endian<R: Read + Seek>(reader: &mut R, is_big_endian: bool) -> binrw::BinResult<Self> {
+        let endian = match is_big_endian {
+            true => binrw::Endian::Big,
+            false => binrw::Endian::Little,
+        };
+
+        T::read_options(reader, endian, T::Args::default())
+    }
+}

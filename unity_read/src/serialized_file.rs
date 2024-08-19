@@ -5,7 +5,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use binrw::{binread, BinRead, NullString};
 
 use crate::object::{ObjectInfo, ObjectRef};
-use crate::read_endian;
+use crate::BinReadEndian;
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]
@@ -119,23 +119,23 @@ impl<'a> SerializedFile<'a> {
 
         // Endianness applies from here.
         if main.version >= 8 {
-            result.target_platform = Some(read_endian!(u32, result.is_big_endian, cursor)?);
+            result.target_platform = Some(u32::read_endian(cursor, result.is_big_endian)?);
         }
 
         if main.version >= 13 {
             result.enable_type_tree = u8::read(cursor)? != 0;
         }
 
-        let type_count = read_endian!(u32, result.is_big_endian, cursor)?;
+        let type_count = u32::read_endian(cursor, result.is_big_endian)?;
         for _ in 0 .. type_count {
             result.types.push(result.read_serialized_type(cursor, false)?);
         }
 
         if result.version >= 7 && result.version < 14 {
-            result.big_id_enabled = read_endian!(u32, result.is_big_endian, cursor)? != 0;
+            result.big_id_enabled = u32::read_endian(cursor, result.is_big_endian)? != 0;
         }
 
-        let object_count = read_endian!(u32, result.is_big_endian, cursor)?;
+        let object_count = u32::read_endian(cursor, result.is_big_endian)?;
         for _ in 0 .. object_count {
             result.objects.push(result.read_object_info(cursor)?);
         }
@@ -149,7 +149,7 @@ impl<'a> SerializedFile<'a> {
 
     fn read_serialized_type(&self, cursor: &mut LocalCursor, is_ref_type: bool) -> anyhow::Result<SerializedType> {
         let mut result = SerializedType {
-            class_id: read_endian!(u32, self.is_big_endian, cursor)?,
+            class_id: u32::read_endian(cursor, self.is_big_endian)?,
             .. SerializedType::default()
         };
 
@@ -183,9 +183,9 @@ impl<'a> SerializedFile<'a> {
             // I don't think I really need this set of data.
             if self.version >= 21 {
                 if is_ref_type {
-                    let _ = read_endian!(SerializedTypeRefNames, self.is_big_endian, cursor)?;
+                    let _ = SerializedTypeRefNames::read_endian(cursor, self.is_big_endian)?;
                 } else {
-                    let _ = read_endian!(SerializedTypeDeps, self.is_big_endian, cursor)?;
+                    let _ = SerializedTypeDeps::read_endian(cursor, self.is_big_endian)?;
                 }
             }
         }
@@ -194,17 +194,17 @@ impl<'a> SerializedFile<'a> {
     }
 
     fn read_type_tree_blob(&self, cursor: &mut LocalCursor) -> anyhow::Result<Vec<TypeTreeNode>> {
-        let node_count = read_endian!(u32, self.is_big_endian, cursor)?;
-        let str_buf_size = read_endian!(u32, self.is_big_endian, cursor)?;
+        let node_count = u32::read_endian(cursor, self.is_big_endian)?;
+        let str_buf_size = u32::read_endian(cursor, self.is_big_endian)?;
 
         let mut raw_nodes = Vec::new();
 
         for _ in 0 .. node_count {
-            let raw_node = read_endian!(TypeTreeNodeBlob, self.is_big_endian, cursor)?;
+            let raw_node = TypeTreeNodeBlob::read_endian(cursor, self.is_big_endian)?;
 
             if self.version >= 19 {
                 // ref type hash
-                let _ = read_endian!(u64, self.is_big_endian, cursor)?;
+                let _ = u64::read_endian(cursor, self.is_big_endian)?;
             }
 
             raw_nodes.push(raw_node);
@@ -253,20 +253,20 @@ impl<'a> SerializedFile<'a> {
             level,
             type_name: NullString::read(cursor)?.try_into()?,
             name: NullString::read(cursor)?.try_into()?,
-            size: read_endian!(i32, self.is_big_endian, cursor)?,
+            size: i32::read_endian(cursor, self.is_big_endian)?,
             .. TypeTreeNode::default()
         };
 
         if self.version > 1 {
-            node.index = read_endian!(u32, self.is_big_endian, cursor)?;
+            node.index = u32::read_endian(cursor, self.is_big_endian)?;
         }
 
-        node.type_flags = read_endian!(u32, self.is_big_endian, cursor)?;
-        node.version = read_endian!(u32, self.is_big_endian, cursor)?;
+        node.type_flags = u32::read_endian(cursor, self.is_big_endian)?;
+        node.version = u32::read_endian(cursor, self.is_big_endian)?;
 
         // unity wtf why is this missing in one version
         if self.version != 3 {
-            node.meta_flags = read_endian!(u32, self.is_big_endian, cursor)?;
+            node.meta_flags = u32::read_endian(cursor, self.is_big_endian)?;
         }
 
         let mut nodes = Vec::new();
@@ -274,7 +274,7 @@ impl<'a> SerializedFile<'a> {
         // we flatten it because other people do that here
         // also because i don't get why this is even a tree
         // no really, why?
-        let child_count = read_endian!(u32, self.is_big_endian, cursor)?;
+        let child_count = u32::read_endian(cursor, self.is_big_endian)?;
         for _ in 0 .. child_count {
             nodes.extend(self.read_type_tree(cursor, level + 1)?);
         }
@@ -285,33 +285,33 @@ impl<'a> SerializedFile<'a> {
     fn read_object_info(&self, cursor: &mut LocalCursor) -> anyhow::Result<ObjectInfo> {
         let mut object = if self.big_id_enabled {
             // Big ID flag only exists from v7 to v13
-            ObjectInfo::from(read_endian!(ObjectBlobBigId, self.is_big_endian, cursor)?)
+            ObjectInfo::from(ObjectBlobBigId::read_endian(cursor, self.is_big_endian)?)
         } else if self.version < 14 {
-            ObjectInfo::from(read_endian!(ObjectBlob, self.is_big_endian, cursor)?)
+            ObjectInfo::from(ObjectBlob::read_endian(cursor, self.is_big_endian)?)
         } else if self.version < 22 {
             // Starting with v14, big ID is the default, and it is aligned.
             align_cursor(cursor)?;
-            ObjectInfo::from(read_endian!(ObjectBlobBigId, self.is_big_endian, cursor)?)
+            ObjectInfo::from(ObjectBlobBigId::read_endian(cursor, self.is_big_endian)?)
         } else {
             // With v22, the blob start changes to 64-bit
             align_cursor(cursor)?;
-            ObjectInfo::from(read_endian!(ObjectBlobV22, self.is_big_endian, cursor)?)
+            ObjectInfo::from(ObjectBlobV22::read_endian(cursor, self.is_big_endian)?)
         };
 
         // Up to v16, class_id maps the the type's type_id.
         // After, the object's type_id is an index into the types list.
         if self.version < 16 {
-            object.class_id = Some(read_endian!(u16, self.is_big_endian, cursor)?);
+            object.class_id = Some(u16::read_endian(cursor, self.is_big_endian)?);
         }
 
         if self.version < 11 {
             // is destroyed
-            let _ = read_endian!(u16, self.is_big_endian, cursor)?;
+            let _ = u16::read_endian(cursor, self.is_big_endian)?;
         }
 
         if self.version >= 11 && self.version < 17 {
             // object's own script type index
-            let _ = read_endian!(u16, self.is_big_endian, cursor)?;
+            let _ = u16::read_endian(cursor, self.is_big_endian)?;
         }
 
         if self.version >= 15 && self.version < 17 {

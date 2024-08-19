@@ -2,12 +2,10 @@
 
 use std::io::{Cursor, Seek, SeekFrom};
 
-use binrw::BinRead;
-
 use crate::object::ObjectRef;
 use crate::{UnityError, UnityMismatch};
 use crate::serialized_file::TypeTreeNode;
-use crate::read_endian;
+use crate::BinReadEndian;
 
 mod asset_bundle;
 mod class_id;
@@ -62,7 +60,7 @@ pub trait UnityClass: Default {
                 "Array" | "TypelessData" => {
                     // The first element is the size, and the second is the child data.
                     // We assume that there cannot be siblings after that.
-                    let size = read_endian!(u32, is_big_endian, r)?;
+                    let size = u32::read_endian(r, is_big_endian)?;
                     let (next, children) = tree.get(1usize ..)
                         .and_then(|o| o.split_first())
                         .ok_or(UnityError::InvalidData("skipped array type data does not contain data element"))?;
@@ -258,7 +256,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
 
         // The first element is the size, and the second is the child data.
         // We assume that there cannot be siblings after that.
-        let len = read_endian!(u32, is_big_endian, r)?;
+        let len = u32::read_endian(r, is_big_endian)?;
         let (next, children) = tree.get(1usize ..)
             .and_then(|o| o.split_first())
             .ok_or(UnityError::InvalidData("array type data does not contain data element"))?;
@@ -282,7 +280,7 @@ macro_rules! impl_unity_class_primitive {
             fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, _tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
                 check_mismatch!(root, $expected $(| $extra)*);
 
-                let value = read_endian!($Type, is_big_endian, r)?;
+                let value = <$Type>::read_endian(r, is_big_endian)?;
                 if (root.meta_flags & 0x4000) != 0 {
                     Self::align_reader(r)?;
                 }
