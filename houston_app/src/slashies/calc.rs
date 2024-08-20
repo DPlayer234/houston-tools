@@ -10,15 +10,28 @@ pub async fn calc(
 ) -> HResult {
     equation.make_ascii_lowercase();
 
-    let mut tokens = tokenize(equation.as_bytes());
-    let expr = read_expr(&mut tokens, &|t| t.is_none())?.expr;
-    let result = eval(expr)?;
+    macro_rules! error_embed {
+        ($($t:tt)*) => {
+            CreateEmbed::new()
+                .description(format!($($t)*))
+                .color(ERROR_EMBED_COLOR)
+        };
+    }
 
-    let embed = CreateEmbed::new()
-        .description(format!(
-            "{equation} = **{result}**"
-        ))
-        .color(DEFAULT_EMBED_COLOR);
+    let embed = match eval_text(equation.as_bytes()) {
+        Ok(result) => CreateEmbed::new()
+            .description(format!("{equation} = **{result}**"))
+            .color(DEFAULT_EMBED_COLOR),
+        Err(MathError::ExprExpected(Some(at))) => error_embed!("Expected expression at `{at}`."),
+        Err(MathError::ExprExpected(None)) => error_embed!("Unexpected empty expression."),
+        Err(MathError::InvalidNumber(num)) => error_embed!("`{num}` is not a valid number."),
+        Err(MathError::InvalidUnaryOperator(op)) => error_embed!("`{op}` is not a unary operator."),
+        Err(MathError::InvalidBinaryOperator(op)) => error_embed!("`{op}` is not a binary operator."),
+        Err(MathError::InvalidFunction(function)) => error_embed!("The function `{function}` is unknown."),
+        Err(MathError::InvalidParameterCount { function, count: 1 }) => error_embed!("The function `{function}` takes 1 parameter."),
+        Err(MathError::InvalidParameterCount { function, count }) => error_embed!("The function `{function}` takes {count} parameters."),
+        Err(r) => Err(r)?,
+    };
 
     ctx.send(ctx.create_reply().embed(embed)).await?;
     Ok(())
@@ -38,6 +51,12 @@ impl Token<'static> {
 impl<'a> Token<'a> {
     const fn new(text: &'a [u8]) -> Self {
         Self { text }
+    }
+}
+
+impl std::fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&String::from_utf8_lossy(self.text))
     }
 }
 
@@ -113,7 +132,7 @@ impl<'a> UnaryOpExpr<'a> {
 
 #[derive(Debug, Clone)]
 struct CallExpr<'a> {
-    method: Token<'a>,
+    function: Token<'a>,
     parameters: Vec<Expr<'a>>,
 }
 
@@ -124,23 +143,40 @@ impl<'a> CallExpr<'a> {
 }
 
 #[derive(Debug)]
-enum MathErrorKind {
-    ParseFailed,
-    ExprExpected,
-    InvalidBinaryOperand,
-    InvalidMethod,
-    InvalidParameterCount,
+enum MathError {
+    Internal,
+    ExprExpected(Option<String>),
+    InvalidNumber(String),
+    InvalidUnaryOperator(String),
+    InvalidBinaryOperator(String),
+    InvalidFunction(String),
+    InvalidParameterCount { function: String, count: usize },
 }
 
 utils::define_simple_error!(
-    #[allow(dead_code)]
-    MathError(MathErrorKind):
-    e => "cannot do math: {e:?}"
+    @main
+    MathError:
+    e => "math expression evaluation failed: {e:?}"
 );
 
 type Result<T> = std::result::Result<T, MathError>;
 
-fn tokenize<'a>(text: &'a [u8]) -> impl Iterator<Item = Token<'a>> {
+trait Tokenizer<'a> {
+    fn next(&mut self) -> Option<Token<'a>>;
+    fn last(&self) -> Option<Token<'a>>;
+
+    fn expr_expected(&self) -> MathError {
+        MathError::ExprExpected(self.last().map(|t| t.to_string()))
+    }
+}
+
+fn eval_text(text: &[u8]) -> Result<f64> {
+    let mut tokens = tokenize(text);
+    let expr = read_expr(&mut tokens, &|t| t.is_none())?.expr;
+    eval(expr)
+}
+
+fn tokenize<'a>(text: &'a [u8]) -> impl Tokenizer<'a> {
     // - split by whitespace
     // - split each fragment by special characters, including them at the end of the new fragments
     // - split away the special characters also
@@ -149,7 +185,8 @@ fn tokenize<'a>(text: &'a [u8]) -> impl Iterator<Item = Token<'a>> {
         matches!(c, b'+' | b'-' | b'*' | b'/' | b'(' | b')' | b',')
     }
 
-    text.split(|c| c.is_ascii_whitespace())
+    let iter = text
+        .split(|c| c.is_ascii_whitespace())
         .flat_map(|s| s.split_inclusive(|c| is_special_char(*c)))
         .flat_map(|s| match s.split_last() {
             Some((last, rest)) if is_special_char(*last) => std::iter::once(rest).chain(Some(std::slice::from_ref(last))),
@@ -157,10 +194,39 @@ fn tokenize<'a>(text: &'a [u8]) -> impl Iterator<Item = Token<'a>> {
         })
         .filter(|s| !s.is_empty())
         .map(Token::new)
-        .fuse()
+        .fuse();
+
+    // this is only generic over `I` because we can't spell out the iterator name
+    // and i don't want to box the iterator to be able to return the value
+    struct TokenizerImpl<'a, I: ?Sized> {
+        last: Option<Token<'a>>,
+        iter: I,
+    }
+
+    impl<'a, I> Tokenizer<'a> for TokenizerImpl<'a, I>
+    where
+        I: Iterator<Item = Token<'a>> + ?Sized + 'a,
+    {
+        fn next(&mut self) -> Option<Token<'a>> {
+            let value = self.iter.next();
+            if value.is_some() {
+                self.last = value;
+            }
+            value
+        }
+
+        fn last(&self) -> Option<Token<'a>> {
+            self.last
+        }
+    }
+
+    TokenizerImpl {
+        last: None,
+        iter,
+    }
 }
 
-fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn Fn(Option<Token<'a>>) -> bool) -> Result<ExprSuccess<'a>> {
+fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>, terminate_on: &dyn Fn(Option<Token<'a>>) -> bool) -> Result<ExprSuccess<'a>> {
     struct ExprPair<'a> {
         value: Expr<'a>,
         operator: Option<BinaryOp>,
@@ -171,36 +237,36 @@ fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn
         Name(Token<'a>),
     }
 
-    fn read_sub_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>) -> Result<Option<SubExpr<'a>>> {
+    fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<SubExpr<'a>> {
         let Some(token) = tokens.next() else {
-            return Ok(None);
+            return Err(tokens.expr_expected());
         };
 
-        fn number(f: f64) -> Option<SubExpr<'static>> {
-            Some(SubExpr::Expr(Expr::Number(f)))
+        fn number(f: f64) -> SubExpr<'static> {
+            SubExpr::Expr(Expr::Number(f))
         }
 
         // reads a sub expression, like `5`, `-2`, or parenthised expressions
         Ok(match token.text {
-            b"(" => Some(SubExpr::Expr(read_expr(tokens, &|t| t == Some(Token::CLOSE))?.expr)),
-            b"+" => Some(SubExpr::Expr(read_required_sub_expr(tokens)?)),
-            b"-" => Some(SubExpr::Expr(UnaryOpExpr { kind: UnaryOp::Minus, operand: read_required_sub_expr(tokens)? }.expr())),
+            b"," | b")" => Err(MathError::ExprExpected(Some(token.to_string())))?,
+            b"(" => SubExpr::Expr(read_expr(tokens, &|t| t == Some(Token::CLOSE))?.expr),
+            b"+" => SubExpr::Expr(read_required_sub_expr(tokens)?),
+            b"-" => SubExpr::Expr(UnaryOpExpr { kind: UnaryOp::Minus, operand: read_required_sub_expr(tokens)? }.expr()),
             b"pi" => number(std::f64::consts::PI),
             b"e" => number(std::f64::consts::E),
             b"tau" => number(std::f64::consts::TAU),
-            [b'0'..=b'9', ..] => number(
-                std::str::from_utf8(token.text).ok()
-                    .and_then(|s| f64::from_str(s).ok())
-                    .ok_or_else(|| MathError(MathErrorKind::ParseFailed))?
-            ),
-            _ => Some(SubExpr::Name(token)),
+            [b'0'..=b'9', ..] => number({
+                let s = std::str::from_utf8(token.text).map_err(|_| MathError::Internal)?;
+                f64::from_str(s).map_err(|_| MathError::InvalidNumber(s.to_owned()))?
+            }),
+            _ => SubExpr::Name(token),
         })
     }
 
-    fn read_required_sub_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>) -> Result<Expr<'a>> {
+    fn read_required_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<Expr<'a>> {
         read_sub_expr(tokens).and_then(|f| match f {
-            Some(SubExpr::Expr(expr)) => Ok(expr),
-            _ => Err(MathError(MathErrorKind::ExprExpected)),
+            SubExpr::Expr(expr) => Ok(expr),
+            _ => Err(tokens.expr_expected()),
         })
     }
 
@@ -212,18 +278,18 @@ fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn
             b"/" => Ok(BinaryOp::Div),
             b"%" | b"mod" => Ok(BinaryOp::Mod),
             b"^" | b"pow" => Ok(BinaryOp::Pow),
-            _ => Err(MathError(MathErrorKind::InvalidBinaryOperand)),
+            _ => Err(MathError::InvalidBinaryOperator(token.to_string())),
         }
     }
 
-    fn finish(mut pairs: Vec<ExprPair>) -> Result<Expr> {
+    fn finish<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair<'a>>) -> Result<Expr<'a>> {
         while pairs.len() > 1 {
             'merge_once: for index in 1..pairs.len() {
                 let ([.., lhs], [rhs, ..]) = pairs.split_at_mut(index) else { unreachable!() };
 
                 match lhs.operator {
                     // None should only be set for the last element
-                    None => Err(MathError(MathErrorKind::InvalidBinaryOperand))?,
+                    None => Err(MathError::InvalidBinaryOperator("<eol>".to_owned()))?,
 
                     // merge cells if the left-hand priority is greater or equal than the right
                     // or if the right hand operator is None
@@ -253,38 +319,45 @@ fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn
 
         pairs.into_iter().next()
             .map(|p| p.value)
-            .ok_or_else(|| MathError(MathErrorKind::ExprExpected))
+            .ok_or_else(|| tokens.expr_expected())
     }
 
     let mut pairs = Vec::new();
-
-    // read sub expressions until out of tokens
-    'main: while let Some(mut value) = read_sub_expr(tokens)? {
+    loop {
+        // read sub expressions until out of tokens
+        let mut value = read_sub_expr(tokens)?;
         'sub: loop {
             match (value, tokens.next()) {
                 // a name is currently only valid for a call
                 // in this case, the call becomes the sub expression
                 (SubExpr::Name(method), Some(Token::OPEN)) => {
                     let mut parameters = Vec::new();
-                    loop {
+                    'params: loop {
                         let parameter = read_expr(tokens, &|t| matches!(t, Some(Token::CLOSE | Token::COMMA)))?;
                         parameters.push(parameter.expr);
                         if parameter.terminator == Some(Token::CLOSE) {
-                            break;
+                            break 'params;
                         }
                     }
 
                     value = SubExpr::Expr(CallExpr {
-                        method,
+                        function: method,
                         parameters,
                     }.expr());
+                    continue 'sub;
+                },
+
+                // a name followed by anything else is an error.
+                // assume it is supposed to be a unary operator.
+                (SubExpr::Name(name), _) => {
+                    return Err(MathError::InvalidUnaryOperator(name.to_string()));
                 },
 
                 // followed by terminator means this expression ends
                 (SubExpr::Expr(expr), token) if terminate_on(token) => {
                     let expr = if !pairs.is_empty() {
                         pairs.push(ExprPair { value: expr, operator: None });
-                        finish(pairs)?
+                        finish(tokens, pairs)?
                     } else {
                         expr
                     };
@@ -305,15 +378,41 @@ fn read_expr<'a>(tokens: &mut dyn Iterator<Item = Token<'a>>, terminate_on: &dyn
                 },
 
                 // anything else is an error
-                _ => break 'main
+                _ => return Err(tokens.expr_expected()),
+            }
+        }
+    }
+}
+
+fn eval(expr: Expr) -> Result<f64> {
+    fn eval_one(expr: CallExpr) -> Result<f64> {
+        eval_many::<1>(expr).map(|r| r[0])
+    }
+
+    fn eval_many<const N: usize>(expr: CallExpr) -> Result<[f64; N]> {
+        match <[Expr; N]>::try_from(expr.parameters) {
+            Err(_) => Err(MathError::InvalidParameterCount {
+                function: expr.function.to_string(),
+                count: N,
+            }),
+            Ok(exprs) => {
+                let mut result = [0f64; N];
+                for (index, expr) in exprs.into_iter().enumerate() {
+                    result[index] = eval(expr)?;
+                }
+
+                Ok(result)
             }
         }
     }
 
-    Err(MathError(MathErrorKind::ParseFailed))
-}
+    fn fold(exprs: Vec<Expr>, mut f: impl FnMut(f64, f64) -> f64) -> Result<f64> {
+        exprs.into_iter()
+            .map(eval)
+            .reduce(|a, b| Ok(f(a?, b?)))
+            .unwrap_or(Ok(0.0))
+    }
 
-fn eval(expr: Expr) -> Result<f64> {
     Ok(match expr {
         Expr::Number(num) => num,
         Expr::BinaryOp(expr) => {
@@ -335,44 +434,48 @@ fn eval(expr: Expr) -> Result<f64> {
             }
         },
         Expr::Call(expr) => {
-            match expr.method.text {
-                b"abs" => eval_one(expr.parameters)?.abs(),
-                b"sqrt" => eval_one(expr.parameters)?.sqrt(),
-                b"sin" => eval_one(expr.parameters)?.sin(),
-                b"cos" => eval_one(expr.parameters)?.cos(),
-                b"tan" => eval_one(expr.parameters)?.tan(),
-                b"asin" => eval_one(expr.parameters)?.asin(),
-                b"acos" => eval_one(expr.parameters)?.acos(),
-                b"atan" => eval_one(expr.parameters)?.atan(),
+            let expr = *expr;
+            match expr.function.text {
+                b"abs" => eval_one(expr)?.abs(),
+                b"sqrt" => eval_one(expr)?.sqrt(),
+                b"sin" => eval_one(expr)?.sin(),
+                b"cos" => eval_one(expr)?.cos(),
+                b"tan" => eval_one(expr)?.tan(),
+                b"asin" => eval_one(expr)?.asin(),
+                b"acos" => eval_one(expr)?.acos(),
+                b"atan" => eval_one(expr)?.atan(),
                 b"log" => {
-                    let [a, b] = eval_many::<2>(expr.parameters)?;
+                    let [a, b] = eval_many::<2>(expr)?;
                     a.log(b)
                 },
-                _ => Err(MathError(MathErrorKind::InvalidMethod))?,
+                b"min" => fold(expr.parameters, f64::min)?,
+                b"max" => fold(expr.parameters, f64::max)?,
+                _ => Err(MathError::InvalidFunction(expr.function.to_string()))?,
             }
         }
     })
 }
 
-fn eval_one(exprs: Vec<Expr>) -> Result<f64> {
-    match <[Expr; 1]>::try_from(exprs) {
-        Err(_) => Err(MathError(MathErrorKind::InvalidParameterCount)),
-        Ok([expr]) => {
-            eval(expr)
-        }
+#[cfg(test)]
+mod test {
+    use super::eval_text;
+
+    macro_rules! is_correct {
+        ($math:literal, $result:literal) => {{
+            const MIN: f64 = $result - 0.001;
+            const MAX: f64 = $result + 0.001;
+            assert!(matches!(
+                eval_text($math),
+                Ok(MIN..=MAX)
+            ));
+        }};
     }
-}
 
-fn eval_many<const N: usize>(exprs: Vec<Expr>) -> Result<[f64; N]> {
-    match <[Expr; N]>::try_from(exprs) {
-        Err(_) => Err(MathError(MathErrorKind::InvalidParameterCount)),
-        Ok(exprs) => {
-            let mut result = [0f64; N];
-            for (index, expr) in exprs.into_iter().enumerate() {
-                result[index] = eval(expr)?;
-            }
-
-            Ok(result)
-        }
+    #[test]
+    fn success() {
+        is_correct!(b"-4.5", -4.5);
+        is_correct!(b"1 + 2 * 3", 7.0);
+        is_correct!(b"sin(pi)", 0.0);
+        is_correct!(b"min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
     }
 }
