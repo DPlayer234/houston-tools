@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     unsafe { utils::time::mark_startup_time(); }
 
     let config = build_config()?;
-    init_logging(&config.log);
+    init_logging(config.log);
 
     log::info!("Starting...");
 
@@ -103,7 +103,7 @@ fn build_config() -> anyhow::Result<config::HConfig> {
     Ok(config)
 }
 
-fn init_logging(config: &config::HLogConfig) {
+fn init_logging(config: config::HLogConfig) {
     use log::LevelFilter;
 
     let mut builder = env_logger::builder();
@@ -112,11 +112,11 @@ fn init_logging(config: &config::HLogConfig) {
     // but to trace for the main app crate
     match config.default {
         None => builder.filter_level(LevelFilter::Warn).filter_module(std::module_path!(), LevelFilter::Trace),
-        Some(value) => builder.filter_level(value.into()),
+        Some(value) => builder.filter_level(value),
     };
 
-    for (module, &level) in &config.modules {
-        builder.filter_module(module, level.into());
+    for (module, level) in config.modules {
+        builder.filter_module(&module, level);
     }
 
     builder.init();

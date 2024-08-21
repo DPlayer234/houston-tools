@@ -28,10 +28,13 @@ impl HAzurLane {
     /// Constructs extended data from definitions.
     #[must_use]
     pub fn load_from(data_path: PathBuf) -> Self {
-        let data = Self::load_definitions(&data_path).unwrap_or_else(|err| {
-            log::error!("No Azur Lane data: {err}");
-            Default::default()
-        });
+        let data = match Self::load_definitions(&data_path) {
+            Ok(data) => data,
+            Err(err) => {
+                log::error!("No Azur Lane data: {err}");
+                return Self::default();
+            }
+        };
 
         let prefix_options = simsearch::SearchOptions::new()
             .threshold(0.9);
