@@ -1,8 +1,9 @@
+use parse::Token;
+
 use crate::prelude::*;
 
-mod ast;
+mod ops;
 mod parse;
-mod eval;
 
 /// Evaluates a mathematical equation.
 #[poise::command(slash_command)]
@@ -49,7 +50,10 @@ pub async fn calc(
         Err(MathError::InvalidParameterCount { function, count })
             => error_embed!("The function `{function}` takes {count} parameters."),
 
-        Err(r) => Err(r)?,
+        Err(MathError::FunctionCallExpected(function))
+            => error_embed!("`{function}` is a function and requires `(...)` after it."),
+
+        Err(r) => error_embed!("failed math: {r:?}"),
     };
 
     ctx.send(ctx.create_reply().embed(embed)).await?;
@@ -57,49 +61,45 @@ pub async fn calc(
 }
 
 /// A result for math evaluation.
-type Result<T> = std::result::Result<T, MathError>;
+type Result<'a, T> = std::result::Result<T, MathError<'a>>;
 
 /// The kinds of errors that may occur when evaluating a mathematical expression.
 #[derive(Debug)]
-enum MathError {
+enum MathError<'a> {
     /// Some internal error. Usually not returned.
     Internal,
 
     /// A sub-expression was expected but not found.
     /// Holds the last token before the error.
-    ExprExpected(Option<String>),
+    ExprExpected(Option<Token<'a>>),
 
     /// Found a token that seemed to be a number but couldn't be parsed as one.
     /// Holds the token in question.
-    InvalidNumber(String),
+    InvalidNumber(Token<'a>),
 
     /// Found a token that should be a unary operator but wasn't valid.
     /// Holds the token in question.
-    InvalidUnaryOperator(String),
+    InvalidUnaryOperator(Token<'a>),
 
     /// Found a token in a binary operator position that wasn't valid.
     /// Holds the token in question.
-    InvalidBinaryOperator(String),
+    InvalidBinaryOperator(Token<'a>),
 
     /// Encountered a call with an invalid function name.
     /// Holds the function name in question.
-    InvalidFunction(String),
+    InvalidFunction(Token<'a>),
 
     /// The parameter count for a function was incorrect.
-    InvalidParameterCount { function: String, count: usize },
-}
+    InvalidParameterCount { function: Token<'a>, count: usize },
 
-utils::define_simple_error!(
-    @main
-    MathError:
-    e => "math expression evaluation failed: {e:?}"
-);
+    /// Expected a function call.
+    FunctionCallExpected(Token<'a>),
+}
 
 /// Fully evaluates an equation text.
 fn eval_text(text: &[u8]) -> Result<f64> {
     let mut tokens = parse::tokenize(text);
-    let expr = parse::read_expr(&mut tokens)?;
-    eval::eval(expr)
+    parse::read_expr(&mut tokens)
 }
 
 #[cfg(test)]
@@ -124,5 +124,6 @@ mod test {
         is_correct!(b"1 + min(2) * 3", 7.0);
         is_correct!(b"sin(pi)", 0.0);
         is_correct!(b"min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
+        is_correct!(b"min()", 0.0);
     }
 }

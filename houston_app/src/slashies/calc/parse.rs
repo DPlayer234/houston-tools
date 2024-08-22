@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use super::{MathError, Result};
-use super::ast::*;
+use super::ops::*;
 
 /// A singular equation token, as returned by the tokenizer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,21 +32,15 @@ impl std::fmt::Display for Token<'_> {
 #[derive(Debug, Clone)]
 struct ExprSuccess<'a> {
     /// The expression.
-    expr: Expr<'a>,
+    value: f64,
     /// The token after the expression that terminated it.
     terminator: Option<Token<'a>>,
 }
 
-/// Pair of an expression value and the following binary operator.
-struct ExprPair<'a> {
-    value: Expr<'a>,
+/// Pair of a value and the following binary operator.
+struct ValuePair {
+    value: f64,
     operator: Option<BinaryOp>,
-}
-
-/// A sub-expression.
-enum SubExpr<'a> {
-    Expr(Expr<'a>),
-    Ident(Token<'a>),
 }
 
 /// A kind-of iterator for tokenizing.
@@ -56,12 +50,14 @@ pub trait Tokenizer<'a> {
     /// Reads the next token, or [`None`] if exhausted.
     fn next(&mut self) -> Option<Token<'a>>;
 
+    fn peek(&mut self) -> Option<Token<'a>>;
+
     /// Returns the last token returned by [`Tokenizer::next`].
     fn last_token(&self) -> Option<Token<'a>>;
 
     /// Returns a [`MathError::ExprExpected`] matching the last token.
-    fn expr_expected(&self) -> MathError {
-        MathError::ExprExpected(self.last_token().map(|t| t.to_string()))
+    fn expr_expected(&self) -> MathError<'a> {
+        MathError::ExprExpected(self.last_token())
     }
 }
 
@@ -90,19 +86,29 @@ pub fn tokenize<'a>(text: &'a [u8]) -> impl Tokenizer<'a> {
     // and i don't want to box the iterator to be able to return the value
     struct TokenizerImpl<'a, I: ?Sized> {
         most_recent: Option<Token<'a>>,
+        peeked: Option<Token<'a>>,
         iter: I,
     }
 
     impl<'a, I> Tokenizer<'a> for TokenizerImpl<'a, I>
     where
-        I: Iterator<Item = Token<'a>> + ?Sized + 'a,
+        I: Iterator<Item = Token<'a>> + ?Sized,
     {
         fn next(&mut self) -> Option<Token<'a>> {
-            let value = self.iter.next();
+            let value = self.peeked.take().or_else(|| self.iter.next());
             if value.is_some() {
                 self.most_recent = value;
             }
+
             value
+        }
+
+        fn peek(&mut self) -> Option<Token<'a>> {
+            if self.peeked.is_none() {
+                self.peeked = self.iter.next();
+            }
+
+            self.peeked
         }
 
         fn last_token(&self) -> Option<Token<'a>> {
@@ -112,13 +118,14 @@ pub fn tokenize<'a>(text: &'a [u8]) -> impl Tokenizer<'a> {
 
     TokenizerImpl {
         most_recent: None,
+        peeked: None,
         iter,
     }
 }
 
 /// Reads an expression. This will consume `tokens` until the end.
-pub fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<Expr<'a>> {
-    read_expr_with_terminator(tokens, &|t| t.is_none()).map(|e| e.expr)
+pub fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
+    read_expr_with_terminator(tokens, |t| t.is_none()).map(|e| e.value)
 }
 
 /// Reads an expression. This will consume `tokens` until it matches `terminate_on`
@@ -127,82 +134,44 @@ pub fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<Expr<'a>> {
 /// If no more tokens are available before it finds the terminator, returns an error.
 fn read_expr_with_terminator<'a>(
     tokens: &mut impl Tokenizer<'a>,
-    terminate_on: &dyn Fn(Option<Token<'a>>) -> bool,
-) -> Result<ExprSuccess<'a>> {
+    terminate_on: fn(Option<Token<'a>>) -> bool,
+) -> Result<'a, ExprSuccess<'a>> {
+    // this is basically the only place where this allocates now
     let mut pairs = Vec::new();
     loop {
         // read sub expressions until out of tokens
-        let mut value = read_sub_expr(tokens)?;
+        let value = read_sub_expr(tokens)?;
+        let token = tokens.next();
 
-        // this loop is used as a pseudo-goto target
-        'sub: loop {
-            match (value, tokens.next()) {
-                // a name is currently only valid for a call
-                // in this case, the call becomes the sub expression
-                (SubExpr::Ident(method), Some(Token::OPEN)) => {
-                    let terminate_on = &|t| matches!(t, Some(Token::CLOSE | Token::COMMA));
+        // if this a terminator, finish the expression and return it
+        if terminate_on(token) {
+            let value = if !pairs.is_empty() {
+                pairs.push(ValuePair { value, operator: None });
+                merge_expr_pairs(tokens, pairs)?
+            } else {
+                value
+            };
 
-                    let mut parameters = Vec::new();
-                    'params: loop {
-                        let parameter = read_expr_with_terminator(tokens, terminate_on)?;
-                        parameters.push(parameter.expr);
-
-                        // we either read an expression followed by `,` or `)`.
-                        // `,` would mean another parameter, `)` ends the parameter list.
-                        if parameter.terminator == Some(Token::CLOSE) {
-                            break 'params;
-                        }
-                    }
-
-                    value = SubExpr::Expr(CallExpr {
-                        function: method,
-                        parameters,
-                    }.expr());
-
-                    // rerun the match with the new value
-                    continue 'sub;
-                },
-
-                // a name followed by anything else is an error.
-                // assume it is supposed to be a unary operator.
-                (SubExpr::Ident(name), _) => {
-                    return Err(MathError::InvalidUnaryOperator(name.to_string()));
-                },
-
-                // followed by terminator means this expression ends
-                (SubExpr::Expr(expr), token) if terminate_on(token) => {
-                    let expr = if !pairs.is_empty() {
-                        pairs.push(ExprPair { value: expr, operator: None });
-                        merge_expr_pairs(tokens, pairs)?
-                    } else {
-                        expr
-                    };
-
-                    // we're done!
-                    return Ok(ExprSuccess {
-                        expr,
-                        terminator: token,
-                    });
-                },
-
-                // otherwise a binary operator follows
-                (SubExpr::Expr(value), Some(operator)) => {
-                    let operator = BinaryOp::from_token(operator)
-                        .ok_or_else(|| MathError::InvalidBinaryOperator(operator.to_string()))?;
-
-                    pairs.push(ExprPair {
-                        value,
-                        operator: Some(operator),
-                    });
-
-                    // read the next sub-expression
-                    break 'sub;
-                },
-
-                // anything else is an error
-                _ => return Err(tokens.expr_expected()),
-            }
+            // we're done!
+            return Ok(ExprSuccess {
+                value,
+                terminator: token,
+            });
         }
+
+        let Some(operator) = token else {
+            // a non-terminating None is an error
+            return Err(tokens.expr_expected());
+        };
+
+        // expecting a binary operator here
+        let operator = BinaryOp::from_token(operator)
+            .ok_or_else(|| MathError::InvalidBinaryOperator(operator))?;
+
+        pairs.push(ValuePair {
+            value,
+            operator: Some(operator),
+        });
     }
 }
 
@@ -210,10 +179,8 @@ fn read_expr_with_terminator<'a>(
 /// like `5` in `5 + 2`, an expression within parenthesis, unary operators with their operand,
 /// or an identifier.
 ///
-/// This function also resolves constants to their value.
-///
 /// If no more tokens are available, returns an error.
-fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<SubExpr<'a>> {
+fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
     let Some(token) = tokens.next() else {
         return Err(tokens.expr_expected());
     };
@@ -221,51 +188,71 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<SubExpr<'a>> {
     // this match *returns* for non-Expr branches
     let expr = match token.text {
         // start of parenthesis around child-expression
-        b"(" => read_expr_with_terminator(tokens, &|t| t == Some(Token::CLOSE))?.expr,
+        b"(" => read_expr_with_terminator(tokens, |t| t == Some(Token::CLOSE))?.value,
 
         // constants
-        b"pi" => Expr::Number(std::f64::consts::PI),
-        b"e" => Expr::Number(std::f64::consts::E),
-        b"tau" => Expr::Number(std::f64::consts::TAU),
+        b"pi" => std::f64::consts::PI,
+        b"e" => std::f64::consts::E,
+        b"tau" => std::f64::consts::TAU,
 
         // anything starting with a digit is assumed to be a number
-        [b'0'..=b'9', ..] => Expr::Number({
+        [b'0'..=b'9', ..] => {
             let s = std::str::from_utf8(token.text).map_err(|_| MathError::Internal)?;
-            f64::from_str(s).map_err(|_| MathError::InvalidNumber(s.to_owned()))?
-        }),
+            f64::from_str(s).map_err(|_| MathError::InvalidNumber(token))?
+        },
 
         // these shouldn't show up here
-        b"," | b")" => return Err(MathError::ExprExpected(Some(token.to_string()))),
+        b"," | b")" => return Err(MathError::ExprExpected(Some(token))),
 
-        // lastly, also check for unary operators
-        _ => match UnaryOp::from_token(token) {
-            // not matched, return an `Ident`.
-            None => return Ok(SubExpr::Ident(token)),
-
-            // otherwise, read the following expression as the operand
-            // also fold it directly into numbers to reduce allocations
-            Some(kind) => match read_required_sub_expr(tokens)? {
-                Expr::Number(n) => Expr::Number(kind.apply(n)),
-                operand => UnaryOpExpr { kind, operand }.expr()
-            }
+        // lastly, also check for unary operators and functions
+        _ => if let Some(op) = UnaryOp::from_token(token) {
+            op.apply(read_sub_expr(tokens)?)
+        } else if let Some(call) = CallOp::from_token(token) {
+            read_call(tokens, call, token)?
+        } else if matches!(tokens.peek(), Some(Token::OPEN)) {
+            return Err(MathError::InvalidFunction(token));
+        } else if matches!(tokens.peek(), Some(_)) {
+            return Err(MathError::InvalidUnaryOperator(token));
+        } else {
+            return Err(MathError::ExprExpected(tokens.last_token()));
         }
     };
 
-    Ok(SubExpr::Expr(expr))
+    Ok(expr)
 }
 
-/// Same as [`read_sub_expr`], but requires that it returns an expression and not anything else.
-fn read_required_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<Expr<'a>> {
-    match read_sub_expr(tokens)? {
-        SubExpr::Expr(expr) => Ok(expr),
-        _ => Err(tokens.expr_expected()),
+/// Reads the parameters for a function call and evaluates it.
+///
+/// This also checks that the next token is `(`.
+fn read_call<'a>(tokens: &mut impl Tokenizer<'a>, call_fn: CallOp, call_fn_token: Token<'a>) -> Result<'a, f64> {
+    if !matches!(tokens.next(), Some(Token::OPEN)) {
+        return Err(MathError::FunctionCallExpected(call_fn_token));
     }
+
+    let terminate_on = |t| matches!(t, Some(Token::CLOSE | Token::COMMA));
+    let mut params = Vec::new();
+
+    if tokens.peek() == Some(Token::CLOSE) {
+        // empty argument list. pop `)`
+        tokens.next();
+    } else {
+        // otherwise terminate when we hit a close in a terminator position
+        loop {
+            let res = read_expr_with_terminator(tokens, terminate_on)?;
+            params.push(res.value);
+            if res.terminator == Some(Token::CLOSE) {
+                break;
+            }
+        }
+    }
+
+    call_fn.apply(&params)
 }
 
 /// Merges a list of expression pairs into a singular expression.
 ///
 /// The `tokens` are only used for error reporting.
-fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair<'a>>) -> Result<Expr<'a>> {
+fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ValuePair>) -> Result<'a, f64> {
     while pairs.len() > 1 {
         // iterate over adjacent pairs (e.g. basically `pairs.windows(2)` but mutable).
         // the cell trick documented for `windows` could work, but it's harder to deal with and not any less code.
@@ -274,20 +261,18 @@ fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair
 
             match lhs.operator {
                 // None should only be set for the last element
-                None => Err(MathError::InvalidBinaryOperator("<eol>".to_owned()))?,
+                None => Err(MathError::InvalidBinaryOperator(Token::new(b"<eol>")))?,
 
                 // merge cells if the left-hand priority is greater or equal than the right
                 // or if the right hand operator is None
                 Some(kind) if rhs.operator.map_or(true, |r| kind.priority() >= r.priority()) => {
-                    use std::mem::take;
-
-                    // move the values out since we'll need to put them elsewhere
-                    let lhs_value = take(&mut lhs.value);
-                    let rhs_value = take(&mut rhs.value);
+                    // copy the values out since we'll need to put them elsewhere
+                    let lhs_value = lhs.value;
+                    let rhs_value = rhs.value;
 
                     // replace `lhs` with the new pair
-                    *lhs = ExprPair {
-                        value: into_binary_expr(kind, lhs_value, rhs_value),
+                    *lhs = ValuePair {
+                        value: kind.apply(lhs_value, rhs_value),
                         operator: rhs.operator,
                     };
 
@@ -310,14 +295,4 @@ fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair
     pairs.into_iter().next()
         .map(|p| p.value)
         .ok_or_else(|| tokens.expr_expected())
-}
-
-/// Creates a binary operator expression.
-///
-/// If both operands are numbers, simplifies it to just a number expression.
-fn into_binary_expr<'a>(kind: BinaryOp, lhs: Expr<'a>, rhs: Expr<'a>) -> Expr<'a> {
-    match (lhs, rhs) {
-        (Expr::Number(lhs), Expr::Number(rhs)) => Expr::Number(kind.apply(lhs, rhs)),
-        (lhs, rhs) => BinaryOpExpr { kind, lhs, rhs }.expr(),
-    }
 }
