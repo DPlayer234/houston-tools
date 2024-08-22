@@ -121,6 +121,7 @@ mod test {
     fn success() {
         is_correct!(b"-4.5", -4.5);
         is_correct!(b"1 + 2 * 3", 7.0);
+        is_correct!(b"1 + min(2) * 3", 7.0);
         is_correct!(b"sin(pi)", 0.0);
         is_correct!(b"min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
     }

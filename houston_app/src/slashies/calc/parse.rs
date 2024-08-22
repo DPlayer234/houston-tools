@@ -287,11 +287,7 @@ fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair
 
                     // replace `lhs` with the new pair
                     *lhs = ExprPair {
-                        value: BinaryOpExpr {
-                            kind,
-                            lhs: lhs_value,
-                            rhs: rhs_value,
-                        }.expr(),
+                        value: into_binary_expr(kind, lhs_value, rhs_value),
                         operator: rhs.operator,
                     };
 
@@ -314,4 +310,14 @@ fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ExprPair
     pairs.into_iter().next()
         .map(|p| p.value)
         .ok_or_else(|| tokens.expr_expected())
+}
+
+/// Creates a binary operator expression.
+///
+/// If both operands are numbers, simplifies it to just a number expression.
+fn into_binary_expr<'a>(kind: BinaryOp, lhs: Expr<'a>, rhs: Expr<'a>) -> Expr<'a> {
+    match (lhs, rhs) {
+        (Expr::Number(lhs), Expr::Number(rhs)) => Expr::Number(kind.apply(lhs, rhs)),
+        (lhs, rhs) => BinaryOpExpr { kind, lhs, rhs }.expr(),
+    }
 }

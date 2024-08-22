@@ -68,7 +68,7 @@ define_op_kind! {
 impl BinaryOp {
     /// The priority for the operator.
     /// Relevant for order-of-operations.
-    pub fn priority(self) -> isize {
+    pub const fn priority(self) -> isize {
         match self {
             BinaryOp::Add | BinaryOp::Sub => 1,
             BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => 2,
