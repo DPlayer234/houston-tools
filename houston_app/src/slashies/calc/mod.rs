@@ -52,8 +52,6 @@ pub async fn calc(
 
         Err(MathError::FunctionCallExpected(function))
             => error_embed!("`{function}` is a function and requires `(...)` after it.{}", function.error_fmt()),
-
-        Err(r) => error_embed!("failed math: {r:?}"),
     };
 
     ctx.send(ctx.create_reply().embed(embed)).await?;
@@ -66,9 +64,6 @@ type Result<'a, T> = std::result::Result<T, MathError<'a>>;
 /// The kinds of errors that may occur when evaluating a mathematical expression.
 #[derive(Debug)]
 enum MathError<'a> {
-    /// Some internal error. Usually not returned.
-    Internal,
-
     /// A sub-expression was expected but not found.
     /// Holds the last token before the error.
     ExprExpected(Option<Token<'a>>),

@@ -175,7 +175,7 @@ fn read_expr_with_terminator<'a>(
         if terminate_on(token) {
             let value = if !pairs.is_empty() {
                 pairs.push(ValuePair { value, operator: None });
-                merge_expr_pairs(tokens, pairs)?
+                merge_expr_pairs(pairs)
             } else {
                 value
             };
@@ -276,48 +276,49 @@ fn read_call<'a>(tokens: &mut impl Tokenizer<'a>, call_fn: CallOp, call_fn_token
 
 /// Merges a list of expression pairs into a singular expression.
 ///
-/// The `tokens` are only used for error reporting.
-fn merge_expr_pairs<'a>(tokens: &mut impl Tokenizer<'a>, mut pairs: Vec<ValuePair>) -> Result<'a, f64> {
+/// # Panics
+///
+/// Panics if `pairs` is empty or any operator other than the last is [`None`].
+fn merge_expr_pairs(mut pairs: Vec<ValuePair>) -> f64 {
     while pairs.len() > 1 {
         // iterate over adjacent pairs (e.g. basically `pairs.windows(2)` but mutable).
         // the cell trick documented for `windows` could work, but it's harder to deal with and not any less code.
         'merge_once: for index in 0..(pairs.len() - 1) {
             let [lhs, rhs, ..] = &mut pairs[index..] else { unreachable!() };
 
-            match lhs.operator {
-                // None should only be set for the last element
-                None => Err(MathError::Internal)?,
+            // None is only set for the last element
+            let kind = lhs.operator
+                .expect("only last operator must be empty");
 
-                // merge cells if the left-hand priority is greater or equal than the right
-                // or if the right hand operator is None
-                Some(kind) if rhs.operator.map_or(true, |r| kind.priority() >= r.priority()) => {
-                    // copy the values out since we'll need to put them elsewhere
-                    let lhs_value = lhs.value;
-                    let rhs_value = rhs.value;
+            // merge cells if the left-hand priority is greater or equal than the right
+            // or if the right hand operator is None
+            if rhs.operator.map_or(true, |r| kind.priority() >= r.priority()) {
+                // copy the values out since we'll need to put them elsewhere
+                let lhs_value = lhs.value;
+                let rhs_value = rhs.value;
 
-                    // replace `lhs` with the new pair
-                    *lhs = ValuePair {
-                        value: kind.apply(lhs_value, rhs_value),
-                        operator: rhs.operator,
-                    };
+                // replace `lhs` with the new pair
+                *lhs = ValuePair {
+                    value: kind.apply(lhs_value, rhs_value),
+                    operator: rhs.operator,
+                };
 
-                    // remove `rhs` from the list entirely
-                    // we can't do that earlier to get `rhs_value` because that would also invalidate `lhs`.
-                    pairs.remove(index + 1);
+                // remove `rhs` from the list entirely
+                // we can't do that earlier to get `rhs_value` because that would also invalidate `lhs`.
+                pairs.remove(index + 1);
 
-                    // restart the inner loop.
-                    // this could start further in, but the logic for that is more difficult to get right.
-                    break 'merge_once;
-                },
-
-                // other cases continue searching
-                // this cannot lead to an infinite loop: if nothing else merges, the last 2 pairs get merged
-                _ => (),
+                // restart the inner loop.
+                // this could start further in, but the logic for that is more difficult to get right.
+                break 'merge_once;
             }
+
+            // other cases continue searching
+            // this cannot lead to an infinite loop: if nothing else merges, the last 2 pairs get merged
         }
     }
 
-    pairs.into_iter().next()
-        .map(|p| p.value)
-        .ok_or_else(|| tokens.expr_expected())
+    // pairs must not be empty
+    pairs.pop()
+        .expect("the pairs must not be empty")
+        .value
 }
