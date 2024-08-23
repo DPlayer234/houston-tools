@@ -5,7 +5,7 @@ use crate::prelude::*;
 mod ops;
 mod parse;
 
-/// Evaluates a mathematical equation.
+/// Evaluates a mathematical equation. Warning: Floating point math.
 #[poise::command(slash_command)]
 pub async fn calc(
     ctx: HContext<'_>,
@@ -21,37 +21,37 @@ pub async fn calc(
         };
     }
 
-    let embed = match eval_text(expression.as_bytes()) {
+    let embed = match eval_text(&expression) {
         Ok(result) => CreateEmbed::new()
             .description(format!("{expression} = **{result}**"))
             .color(DEFAULT_EMBED_COLOR),
 
         Err(MathError::ExprExpected(Some(at)))
-            => error_embed!("Expected expression at `{at}`."),
+            => error_embed!("Expected expression at `{at}`.{}", at.error_fmt()),
 
         Err(MathError::ExprExpected(None))
             => error_embed!("Unexpected empty expression."),
 
         Err(MathError::InvalidNumber(num))
-            => error_embed!("`{num}` is not a valid number."),
+            => error_embed!("`{num}` is not a valid number.{}", num.error_fmt()),
 
         Err(MathError::InvalidUnaryOperator(op))
-            => error_embed!("`{op}` is not a unary operator."),
+            => error_embed!("`{op}` is not a unary operator.{}", op.error_fmt()),
 
         Err(MathError::InvalidBinaryOperator(op))
-            => error_embed!("`{op}` is not a binary operator."),
+            => error_embed!("`{op}` is not a binary operator.{}", op.error_fmt()),
 
         Err(MathError::InvalidFunction(function))
-            => error_embed!("The function `{function}` is unknown."),
+            => error_embed!("The function `{function}` is unknown.{}", function.error_fmt()),
 
         Err(MathError::InvalidParameterCount { function, count: 1 })
-            => error_embed!("The function `{function}` takes 1 parameter."),
+            => error_embed!("The function `{function}` takes 1 parameter.{}", function.error_fmt()),
 
         Err(MathError::InvalidParameterCount { function, count })
-            => error_embed!("The function `{function}` takes {count} parameters."),
+            => error_embed!("The function `{function}` takes {count} parameters.{}", function.error_fmt()),
 
         Err(MathError::FunctionCallExpected(function))
-            => error_embed!("`{function}` is a function and requires `(...)` after it."),
+            => error_embed!("`{function}` is a function and requires `(...)` after it.{}", function.error_fmt()),
 
         Err(r) => error_embed!("failed math: {r:?}"),
     };
@@ -97,7 +97,7 @@ enum MathError<'a> {
 }
 
 /// Fully evaluates an equation text.
-fn eval_text(text: &[u8]) -> Result<f64> {
+fn eval_text(text: &str) -> Result<f64> {
     let mut tokens = parse::tokenize(text);
     parse::read_expr(&mut tokens)
 }
@@ -110,20 +110,19 @@ mod test {
         ($math:literal, $result:literal) => {{
             const MIN: f64 = $result - 0.001;
             const MAX: f64 = $result + 0.001;
-            assert!(matches!(
-                eval_text($math),
-                Ok(MIN..=MAX)
-            ));
+            let text = $math;
+            let res = eval_text(text);
+            assert!(matches!(res, Ok(MIN..=MAX)), "`{text:?}` not in `{MIN}..={MAX}`, was {res:?}");
         }};
     }
 
     #[test]
     fn success() {
-        is_correct!(b"-4.5", -4.5);
-        is_correct!(b"1 + 2 * 3", 7.0);
-        is_correct!(b"1 + min(2) * 3", 7.0);
-        is_correct!(b"sin(pi)", 0.0);
-        is_correct!(b"min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
-        is_correct!(b"min()", 0.0);
+        is_correct!("-4.5", -4.5);
+        is_correct!("1 + 2 * 3", 7.0);
+        is_correct!("1 + min(2) * 3", 7.0);
+        is_correct!("sin(pi)", 0.0);
+        is_correct!("min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
+        is_correct!("min()", 0.0);
     }
 }

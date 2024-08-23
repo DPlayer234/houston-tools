@@ -5,7 +5,7 @@ use super::parse::Token;
 macro_rules! define_op_kind {
     {
         $(#[$attr:meta])*
-        enum $Op:ident ($($par:ident: $Par:ty),*) -> $Res:ty {
+        enum $Op:ident $([$($g:tt)*])? ($($par:tt)*) -> $Res:ty {
             $($name:ident $lit:pat => $fn:expr,)*
         }
     } => {
@@ -17,7 +17,7 @@ macro_rules! define_op_kind {
 
         impl $Op {
             /// Applies the operator to the given values.
-            pub fn apply(self, $($par: $Par),*) -> $Res {
+            pub fn apply $(<$($g)*>)? (self, $($par)*) -> $Res {
                 match self {
                     $( Self::$name => $fn, )*
                 }
@@ -37,12 +37,12 @@ macro_rules! define_op_kind {
 define_op_kind! {
     /// A binary operator kind.
     enum BinaryOp(lhs: f64, rhs: f64) -> f64 {
-        Add b"+" => lhs + rhs,
-        Sub b"- "=> lhs - rhs,
-        Mul b"*" => lhs * rhs,
-        Div b"/" => lhs / rhs,
-        Mod b"%" | b"mod" => lhs % rhs,
-        Pow b"^" | b"pow" => lhs.powf(rhs),
+        Add "+" => lhs + rhs,
+        Sub "-" => lhs - rhs,
+        Mul "*" => lhs * rhs,
+        Div "/" => lhs / rhs,
+        Mod "%" | "mod" => lhs % rhs,
+        Pow "^" | "pow" => lhs.powf(rhs),
     }
 }
 
@@ -61,41 +61,42 @@ impl BinaryOp {
 define_op_kind! {
     /// A unary operator kind.
     enum UnaryOp(value: f64) -> f64 {
-        Plus b"+" => value,
-        Minus b"-" => -value,
-        Abs b"abs" => value.abs(),
-        Sqrt b"sqrt" => value.sqrt(),
-        Sin b"sin" => value.sin(),
-        Cos b"cos" => value.cos(),
-        Tan b"tan" => value.tan(),
-        Asin b"asin" => value.asin(),
-        Acos b"acos" => value.acos(),
-        Atan b"atan" => value.atan(),
-        Ln b"ln" => value.ln(),
-        Exp b"exp" => value.exp(),
+        Plus "+" => value,
+        Minus "-" => -value,
+        Abs "abs" => value.abs(),
+        Sqrt "sqrt" => value.sqrt(),
+        Sin "sin" => value.sin(),
+        Cos "cos" => value.cos(),
+        Tan "tan" => value.tan(),
+        Asin "asin" => value.asin(),
+        Acos "acos" => value.acos(),
+        Atan "atan" => value.atan(),
+        Ln "ln" => value.ln(),
+        Exp "exp" => value.exp(),
     }
 }
 
 define_op_kind! {
     /// A function to call.
-    enum CallOp(values: &[f64]) -> Result<'static, f64> {
-        Log b"log" => {
-            let [a, b] = read_args(values, b"log")?;
+    enum CallOp['a](fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
+        Log "log" => {
+            let &[a, b] = read_args(values, fn_name)?;
             Ok(a.log(b))
         },
-        Min b"min" => Ok(fold_values(values, f64::min)),
-        Max b"max" => Ok(fold_values(values, f64::max)),
+        Min "min" => Ok(fold_values(values, f64::min)),
+        Max "max" => Ok(fold_values(values, f64::max)),
     }
 }
 
-fn read_args<'a, const N: usize>(
-    values: &[f64],
-    fn_name: &'a [u8],
-) -> Result<'a, [f64; N]> {
-    match <&[f64; N]>::try_from(values) {
-        Ok(slice) => Ok(*slice),
-        _ => Err(MathError::InvalidParameterCount { function: Token::new(fn_name), count: N })
-    }
+fn read_args<'v, 'n, const N: usize>(
+    values: &'v [f64],
+    fn_name: Token<'n>,
+) -> Result<'n, &'v [f64; N]> {
+    <&[f64; N]>::try_from(values)
+        .map_err(|_| MathError::InvalidParameterCount {
+            function: fn_name,
+            count: N
+        })
 }
 
 fn fold_values(
