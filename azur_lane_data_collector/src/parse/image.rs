@@ -21,6 +21,7 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
     for entry in unity_fs.entries() {
         if let UnityFsData::SerializedFile(ser_file) = entry.read()? {
             let texture = ser_file.objects()
+                .filter_map(Result::ok)
                 .filter(|o| o.class_id() == ClassID::Texture2D)
                 .filter_map(|o| o.try_into_class::<Texture2D>().ok())
                 .find(|t| t.name.to_ascii_lowercase() == name);

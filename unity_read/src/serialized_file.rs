@@ -6,7 +6,7 @@ use binrw::{binread, BinRead, NullString};
 
 use crate::object::{ObjectInfo, ObjectRef};
 use crate::unity_fs::SeekRead;
-use crate::BinReadEndian;
+use crate::{BinReadEndian, UnityError};
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]
@@ -50,15 +50,15 @@ pub struct TypeTreeNode {
 
 impl<'a> SerializedFile<'a> {
     /// Enumerates the objects listed within this file.
-    pub fn objects(&'a self) -> impl Iterator<Item = ObjectRef<'a>> {
-        self.objects.iter().map(|obj| ObjectRef {
+    pub fn objects(&'a self) -> impl Iterator<Item = anyhow::Result<ObjectRef<'a>>> {
+        self.objects.iter().map(|obj| Ok(ObjectRef {
             file: self,
-            // the below will panic if the class_id and type_id don't map to anything
             ser_type: obj.class_id
                 .and_then(|c| self.types.iter().find(|t| t.class_id == i32::from(c)))
-                .unwrap_or_else(|| &self.types[usize::try_from(obj.type_id).unwrap()]),
+                .or_else(|| self.types.get(usize::try_from(obj.type_id).ok()?))
+                .ok_or(UnityError::InvalidData("object data references invalid type"))?,
             object: obj.clone()
-        })
+        }))
     }
 
     /// Gets the serialized types.

@@ -88,7 +88,8 @@ impl Texture2DData<'_> {
                     }
                 }
 
-                let image = RgbaImage::from_raw(width, height, as_bytes(&buffer)).unwrap();
+                let image = RgbaImage::from_raw(width, height, as_bytes(&buffer))
+                    .expect("buffer allocated with the correct size");
                 Ok(image)
             },
             _ => todo!("texture format {:?} not implemented", self.texture.format())
