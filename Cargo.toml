@@ -15,3 +15,49 @@ panic = 'abort'
 [patch.crates-io]
 serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "c7540cd3ee97662a7494516ce58a26c83fcf9419" }
 poise = { git = "https://github.com/serenity-rs/poise.git", rev = "575025909b063c3b998659abf9d241c8790404ee" }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+# pedantic
+borrow_as_ptr = "deny"
+cast_lossless = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_sign_loss = "warn"
+checked_conversions = "warn"
+explicit_deref_methods = "warn"
+explicit_iter_loop = "warn"
+explicit_into_iter_loop = "warn"
+filter_map_next = "warn"
+flat_map_option = "warn"
+implicit_clone = "warn"
+inconsistent_struct_constructor = "warn"
+index_refutable_slice = "warn"
+inefficient_to_string = "warn"
+manual_let_else = "warn"
+no_effect_underscore_binding = "warn"
+option_as_ref_cloned = "warn"
+ptr_as_ptr = "warn"
+ptr_cast_constness = "warn"
+ref_as_ptr = "warn"
+same_functions_in_if_condition = "warn"
+
+# restriction
+clone_on_ref_ptr = "warn"
+fn_to_numeric_cast_any = "warn"
+format_push_string = "deny"
+let_underscore_untyped = "warn"
+ref_patterns = "warn"
+rest_pat_in_fully_bound_structs = "deny"
+str_to_string = "warn"
+
+# nursery
+debug_assert_with_mut_call = "deny"
+needless_collect = "warn"
+redundant_clone = "warn"
+
+# allows
+single_char_add_str = "allow"
+upper_case_acronyms = "allow"

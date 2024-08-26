@@ -45,6 +45,7 @@ macro_rules! define_data_enum {
             $(
                 $(#[$data_attr])*
                 #[must_use]
+                #[inline]
                 $data_vis const fn $data_name (self) -> $data_type {
                     self.data().$data_name
                 }

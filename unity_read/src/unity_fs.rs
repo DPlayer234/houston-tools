@@ -149,21 +149,11 @@ impl<'a> UnityFsFile<'a> {
     pub fn open(mut buf: &'a mut dyn SeekRead) -> anyhow::Result<Self> {
         let header = UnityFsHeader::read(&mut buf)?;
 
-        fn seek_to_16_byte_boundary(buf: &mut dyn SeekRead) -> anyhow::Result<()> {
-            let pos = buf.stream_position()?;
-            let offset = pos % 16;
-            if offset != 0 {
-                buf.seek(SeekFrom::Current(16i64 - offset as i64))?;
-            }
-
-            Ok(())
-        }
-
         // Load blocks info
         let blocks_info = {
             if header.version >= 7 {
                 // Starting with version 7, the blocks info is aligned to the next 16-byte boundary.
-                seek_to_16_byte_boundary(buf)?;
+                buf.align_to(16)?;
             }
 
             let mut compressed_data = vec![0u8; header.compressed_blocks_info_size.try_into()?];
@@ -178,7 +168,7 @@ impl<'a> UnityFsFile<'a> {
             }
 
             if header.flags.blocks_info_need_start_pad() {
-                seek_to_16_byte_boundary(buf)?;
+                buf.align_to(16)?;
             }
 
             let decompressed_data = decompress_data(
@@ -187,7 +177,7 @@ impl<'a> UnityFsFile<'a> {
                 header.uncompressed_blocks_info_size
             )?;
 
-            let mut reader = Cursor::new(decompressed_data.deref());
+            let mut reader = Cursor::new(&*decompressed_data);
             BlocksInfo::read(&mut reader)?
         };
 
@@ -261,8 +251,8 @@ impl<'a> UnityFsNode<'a> {
             )?;
 
             // Determine the relative offsets for this file into this block
-            let sub_start = uncompressed_start.saturating_sub(uncompressed_offset) as usize;
-            let missing_size = (self.node.size - result.len() as u64) as usize;
+            let sub_start = usize::try_from(uncompressed_start.saturating_sub(uncompressed_offset))?;
+            let missing_size = usize::try_from(self.node.size - u64::try_from(result.len())?)?;
             let sub_end = sub_start + missing_size;
 
             if sub_end <= uncompressed_data.len() {
@@ -276,7 +266,7 @@ impl<'a> UnityFsNode<'a> {
             uncompressed_offset += u64::from(block.uncompressed_size);
         }
 
-        // return the buffer so future have access to it again
+        // return the buffer so future operations have access to it again
         self.file.buf.set(Some(buf));
 
         debug_assert!(result.len() as u64 == self.node.size);
@@ -285,13 +275,13 @@ impl<'a> UnityFsNode<'a> {
 
     /// Reads the raw binary data for this node.
     pub fn read_raw(&self) -> anyhow::Result<&'a [u8]> {
-        Ok(&self.node.uncompressed_cache.get_or_try_init(|| self.decompress())?)
+        Ok(self.node.uncompressed_cache.get_or_try_init(|| self.decompress())?)
     }
 
     /// Reads the data for this node.
     pub fn read(&self) -> anyhow::Result<UnityFsData<'a>>{
         let buf = self.read_raw()?;
-        if SerializedFile::is_serialized_file(&buf) {
+        if SerializedFile::is_serialized_file(buf) {
             Ok(UnityFsData::SerializedFile(SerializedFile::read(buf)?))
         } else {
             Ok(UnityFsData::RawData(buf))
@@ -325,7 +315,22 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) 
     }
 }
 
-pub trait SeekRead: Read + Seek {}
+pub trait SeekRead: Read + Seek {
+    #[inline]
+    fn align_to(&mut self, align: u16) -> std::io::Result<()> {
+        let pos = self.stream_position()?;
+        let offset = pos % u64::from(align);
+
+        if offset != 0 {
+            // offset is within (0..=u16::MAX) and thus cannot wrap
+            #[allow(clippy::cast_possible_wrap)]
+            self.seek(SeekFrom::Current(i64::from(align) - offset as i64))?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<T: Read + Seek> SeekRead for T {}
 
 #[derive(Clone)]

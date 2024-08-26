@@ -389,7 +389,7 @@ fn search_referenced_weapons_in_effect_entry(context: &mut ReferencedWeaponsCont
 
                     let target = convert_al::to_skill_target(&target);
                     if let Some(weapon) = load_weapon(lua, weapon_id)? {
-                        attacks.push(SkillAttack { weapon, target });
+                        attacks.push(SkillAttack { target, weapon });
                     }
                 }
             }

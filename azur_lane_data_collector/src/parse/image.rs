@@ -37,5 +37,5 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
     }
 
     println!("Skin shipmodels image {name} not present.");
-    return Ok(None)
+    Ok(None)
 }

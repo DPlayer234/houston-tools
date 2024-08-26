@@ -46,7 +46,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     // ID of the only ship group this can be equipped to, if unique.
     // As with the effect, always present but 0 if not used.
     let unique_ship_id: u32 = read!("unique");
-    let unique_ship_id = if unique_ship_id != 0 { Some(unique_ship_id) } else { None };
+    let unique_ship_id = (unique_ship_id != 0).then_some(unique_ship_id);
 
     Ok(Augment {
         augment_id: set.id,

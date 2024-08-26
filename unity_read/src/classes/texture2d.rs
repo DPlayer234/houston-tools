@@ -42,43 +42,48 @@ impl Texture2D {
 impl Texture2DData<'_> {
     /// Gets the block of data.
     pub fn data(&self) -> &[u8] {
-        &self.data
+        self.data
     }
 
     /// Decodes the image data.
     pub fn decode(&self) -> anyhow::Result<RgbaImage> {
-        let width: u32 = self.texture.width.try_into()?;
-        let height: u32 = self.texture.height.try_into()?;
+        let width = u32::try_from(self.texture.width)?;
+        let height = u32::try_from(self.texture.height)?;
 
         fn as_bytes<T>(v: &[T]) -> Vec<u8> {
             // NOTE: You cannot construct Vecs from the raw data of another.
             // That is because the allocator allocates blocks using a certain SIZE AND LAYOUT.
 
             let ptr = v.as_ptr().cast::<u8>();
-            let byte_len = v.len() * std::mem::size_of::<T>() / std::mem::size_of::<u8>();
+            let byte_len = std::mem::size_of_val(v);
             unsafe { std::slice::from_raw_parts(ptr, byte_len) }.to_vec()
         }
 
         match self.texture.format() {
             TextureFormat::RGBA32 => {
                 // I think this matches the Rgba<u8> layout?
-                let image = RgbaImage::from_raw(width.try_into()?, height.try_into()?, self.data.to_vec())
+                let image = RgbaImage::from_raw(width, height, self.data.to_vec())
                     .ok_or(UnityError::InvalidData("image data size incorrect"))?;
 
                 Ok(image)
             },
             TextureFormat::ETC2_RGBA8 => {
-                let mut buffer = vec![0u32; (width * height) as usize];
-                texture2ddecoder::decode_etc2_rgba8(&self.data, width as usize, height as usize, buffer.as_mut_slice())
+                let width_s = usize::try_from(width)?;
+                let height_s = usize::try_from(height)?;
+                let size = width_s.checked_mul(height_s)
+                    .ok_or(UnityError::InvalidData("image size overflows address space"))?;
+
+                let mut buffer = vec![0u32; size];
+                texture2ddecoder::decode_etc2_rgba8(self.data, width_s, height_s, buffer.as_mut_slice())
                     .map_err(UnityError::InvalidData)?;
 
                 // Swap red and green channels
                 if cfg!(target_endian = "little") {
-                    for px in buffer.iter_mut() {
+                    for px in &mut buffer {
                         *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
                     }
                 } else {
-                    for px in buffer.iter_mut() {
+                    for px in &mut buffer {
                         *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
                     }
                 }

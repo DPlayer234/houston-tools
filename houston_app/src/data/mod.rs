@@ -83,7 +83,7 @@ impl HBotData {
 
     /// Forces initialization of held lazy data.
     pub fn force_init(&self) {
-        let _ = self.azur_lane();
+        _ = self.azur_lane();
     }
 
     #[must_use]
@@ -98,7 +98,7 @@ impl HBotData {
 
     pub async fn load_app_emojis(&self, ctx: &Http) -> HResult {
         if self.app_emojis.get().is_none() {
-            let _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
+            _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
             log::info!("Loaded App Emojis.");
         }
 

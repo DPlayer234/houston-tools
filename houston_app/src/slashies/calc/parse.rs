@@ -79,7 +79,7 @@ pub trait Tokenizer<'a> {
 }
 
 /// Returns an kind-of iterator to the tokens.
-pub fn tokenize<'a>(text: &'a str) -> impl Tokenizer<'a> {
+pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
     // - split by whitespace
     // - split each fragment by special characters, including them at the end of the new fragments
     // - split away the special characters also
@@ -89,7 +89,7 @@ pub fn tokenize<'a>(text: &'a str) -> impl Tokenizer<'a> {
         matches!(c, b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',')
     }
 
-    unsafe fn token_from_utf8<'a>(token_index: usize, bytes: &'a [u8]) -> Token<'a> {
+    unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
         debug_assert!(std::str::from_utf8(bytes).is_ok());
 
         // SAFETY: only splitting on ASCII characters
@@ -194,7 +194,7 @@ fn read_expr_with_terminator<'a>(
 
         // expecting a binary operator here
         let operator = BinaryOp::from_token(operator)
-            .ok_or_else(|| MathError::InvalidBinaryOperator(operator))?;
+            .ok_or(MathError::InvalidBinaryOperator(operator))?;
 
         pairs.push(ValuePair {
             value,

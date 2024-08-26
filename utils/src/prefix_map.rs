@@ -36,7 +36,6 @@ impl<T> PrefixMap<T> {
     ///
     /// This function in itself is O(log n), looking for the start of the data.
     /// The data is evaluated lazily as you use the iterator.
-    #[must_use]
     pub fn find(&self, key_prefix: &str) -> impl Iterator<Item = &T> {
         let key_prefix = simplify(key_prefix);
         let start = self.search_by(&key_prefix).unwrap_or_else(std::convert::identity);
@@ -48,6 +47,12 @@ impl<T> PrefixMap<T> {
 
     fn search_by(&self, key: &str) -> Result<usize, usize> {
         self.map.binary_search_by_key(&key, |e| e.key.as_str())
+    }
+}
+
+impl<T> Default for PrefixMap<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

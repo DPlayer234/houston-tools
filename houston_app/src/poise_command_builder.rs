@@ -63,7 +63,7 @@ fn create_as_slash_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCreateComm
 
     Some(CustomCreateCommand {
         name: cmd.name.clone(),
-        description: cmd.description.clone().unwrap_or_else(|| "---".to_string()),
+        description: cmd.description.clone().unwrap_or_else(|| "---".to_owned()),
         options,
         kind: CommandType::ChatInput,
         contexts: [0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL

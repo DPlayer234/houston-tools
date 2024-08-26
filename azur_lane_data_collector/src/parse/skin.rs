@@ -22,7 +22,7 @@ pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
         words_extra: None, // loaded below
     };
 
-    if let Some(ref extra) = set.words_extra {
+    if let Some(extra) = &set.words_extra {
         skin.words_extra = Some(Box::new(load_words_extra(set, extra, &skin.words)?));
     }
 
@@ -124,7 +124,7 @@ fn load_words_extra(set: &SkinSet, table: &LuaTable, base: &ShipSkinWords) -> Lu
     })
 }
 
-fn to_main_screen<'a>(raw: Option<&'a str>) -> impl Iterator<Item = ShipMainScreenLine> + 'a {
+fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = ShipMainScreenLine> + '_ {
     raw.into_iter().flat_map(|s| s.split('|')).enumerate()
         .filter(|(_, text)| !text.is_empty() && *text != "nil")
         .map(|(index, text)| ShipMainScreenLine::new(index, text.to_owned()))

@@ -25,7 +25,7 @@ impl Display for DisplayWeapon<'_> {
         let weapon = self.0;
 
         if !f.alternate() {
-            write!(f, "**Kind:** {}\n", weapon.kind.name())?;
+            writeln!(f, "**Kind:** {}", weapon.kind.name())?;
         }
 
         format_fire_rate(weapon, f)?;
@@ -46,9 +46,9 @@ fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> FmtResult {
 
     let reload_time = weapon.reload_time * if weapon.kind == WeaponKind::StrikeAircraft { 2.2 } else { 1.0 };
     let fixed_delay = weapon.fixed_delay + salvo_time;
-    write!(
+    writeln!(
         f,
-        "**FR:** {:.2} +{:.2}s (~{:.1}/min)\n",
+        "**FR:** {:.2} +{:.2}s (~{:.1}/min)",
         reload_time, fixed_delay, 60.0 / (reload_time + fixed_delay)
     )
 }
@@ -73,9 +73,9 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     )?;
 
     if let Some(spread) = &bullet.spread {
-        write!(
+        writeln!(
             f,
-            "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0}\n",
+            "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0}",
             spread.hit_range, spread.spread_x, spread.spread_y
         )?;
     }
@@ -104,14 +104,14 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fm
 fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
     const PAD: &str = "> ";
 
-    write!(
+    writeln!(
         f,
-        "**Speed:** {:.0} \u{2E31} **HP:** {:.0} \u{2E31} {}\n",
+        "**Speed:** {:.0} \u{2E31} **HP:** {:.0} \u{2E31} {}",
         aircraft.speed, aircraft.health.calc(120, 1.0), aircraft.dodge_limit
     )?;
 
     for weapon in &aircraft.weapons {
-        write!(f, "__**{}:**__\n", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
+        writeln!(f, "__**{}:**__", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => {

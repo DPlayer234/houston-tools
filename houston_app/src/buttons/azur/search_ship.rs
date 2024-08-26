@@ -47,7 +47,7 @@ impl View {
                 ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             ).discard();
 
-            let view_ship = super::ship::View::new(ship.group_id).as_new_message();
+            let view_ship = super::ship::View::new(ship.group_id).new_message();
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
         }
 
@@ -107,8 +107,8 @@ impl ButtonMessage for View {
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
         let predicate = self.predicate(data);
-        match self.name {
-            Some(ref name) => Box::new(data.ships_by_prefix(name.as_str()).filter(predicate)),
+        match &self.name {
+            Some(name) => Box::new(data.ships_by_prefix(name.as_str()).filter(predicate)),
             None => Box::new(data.ship_list.iter().filter(predicate))
         }
     }

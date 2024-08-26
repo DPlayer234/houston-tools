@@ -15,7 +15,8 @@ static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 /// This function is unsafe as the underlying memory is static.
 /// This must not be called concurrently with itself or [`get_startup_time`].
 pub unsafe fn mark_startup_time() {
-    STARTUP_TIME = Utc::now();
+    // SAFETY: Caller guarantees exclusive access
+    unsafe { STARTUP_TIME = Utc::now(); }
 }
 
 /// Gets the marked startup time of the application.
@@ -23,6 +24,7 @@ pub unsafe fn mark_startup_time() {
 /// If the program setup never called [`mark_startup_time`], this will be the unix epoch.
 #[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
+    // SAFETY: only concurrent reads
     unsafe { STARTUP_TIME }
 }
 
@@ -30,6 +32,7 @@ pub fn get_startup_time() -> DateTime<Utc> {
 #[must_use]
 pub fn get_creation_time(snowflake: u64) -> Option<DateTime<Utc>> {
     // This shouldn't be able to fail due to the bit shift, but I'm not validating that.
+    #[allow(clippy::cast_possible_wrap)]
     DateTime::from_timestamp_millis(((snowflake >> 22) + DISCORD_EPOCH) as i64)
 }
 

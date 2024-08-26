@@ -36,7 +36,7 @@ impl View {
         let index = self.skill_index.map(usize::from);
         let mut components = Vec::new();
 
-        if let Some(ref back) = self.back {
+        if let Some(back) = &self.back {
             components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 
@@ -85,6 +85,7 @@ impl View {
 
     /// Creates a button that redirects to a skill index.
     fn button_with_skill(&mut self, index: usize) -> CreateButton {
+        #[allow(clippy::cast_possible_truncation)]
         self.new_button(utils::field_mut!(Self: skill_index), Some(index as u8), |u| u.unwrap_or_default().into())
     }
 
@@ -183,7 +184,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
         struct Value<'a> { amount: u32, bullet: &'a Bullet }
 
         let mut sets: HashMap<Key, Value> = HashMap::new();
-        for bullet in barrage.bullets.iter() {
+        for bullet in &barrage.bullets {
             let key = Key { kind: bullet.kind, ammo: bullet.ammo };
             sets.entry(key)
                 .and_modify(|v| v.amount += bullet.amount)

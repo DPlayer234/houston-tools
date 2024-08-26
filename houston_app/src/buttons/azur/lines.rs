@@ -53,7 +53,7 @@ impl View {
         let mut components = Vec::new();
 
         let mut top_row = Vec::new();
-        if let Some(ref back) = self.back {
+        if let Some(back) = &self.back {
             top_row.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
         }
 
@@ -109,6 +109,7 @@ impl View {
     /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index(&mut self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
         // Just as-cast the index to u8 since we'd have problems long before an overflow.
+        #[allow(clippy::cast_possible_truncation)]
         self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
     }
 }
@@ -263,7 +264,7 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
     match &opt.condition {
         ShipCouple::ShipGroup(ship_ids) => {
             let ships = ship_ids.iter()
-                .flat_map(|&id| data.azur_lane().ship_by_id(id))
+                .filter_map(|&id| data.azur_lane().ship_by_id(id))
                 .map(|ship| ship.name.as_str());
 
             if ship_ids.len() == opt.amount.try_into().unwrap_or(0) {
@@ -320,10 +321,9 @@ fn join_natural<'a>(iter: impl Iterator<Item = &'a str>, join: &str, join_last: 
     let data = iter.collect::<Vec<_>>();
     match data.split_last() {
         None => String::new(),
+        Some((&last, [])) => last.to_owned(),
+        Some((&last, &[head])) => head.to_owned() + join_once + last,
         Some((&last, head)) => {
-            if head.is_empty() { return last.to_owned(); }
-            if head.len() == 1 { return head[0].to_owned() + join_once + last; }
-
             let mut result = head.join(join);
             result.push_str(join_last);
             result.push_str(last);

@@ -44,7 +44,7 @@ impl View {
                 equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
             ).discard();
 
-            let view_equip = super::equip::View::new(equip.equip_id).as_new_message();
+            let view_equip = super::equip::View::new(equip.equip_id).new_message();
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
@@ -104,8 +104,8 @@ impl ButtonMessage for View {
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
         let predicate = self.predicate(data);
-        match self.name {
-            Some(ref name) => Box::new(data.equips_by_prefix(name.as_str()).filter(predicate)),
+        match &self.name {
+            Some(name) => Box::new(data.equips_by_prefix(name.as_str()).filter(predicate)),
             None => Box::new(data.equip_list.iter().filter(predicate))
         }
     }

@@ -3,6 +3,7 @@
 use std::io::{Cursor, Seek, SeekFrom};
 
 use crate::object::ObjectRef;
+use crate::unity_fs::SeekRead;
 use crate::{UnityError, UnityMismatch};
 use crate::serialized_file::TypeTreeNode;
 use crate::BinReadEndian;
@@ -41,13 +42,7 @@ pub trait UnityClass: Default {
     /// Aligns the reader to the next 4-byte boundary.
     #[doc(hidden)]
     fn align_reader(r: &mut Cursor<&[u8]>) -> anyhow::Result<()> {
-        let pos = r.position();
-        let offset = pos % 4u64;
-        if offset != 0 {
-            r.seek(SeekFrom::Current(4i64 - offset as i64))?;
-        }
-
-        Ok(())
+        Ok(r.align_to(4)?)
     }
 
     /// Skips the object the current reader is at.
@@ -104,7 +99,7 @@ impl<T: AutoUnityClass> UnityClass for T {
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
         if root.type_name.as_str() != Self::TYPE_NAME {
             Err(UnityError::Mismatch(UnityMismatch {
-                expected: Self::TYPE_NAME.to_string(),
+                expected: Self::TYPE_NAME.to_owned(),
                 received: root.type_name.clone()
             }))?
         }
@@ -131,7 +126,7 @@ pub fn split_tree(tree: &[TypeTreeNode]) -> Option<(&TypeTreeNode, &[TypeTreeNod
     let (next, other) = tree.split_first()?;
 
     let mut last_index = 0usize;
-    for tree in other.iter() {
+    for tree in other {
         if tree.level <= next.level {
             break
         }

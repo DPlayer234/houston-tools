@@ -32,7 +32,11 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
                 // Stats added by retrofits are NOT affected by affinity.
                 if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
                     match k.borrow() {
-                        "skill_id" => new_skills.push(parse::skill::load_skill(lua, v as u32)?),
+                        "skill_id" => {
+                            #[allow(clippy::cast_sign_loss)]
+                            #[allow(clippy::cast_possible_truncation)]
+                            new_skills.push(parse::skill::load_skill(lua, v as u32)?)
+                        },
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,
                         "equipment_proficiency_2" => add_equip_efficiency(ship, 1, v)?,
                         "equipment_proficiency_3" => add_equip_efficiency(ship, 2, v)?,
@@ -46,7 +50,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> Lu
     }
 
     if !new_skills.is_empty() {
-        ship.skills.extend(new_skills.into_iter());
+        ship.skills.extend(new_skills);
     }
 
     Ok(())

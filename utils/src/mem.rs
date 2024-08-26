@@ -17,7 +17,7 @@
 /// ```
 #[inline]
 #[must_use = "if you don't need the return value, just assert the length"]
-pub const fn with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
+pub const fn with_size<T, const N: usize>(slice: &[T]) -> &[T; N] {
     match try_with_size(slice) {
         Some(slice) => slice,
         None => panic!("requested size too large"),
@@ -45,11 +45,11 @@ pub const fn with_size<'a, T, const N: usize>(slice: &'a [T]) -> &'a [T; N] {
 /// assert_eq!(large, None);
 /// ```
 #[inline]
-pub const fn try_with_size<'a, T, const N: usize>(slice: &'a [T]) -> Option<&'a [T; N]> {
+pub const fn try_with_size<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
     if slice.len() >= N {
         Some(unsafe {
             // SAFETY: The length has already been validated.
-            &*(slice.as_ptr() as *const [T; N])
+            &*slice.as_ptr().cast::<[T; N]>()
         })
     } else {
         None
@@ -88,6 +88,7 @@ pub const fn try_with_size<'a, T, const N: usize>(slice: &'a [T]) -> Option<&'a 
 /// ```
 #[inline]
 #[must_use = "transmuting has no effect if you don't use the return value"]
+#[allow(clippy::cast_sign_loss)]
 pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
     let ptr = slice.as_ptr_range();
 
@@ -95,7 +96,8 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
     // Uncomment the following line when it is:
     // debug_assert!(ptr.start.cast::<Dst>().is_aligned());
 
-    let byte_len = ptr.end.byte_offset_from(ptr.start);
+    // SAFETY: Both pointers are to the slice, so the offset must be valid.
+    let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
     debug_assert!(byte_len >= 0);
 
     let src_size = std::mem::size_of::<Src>();

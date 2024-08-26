@@ -32,7 +32,7 @@ impl View {
     }
 
     /// Makes the button send a new message.
-    pub fn as_new_message(mut self) -> Self {
+    pub fn new_message(mut self) -> Self {
         self.mode = ButtonMessageMode::New;
         self
     }
@@ -129,7 +129,7 @@ impl View {
             row.push(button);
         }
 
-        if !row.is_empty() {
+        if row.is_empty() {
             rows.push(CreateActionRow::Buttons(row));
         }
     }
@@ -185,6 +185,8 @@ impl View {
         let stats = &ship.stats;
         let affinity = self.affinity.to_mult();
 
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_possible_truncation)]
         fn f(n: f64) -> u32 { n.floor() as u32 }
         macro_rules! s {
             ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
@@ -275,7 +277,7 @@ impl View {
             0 => None,
             _ => {
                 let mut text = String::new();
-                for s in ship.skills.iter() {
+                for s in &ship.skills {
                     if !text.is_empty() { text.push('\n'); }
                     write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
                 }

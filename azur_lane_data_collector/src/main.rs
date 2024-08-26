@@ -143,7 +143,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
         let mut groups = HashMap::new();
         ship_data_template_all.for_each(|_: u32, id: u32| {
-            if id >= 900000 && id <= 900999 {
+            if (900000..=900999).contains(&id) {
                 return Ok(())
             }
 
@@ -210,17 +210,17 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
                 words_extra: ship_skin_words_extra.get(skin_id).with_context(context!("skin words extra {} for ship {}", skin_id, group.id))?,
             })).collect::<LuaResult<Vec<_>>>()?;
 
-            let mut mlb = parse::ship::load_ship_data(&lua, &raw_mlb)?;
+            let mut mlb = parse::ship::load_ship_data(&lua, raw_mlb)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
                 mlb.name = name_override.clone();
             }
 
-            if let Some(ref retrofit_data) = raw_mlb.retrofit_data {
+            if let Some(retrofit_data) = &raw_mlb.retrofit_data {
                 for retrofit_set in raw_retrofits {
-                    let mut retrofit = parse::ship::load_ship_data(&lua, &retrofit_set)?;
+                    let mut retrofit = parse::ship::load_ship_data(&lua, retrofit_set)?;
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
 
-                    fix_up_retrofitted_data(&mut retrofit, &retrofit_set)?;
+                    fix_up_retrofitted_data(&mut retrofit, retrofit_set)?;
                     mlb.retrofits.push(retrofit);
                 }
 
@@ -228,7 +228,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
                     let mut retrofit = mlb.clone();
                     enhance::retrofit::apply_retrofit(&lua, &mut retrofit, retrofit_data)?;
 
-                    fix_up_retrofitted_data(&mut retrofit, &raw_mlb)?;
+                    fix_up_retrofitted_data(&mut retrofit, raw_mlb)?;
                     mlb.retrofits.push(retrofit);
                 }
             }
@@ -351,7 +351,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
 
 fn add_missing<T>(main: &mut Vec<T>, next: Vec<T>, matches: impl Fn(&T, &T) -> bool) {
     for new in next {
-        if !main.iter().any(|old| matches(&old, &new)) {
+        if !main.iter().any(|old| matches(old, &new)) {
             main.push(new);
         }
     }

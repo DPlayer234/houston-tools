@@ -20,7 +20,7 @@ impl View {
     }
 
     /// Makes the button send a new message.
-    pub fn as_new_message(mut self) -> Self {
+    pub fn new_message(mut self) -> Self {
         self.mode = ButtonMessageMode::New;
         self
     }

@@ -43,8 +43,8 @@ fn who_user_embed(user: &User) -> CreateEmbed {
 fn who_user_info(user: &User) -> String {
     let mut f = String::new();
 
-    if let Some(ref global_name) = user.global_name {
-        write!(f, "**Display Name:** {global_name}\n").discard();
+    if let Some(global_name) = &user.global_name {
+        writeln!(f, "**Display Name:** {global_name}").discard();
     }
 
     write!(
@@ -56,7 +56,7 @@ fn who_user_info(user: &User) -> String {
     ).discard();
 
     if let Some(avatar_url) = user.avatar_url() {
-        write!(f, "**Avatar:** [Click]({avatar_url})\n").discard();
+        writeln!(f, "**Avatar:** [Click]({avatar_url})").discard();
     }
 
     // Bots don't get banners.
@@ -73,7 +73,7 @@ fn who_user_info(user: &User) -> String {
         "User Account"
     };
 
-    write!(f, "**{label}**\n").discard();
+    writeln!(f, "**{label}**").discard();
 
     f
 }
@@ -86,15 +86,15 @@ fn who_member_info(member: &PartialMember) -> String {
     let mut f = String::new();
 
     if let Some(nick) = &member.nick {
-        write!(f, "**Nickname:** `{nick}`\n").discard();
+        writeln!(f, "**Nickname:** `{nick}`").discard();
     }
 
     if let Some(joined_at) = member.joined_at {
-        write!(f, "**Joined At:** {}\n", joined_at.short_date_time()).discard();
+        writeln!(f, "**Joined At:** {}", joined_at.short_date_time()).discard();
     }
 
     if let Some(premium_since) = member.premium_since {
-        write!(f, "**Boosting Since:** {}\n", premium_since.short_date_time()).discard();
+        writeln!(f, "**Boosting Since:** {}", premium_since.short_date_time()).discard();
     }
 
     if let Some(permissions) = member.permissions.filter(|p| !p.is_empty()) {

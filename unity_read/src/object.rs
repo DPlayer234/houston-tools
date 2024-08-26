@@ -13,7 +13,7 @@ pub(crate) struct ObjectInfo {
     pub start: u64,
     pub size: u32,
     pub type_id: u32,
-    pub class_id: Option<u16>,
+    pub class_id: Option<i16>,
 }
 
 /// A reference to a Unity object.
@@ -32,7 +32,7 @@ impl ObjectRef<'_> {
 
     /// Gets the class ID for this object's type.
     pub fn class_id(&self) -> ClassID {
-        ClassID::from_primitive(self.ser_type.class_id as i32)
+        ClassID::from_primitive(self.ser_type.class_id)
     }
 
     /// Whether the data should be read as big endian.
@@ -42,9 +42,12 @@ impl ObjectRef<'_> {
 
     /// Gets the block of memory with the object data.
     pub fn data(&self) -> anyhow::Result<&[u8]> {
+        let offset = usize::try_from(self.object.start + self.file.data_offset)?;
+        let size = usize::try_from(self.object.size)?;
+
         let data = self.file.buf
-            .get(((self.object.start + self.file.data_offset) as usize) ..).ok_or(UnityError::InvalidData("object start out of file range"))?
-            .get(.. (self.object.size as usize)).ok_or(UnityError::InvalidData("object size out of file range"))?;
+            .get(offset..).ok_or(UnityError::InvalidData("object start out of file range"))?
+            .get(..size).ok_or(UnityError::InvalidData("object size out of file range"))?;
 
         Ok(data)
     }

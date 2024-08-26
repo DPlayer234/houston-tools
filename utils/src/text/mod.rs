@@ -152,13 +152,13 @@ pub unsafe trait MutStrLike {
 
 unsafe impl MutStrLike for String {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.as_mut_str().as_bytes_mut()
+        unsafe { self.as_mut_str().as_bytes_mut() }
     }
 }
 
 unsafe impl MutStrLike for str {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.as_bytes_mut()
+        unsafe { self.as_bytes_mut() }
     }
 }
 

@@ -14,7 +14,7 @@ crate::define_simple_error!(
 pub fn to_b256(bytes: &[u8]) -> String {
     use std::iter::once;
 
-    let input = bytes.into_iter().map(|b| char::from(*b));
+    let input = bytes.iter().map(|b| char::from(*b));
     once('#').chain(input).chain(once('&')).collect()
 }
 
@@ -35,7 +35,7 @@ pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
 pub fn to_b65536(bytes: &[u8]) -> String {
     // A little testing indicates that the output
     // generally takes 25%-50% more bytes.
-    let expected_size = 2 + bytes.len() + bytes.len() >> 1;
+    let expected_size = 2 + bytes.len() + (bytes.len() >> 1);
 
     let mut result = String::with_capacity(expected_size);
 
@@ -44,7 +44,7 @@ pub fn to_b65536(bytes: &[u8]) -> String {
     result.push('&');
 
     let mut iter = bytes.chunks_exact(2);
-    while let Some(chunk) = iter.next() {
+    for chunk in iter.by_ref() {
         // Conversion cannot fail and check is optimized out.
         let chunk = <[u8; 2]>::try_from(chunk).unwrap();
         result.push(bytes_to_char(chunk));
@@ -101,13 +101,14 @@ fn char_to_bytes(c: char) -> [u8; 2] {
     // char codes greater than 0x107FF will end up wrapping around
     // due to the u16 truncation here. while this could be checked,
     // it's not worth having another failure branch.
+    #[allow(clippy::cast_possible_truncation)]
     (int as u16).to_le_bytes()
 }
 
 #[must_use]
 fn bytes_to_char(bytes: [u8; 2]) -> char {
     // SAFETY: Reverse of `char_to_bytes`.
-    let int = u16::from_le_bytes(bytes) as u32;
+    let int = u32::from(u16::from_le_bytes(bytes));
     match int {
         0 ..= 0xD7FF => unsafe { char::from_u32_unchecked(int) },
         _ => unsafe { char::from_u32_unchecked(int + OFFSET) },
@@ -124,6 +125,8 @@ mod test {
         const fn create_data() -> [u16; MAX] {
             let mut result = [0u16; MAX];
             let mut index = 0usize;
+
+            #[allow(clippy::cast_possible_truncation)]
             while index < result.len() {
                 result[index] = index as u16;
                 index += 1;
@@ -165,7 +168,7 @@ mod test {
     }
 
     fn round_trip_core<E: std::fmt::Debug>(bytes: &[u8], encode: impl FnOnce(&[u8]) -> String, decode: impl FnOnce(&str) -> Result<Vec<u8>, E>) {
-        let encoded = black_box(encode(&bytes));
+        let encoded = black_box(encode(bytes));
         println!("encoded[{}]", encoded.chars().count());
 
         let back = decode(&encoded).expect("decoding failed");

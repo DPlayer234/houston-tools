@@ -103,7 +103,7 @@ fn fold_values(
     values: &[f64],
     f: impl FnMut(f64, f64) -> f64,
 ) -> f64 {
-    values.into_iter()
+    values.iter()
         .copied()
         .reduce(f)
         .unwrap_or(0.0)

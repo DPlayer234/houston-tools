@@ -99,7 +99,7 @@ impl HAzurLane {
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.ship_simsearch.search(prefix).into_iter().flat_map(|i| self.ship_list.get(i))
+        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ship_list.get(i))
     }
 
     /// Gets an equip by its ID.
@@ -110,7 +110,7 @@ impl HAzurLane {
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> {
-        self.equip_simsearch.search(prefix).into_iter().flat_map(|i| self.equip_list.get(i))
+        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equip_list.get(i))
     }
 
     /// Gets an augment by its ID.

@@ -193,13 +193,12 @@ pub trait ToCustomData {
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
-    #[must_use]
     fn new_button<T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton {
         let disabled = *field.get(self) == value;
         if disabled {
             // This value is intended to be unique for a given object.
             // It isn't used in any way other than as a discriminator.
-            let sentinel_key = field.get(self) as *const T as u16;
+            let sentinel_key = std::ptr::from_ref(field.get(self)) as u16;
 
             let sentinel = common::None::new(sentinel_key, sentinel(value));
             CreateButton::new(ButtonArgs::None(sentinel).to_custom_id()).disabled(true)
@@ -210,7 +209,6 @@ pub trait ToCustomData {
     }
 
     /// Creates a new select option that would switch to a state where one field is changed.
-    #[must_use]
     fn new_select_option<T: PartialEq>(&mut self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption {
         let default = *field.get(self) == value;
         let custom_id = self.to_custom_id_with(field, value);
@@ -298,7 +296,7 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
             ButtonMessageMode::Edit => CreateInteractionResponse::UpdateMessage(reply),
         };
 
-        Ok(ctx.reply(reply).await?)
+        ctx.reply(reply).await
     }
 }
 
@@ -323,7 +321,7 @@ impl CustomData {
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
-    pub fn from_button_args<'a>(args: ButtonArgsRef<'a>) -> Self {
+    pub fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
         match serde_bare::to_vec(&args) {
             Ok(data) => Self(data),
             Err(err) => {

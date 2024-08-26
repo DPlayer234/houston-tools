@@ -113,10 +113,13 @@ impl MeshVertexData<'_> {
         let mut result_meshes = Vec::new();
 
         for sub_mesh in &self.mesh.sub_meshes {
-            let mut result = ResolvedMesh::default();
-            result.vertices = vec![Vertex::default(); sub_mesh.vertex_count.try_into()?];
+            let mut result = ResolvedMesh {
+                vertices: vec![Vertex::default(); sub_mesh.vertex_count.try_into()?],
+                ..Default::default()
+            };
 
             for (index, channel) in self.mesh.vertex_data.channels.iter().enumerate() {
+                #[allow(clippy::manual_range_patterns)]
                 if !matches!(channel.dimension, 1 | 2 | 3) { continue }
 
                 // CMBK: currently only supporting some channels
@@ -130,6 +133,9 @@ impl MeshVertexData<'_> {
                     + u64::from(stream.offset);
 
                 if channel_size > stream.stride || stream_size > self.data.len().try_into()? { continue }
+
+                // assert that the loops below can always cast `i as usize`
+                _ = usize::try_from(sub_mesh.vertex_count)?;
 
                 match index {
                     0 => { // pos
@@ -159,8 +165,8 @@ impl MeshVertexData<'_> {
 
             let index_offset = sub_mesh.first_byte / index_size;
             let mut index_iter = index_buffer.iter()
-                .skip(index_offset as usize)
-                .take(sub_mesh.index_count as usize);
+                .skip(index_offset.try_into()?)
+                .take(sub_mesh.index_count.try_into()?);
 
             // This is only used to switch triangle winding
             let mut topology_offset = index_offset % 2u32;
@@ -170,9 +176,9 @@ impl MeshVertexData<'_> {
                 let Some(&vertex_index_2) = index_iter.next() else { break };
 
                 let mut triangle = (
-                    (vertex_index_0 + sub_mesh.base_vertex - sub_mesh.first_vertex) as usize,
-                    (vertex_index_1 + sub_mesh.base_vertex - sub_mesh.first_vertex) as usize,
-                    (vertex_index_2 + sub_mesh.base_vertex - sub_mesh.first_vertex) as usize,
+                    usize::try_from(vertex_index_0 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
+                    usize::try_from(vertex_index_1 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
+                    usize::try_from(vertex_index_2 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
                 );
 
                 if sub_mesh.topology != 0 && (topology_offset & 1) != 0 {
@@ -248,11 +254,12 @@ impl MeshVertexData<'_> {
 
         let mut streams = vertex_data.streams
             .clone()
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_default();
 
         let max_stream = vertex_data.channels.iter()
             .map(|c| c.stream).max()
-            .unwrap_or_default() as usize;
+            .unwrap_or_default();
+        let max_stream = usize::from(max_stream);
 
         while streams.len() <= max_stream {
             streams.push(StreamInfo::default());
@@ -262,7 +269,7 @@ impl MeshVertexData<'_> {
             for (index, channel) in vertex_data.channels.iter().enumerate() {
                 let stream = &mut streams[usize::from(channel.stream)];
 
-                stream.channel_mask |= (1 << index) as u32;
+                stream.channel_mask |= 1u32 << index;
 
                 let cur_size = channel.stride();
                 if cur_size > stream.stride {
@@ -301,7 +308,7 @@ impl ChannelInfo {
         */
         const FORMATS: [u8; 13] = [4, 2, 1, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
-        FORMATS.get(self.format as usize).copied().unwrap_or_default()
+        FORMATS.get(usize::from(self.format)).copied().unwrap_or_default()
     }
 }
 
