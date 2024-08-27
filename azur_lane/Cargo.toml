@@ -9,11 +9,6 @@ rust-version = "1.80"
 [lints]
 workspace = true
 
-[dependencies]
-base64 = "0.22.1"
-bitflags = "2.6.0"
-once_cell = "1.19.0"
-
 [dependencies.serde]
 version = "1.0.207"
 features = ["rc", "derive"]
