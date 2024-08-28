@@ -129,7 +129,7 @@ impl View {
             row.push(button);
         }
 
-        if row.is_empty() {
+        if !row.is_empty() {
             rows.push(CreateActionRow::Buttons(row));
         }
     }
