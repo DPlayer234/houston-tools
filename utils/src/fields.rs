@@ -16,11 +16,28 @@ pub trait FieldMut<S: ?Sized, F: ?Sized>: Field<S, F> {
     fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F;
 }
 
+// Provide blanket implementations so any `&impl Field{Mut}<S, F>` is also `impl Field{Mut}<S, F>`.
+impl<T, S: ?Sized, F: ?Sized> Field<S, F> for &T
+where
+    T: Field<S, F> + ?Sized,
+{
+    fn get<'r>(&self, obj: &'r S) -> &'r F {
+        (**self).get(obj)
+    }
+}
+
+impl<T, S: ?Sized, F: ?Sized> FieldMut<S, F> for &T
+where
+    T: FieldMut<S, F> + ?Sized,
+{
+    fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F {
+        (**self).get_mut(obj)
+    }
+}
+
 /// Provides a [`Field`] implementation that uses lambdas.
 ///
-/// It is discouraged to use this struct directly.
-/// Instead, use the [`Field`] trait and [`field`] macro or
-/// the [`FieldMut`] trait and [`field_mut`] macro.
+/// This type isn't publicly available and hidden via `impl` in return position.
 ///
 /// Note that the trait bounds for this type's generic parameters are only present for its impl blocks.
 //
@@ -29,48 +46,68 @@ pub trait FieldMut<S: ?Sized, F: ?Sized>: Field<S, F> {
 // infer the input type.
 #[derive(Debug, Clone, Copy)]
 #[must_use]
-pub struct LambdaField<Get, GetMut = ()> {
+struct LambdaField<Get, GetMut> {
     get: Get,
     get_mut: GetMut,
 }
 
-impl<Get> LambdaField<Get> {
-    /// Creates a new [`LambdaField`] from lambdas.
-    ///
-    /// Instead, use the [`field`] macro to create values.
-    pub const fn new<S: ?Sized, F: ?Sized>(get: Get) -> Self
-    where Get: Fn(&S) -> &F {
-        LambdaField {
-            get,
-            get_mut: (),
-        }
-    }
-}
-
-impl<Get, GetMut> LambdaField<Get, GetMut> {
-    /// Creates a new [`LambdaField`] from lambdas.
-    ///
-    /// Instead, use the [`field_mut`] macro to create values.
-    pub const fn new_mut<S: ?Sized, F: ?Sized>(get: Get, get_mut: GetMut) -> Self
-    where Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F {
-        LambdaField {
-            get,
-            get_mut,
-        }
-    }
-}
-
-impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut> Field<S, F> for LambdaField<Get, GetMut> {
+impl<S, F, Get, GetMut> Field<S, F> for LambdaField<Get, GetMut>
+where
+    S: ?Sized,
+    F: ?Sized,
+    Get: Fn(&S) -> &F,
+{
     #[inline]
     fn get<'r>(&self, obj: &'r S) -> &'r F {
         (self.get)(obj)
     }
 }
 
-impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> FieldMut<S, F> for LambdaField<Get, GetMut> {
+impl<S, F, Get, GetMut> FieldMut<S, F> for LambdaField<Get, GetMut>
+where
+    S: ?Sized,
+    F: ?Sized,
+    Get: Fn(&S) -> &F,
+    GetMut: Fn(&mut S) -> &mut F,
+{
     #[inline]
     fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F {
         (self.get_mut)(obj)
+    }
+}
+
+/// Creates a new [`Field`] from lambdas.
+///
+/// This isn't considered public API.
+/// Instead, use the [`field`] macro to create values.
+#[doc(hidden)]
+pub const fn new_field<S, F, Get>(get: Get) -> impl Field<S, F>
+where
+    S: ?Sized,
+    F: ?Sized,
+    Get: Fn(&S) -> &F,
+{
+    LambdaField {
+        get,
+        get_mut: (),
+    }
+}
+
+/// Creates a new [`FieldMut`] from lambdas.
+///
+/// This isn't considered public API.
+/// Instead, use the [`field_mut`] macro to create values.
+#[doc(hidden)]
+pub const fn new_field_mut<S, F, Get, GetMut>(get: Get, get_mut: GetMut) -> impl FieldMut<S, F>
+where
+    S: ?Sized,
+    F: ?Sized,
+    Get: Fn(&S) -> &F,
+    GetMut: Fn(&mut S) -> &mut F,
+{
+    LambdaField {
+        get,
+        get_mut,
     }
 }
 
@@ -95,7 +132,7 @@ impl<S: ?Sized, F: ?Sized, Get: Fn(&S) -> &F, GetMut: Fn(&mut S) -> &mut F> Fiel
 #[macro_export]
 macro_rules! field {
     ($Type:ty : $($path:tt)*) => {{
-        $crate::fields::LambdaField::new(
+        $crate::fields::new_field(
             |s: &$Type| &s.$($path)*,
         )
     }};
@@ -123,7 +160,7 @@ macro_rules! field {
 #[macro_export]
 macro_rules! field_mut {
     ($Type:ty : $($path:tt)*) => {{
-        $crate::fields::LambdaField::new_mut(
+        $crate::fields::new_field_mut(
             |s: &$Type| &s.$($path)*,
             |s: &mut $Type| &mut s.$($path)*,
         )

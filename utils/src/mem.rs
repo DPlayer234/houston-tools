@@ -1,52 +1,50 @@
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
 ///
-/// Slices longer than `N` are truncated.
+/// Slices must have the right size.
 ///
 /// # Panics
 ///
-/// Panics if the slice is shorter than `N`.
-/// If you cannot guarantee this, use [`try_with_size`].
+/// Panics if the slice is not exactly `N` long.
+/// If you cannot guarantee this, use [`try_as_sized`].
 ///
 /// # Examples
 ///
 /// ```
 /// let x: &[u8] = &[1, 2, 3, 4];
-/// let y: &[u8; 4] = utils::mem::with_size(x);
+/// let y: &[u8; 4] = utils::mem::as_sized(x);
 /// assert_eq!(x, y);
 /// ```
 #[inline]
 #[must_use = "if you don't need the return value, just assert the length"]
-pub const fn with_size<T, const N: usize>(slice: &[T]) -> &[T; N] {
-    match try_with_size(slice) {
+pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
+    match try_as_sized(slice) {
         Some(slice) => slice,
-        None => panic!("requested size too large"),
+        None => panic!("requested size incorrect"),
     }
 }
 
 /// Tries to convert a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
 ///
-/// Returns [`None`] if the requested `N` is too large.
-///
-/// Slices longer than `N` are truncated rather than returning an error.
+/// Returns [`None`] if the slice isn't exactly `N` long.
 ///
 /// # Examples
 ///
 /// ```
 /// let x: &[u8] = &[1, 2, 3, 4];
 ///
-/// let exact = utils::mem::try_with_size::<u8, 4>(x);
-/// let small = utils::mem::try_with_size::<u8, 2>(x);
-/// let large = utils::mem::try_with_size::<u8, 6>(x);
+/// let exact = utils::mem::try_as_sized::<u8, 4>(x);
+/// let small = utils::mem::try_as_sized::<u8, 2>(x);
+/// let large = utils::mem::try_as_sized::<u8, 6>(x);
 ///
 /// assert_eq!(exact, Some(&[1, 2, 3, 4]));
-/// assert_eq!(small, Some(&[1, 2]));
+/// assert_eq!(small, None);
 /// assert_eq!(large, None);
 /// ```
 #[inline]
-pub const fn try_with_size<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
-    if slice.len() >= N {
+pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
+    if slice.len() == N {
         Some(unsafe {
             // SAFETY: The length has already been validated.
             &*slice.as_ptr().cast::<[T; N]>()

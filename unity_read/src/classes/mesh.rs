@@ -1,6 +1,6 @@
-use std::io::Cursor;
+use std::io::{Cursor, Read, Seek};
 
-use binrw::BinRead;
+use binrw::{BinRead, BinResult, Endian};
 use half::f16;
 
 use crate::{define_unity_class, UnityError};
@@ -372,11 +372,11 @@ impl NormFloat for Norm<i16> {
 impl<T: BinRead> BinRead for Norm<T> {
     type Args<'a> = T::Args<'a>;
 
-    fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
+    fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: binrw::Endian,
+        endian: Endian,
         args: Self::Args<'_>,
-    ) -> binrw::prelude::BinResult<Self> {
+    ) -> BinResult<Self> {
         Ok(Norm(T::read_options(reader, endian, args)?))
     }
 }
@@ -391,13 +391,13 @@ impl NormFloat for ReadF16 {
 }
 
 impl BinRead for ReadF16 {
-    type Args<'a> = ();
+    type Args<'a> = <u16 as BinRead>::Args<'a>;
 
-    fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
+    fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: binrw::Endian,
+        endian: Endian,
         args: Self::Args<'_>,
-    ) -> binrw::prelude::BinResult<Self> {
+    ) -> BinResult<Self> {
         u16::read_options(reader, endian, args).map(|b| ReadF16(f16::from_bits(b)))
     }
 }

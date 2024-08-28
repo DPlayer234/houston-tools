@@ -1,32 +1,68 @@
 use std::fmt::{Display, Debug};
 use std::ops::{RangeBounds, Bound};
+use std::error::Error as StdError;
 
 /// An error that can occur when constructing bounded ranges.
-#[derive(Debug, Clone)]
-pub enum OutOfRange<T> {
+#[derive(Debug)]
+pub enum OutOfRange<T: RangeNum> {
     /// The provided value was below the `MIN`.
-    /// This variant stores the `MIN`.
-    BelowMin(T),
+    BelowMin {
+        /// The actual value provided.
+        actual: T,
+        /// The static minimum.
+        min: T,
+    },
+
     /// The provided value was above the `MAX`.
-    /// This variant stores the `MAX`.
-    AboveMax(T),
+    AboveMax {
+        /// The actual value provided.
+        actual: T,
+        /// The static maximum.
+        max: T,
+    },
+
     /// The low value was above the high value.
     /// This variant stores the provided low and high values.
-    LowAboveHigh(T, T),
+    LowAboveHigh {
+        low: T,
+        high: T,
+    },
+
     /// Parsing failed.
-    /// This variant stores the static limits.
-    Parse(T, T),
+    Parse {
+        min: T,
+        max: T,
+        source: T::FromStrError,
+    },
 }
 
-impl<T: Display + Debug> std::error::Error for OutOfRange<T> {}
+impl<T: RangeNum> OutOfRange<T> {
+    const fn below_min(actual: T, min: T) -> Self {
+        Self::BelowMin { actual, min }
+    }
+    const fn above_max(actual: T, max: T) -> Self {
+        Self::AboveMax { actual, max }
+    }
+    const fn low_above_high(low: T, high: T) -> Self {
+        Self::LowAboveHigh { low, high }
+    }
+    const fn parse(min: T, max: T, source: T::FromStrError) -> Self {
+        Self::Parse { min, max, source }
+    }
+}
 
-impl<T: Display> Display for OutOfRange<T> {
+impl<T: Display + Debug + RangeNum> StdError for OutOfRange<T> {}
+
+impl<T: Display + RangeNum> Display for OutOfRange<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OutOfRange::BelowMin(min) => write!(f, "Value must be at least {min}."),
-            OutOfRange::AboveMax(max) => write!(f, "Value must be at most {max}."),
-            OutOfRange::LowAboveHigh(l, h) => write!(f, "Low ({l}) is greater than high ({h})."),
-            OutOfRange::Parse(min, max) => write!(f, "Expected a number or range within `[{min}..{max}]`."),
+            OutOfRange::BelowMin { actual, min } => write!(f, "value must be at least {min}, was {actual}"),
+            OutOfRange::AboveMax { actual, max } => write!(f, "value must be at most {max}, was {actual}"),
+            OutOfRange::LowAboveHigh { low, high } => write!(f, "low ({low}) is greater than high ({high})"),
+            OutOfRange::Parse { min, max, source: error } => {
+                write!(f, "expected range within limits [{min}..{max}]; ")?;
+                Display::fmt(error, f)
+            },
         }
     }
 }
@@ -38,6 +74,10 @@ macro_rules! try_const {
             Err(e) => return Err(e),
         }
     }};
+}
+
+pub trait RangeNum {
+    type FromStrError: StdError;
 }
 
 macro_rules! impl_range {
@@ -77,12 +117,12 @@ macro_rules! impl_range {
             pub const fn new(low: $Num, high: $Num) -> Result<Self, OutOfRange<$Num>> {
                 const { Self::assert_valid(); }
 
-                let low = try_const!(Self::check(low));
-                let high = try_const!(Self::check(high));
                 if low <= high {
+                    let low = try_const!(Self::check(low));
+                    let high = try_const!(Self::check(high));
                     Ok(Self(low, high))
                 } else {
-                    Err(OutOfRange::LowAboveHigh(low, high))
+                    Err(OutOfRange::low_above_high(low, high))
                 }
             }
 
@@ -94,9 +134,9 @@ macro_rules! impl_range {
                 const { Self::assert_valid(); }
 
                 if n < MIN {
-                    Err(OutOfRange::BelowMin(MIN))
+                    Err(OutOfRange::below_min(n, MIN))
                 } else if n > MAX {
-                    Err(OutOfRange::AboveMax(MAX))
+                    Err(OutOfRange::above_max(n, MAX))
                 } else {
                     Ok(n)
                 }
@@ -118,7 +158,7 @@ macro_rules! impl_range {
             }
 
             fn parse_part(s: &str) -> Result<$Num, OutOfRange<$Num>> {
-                s.parse().map_err(|_| OutOfRange::Parse(MIN, MAX))
+                s.parse().map_err(|err| OutOfRange::parse(MIN, MAX, err))
             }
 
             const fn assert_valid() {
@@ -178,6 +218,10 @@ macro_rules! impl_range {
                 Bound::Included(&self.1)
             }
         }
+
+        impl RangeNum for $Num {
+            type FromStrError = <$Num as std::str::FromStr>::Err;
+        }
     };
 }
 
@@ -209,9 +253,9 @@ mod test {
                 let too_high = <$Type<1, 10>>::new(2, 11);
 
                 assert!(matches!(valid.map($Type::tuple), Ok((4, 6))));
-                assert!(matches!(inverse, Err(OutOfRange::LowAboveHigh(5, 4))));
-                assert!(matches!(too_low, Err(OutOfRange::BelowMin(1))));
-                assert!(matches!(too_high, Err(OutOfRange::AboveMax(10))));
+                assert!(matches!(inverse, Err(OutOfRange::LowAboveHigh { low: 5, high: 4 })));
+                assert!(matches!(too_low, Err(OutOfRange::BelowMin { actual: 0, min: 1 })));
+                assert!(matches!(too_high, Err(OutOfRange::AboveMax { actual: 11, max: 10 })));
             }
         };
     }

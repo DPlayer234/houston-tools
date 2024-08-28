@@ -232,7 +232,9 @@ pub trait ToCustomData {
 }
 
 impl<T> ToCustomData for T
-where for<'a> &'a T: Into<ButtonArgsRef<'a>> {
+where
+    for<'a> &'a T: Into<ButtonArgsRef<'a>>,
+{
     fn to_custom_data(&self) -> CustomData {
         CustomData::from_button_args(self.into())
     }

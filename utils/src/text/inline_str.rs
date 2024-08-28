@@ -52,7 +52,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     ///
     /// Returns an error if the length does not match.
     pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
-        match crate::mem::try_with_size(str.as_bytes()) {
+        match crate::mem::try_as_sized(str.as_bytes()) {
             Some(slice) => Ok(unsafe {
                 // SAFETY: InlineStr<LEN> is a transparent wrapper around [u8; LEN].
                 std::mem::transmute::<&[u8; LEN], &InlineStr<LEN>>(slice)

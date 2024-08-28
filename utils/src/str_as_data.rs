@@ -10,6 +10,11 @@ crate::define_simple_error!(
     "base65536 data is invalid"
 );
 
+/// Converts the bytes to "base 256".
+///
+/// Each byte will be mapped to the UTF-8 character with the equivalent code.
+///
+/// The sequence will be prefixed with `#` and ends with `&`.
 #[must_use]
 pub fn to_b256(bytes: &[u8]) -> String {
     use std::iter::once;
@@ -18,6 +23,9 @@ pub fn to_b256(bytes: &[u8]) -> String {
     once('#').chain(input).chain(once('&')).collect()
 }
 
+/// Reverses the operation done by [`to_b256`].
+///
+/// If the data is invalid or lacks the required markers, returns an error.
 pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
     let str = str
         // strip the start marker
@@ -31,6 +39,13 @@ pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
         .map_err(|_| Base256Error(()))
 }
 
+/// Converts the bytes to "base 65535".
+///
+/// Byte will be paired. The combined value of each pair will mapped to UTF-8 characters
+/// and the sequence is then joined. A marker for whether the input sequence had an odd
+/// amount of bytes will be stored.
+///
+/// The sequence will be prefixed with a header character and ends with `&`.
 #[must_use]
 pub fn to_b65536(bytes: &[u8]) -> String {
     // A little testing indicates that the output
@@ -64,6 +79,9 @@ pub fn to_b65536(bytes: &[u8]) -> String {
     result
 }
 
+/// Reverses the operation done by [`to_b65536`].
+///
+/// If the data is invalid or lacks the required markers, returns an error.
 pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
     let (skip_last, str) = str
         // strip the end marker
@@ -77,10 +95,11 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
         })
         .ok_or(Base65536Error(()))?;
 
-    let mut result: Vec<u8> = str
-        .chars()
-        .flat_map(char_to_bytes)
-        .collect();
+    let mut result = Vec::new();
+    for c in str.chars() {
+        let bytes = char_to_bytes(c)?;
+        result.extend(bytes);
+    }
 
     if skip_last && result.pop().is_none() {
         return Err(Base65536Error(()));
@@ -91,18 +110,17 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
 
 const OFFSET: u32 = 0xE000 - 0xD800;
 
-#[must_use]
-fn char_to_bytes(c: char) -> [u8; 2] {
+fn char_to_bytes(c: char) -> Result<[u8; 2], Base65536Error> {
     let int = match c {
         '\0' ..= '\u{D7FF}' => u32::from(c),
         '\u{E000}' ..= '\u{10FFFF}' => u32::from(c) - OFFSET,
     };
 
-    // char codes greater than 0x107FF will end up wrapping around
-    // due to the u16 truncation here. while this could be checked,
-    // it's not worth having another failure branch.
-    #[allow(clippy::cast_possible_truncation)]
-    (int as u16).to_le_bytes()
+    // char codes greater than 0x107FF would wrap around
+    match u16::try_from(int) {
+        Ok(i) => Ok(i.to_le_bytes()),
+        Err(_) => Err(Base65536Error(())),
+    }
 }
 
 #[must_use]
@@ -150,7 +168,7 @@ mod test {
     }
 
     #[test]
-    fn round_trip_b65535_even() {
+    fn round_trip_b65536_even() {
         round_trip_core(
             DATA,
             to_b65536,
@@ -159,12 +177,40 @@ mod test {
     }
 
     #[test]
-    fn round_trip_b65535_odd() {
+    fn round_trip_b65536_odd() {
         round_trip_core(
             &DATA[1..],
             to_b65536,
             from_b65536
         );
+    }
+
+    #[test]
+    fn min_b256() {
+        let encoded = black_box("#\u{0078}&");
+        let back = from_b256(encoded).expect("decoding failed");
+
+        assert_eq!(back.as_slice(), &[0x78]);
+    }
+
+    #[test]
+    fn min_b65536() {
+        let encoded = black_box("&\u{1020}&");
+        let back = from_b65536(encoded).expect("decoding failed");
+
+        assert_eq!(back.as_slice(), &[0x20, 0x10]);
+    }
+
+    #[test]
+    fn invalid_char_b256_fails() {
+        let encoded = black_box("%\u{10800}&");
+        from_b65536(encoded).expect_err("U+10800 is out of range");
+    }
+
+    #[test]
+    fn invalid_char_b65535_fails() {
+        let encoded = black_box("#\u{0100}&");
+        from_b256(encoded).expect_err("U+256 is out of range");
     }
 
     fn round_trip_core<E: std::fmt::Debug>(bytes: &[u8], encode: impl FnOnce(&[u8]) -> String, decode: impl FnOnce(&str) -> Result<Vec<u8>, E>) {
