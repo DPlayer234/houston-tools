@@ -21,7 +21,7 @@ macro_rules! generate {
                 pub fn $key(self) -> &'a ReactionType {
                     match self.0 {
                         Some(e) => &e.$key,
-                        None => &*FALLBACK_EMOJI
+                        None => &FALLBACK_EMOJI
                     }
                 }
             )*

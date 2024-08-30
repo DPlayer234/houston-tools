@@ -1,5 +1,7 @@
 use std::fmt::Write;
 
+use bitflags::Flags;
+
 use utils::Discard;
 use utils::time::*;
 use utils::titlecase;
@@ -114,7 +116,9 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
         };
     }
 
-    const FLAGS: &[(UserPublicFlags, &str)] = &[
+    // use const size to catch when new flags are added
+    const FLAG_COUNT: usize = UserPublicFlags::FLAGS.len();
+    const FLAGS: [(UserPublicFlags, &str); FLAG_COUNT] = [
         flag!(DISCORD_EMPLOYEE),
         flag!(PARTNERED_SERVER_OWNER),
         flag!(HYPESQUAD_EVENTS),
@@ -135,9 +139,87 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
 
     write!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits()).discard();
 
+    write_flags(f, public_flags, &FLAGS);
+    f.push_str("\n");
+}
+
+fn write_permissions(f: &mut String, permissions: Permissions) {
+    macro_rules! flag {
+        ($flag:ident) => {
+            (Permissions::$flag, titlecase!(stringify!($flag)))
+        };
+    }
+
+    // use const size to catch when new flags are added
+    // `-1` because one flag is deprecated/duplicated
+    const FLAG_COUNT: usize = Permissions::FLAGS.len() - 1;
+    const FLAGS: [(Permissions, &str); FLAG_COUNT] = [
+        flag!(CREATE_INSTANT_INVITE),
+        flag!(KICK_MEMBERS),
+        flag!(BAN_MEMBERS),
+        flag!(ADMINISTRATOR),
+        flag!(MANAGE_CHANNELS),
+        flag!(MANAGE_GUILD),
+        flag!(ADD_REACTIONS),
+        flag!(VIEW_AUDIT_LOG),
+        flag!(PRIORITY_SPEAKER),
+        flag!(STREAM),
+        flag!(VIEW_CHANNEL),
+        flag!(SEND_MESSAGES),
+        flag!(SEND_TTS_MESSAGES),
+        flag!(MANAGE_MESSAGES),
+        flag!(EMBED_LINKS),
+        flag!(ATTACH_FILES),
+        flag!(READ_MESSAGE_HISTORY),
+        flag!(MENTION_EVERYONE),
+        flag!(USE_EXTERNAL_EMOJIS),
+        flag!(VIEW_GUILD_INSIGHTS),
+        flag!(CONNECT),
+        flag!(SPEAK),
+        flag!(MUTE_MEMBERS),
+        flag!(DEAFEN_MEMBERS),
+        flag!(MOVE_MEMBERS),
+        flag!(USE_VAD),
+        flag!(CHANGE_NICKNAME),
+        flag!(MANAGE_NICKNAMES),
+        flag!(MANAGE_ROLES),
+        flag!(MANAGE_WEBHOOKS),
+        flag!(MANAGE_GUILD_EXPRESSIONS),
+        flag!(USE_APPLICATION_COMMANDS),
+        flag!(REQUEST_TO_SPEAK),
+        flag!(MANAGE_EVENTS),
+        flag!(MANAGE_THREADS),
+        flag!(CREATE_PUBLIC_THREADS),
+        flag!(CREATE_PRIVATE_THREADS),
+        flag!(USE_EXTERNAL_STICKERS),
+        flag!(SEND_MESSAGES_IN_THREADS),
+        flag!(USE_EMBEDDED_ACTIVITIES),
+        flag!(MODERATE_MEMBERS),
+        flag!(VIEW_CREATOR_MONETIZATION_ANALYTICS),
+        flag!(USE_SOUNDBOARD),
+        flag!(CREATE_GUILD_EXPRESSIONS),
+        flag!(CREATE_EVENTS),
+        flag!(USE_EXTERNAL_SOUNDS),
+        flag!(SEND_VOICE_MESSAGES),
+        flag!(SET_VOICE_CHANNEL_STATUS),
+        flag!(SEND_POLLS),
+    ];
+
+    write!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits()).discard();
+
+    if permissions.administrator() {
+        f.push_str("Administrator, *");
+    } else if !permissions.is_empty() {
+        write_flags(f, permissions, &FLAGS);
+    }
+
+    f.push_str("\n");
+}
+
+fn write_flags<T: Flags + Copy>(f: &mut String, flags: T, names: &[(T, &str)]) {
     let mut first = true;
-    for (flag, label) in FLAGS {
-        if public_flags.contains(*flag) {
+    for (flag, label) in names {
+        if flags.contains(*flag) {
             if !first {
                 f.push_str(", ");
             }
@@ -150,18 +232,4 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
     if first {
         f.push_str("<None?>");
     }
-
-    f.push_str("\n");
-}
-
-fn write_permissions(f: &mut String, permissions: Permissions) {
-    write!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits()).discard();
-
-    if permissions.administrator() {
-        f.push_str("Administrator, *");
-    } else if !permissions.is_empty() {
-        f.push_str(&permissions.get_permission_names().join(", "));
-    }
-
-    f.push_str("\n");
 }

@@ -151,7 +151,8 @@ impl View {
                 rows.push(CreateActionRow::Buttons(
                     std::iter::once(base_button)
                         .chain(
-                            base_ship.retrofits.iter().enumerate()
+                            base_ship.retrofits.iter()
+                                .enumerate()
                                 .filter_map(|(index, retro)| {
                                     let index = u8::try_from(index).ok()?;
                                     let result = self.button_with_retrofit(Some(index))
@@ -192,45 +193,35 @@ impl View {
             ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
         }
 
-        if ship.hull_type.team_type() != TeamType::Submarine {
-            [(
-                "Stats",
-                format!(
-                    "\
-                    **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                    **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                    **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                    **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                    **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
-                    ",
-                    s!(stats.hp), stats.armor.name(), s!(stats.rld),
-                    s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                    s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                    s!(stats.asw), f(stats.spd),
-                    f(stats.lck), stats.cost
-                ),
-                false
-            )]
+        let content = if ship.hull_type.team_type() != TeamType::Submarine {
+            format!(
+                "**`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                 **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                 **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                 **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                 **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
+                s!(stats.hp), stats.armor.name(), s!(stats.rld),
+                s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                s!(stats.asw), f(stats.spd),
+                f(stats.lck), stats.cost
+            )
         } else {
-            [(
-                "Stats",
-                format!(
-                    "\
-                    **`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                    **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                    **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                    **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                    **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`
-                    ",
-                    s!(stats.hp), stats.armor.name(), s!(stats.rld),
-                    s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                    s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                    stats.oxy, stats.amo, f(stats.spd),
-                    f(stats.lck), stats.cost
-                ),
-                false
-            )]
-        }
+            format!(
+                "**`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
+                 **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
+                 **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
+                 **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
+                 **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
+                s!(stats.hp), stats.armor.name(), s!(stats.rld),
+                s!(stats.fp), s!(stats.trp), s!(stats.eva),
+                s!(stats.aa), s!(stats.avi), s!(stats.acc),
+                stats.oxy, stats.amo, f(stats.spd),
+                f(stats.lck), stats.cost
+            )
+        };
+
+        [("Stats", content, false)]
     }
 
     /// Creates the embed field that displays the weapon equipment slots.

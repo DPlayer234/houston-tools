@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "1.1.6"
+version = "1.1.7"
 edition = "2021"
 rust-version = "1.80"
 
@@ -12,6 +12,7 @@ workspace = true
 [dependencies]
 anyhow = "1.0.86"
 base64 = "0.22.1"
+bitflags = "2.6.0"
 chrono = "0.4.38"
 dashmap = "5.5.3"
 env_logger = "0.11.5"
