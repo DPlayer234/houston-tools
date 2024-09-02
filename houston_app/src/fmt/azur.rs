@@ -6,29 +6,50 @@ use azur_lane::equip::*;
 ///
 /// Alternate formatting (`{:#}`) omits the weapon kind.
 #[must_use]
-pub struct DisplayWeapon<'a>(&'a Weapon);
+pub struct DisplayWeapon<'a> {
+    weapon: &'a Weapon,
+    flags: DisplayWeaponFlags,
+}
+
+bitflags::bitflags! {
+    #[derive(Clone, Copy)]
+    struct DisplayWeaponFlags: usize {
+        const NO_KIND = 1 << 0;
+        const NO_FIRE_RATE = 1 << 1;
+    }
+}
 
 impl<'a> DisplayWeapon<'a> {
     /// Creates a new value.
-    pub fn new(weapon: &'a Weapon) -> Self {
-        Self(weapon)
+    pub const fn new(weapon: &'a Weapon) -> Self {
+        Self {
+            weapon,
+            flags: DisplayWeaponFlags::empty(),
+        }
     }
 
-    /// Formats the weapon without the kind.
-    pub fn to_string_no_kind(&self) -> String {
-        format!("{:#}", self)
+    pub fn no_kind(mut self) -> Self {
+        self.flags.insert(DisplayWeaponFlags::NO_KIND);
+        self
+    }
+
+    pub fn no_fire_rate(mut self) -> Self {
+        self.flags.insert(DisplayWeaponFlags::NO_FIRE_RATE);
+        self
     }
 }
 
 impl Display for DisplayWeapon<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        let weapon = self.0;
+        let weapon = self.weapon;
 
-        if !f.alternate() {
+        if !self.flags.contains(DisplayWeaponFlags::NO_KIND) {
             writeln!(f, "**Kind:** {}", weapon.kind.name())?;
         }
 
-        format_fire_rate(weapon, f)?;
+        if !self.flags.contains(DisplayWeaponFlags::NO_FIRE_RATE) {
+            format_fire_rate(weapon, f)?;
+        }
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => format_barrage(barrage, f, ""),
@@ -62,17 +83,29 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     let amount: u32 = barrage.bullets.iter().map(|b| b.amount).sum();
     let ArmorModifiers(l, m, h) = bullet.modifiers;
 
-    // amount x damage
+    match &bullet.extra {
+        // ticks x amount x damage
+        BulletExtra::Beam(beam) => writeln!(
+            f,
+            "{indent}**Dmg:** ~{:.0} x {} x {:.1} @ {:.0}% {}",
+            beam.duration / beam.tick_delay, amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+        )?,
+        // amount x damage
+        _ => writeln!(
+            f,
+            "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}",
+            amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+        )?,
+    }
+
     // range | angle | vel
-    write!(
+    writeln!(
         f,
-        "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}\n\
-        {indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}\n",
-        amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+        "{indent}**Range:** {:.0} \u{2E31} **Angle:** {:.0}° \u{2E31} **Vel.:** {:.0}",
         barrage.range, barrage.firing_angle, bullet.velocity
     )?;
 
-    if let Some(spread) = &bullet.spread {
+    if let BulletExtra::Spread(spread) = &bullet.extra {
         writeln!(
             f,
             "{indent}**AoE:** {:.0} \u{2E31} **Spread:** {:.0} x {:.0}",
@@ -95,7 +128,7 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fm
     write!(
         f,
         "{indent}**Dmg:** {:.1} @ {:.0}% {}\n\
-        {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}\n",
+         {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}\n",
         barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
         barrage.range, barrage.firing_angle,
     )

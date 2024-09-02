@@ -71,8 +71,20 @@ pub struct Bullet {
     pub attach_buff: Vec<BuffInfo>,
 
     /// How far the hit spread is. Only applicable to main gun fire and bombs.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub spread: Option<BulletSpread>,
+    #[serde(default, skip_serializing_if = "is_none_bullet_extra")]
+    pub extra: BulletExtra,
+}
+
+fn is_none_bullet_extra(extra: &BulletExtra) -> bool {
+    matches!(extra, BulletExtra::None)
+}
+
+/// Additional bullet data.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub enum BulletExtra {
+    #[default] None,
+    Spread(BulletSpread),
+    Beam(BulletBeam),
 }
 
 /// How far a bullet's hit spread is. Only applicable to main gun fire and bombs.
@@ -81,6 +93,13 @@ pub struct BulletSpread {
     pub spread_x: f64,
     pub spread_y: f64,
     pub hit_range: f64,
+}
+
+/// Additional information about a beam.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BulletBeam {
+    pub duration: f64,
+    pub tick_delay: f64,
 }
 
 /// Aircraft data for a [`Weapon`].

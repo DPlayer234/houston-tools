@@ -74,8 +74,11 @@ struct DiceSet {
 #[derive(Debug, Clone)]
 struct DiceSetVec(Vec<DiceSet>);
 
-#[derive(Debug, Clone, Copy)]
-struct DiceParseError;
+utils::define_simple_error!(
+    #[derive(Clone, Copy)]
+    DiceParseError(()):
+    "Expected inputs like '2d6'. The maximum is '255d65535'."
+);
 
 impl DiceSet {
     #[must_use]
@@ -97,7 +100,7 @@ impl FromStr for DiceSet {
 
         s.split_once(['d', 'D'])
             .and_then(parse_inner)
-            .ok_or(DiceParseError)
+            .ok_or(DiceParseError(()))
     }
 }
 
@@ -109,8 +112,8 @@ impl std::fmt::Display for DiceSet {
 
 impl DiceSetVec {
     #[must_use]
-    fn from_vec(vec: Vec<DiceSet>) -> Self {
-        Self(vec)
+    fn from_vec(vec: Vec<DiceSet>) -> Option<Self> {
+        (!vec.is_empty()).then_some(Self(vec))
     }
 
     #[must_use]
@@ -123,19 +126,11 @@ impl FromStr for DiceSetVec {
     type Err = DiceParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        fn map_vector(v: Vec<DiceSet>) -> Result<DiceSetVec, DiceParseError> {
-            if v.is_empty() {
-                Err(DiceParseError)
-            } else {
-                Ok(DiceSetVec::from_vec(v))
-            }
-        }
-
         s.split(|c: char| c.is_whitespace() || c.is_ascii_punctuation())
             .filter(|s| !s.is_empty())
             .map(DiceSet::from_str)
             .collect::<Result<Vec<DiceSet>, Self::Err>>()
-            .and_then(map_vector)
+            .and_then(|v| DiceSetVec::from_vec(v).ok_or(DiceParseError(())))
     }
 }
 
@@ -152,13 +147,5 @@ impl std::fmt::Display for DiceSetVec {
         }
 
         Ok(())
-    }
-}
-
-impl std::error::Error for DiceParseError {}
-
-impl std::fmt::Display for DiceParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Expected inputs like '2d6'. The maximum is '255d65535'.")
     }
 }

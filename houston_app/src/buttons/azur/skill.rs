@@ -117,10 +117,14 @@ impl View {
             ));
         }
 
-        for weapon in &skill.new_weapons {
+        for buff in &skill.new_weapons {
+            let fmt = crate::fmt::azur::DisplayWeapon::new(&buff.weapon);
             fields.push((
-                format!("__{}__", weapon.name.as_deref().unwrap_or("Special Weapon")),
-                crate::fmt::azur::DisplayWeapon::new(weapon).to_string(),
+                format!("__{}__", buff.weapon.name.as_deref().unwrap_or("Special Weapon")),
+                match buff.duration {
+                    Some(_) => fmt.no_fire_rate().to_string(),
+                    None => fmt.to_string(),
+                },
                 true
             ))
         }

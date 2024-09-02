@@ -35,7 +35,7 @@ pub fn to_titlecase<S: MutStrLike + ?Sized>(value: &mut S) {
 fn to_titlecase_u8(slice: &mut [u8]) {
     let mut is_start = true;
 
-    for item in slice.iter_mut() {
+    for item in slice {
         (*item, is_start) = titlecase_transform(*item, is_start);
     }
 }
@@ -171,5 +171,11 @@ unsafe impl MutStrLike for [u8] {
 unsafe impl MutStrLike for Vec<u8> {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         self.as_mut_slice()
+    }
+}
+
+unsafe impl<const N: usize> MutStrLike for InlineStr<N> {
+    unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
+        unsafe { self.as_bytes_mut() }
     }
 }

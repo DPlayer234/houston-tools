@@ -237,13 +237,22 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
     })
 }
 
-fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, bullet_id: u32, barrage_id: u32, parent_amount: u32) -> LuaResult<f64> {
+fn get_sub_barrage(
+    lua: &Lua,
+    bullets: &mut Vec<Bullet>,
+    salvo_time: &mut f64,
+    bullet_id: u32,
+    barrage_id: u32,
+    parent_amount: u32,
+) -> LuaResult<f64> {
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
     let bullet_template: LuaTable = pg.get("bullet_template").context("global pg.bullet_template")?;
     let barrage_template: LuaTable = pg.get("barrage_template").context("global pg.barrage_template")?;
 
     let bullet: LuaTable = bullet_template.get(bullet_id).with_context(context!("bullet template for id {bullet_id}"))?;
     let barrage: LuaTable = barrage_template.get(barrage_id).with_context(context!("barrage template for id {barrage_id}"))?;
+
+    let kind = convert_al::to_bullet_kind(bullet.get("type")?);
 
     let senior_delay: f64 = barrage.get("senior_delay").with_context(context!("senior_delay in barrage {barrage_id}"))?;
     let senior_repeat: u32 = barrage.get("senior_repeat").with_context(context!("senior_repeat in barrage {barrage_id}"))?;
@@ -270,7 +279,6 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
     } else {
         let armor_mods: [f64; 3] = bullet.get("damage_type")?;
         let pierce: Option<u32> = bullet.get("pierce_amount").with_context(context!("pierce_amount in bullet {bullet_id}"))?;
-        let kind = convert_al::to_bullet_kind(bullet.get("type")?);
 
         let mut attach_buff = Vec::new();
         let attach_buff_raw: Option<Vec<LuaTable>> = bullet.get("attach_buff").with_context(context!("attach_buff in bullet {bullet_id}"))?;
@@ -288,6 +296,35 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
             }
         }
 
+        let extra = match kind {
+            BulletKind::Bomb => {
+                let hit_type: LuaTable = bullet.get("hit_type").with_context(context!("hit_type in bullet {bullet_id}"))?;
+                let extra_param: LuaTable = bullet.get("extra_param").with_context(context!("extra_param in bullet {bullet_id}"))?;
+
+                let spread_x: Option<f64> = extra_param.get("randomOffsetX").with_context(context!("randomOffsetX in bullet {bullet_id}"))?;
+                let spread_y: Option<f64> = extra_param.get("randomOffsetZ").with_context(context!("randomOffsetZ in bullet {bullet_id}"))?;
+
+                BulletExtra::Spread(BulletSpread {
+                    spread_x: spread_x.unwrap_or_default(),
+                    spread_y: spread_y.unwrap_or_default(),
+                    hit_range: hit_type.get("range").with_context(context!("range in bullet {bullet_id}"))?
+                })
+            },
+            BulletKind::Beam => {
+                // delay: total duration, including senior_delay
+                // senior_delay: even without repeat, delay before damage starts
+                // delta_delay: damage tick rate
+                let delta_delay: f64 = barrage.get("delta_delay").with_context(context!("delta_delay in barrage {barrage_id}"))?;
+                let delay: f64 = barrage.get("delay").with_context(context!("delay in barrage {barrage_id}"))?;
+
+                BulletExtra::Beam(BulletBeam {
+                    duration: delay - senior_delay,
+                    tick_delay: delta_delay,
+                })
+            },
+            _ => BulletExtra::None,
+        };
+
         bullets.push(Bullet {
             bullet_id,
             amount,
@@ -297,36 +334,26 @@ fn get_sub_barrage(lua: &Lua, bullets: &mut Vec<Bullet>, salvo_time: &mut f64, b
             velocity: bullet.get("velocity")?,
             modifiers: ArmorModifiers::from(armor_mods),
             attach_buff,
-
-            spread: if kind == BulletKind::Bomb {
-                let hit_type: LuaTable = bullet.get("hit_type").with_context(context!("hit_type in bullet {bullet_id}"))?;
-                let extra_param: LuaTable = bullet.get("extra_param").with_context(context!("extra_param in bullet {bullet_id}"))?;
-
-                let spread_x: Option<f64> = extra_param.get("randomOffsetX").with_context(context!("randomOffsetX in bullet {bullet_id}"))?;
-                let spread_y: Option<f64> = extra_param.get("randomOffsetZ").with_context(context!("randomOffsetZ in bullet {bullet_id}"))?;
-
-                Some(BulletSpread {
-                    spread_x: spread_x.unwrap_or_default(),
-                    spread_y: spread_y.unwrap_or_default(),
-                    hit_range: hit_type.get("range").with_context(context!("range in bullet {bullet_id}"))?
-                })
-            } else {
-                None
-            }
+            extra,
         });
     }
 
     Ok(senior_delay)
 }
 
-fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, skill: LuaTable, skill_id: u32) -> LuaResult<()> {
+fn search_referenced_weapons(
+    context: &mut ReferencedWeaponsContext,
+    lua: &Lua,
+    skill: LuaTable,
+    skill_id: u32,
+) -> LuaResult<()> {
     let len = skill.len()?;
     if let Ok(len) = usize::try_from(len) {
         if len != 0 {
             let level_entry: LuaTable = skill.get(len).with_context(context!("level entry {len} of skill/buff"))?;
             let effect_list: Option<Vec<LuaTable>> = level_entry.get("effect_list").with_context(context!("effect_list of skill/buff level entry {len}"))?;
             if let Some(effect_list) = effect_list {
-                search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
+                search_referenced_weapons_in_effect_entry(context, lua, &skill, effect_list, skill_id)?;
                 return Ok(());
             }
         }
@@ -334,13 +361,19 @@ fn search_referenced_weapons(context: &mut ReferencedWeaponsContext, lua: &Lua, 
 
     let effect_list: Option<Vec<LuaTable>> = skill.get("effect_list").context("effect_list of skill/buff")?;
     if let Some(effect_list) = effect_list {
-        search_referenced_weapons_in_effect_entry(context, lua, effect_list, skill_id)?;
+        search_referenced_weapons_in_effect_entry(context, lua, &skill, effect_list, skill_id)?;
     }
 
     Ok(())
 }
 
-fn search_referenced_weapons_in_effect_entry(context: &mut ReferencedWeaponsContext, lua: &Lua, effect_list: Vec<LuaTable>, skill_id: u32) -> LuaResult<()> {
+fn search_referenced_weapons_in_effect_entry(
+    context: &mut ReferencedWeaponsContext,
+    lua: &Lua,
+    skill: &LuaTable,
+    effect_list: Vec<LuaTable>,
+    skill_id: u32,
+) -> LuaResult<()> {
     fn get_arg<'a, T: FromLua<'a>>(entry: &LuaTable<'a>, key: &str) -> LuaResult<T> {
         let arg_list: LuaTable = entry.get("arg_list").context("skill/buff effect_list entry arg_list")?;
         arg_list.get(key).with_context(context!("skill/buff effect_list entry arg_list {}", key))
@@ -395,9 +428,13 @@ fn search_referenced_weapons_in_effect_entry(context: &mut ReferencedWeaponsCont
             }
             "BattleBuffNewWeapon" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
-                if !context.new_weapons.iter().any(|w| w.weapon_id == weapon_id) {
+                let time: f64 = skill.get("time").with_context(context!("time of buff {skill_id}"))?;
+                if !context.new_weapons.iter().any(|w| w.weapon.weapon_id == weapon_id) {
                     if let Some(weapon) = load_weapon(lua, weapon_id)? {
-                        context.new_weapons.push(weapon);
+                        context.new_weapons.push(BuffWeapon {
+                            duration: (time != 0.0).then_some(time),
+                            weapon,
+                        });
                     }
                 }
             }
@@ -428,7 +465,7 @@ fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
 #[derive(Debug, Default)]
 struct ReferencedWeaponsContext {
     barrages: Vec<SkillBarrage>,
-    new_weapons: Vec<Weapon>,
+    new_weapons: Vec<BuffWeapon>,
     seen_skills: HashSet<u32>,
     seen_buffs: HashSet<u32>,
 }

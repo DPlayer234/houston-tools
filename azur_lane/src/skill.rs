@@ -15,7 +15,7 @@ pub struct Skill {
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub barrages: Vec<SkillBarrage>,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub new_weapons: Vec<Weapon>,
+    pub new_weapons: Vec<BuffWeapon>,
 }
 
 /// Represents a skill barrage.
@@ -29,6 +29,13 @@ pub struct SkillBarrage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillAttack {
     pub target: SkillAttackTarget,
+    pub weapon: Weapon,
+}
+
+/// Represents a buff's bonus weapon.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuffWeapon {
+    pub duration: Option<f64>,
     pub weapon: Weapon,
 }
 
