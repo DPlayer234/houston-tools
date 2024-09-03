@@ -151,6 +151,8 @@ impl ButtonMessage for View {
 
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
+    use utils::text::InlineStr;
+
     return join("\n\n", skill.barrages.iter().filter_map(get_skill_barrage_summary)).unwrap_or_else(String::new);
 
     macro_rules! idk {
@@ -165,8 +167,8 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
     fn get_skill_barrage_summary(barrage: &SkillBarrage) -> Option<String> {
         idk!(
             join("\n", barrage.attacks.iter().filter_map(get_skill_attack_summary)),
-            "__`Trgt. | Amount x  Dmg. | Ammo:  L / M / H  | Scaling `__\n{sum}"
-            // `Fix.  |     12 x  58.0 | Nor.: 120/ 80/ 80 | 100%  FP`
+            "__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n{sum}"
+            // `Fix.  | 12 x  58.0 | Nor.: 120/ 80/ 80 | 100% AVI |   s`
         )
     }
 
@@ -175,7 +177,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             WeaponData::Bullets(bullets) => get_barrage_summary(bullets, Some(attack.target)),
             WeaponData::Aircraft(aircraft) => idk!(
                 get_aircraft_summary(aircraft),
-                "`{: >5} | {: >6} x Aircraft                            `\n{sum}",
+                "`{: >5} |{: >3} x Aircraft                             |    `\n{sum}",
                 attack.target.short_name(), aircraft.amount
             ),
             _ => None
@@ -203,16 +205,28 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 // % of scaling stat |
                 // amount | totals
                 "`\
-                {: <5} | \
-                {: >6} x{: >6.1} | \
-                {: >4}: {: >3.0}/{: >3.0}/{: >3.0} | \
-                {: >3.0}% {: >3}`",
+                {: <5} |\
+                {: >3} x{: >6.1} |\
+                {: >5}: {: >3.0}/{: >3.0}/{: >3.0} |\
+                {: >4.0}% {: <3} | \
+                {}`",
                 target.map(|t| t.short_name()).unwrap_or(""),
                 amount, barrage.damage * barrage.coefficient,
                 key.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
-                barrage.scaling * 100f64, barrage.scaling_stat.name()
+                barrage.scaling * 100f64, barrage.scaling_stat.name(),
+                get_bullet_flags(bullet),
             )
         }))
+    }
+
+    fn get_bullet_flags(bullet: &Bullet) -> InlineStr<3> {
+        let mut res = [b'-'; 3];
+        if bullet.pierce != 0 { res[0] = b'P'; }
+        if bullet.flags.contains(BulletFlags::IGNORE_SHIELD) { res[1] = b'I'; }
+        if bullet.flags.dive_filter().is_empty() { res[2] = b'S'; }
+
+        // SAFETY: Always ASCII here.
+        unsafe { InlineStr::from_utf8_unchecked(res) }
     }
 
     fn get_aircraft_summary(aircraft: &Aircraft) -> Option<String> {

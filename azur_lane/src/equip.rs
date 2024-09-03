@@ -66,11 +66,13 @@ pub struct Bullet {
     pub pierce: u32,
     pub velocity: f64,
     pub modifiers: ArmorModifiers,
+    pub flags: BulletFlags,
 
+    /// Buffs caused by the bullet hit.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub attach_buff: Vec<BuffInfo>,
 
-    /// How far the hit spread is. Only applicable to main gun fire and bombs.
+    /// Extra data depending on the bullet type.
     #[serde(default, skip_serializing_if = "is_none_bullet_extra")]
     pub extra: BulletExtra,
 }
@@ -156,6 +158,23 @@ pub struct AugmentStatBonus {
     pub stat_kind: StatKind,
     pub amount: f64,
     pub random: f64
+}
+
+bitflags::bitflags! {
+    /// Additional flags for a bullet.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[repr(transparent)]
+    pub struct BulletFlags: u8 {
+        const IGNORE_SHIELD = 1 << 0;
+        const IGNORE_SURFACE = 1 << 1;
+        const IGNORE_DIVE = 1 << 2;
+    }
+}
+
+impl BulletFlags {
+    pub fn dive_filter(self) -> Self {
+        self & (BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE)
+    }
 }
 
 define_data_enum! {

@@ -13,17 +13,18 @@ use crate::prelude::*;
 #[poise::command(slash_command)]
 pub async fn dice(
     ctx: HContext<'_>,
-    #[description = "The sets of dice to roll, in a format like '2d6'."]
+    #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]
     sets: DiceSetVec,
 ) -> HResult {
     let sets = sets.into_vec();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
     if dice_count > 255 {
-        Err(HArgError("Too many dice in total."))?;
+        Err(HArgError("You can't roll more than 255 dice at once."))?;
     }
 
-    let content = get_dice_roll_result(sets);
+    let (total_sum, content) = get_dice_roll_result(sets);
     let embed = CreateEmbed::new()
+        .title(format!("Total \u{2211}{}", total_sum))
         .description(content)
         .color(DEFAULT_EMBED_COLOR);
 
@@ -31,22 +32,23 @@ pub async fn dice(
     Ok(())
 }
 
-fn get_dice_roll_result(sets: Vec<DiceSet>) -> String {
+fn get_dice_roll_result(sets: Vec<DiceSet>) -> (u32, String) {
     let mut content = String::new();
     let mut rng = thread_rng();
 
-    // Sum into u64 to avoid overflow risk
-    let mut total_sum = 0u64;
+    // 32 bits are enough (max allowed input is 255*65535)
+    // so we won't ever exceed the needed space
+    let mut total_sum = 0u32;
 
     let len = sets.len();
     for d in sets {
-        write!(content, "- **{}:**", d).discard();
+        write!(content, "- **{}d{}:**", d.count, d.faces).discard();
 
-        let sample = Uniform::new_inclusive(1u16, d.faces.get());
+        let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()));
         let mut local_sum = 0u32;
         for _ in 0..d.count.get() {
             let roll = rng.sample(sample);
-            local_sum += u32::from(roll);
+            local_sum += roll;
 
             write!(content, " {}", roll).discard();
         }
@@ -55,36 +57,24 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> String {
             write!(content, " *(\u{2211}{})*", local_sum).discard();
         }
 
-        total_sum += u64::from(local_sum);
+        total_sum += local_sum;
         content.push('\n');
     }
 
-    let header = format!("### Total \u{2211}{}\n", total_sum);
-    content.insert_str(0, &header);
-
-    content
+    (total_sum, content)
 }
-
-#[derive(Debug, Clone, Copy)]
-struct DiceSet {
-    pub count: NonZero<u8>,
-    pub faces: NonZero<u16>
-}
-
-#[derive(Debug, Clone)]
-struct DiceSetVec(Vec<DiceSet>);
 
 utils::define_simple_error!(
     #[derive(Clone, Copy)]
     DiceParseError(()):
-    "Expected inputs like '2d6'. The maximum is '255d65535'."
+    "Expected inputs like '2d6' or '1d20 2d4'. The maximum is '255d65535'."
 );
 
-impl DiceSet {
-    #[must_use]
-    fn new(count: NonZero<u8>, faces: NonZero<u16>) -> Self {
-        Self { count, faces }
-    }
+#[derive(Debug, Clone, Copy)]
+#[repr(align(4))]
+struct DiceSet {
+    count: NonZero<u8>,
+    faces: NonZero<u16>
 }
 
 impl FromStr for DiceSet {
@@ -92,10 +82,9 @@ impl FromStr for DiceSet {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         fn parse_inner(args: (&str, &str)) -> Option<DiceSet> {
-            let (l, r) = args;
-            let l = NonZero::from_str(l).ok()?;
-            let r = NonZero::from_str(r).ok()?;
-            Some(DiceSet::new(l, r))
+            let count = NonZero::from_str(args.0).ok()?;
+            let faces = NonZero::from_str(args.1).ok()?;
+            Some(DiceSet { count, faces })
         }
 
         s.split_once(['d', 'D'])
@@ -104,11 +93,8 @@ impl FromStr for DiceSet {
     }
 }
 
-impl std::fmt::Display for DiceSet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}d{}", self.count.get(), self.faces.get())
-    }
-}
+#[derive(Debug)]
+struct DiceSetVec(Vec<DiceSet>);
 
 impl DiceSetVec {
     #[must_use]
@@ -131,21 +117,5 @@ impl FromStr for DiceSetVec {
             .map(DiceSet::from_str)
             .collect::<Result<Vec<DiceSet>, Self::Err>>()
             .and_then(|v| DiceSetVec::from_vec(v).ok_or(DiceParseError(())))
-    }
-}
-
-impl std::fmt::Display for DiceSetVec {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut first = true;
-        for d in &self.0 {
-            if first {
-                f.write_str(" ")?;
-                first = false;
-            }
-
-            write!(f, "{}", d)?;
-        }
-
-        Ok(())
     }
 }

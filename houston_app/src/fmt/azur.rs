@@ -13,6 +13,7 @@ pub struct DisplayWeapon<'a> {
 
 bitflags::bitflags! {
     #[derive(Clone, Copy)]
+    #[repr(transparent)]
     struct DisplayWeaponFlags: usize {
         const NO_KIND = 1 << 0;
         const NO_FIRE_RATE = 1 << 1;
@@ -118,7 +119,14 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
         f,
         "{indent}**{: >4}:** {:.0}/{:.0}/{:.0}",
         bullet.ammo.name(), l * 100f64, m * 100f64, h * 100f64
-    )
+    )?;
+
+    // hits both surface and subs
+    if bullet.flags.dive_filter().is_empty() {
+        write!(f, "\n{indent}-# *Hits Submarines*")?;
+    }
+
+    Ok(())
 }
 
 fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> FmtResult {

@@ -250,3 +250,12 @@ pub fn to_ammo_kind(num: u32) -> AmmoKind {
         _ => AmmoKind::Normal
     }
 }
+
+/// Converts to a dive filter.
+pub fn to_dive_filter(num: u32) -> BulletFlags {
+    match num {
+        1 => BulletFlags::IGNORE_SURFACE,
+        2 => BulletFlags::IGNORE_DIVE,
+        _ => BulletFlags::empty(),
+    }
+}

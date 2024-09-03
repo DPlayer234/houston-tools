@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use azur_lane::ship::ShipStat;
 use mlua::prelude::*;
@@ -42,7 +42,12 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
 
     let buff = require_buff_data(lua, skill_id)?;
     let mut context = ReferencedWeaponsContext::default();
-    search_referenced_weapons(&mut context, lua, buff, skill_id)?;
+    search_referenced_weapons(&mut context, SkillContext {
+        lua,
+        skill: &buff,
+        skill_id,
+        quota: 1,
+    })?;
 
     Ok(Skill {
         buff_id: skill_id,
@@ -261,7 +266,25 @@ fn get_sub_barrage(
     let amount = (senior_repeat + 1) * (primal_repeat + 1) * parent_amount;
     *salvo_time += f64::from(senior_repeat + 1) * senior_delay;
 
+    let mut flags = BulletFlags::IGNORE_DIVE;
+
     if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
+        if let Ok(dive_filter) = extra_param.get::<_, Vec<u32>>("diveFilter") {
+            flags = dive_filter
+                .into_iter()
+                .fold(
+                    BulletFlags::empty(),
+                    |a, c| a | convert_al::to_dive_filter(c)
+                );
+
+            // `diveFilter` filters out ships with the given oxy state
+            // the states are: 1 = surface; 2 = dive
+            // having both means the attack hits nothing
+            if flags.contains(BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE) {
+                return Ok(senior_delay);
+            }
+        }
+
         let shrapnel: Option<Vec<LuaTable>> = extra_param.get("shrapnel")?;
         if let Some(shrapnel) = shrapnel {
             for emitter in shrapnel {
@@ -272,13 +295,19 @@ fn get_sub_barrage(
 
             return Ok(senior_delay);
         }
+
+        // note: dive filter code above overwrites the flags, so keep this lower
+        let ignore_shield: Option<bool> = extra_param.get("ignoreShield")?;
+        if ignore_shield == Some(true) {
+            flags.insert(BulletFlags::IGNORE_SHIELD);
+        }
     }
 
     if let Some(existing) = bullets.iter_mut().find(|b| b.bullet_id == bullet_id) {
         existing.amount += amount;
     } else {
         let armor_mods: [f64; 3] = bullet.get("damage_type")?;
-        let pierce: Option<u32> = bullet.get("pierce_amount").with_context(context!("pierce_amount in bullet {bullet_id}"))?;
+        let pierce: Option<u32> = bullet.get("pierce_count").with_context(context!("pierce_count in bullet {bullet_id}"))?;
 
         let mut attach_buff = Vec::new();
         let attach_buff_raw: Option<Vec<LuaTable>> = bullet.get("attach_buff").with_context(context!("attach_buff in bullet {bullet_id}"))?;
@@ -333,6 +362,7 @@ fn get_sub_barrage(
             pierce: pierce.unwrap_or_default(),
             velocity: bullet.get("velocity")?,
             modifiers: ArmorModifiers::from(armor_mods),
+            flags,
             attach_buff,
             extra,
         });
@@ -342,44 +372,39 @@ fn get_sub_barrage(
 }
 
 fn search_referenced_weapons(
-    context: &mut ReferencedWeaponsContext,
-    lua: &Lua,
-    skill: LuaTable,
-    skill_id: u32,
+    rwc: &mut ReferencedWeaponsContext,
+    sc: SkillContext,
 ) -> LuaResult<()> {
-    let len = skill.len()?;
+    let len = sc.skill.len()?;
     if let Ok(len) = usize::try_from(len) {
         if len != 0 {
-            let level_entry: LuaTable = skill.get(len).with_context(context!("level entry {len} of skill/buff"))?;
+            let level_entry: LuaTable = sc.skill.get(len).with_context(context!("level entry {len} of skill/buff"))?;
             let effect_list: Option<Vec<LuaTable>> = level_entry.get("effect_list").with_context(context!("effect_list of skill/buff level entry {len}"))?;
             if let Some(effect_list) = effect_list {
-                search_referenced_weapons_in_effect_entry(context, lua, &skill, effect_list, skill_id)?;
+                search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
                 return Ok(());
             }
         }
     }
 
-    let effect_list: Option<Vec<LuaTable>> = skill.get("effect_list").context("effect_list of skill/buff")?;
+    let effect_list: Option<Vec<LuaTable>> = sc.skill.get("effect_list").context("effect_list of skill/buff")?;
     if let Some(effect_list) = effect_list {
-        search_referenced_weapons_in_effect_entry(context, lua, &skill, effect_list, skill_id)?;
+        search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
     }
 
     Ok(())
 }
 
 fn search_referenced_weapons_in_effect_entry(
-    context: &mut ReferencedWeaponsContext,
-    lua: &Lua,
-    skill: &LuaTable,
+    rwc: &mut ReferencedWeaponsContext,
+    sc: SkillContext,
     effect_list: Vec<LuaTable>,
-    skill_id: u32,
 ) -> LuaResult<()> {
     fn get_arg<'a, T: FromLua<'a>>(entry: &LuaTable<'a>, key: &str) -> LuaResult<T> {
         let arg_list: LuaTable = entry.get("arg_list").context("skill/buff effect_list entry arg_list")?;
         arg_list.get(key).with_context(context!("skill/buff effect_list entry arg_list {}", key))
     }
 
-    let mut seen_weapons = HashSet::new();
     let mut attacks = Vec::new();
 
     for entry in effect_list {
@@ -387,51 +412,66 @@ fn search_referenced_weapons_in_effect_entry(
         match entry_type.as_str() {
             "BattleBuffCastSkill" => {
                 let skill_id: u32 = get_arg(&entry, "skill_id")?;
-                if context.seen_skills.insert(skill_id) {
-                    let skill = require_skill_data(lua, skill_id)?;
-                    search_referenced_weapons(context, lua, skill, skill_id)?;
+                if rwc.seen_skills.insert(skill_id) {
+                    let quota: Option<u32> = get_arg(&entry, "quota")?;
+                    let skill = require_skill_data(sc.lua, skill_id)?;
+                    search_referenced_weapons(rwc, SkillContext {
+                        skill: &skill,
+                        skill_id,
+                        quota: quota.unwrap_or(1),
+                        ..sc
+                    })?;
                 }
             }
             "BattleBuffCastSkillRandom" => {
                 let skill_id_list: Option<Vec<u32>> = get_arg(&entry, "skill_id_list")?;
                 if let Some(skill_id_list) = skill_id_list {
+                    let quota: Option<u32> = get_arg(&entry, "quota")?;
                     for skill_id in skill_id_list {
-                        if context.seen_skills.insert(skill_id) {
-                            let skill = require_skill_data(lua, skill_id)?;
-                            search_referenced_weapons(context, lua, skill, skill_id)?;
+                        if rwc.seen_skills.insert(skill_id) {
+                            let skill = require_skill_data(sc.lua, skill_id)?;
+                            search_referenced_weapons(rwc, SkillContext {
+                                skill: &skill,
+                                skill_id,
+                                quota: quota.unwrap_or(1),
+                                ..sc
+                            })?;
                         }
                     }
                 }
             }
             "BattleBuffAddBuff" | "BattleSkillAddBuff" => {
                 let buff_id: u32 = get_arg(&entry, "buff_id")?;
-                if context.seen_buffs.insert(buff_id) {
-                    let buff = require_buff_data(lua, buff_id)?;
-                    search_referenced_weapons(context, lua, buff, buff_id)?;
+                if rwc.seen_buffs.insert(buff_id) {
+                    let buff = require_buff_data(sc.lua, buff_id)?;
+                    search_referenced_weapons(rwc, SkillContext {
+                        skill: &buff,
+                        skill_id: buff_id,
+                        quota: 1,
+                        ..sc
+                    })?;
                 }
             }
             "BattleSkillFire" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
-                if seen_weapons.insert(weapon_id) {
-                    let target: LuaValue = entry.get("target_choise" /* sic */)?;
-                    let target = match target {
-                        LuaValue::String(s) => s.to_str()?.to_owned(),
-                        LuaValue::Table(t) => t.get(1)?,
-                        _ => String::new()
-                    };
+                let target: LuaValue = entry.get("target_choise" /* sic */)?;
+                let target = match target {
+                    LuaValue::String(s) => s.to_str()?.to_owned(),
+                    LuaValue::Table(t) => t.get(1)?,
+                    _ => String::new()
+                };
 
-                    let target = convert_al::to_skill_target(&target);
-                    if let Some(weapon) = load_weapon(lua, weapon_id)? {
-                        attacks.push(SkillAttack { target, weapon });
-                    }
+                let target = convert_al::to_skill_target(&target);
+                if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
+                    attacks.push(SkillAttack { target, weapon });
                 }
             }
             "BattleBuffNewWeapon" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
-                let time: f64 = skill.get("time").with_context(context!("time of buff {skill_id}"))?;
-                if !context.new_weapons.iter().any(|w| w.weapon.weapon_id == weapon_id) {
-                    if let Some(weapon) = load_weapon(lua, weapon_id)? {
-                        context.new_weapons.push(BuffWeapon {
+                let time: f64 = sc.skill.get("time").with_context(context!("time of buff {}", sc.skill_id))?;
+                if !rwc.new_weapons.iter().any(|w| w.weapon.weapon_id == weapon_id) {
+                    if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
+                        rwc.new_weapons.push(BuffWeapon {
                             duration: (time != 0.0).then_some(time),
                             weapon,
                         });
@@ -443,13 +483,35 @@ fn search_referenced_weapons_in_effect_entry(
     }
 
     if !attacks.is_empty() {
-        context.barrages.push(SkillBarrage {
-            skill_id,
+        if sc.quota != 1 {
+            // multiply attacks by quota
+            let len = attacks.len() * usize::try_from(sc.quota).unwrap();
+            attacks = attacks.into_iter().cycle().take(len).collect();
+        }
+
+        merge_attacks(&mut attacks);
+        rwc.barrages.push(SkillBarrage {
+            skill_id: sc.skill_id,
             attacks
         });
     }
 
     Ok(())
+}
+
+fn merge_attacks(attacks: &mut Vec<SkillAttack>) {
+    let mut counts = HashMap::<u32, u32>::new();
+    attacks.retain_mut(|a| *counts.entry(a.weapon.weapon_id).and_modify(|c| *c += 1).or_insert(1) == 1);
+
+    for attack in attacks {
+        let count = *counts.get(&attack.weapon.weapon_id).unwrap_or(&1);
+        if count <= 1 { continue; }
+
+        match &mut attack.weapon.data {
+            WeaponData::Bullets(b) | WeaponData::AntiAir(b) => for b in &mut b.bullets { b.amount *= count; },
+            WeaponData::Aircraft(a) => a.amount *= count,
+        }
+    }
 }
 
 /// Calls our "require_buff" Lua helper to get buff data.
@@ -468,6 +530,14 @@ struct ReferencedWeaponsContext {
     new_weapons: Vec<BuffWeapon>,
     seen_skills: HashSet<u32>,
     seen_buffs: HashSet<u32>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SkillContext<'a> {
+    lua: &'a Lua,
+    skill: &'a LuaTable<'a>,
+    skill_id: u32,
+    quota: u32,
 }
 
 #[derive(Debug, Clone, Copy)]

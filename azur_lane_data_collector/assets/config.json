@@ -45,6 +45,7 @@
                                                     0.9,
                                                     1.1
                                                 ],
+                                                "flags": "IGNORE_DIVE",
                                                 "attach_buff": [
                                                     {
                                                         "buff_id": 17033,
@@ -88,6 +89,7 @@
                                                     0.9,
                                                     1.1
                                                 ],
+                                                "flags": "IGNORE_DIVE",
                                                 "attach_buff": [
                                                     {
                                                         "buff_id": 17033,
