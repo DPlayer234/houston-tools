@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use image::{imageops, ImageOutputFormat};
+use image::{imageops, ImageFormat};
 use unity_read::classes::{ClassID, Texture2D};
 use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 
@@ -31,7 +31,7 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
                 imageops::flip_vertical_in_place(&mut image);
 
                 let mut writer = Cursor::new(Vec::new());
-                image.write_to(&mut writer, ImageOutputFormat::WebP)?;
+                image.write_to(&mut writer, ImageFormat::WebP)?;
                 return Ok(Some(writer.into_inner()))
             }
         }

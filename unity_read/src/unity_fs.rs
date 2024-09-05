@@ -311,7 +311,9 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) 
             })?;
             Ok(Cow::Owned(output.into_inner()))
         }
-        _ => Err(UnityError::Unsupported("unsupported compression method"))?
+        _ => Err(UnityError::Unsupported(
+            format!("unsupported compression method: {compression:?}")
+        ))?
     }
 }
 

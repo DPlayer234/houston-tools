@@ -50,18 +50,9 @@ impl Texture2DData<'_> {
         let width = u32::try_from(self.texture.width)?;
         let height = u32::try_from(self.texture.height)?;
 
-        fn as_bytes<T>(v: &[T]) -> Vec<u8> {
-            // NOTE: You cannot construct Vecs from the raw data of another.
-            // That is because the allocator allocates blocks using a certain SIZE AND LAYOUT.
-
-            let ptr = v.as_ptr().cast::<u8>();
-            let byte_len = std::mem::size_of_val(v);
-            unsafe { std::slice::from_raw_parts(ptr, byte_len) }.to_vec()
-        }
-
         match self.texture.format() {
             TextureFormat::RGBA32 => {
-                // I think this matches the Rgba<u8> layout?
+                // this matches the Rgba<u8> layout
                 let image = RgbaImage::from_raw(width, height, self.data.to_vec())
                     .ok_or(UnityError::InvalidData("image data size incorrect"))?;
 
@@ -71,28 +62,35 @@ impl Texture2DData<'_> {
                 let width_s = usize::try_from(width)?;
                 let height_s = usize::try_from(height)?;
                 let size = width_s.checked_mul(height_s)
+                    .and_then(|s| s.checked_mul(size_of::<u32>()))
                     .ok_or(UnityError::InvalidData("image size overflows address space"))?;
 
-                let mut buffer = vec![0u32; size];
-                texture2ddecoder::decode_etc2_rgba8(self.data, width_s, height_s, buffer.as_mut_slice())
+                // allocate buffer as Vec<u8> since that's the final data type needed
+                // the size has been multiplied by 4 already to match the pixel width
+                let mut buffer = vec![0u8; size];
+
+                // cast the vec's slice to u32. this can't fail since the buffer's size is a multiple of 4.
+                // following that, try to decode the image data
+                let buffer_u32 = bytemuck::cast_slice_mut::<u8, u32>(&mut buffer);
+                texture2ddecoder::decode_etc2_rgba8(self.data, width_s, height_s, buffer_u32)
                     .map_err(UnityError::InvalidData)?;
 
                 // Swap red and green channels
-                if cfg!(target_endian = "little") {
-                    for px in &mut buffer {
+                for px in buffer_u32 {
+                    if cfg!(target_endian = "little") {
                         *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
-                    }
-                } else {
-                    for px in &mut buffer {
+                    } else {
                         *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
                     }
                 }
 
-                let image = RgbaImage::from_raw(width, height, as_bytes(&buffer))
+                let image = RgbaImage::from_raw(width, height, buffer)
                     .expect("buffer allocated with the correct size");
                 Ok(image)
             },
-            _ => todo!("texture format {:?} not implemented", self.texture.format())
+            _ => Err(UnityError::Unsupported(
+                format!("texture format not implemented: {:?}", self.texture.format())
+            ))?,
         }
     }
 }

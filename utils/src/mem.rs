@@ -98,8 +98,8 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
     let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
     debug_assert!(byte_len >= 0);
 
-    let src_size = std::mem::size_of::<Src>();
-    let dst_size = std::mem::size_of::<Dst>();
+    let src_size = size_of::<Src>();
+    let dst_size = size_of::<Dst>();
 
     unsafe {
         let dst_len = match (src_size, dst_size) {

@@ -212,7 +212,9 @@ impl MeshVertexData<'_> {
                 4 => read_vector_of::<Norm<i8>, N>(cursor).map(NormFloat::to_f32_array),
                 5 => read_vector_of::<Norm<u16>, N>(cursor).map(NormFloat::to_f32_array),
                 6 => read_vector_of::<Norm<i16>, N>(cursor).map(NormFloat::to_f32_array),
-                _ => Err(UnityError::Unsupported("unsupported mesh data type"))?
+                _ => Err(UnityError::Unsupported(
+                    format!("unsupported mesh data type: {t}")
+                ))?
             }
         }
 

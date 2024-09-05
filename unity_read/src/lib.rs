@@ -20,7 +20,7 @@ pub enum UnityError {
     UnexpectedEof,
     InvalidData(&'static str),
     Mismatch(UnityMismatch),
-    Unsupported(&'static str)
+    Unsupported(String),
 }
 
 #[derive(Debug, Clone)]
