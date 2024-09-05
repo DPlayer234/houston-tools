@@ -41,7 +41,7 @@ define_data_enum! {
         VichyaDominion("Vichya Dominion", Some("MNF")),
         IrisOrthodoxy("Iris Orthodoxy", Some("NF")),
         Tempesta("Tempesta", Some("MOT")),
-        META("META", None),
+        META("META", Some("META")),
         Siren("Siren", None),
         CollabNeptunia("Neptunia", None),
         CollabBilibili("Bilibili", None),

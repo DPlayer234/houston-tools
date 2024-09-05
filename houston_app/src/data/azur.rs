@@ -20,7 +20,7 @@ pub struct HAzurLane {
     equip_id_to_index: HashMap<u32, usize>,
     equip_simsearch: SimSearch<usize>,
     augment_id_to_index: HashMap<u32, usize>,
-    ship_id_to_augment_index: HashMap<u32, usize>,
+    ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
     chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
 }
 
@@ -46,7 +46,7 @@ impl HAzurLane {
         let mut equip_simsearch = SimSearch::new_with(prefix_options);
 
         let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
-        let mut ship_id_to_augment_index = HashMap::with_capacity(data.augments.len());
+        let mut ship_id_to_augment_index = HashMap::<u32, Vec<usize>>::with_capacity(data.augments.len());
 
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
@@ -66,7 +66,9 @@ impl HAzurLane {
         for (index, augment) in data.augments.iter().enumerate() {
             augment_id_to_index.insert(augment.augment_id, index);
             if let Some(ship_id) = augment.unique_ship_id {
-                ship_id_to_augment_index.insert(ship_id, index);
+                ship_id_to_augment_index.entry(ship_id)
+                    .and_modify(|v| v.push(index))
+                    .or_insert(vec![index]);
             }
         }
 
@@ -119,10 +121,9 @@ impl HAzurLane {
         self.augment_list.get(index)
     }
 
-    /// Gets a unique augment by its associated ship ID.
-    pub fn augment_by_ship_id(&self, ship_id: u32) -> Option<&Augment> {
-        let index = *self.ship_id_to_augment_index.get(&ship_id)?;
-        self.augment_list.get(index)
+    /// Gets unique augments by their associated ship ID.
+    pub fn augments_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Augment> {
+        self.ship_id_to_augment_index.get(&ship_id).into_iter().flatten().filter_map(|i| self.augment_list.get(*i))
     }
 
     /// Gets a chibi's image data.
@@ -130,7 +131,7 @@ impl HAzurLane {
         // Consult the cache first. If the image has been seen already, it will be stored here.
         // It may also have a None entry if the image was requested but not found.
         match self.chibi_sprite_cache.get(image_key) {
-            Some(entry) => entry.clone(),
+            Some(entry) => Option::clone(&entry),
             _ => self.load_and_cache_chibi_image(image_key),
         }
     }

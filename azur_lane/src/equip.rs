@@ -149,7 +149,7 @@ pub struct Augment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unique_ship_id: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub skill_upgrade: Option<Skill>
+    pub skill_upgrade: Option<AugmentSkillUpgrade>,
 }
 
 /// Bonus stats gained by equipping the associated augment.
@@ -158,6 +158,13 @@ pub struct AugmentStatBonus {
     pub stat_kind: StatKind,
     pub amount: f64,
     pub random: f64
+}
+
+/// A skill upgraded by an augment module.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AugmentSkillUpgrade {
+    pub original_id: u32,
+    pub skill: Skill,
 }
 
 bitflags::bitflags! {

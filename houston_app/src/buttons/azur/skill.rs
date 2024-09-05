@@ -13,14 +13,33 @@ use super::ShipParseError;
 pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
-    pub back: Option<CustomData>
+    pub back: Option<CustomData>,
+    augment_index: Option<u8>,
 }
 
 /// Where to load the skills from.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ViewSource {
-    Ship(u32, Option<u8>),
+    Ship(ShipViewSource),
     Augment(u32),
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ShipViewSource {
+    pub ship_id: u32,
+    pub retrofit: Option<u8>,
+}
+
+impl ShipViewSource {
+    pub fn new(ship_id: u32, retrofit: Option<u8>) -> Self {
+        Self { ship_id, retrofit }
+    }
+}
+
+impl From<ShipViewSource> for ViewSource {
+    fn from(value: ShipViewSource) -> Self {
+        Self::Ship(value)
+    }
 }
 
 type OwnedCreateEmbedField = (String, String, bool);
@@ -28,20 +47,18 @@ type OwnedCreateEmbedField = (String, String, bool);
 impl View {
     /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(source: ViewSource, back: CustomData) -> Self {
-        Self { source, skill_index: None, back: Some(back) }
+        Self { source, skill_index: None, back: Some(back), augment_index: None }
     }
 
     /// Modifies the create-reply with a preresolved list of skills and a base embed.
-    fn modify_with_skills<'a>(mut self, create: CreateReply, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> CreateReply {
-        let index = self.skill_index.map(usize::from);
+    fn modify_with_skills<'a>(mut self, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> (CreateEmbed, CreateActionRow) {
         let mut components = Vec::new();
 
-        if let Some(back) = &self.back {
-            components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
-        }
+        for (t_index, skill) in iterator.enumerate().take(5) {
+            #[allow(clippy::cast_possible_truncation)]
+            let t_index = Some(t_index as u8);
 
-        for (t_index, skill) in iterator.enumerate().take(4) {
-            if Some(t_index) == index {
+            if t_index == self.skill_index {
                 embed = embed.color(skill.category.color_rgb())
                     .fields(self.create_ex_skill_fields(skill));
             } else {
@@ -57,36 +74,86 @@ impl View {
             }
         }
 
-        let rows = vec![
-            CreateActionRow::Buttons(components)
-        ];
-
-        create.embed(embed).components(rows)
+        (embed, CreateActionRow::Buttons(components))
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
         let base_ship = base_ship.unwrap_or(ship);
-        self.modify_with_skills(
-            create,
-            ship.skills.iter(),
-            CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_wiki_url(base_ship))
-        )
+
+        let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
+        let mut embed = CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_wiki_url(base_ship));
+
+        let mut components = Vec::new();
+        if let Some(back) = &self.back {
+            components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
+        }
+
+        for (a_index, augment) in data.azur_lane().augments_by_ship_id(ship.group_id).enumerate().take(4) {
+            if a_index == 0 {
+                components.push(
+                    self.button_with_augment(None)
+                        .label("Default")
+                );
+            }
+
+            #[allow(clippy::cast_possible_truncation)]
+            let a_index = Some(a_index as u8);
+            components.push(
+                self.button_with_augment(a_index)
+                    .label(utils::text::truncate(&augment.name, 25))
+            );
+
+            if a_index == self.augment_index {
+                // replace upgraded skill
+                if let Some(upgrade) = &augment.skill_upgrade {
+                    if let Some(skill) = skills.iter_mut().find(|s| s.buff_id == upgrade.original_id) {
+                        *skill = &upgrade.skill;
+                    }
+                }
+
+                // append augment effect
+                if let Some(effect) = &augment.effect {
+                    skills.push(effect);
+                }
+
+                embed = embed.field(
+                    format!("'{}' Bonus Stats", augment.name),
+                    format!("{}", crate::fmt::azur::Stats::augment(augment)),
+                    false
+                );
+            }
+        }
+
+        let (embed, row) = self.modify_with_skills(skills.into_iter(), embed);
+        create.embed(embed).components(vec![
+            CreateActionRow::Buttons(components),
+            row,
+        ])
     }
 
     /// Modifies the create-reply with preresolved augment data.
-    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
-        self.modify_with_skills(
-            create,
-            augment.effect.iter().chain(augment.skill_upgrade.as_ref()),
-            CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name))
-        )
+    fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
+        let embed = CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name));
+        let skills = augment.effect.iter().chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
+        let (embed, row) = self.modify_with_skills(skills, embed);
+
+        create.embed(embed).components(vec![row])
     }
 
     /// Creates a button that redirects to a skill index.
-    fn button_with_skill(&mut self, index: usize) -> CreateButton {
-        #[allow(clippy::cast_possible_truncation)]
-        self.new_button(utils::field_mut!(Self: skill_index), Some(index as u8), |u| u.unwrap_or_default().into())
+    fn button_with_skill(&mut self, index: Option<u8>) -> CreateButton {
+        self.button_with_u8(utils::field_mut!(Self: skill_index), index)
+    }
+
+    /// Creates a button that redirects to a skill index.
+    fn button_with_augment(&mut self, index: Option<u8>) -> CreateButton {
+        self.button_with_u8(utils::field_mut!(Self: augment_index), index)
+    }
+
+    /// Shared logic for buttons that use a `Option<u8>` field.
+    fn button_with_u8(&mut self, field: impl FieldMut<Self, Option<u8>>, index: Option<u8>) -> CreateButton {
+        self.new_button(field, index, |u| u.map(u16::from).unwrap_or(u16::MAX))
     }
 
     /// Creates the embed field for a skill.
@@ -135,14 +202,14 @@ impl View {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        match self.source {
-            ViewSource::Ship(ship_id, retro_index) => {
-                let base_ship = ctx.data.azur_lane().ship_by_id(ship_id).ok_or(ShipParseError)?;
-                let ship = retro_index.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                Ok(self.modify_with_ship(ctx.create_reply(), ship, Some(base_ship)))
+        match &self.source {
+            ViewSource::Ship(source) => {
+                let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(ShipParseError)?;
+                let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
+                Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
-                let augment = ctx.data.azur_lane().augment_by_id(augment_id).ok_or(AugmentParseError)?;
+                let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AugmentParseError)?;
                 Ok(self.modify_with_augment(ctx.create_reply(), augment))
             }
         }

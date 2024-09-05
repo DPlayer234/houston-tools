@@ -1,9 +1,6 @@
-use std::fmt::Write;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
-use utils::Discard;
 
 use crate::buttons::*;
 use super::AugmentParseError;
@@ -29,23 +26,14 @@ impl View {
 
     /// Modifies the create-reply with a preresolved augment.
     pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
-        let mut description = String::new();
-        for chunk in augment.stat_bonuses.chunks(3) {
-            if !description.is_empty() { description.push('\n'); }
-            for (index, stat) in chunk.iter().enumerate() {
-                if index != 0 { description.push_str(" \u{2E31} "); }
-
-                let name = stat.stat_kind.name();
-                write!(description, "**`{}:`**`{: >len$}`", name, stat.amount + stat.random, len = 7 - name.len()).discard();
-            }
-        }
+        let description = format!("{}", crate::fmt::azur::Stats::augment(augment));
 
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(&augment.name))
             .description(description)
             .color(ShipRarity::SR.color_rgb())
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
-            .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref()));
+            .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref().map(|s| &s.skill)));
 
         let mut components = Vec::new();
 

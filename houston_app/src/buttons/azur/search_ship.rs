@@ -132,7 +132,7 @@ impl Filter {
         fn finish<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&ShipData) -> bool + 'a) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
             match f.has_augment {
                 Some(filter) => {
-                    Box::new(move |s| base(s) && data.augment_by_ship_id(s.group_id).is_some() == filter)
+                    Box::new(move |s| base(s) && data.augments_by_ship_id(s.group_id).next().is_some() == filter)
                 }
                 None => Box::new(base)
             }

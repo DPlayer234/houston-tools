@@ -1,7 +1,4 @@
-use std::fmt::Write;
-
 use azur_lane::equip::*;
-use utils::Discard;
 
 use crate::buttons::*;
 use super::EquipParseError;
@@ -28,17 +25,11 @@ impl View {
     /// Modifies the create-reply with a preresolved equipment.
     pub fn modify_with_equip(mut self, create: CreateReply, equip: &Equip) -> CreateReply {
         self.mode = ButtonMessageMode::Edit;
-        let mut description = format!("**{}**", equip.kind.name());
-
-        for chunk in equip.stat_bonuses.chunks(3) {
-            description.push('\n');
-            for (index, stat) in chunk.iter().enumerate() {
-                if index != 0 { description.push_str(" \u{2E31} "); }
-
-                let name = stat.stat_kind.name();
-                write!(description, "**`{}:`**`{: >len$}`", name, stat.amount, len = 7 - name.len()).discard();
-            }
-        }
+        let description = format!(
+            "**{}**\n{}",
+            equip.kind.name(),
+            crate::fmt::azur::Stats::equip(equip)
+        );
 
         let embed = CreateEmbed::new()
             .color(equip.rarity.color_rgb())

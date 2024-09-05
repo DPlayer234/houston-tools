@@ -60,7 +60,7 @@ impl View {
         let mut rows = Vec::new();
         self.add_upgrade_row(&mut rows);
         self.add_retro_state_row(base_ship, &mut rows);
-        self.add_nav_row(ship, data, &mut rows);
+        self.add_nav_row(ship, &mut rows);
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
@@ -87,14 +87,16 @@ impl View {
         );
     }
 
-    fn add_nav_row(&self, ship: &ShipData, data: &HBotData, rows: &mut Vec<CreateActionRow>) {
+    fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
         let self_custom_data = self.to_custom_data();
 
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
-            let source = super::skill::ViewSource::Ship(self.ship_id, self.retrofit);
-            let view_skill = super::skill::View::with_back(source, self_custom_data.clone());
+            use super::skill::{View, ShipViewSource};
+
+            let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
+            let view_skill = View::with_back(source, self_custom_data.clone());
             let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
@@ -106,15 +108,6 @@ impl View {
             let view = super::shadow_equip::View::new(self.clone());
             let button = CreateButton::new(view.to_custom_id())
                 .label("Shadow Equip")
-                .style(ButtonStyle::Secondary);
-
-            row.push(button);
-        }
-
-        if let Some(augment) = data.azur_lane().augment_by_ship_id(ship.group_id) {
-            let view_augment = super::augment::View::with_back(augment.augment_id, self_custom_data.clone());
-            let button = CreateButton::new(view_augment.to_custom_id())
-                .label("Unique Augment")
                 .style(ButtonStyle::Secondary);
 
             row.push(button);
@@ -140,29 +133,25 @@ impl View {
 
         match base_ship.retrofits.len() {
             0 => {},
-            1 => {
-                rows.push(CreateActionRow::Buttons(vec![
-                    base_button,
-                    self.button_with_retrofit(Some(0))
-                        .label("Retrofit")
-                ]));
-            },
-            _ => {
-                rows.push(CreateActionRow::Buttons(
-                    std::iter::once(base_button)
-                        .chain(
-                            base_ship.retrofits.iter()
-                                .enumerate()
-                                .filter_map(|(index, retro)| {
-                                    let index = u8::try_from(index).ok()?;
-                                    let result = self.button_with_retrofit(Some(index))
-                                        .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
-                                    Some(result)
-                                })
-                        )
-                        .collect()
-                ));
-            }
+            1 => rows.push(CreateActionRow::Buttons(vec![
+                base_button,
+                self.button_with_retrofit(Some(0))
+                    .label("Retrofit")
+            ])),
+            _ => rows.push(CreateActionRow::Buttons(
+                std::iter::once(base_button)
+                    .chain(
+                        base_ship.retrofits.iter()
+                            .enumerate()
+                            .filter_map(|(index, retro)| {
+                                let index = u8::try_from(index).ok()?;
+                                let result = self.button_with_retrofit(Some(index))
+                                    .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
+                                Some(result)
+                            })
+                    )
+                    .collect()
+            )),
         };
     }
 

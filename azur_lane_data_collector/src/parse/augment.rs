@@ -37,8 +37,12 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     let skill_upgrade: Vec<LuaTable> = read!("skill_upgrade");
     let skill_upgrade = match skill_upgrade.into_iter().next() {
         Some(skill_upgrade) => {
+            let original_id: u32 = skill_upgrade.get(1).with_context(context!("skill_upgrade original id for augment {}", set.id))?;
             let skill_id: u32 = skill_upgrade.get(2).with_context(context!("skill_upgrade id for augment {}", set.id))?;
-            Some(parse::skill::load_skill(lua, skill_id)?)
+            Some(AugmentSkillUpgrade {
+                original_id,
+                skill: parse::skill::load_skill(lua, skill_id)?,
+            })
         }
         None => None,
     };
