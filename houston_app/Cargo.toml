@@ -6,6 +6,9 @@ rust-version = "1.80"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.winres]
+FileDescription = "Houston Tools Discord Bot"
+
 [lints]
 workspace = true
 
@@ -51,3 +54,6 @@ package = "config"
 version = "0.14.0"
 default-features = false
 features = ["toml"]
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"

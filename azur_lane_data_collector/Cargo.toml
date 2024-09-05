@@ -6,6 +6,9 @@ rust-version = "1.80"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.winres]
+FileDescription = "Houston Tools Azur Lane Data Collector"
+
 [lints]
 workspace = true
 
@@ -31,3 +34,6 @@ features = ["lua54", "vendored"]
 [dependencies.serde]
 version = "1.0.207"
 features = ["rc", "derive"]
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
