@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use azur_lane::ship::ShipStat;
 use mlua::prelude::*;
 
+use azur_lane::ship::*;
 use azur_lane::skill::*;
 use azur_lane::equip::*;
 
@@ -68,12 +68,16 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
 pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
     let equip_data_statistics: LuaTable = pg.get("equip_data_statistics").context("global pg.equip_data_statistics")?;
+    let equip_data_template: LuaTable = pg.get("equip_data_template").context("global pg.equip_data_template")?;
 
-    let equip_data: LuaTable = equip_data_statistics.get(equip_id).with_context(context!("equip statistics for id {equip_id}"))?;
-    let weapon_ids: Vec<u32> = equip_data.get("weapon_id").with_context(context!("weapon_id for equip with id {equip_id}"))?;
-    let skill_ids: Vec<u32> = equip_data.get("skill_id").with_context(context!("skill_id for equip with id {equip_id}"))?;
-    let name: String = equip_data.get("name").with_context(context!("name for equip with id {equip_id}"))?;
-    let description: String = equip_data.get("descrip").with_context(context!("descrip for equip with id {equip_id}"))?;
+    // note: the template might not exist for every equip
+    let statistics: LuaTable = equip_data_statistics.get(equip_id).with_context(context!("equip statistics for id {equip_id}"))?;
+    let template: Option<LuaTable> = equip_data_template.get(equip_id).with_context(context!("equip template for id {equip_id}"))?;
+
+    let weapon_ids: Vec<u32> = statistics.get("weapon_id").with_context(context!("weapon_id for equip with id {equip_id}"))?;
+    let skill_ids: Vec<u32> = statistics.get("skill_id").with_context(context!("skill_id for equip with id {equip_id}"))?;
+    let name: String = statistics.get("name").with_context(context!("name for equip with id {equip_id}"))?;
+    let description: String = statistics.get("descrip").with_context(context!("descrip for equip with id {equip_id}"))?;
 
     let mut weapons = Vec::new();
     for weapon_id in weapon_ids {
@@ -88,12 +92,12 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     macro_rules! stat_bonus {
         ($index:literal) => {{
-            match equip_data.get(concat!("attribute_", $index)).with_context(context!("attribute_{} for equip with id {equip_id}", $index))? {
+            match statistics.get(concat!("attribute_", $index)).with_context(context!("attribute_{} for equip with id {equip_id}", $index))? {
                 Some(stat_kind) => {
                     let stat_kind: String = stat_kind;
                     Some(EquipStatBonus {
                         stat_kind: convert_al::to_stat_kind(&stat_kind),
-                        amount: equip_data.get(concat!("value_", $index)).with_context(context!("value_{} for equip with id {equip_id}", $index))?
+                        amount: statistics.get(concat!("value_", $index)).with_context(context!("value_{} for equip with id {equip_id}", $index))?
                     })
                 }
                 None => None
@@ -101,15 +105,35 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         }};
     }
 
+    // CMBK: we might want to split this
+    let hull_allowed = {
+        let mut main: Vec<u32> = statistics.get("part_main").with_context(context!("part_main for equip with id {equip_id}"))?;
+        let sub: Vec<u32> = statistics.get("part_sub").with_context(context!("part_sub for equip with id {equip_id}"))?;
+
+        for id in sub {
+            if !main.contains(&id) { main.push(id) }
+        }
+
+        main.into_iter().map(convert_al::to_hull_type).filter(|w| *w != HullType::Unknown).collect()
+    };
+
+    let hull_disallowed = match template {
+        Some(template) => {
+            let forbidden: Vec<u32> = template.get("ship_type_forbidden").with_context(context!("ship_type_forbidden for equip with id {equip_id}"))?;
+            forbidden.into_iter().map(convert_al::to_hull_type).filter(|w| *w != HullType::Unknown).collect()
+        },
+        None => Vec::new(),
+    };
+
     Ok(Equip {
         equip_id,
         name,
         description,
-        rarity: convert_al::to_equip_rarity(equip_data.get("rarity").with_context(context!("rarity for equip with id {equip_id}"))?),
-        kind: convert_al::to_equip_type(equip_data.get("type").with_context(context!("type for equip with id {equip_id}"))?),
-        faction: convert_al::to_faction(equip_data.get("nationality").with_context(context!("nationality for equip with id {equip_id}"))?),
-        hull_allowed: Vec::new(), // todo
-        hull_disallowed: Vec::new(), // todo
+        rarity: convert_al::to_equip_rarity(statistics.get("rarity").with_context(context!("rarity for equip with id {equip_id}"))?),
+        kind: convert_al::to_equip_type(statistics.get("type").with_context(context!("type for equip with id {equip_id}"))?),
+        faction: convert_al::to_faction(statistics.get("nationality").with_context(context!("nationality for equip with id {equip_id}"))?),
+        hull_allowed,
+        hull_disallowed,
         weapons,
         skills,
         stat_bonuses: [stat_bonus!(1), stat_bonus!(2), stat_bonus!(3)].into_iter().flatten().collect()

@@ -138,6 +138,7 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
         amount: table.get(2).with_context(context!("couple_encourage 2 for skin {}", set.skin_id))?,
         line: table.get(3).with_context(context!("couple_encourage 3 for skin {}", set.skin_id))?,
         condition: match mode {
+            // CMBK: investigate why hull type and faction output "Unknown" sometimes
             Some(1) => ShipCouple::HullType(filter.into_iter().map(convert_al::to_hull_type).collect()),
             Some(2) => ShipCouple::Rarity(filter.into_iter().map(convert_al::to_rarity).collect()),
             Some(3) => ShipCouple::Faction(filter.into_iter().map(convert_al::to_faction).collect()),
