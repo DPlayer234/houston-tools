@@ -126,19 +126,20 @@ impl View {
         }
 
         let (embed, row) = self.modify_with_skills(skills.into_iter(), embed);
-        create.embed(embed).components(vec![
-            CreateActionRow::Buttons(components),
-            row,
-        ])
+        create.embed(embed).components(rows_without_empty([CreateActionRow::Buttons(components), row]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
     fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
         let embed = CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name));
         let skills = augment.effect.iter().chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
-        let (embed, row) = self.modify_with_skills(skills, embed);
 
-        create.embed(embed).components(vec![row])
+        let nav_row = self.back.as_ref().map(|back| CreateActionRow::Buttons(vec![
+            CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back")
+        ]));
+
+        let (embed, row) = self.modify_with_skills(skills, embed);
+        create.embed(embed).components(rows_without_empty([nav_row, Some(row)]))
     }
 
     /// Creates a button that redirects to a skill index.
@@ -198,6 +199,17 @@ impl View {
 
         fields
     }
+}
+
+fn rows_without_empty<I, T>(rows: I) -> Vec<CreateActionRow>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<Option<CreateActionRow>>,
+{
+    rows.into_iter()
+        .filter_map(|a| a.into())
+        .filter(|a| !matches!(a, CreateActionRow::Buttons(a) if a.is_empty()))
+        .collect()
 }
 
 impl ButtonMessage for View {

@@ -142,6 +142,7 @@ pub struct EquipStatBonus {
 pub struct Augment {
     pub augment_id: u32,
     pub name: String,
+    pub rarity: AugmentRarity,
     pub stat_bonuses: Vec<AugmentStatBonus>,
     pub allowed: Vec<HullType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -316,6 +317,24 @@ define_data_enum! {
         SR(5, "SR", 0xEDDD76),
         /// 6* UR (Ultra Rare)
         UR(6, "UR", 0xFF8D8D)
+    }
+}
+
+define_data_enum! {
+    /// The rarities for augments.
+    pub enum AugmentRarity for AugmentRarityData {
+        pub stars: u32,
+        /// The display name for the rarity.
+        pub name: &'static str,
+        /// An RGB color that can be used to represent the rarity.
+        pub color_rgb: u32;
+
+        /// 2* R (Rare)
+        R(2, "R", 0x9FE8FF),
+        /// 3* E (Elite)
+        E(3, "E", 0xC4ADFF),
+        /// 4* SR (Super Rare)
+        SR(4, "SR", 0xEDDD76)
     }
 }
 

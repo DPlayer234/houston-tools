@@ -50,13 +50,15 @@ The following commands are supported in context menus:
 
 Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
 
-| Command           | Description |
-|:----------------- |:----------- |
-| azur              | Information about mobile game Azur Lane. |
-| azur ship         | Shows information about a ship. |
-| azur search-ship  | Searches for ships. |
-| azur equip        | Shows information about equipment. |
-| azur search-equip | Searches for equipment. |
+| Command             | Description |
+|:------------------- |:----------- |
+| azur                | Information about mobile game Azur Lane. |
+| azur ship           | Shows information about a ship. |
+| azur search-ship    | Searches for ships. |
+| azur equip          | Shows information about equipment. |
+| azur search-equip   | Searches for equipment. |
+| azur augment        | Shows information about an augment module. |
+| azur search-augment | Searches for augment modules. |
 
 # Azur Lane Data Collector
 

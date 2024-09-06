@@ -20,6 +20,7 @@ pub struct HAzurLane {
     equip_id_to_index: HashMap<u32, usize>,
     equip_simsearch: SimSearch<usize>,
     augment_id_to_index: HashMap<u32, usize>,
+    augment_simsearch: SimSearch<usize>,
     ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
     chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
 }
@@ -43,9 +44,10 @@ impl HAzurLane {
         let mut ship_simsearch = SimSearch::new_with(prefix_options.clone());
 
         let mut equip_id_to_index = HashMap::with_capacity(data.equips.len());
-        let mut equip_simsearch = SimSearch::new_with(prefix_options);
+        let mut equip_simsearch = SimSearch::new_with(prefix_options.clone());
 
         let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
+        let mut augment_simsearch = SimSearch::new_with(prefix_options);
         let mut ship_id_to_augment_index = HashMap::<u32, Vec<usize>>::with_capacity(data.augments.len());
 
         for (index, data) in data.ships.iter().enumerate() {
@@ -63,9 +65,11 @@ impl HAzurLane {
             ]);
         }
 
-        for (index, augment) in data.augments.iter().enumerate() {
-            augment_id_to_index.insert(augment.augment_id, index);
-            if let Some(ship_id) = augment.unique_ship_id {
+        for (index, data) in data.augments.iter().enumerate() {
+            augment_id_to_index.insert(data.augment_id, index);
+            augment_simsearch.insert(index, &data.name);
+
+            if let Some(ship_id) = data.unique_ship_id {
                 ship_id_to_augment_index.entry(ship_id)
                     .and_modify(|v| v.push(index))
                     .or_insert(vec![index]);
@@ -82,6 +86,7 @@ impl HAzurLane {
             equip_id_to_index,
             equip_simsearch,
             augment_id_to_index,
+            augment_simsearch,
             ship_id_to_augment_index,
             chibi_sprite_cache: DashMap::new()
         }
@@ -119,6 +124,11 @@ impl HAzurLane {
     pub fn augment_by_id(&self, id: u32) -> Option<&Augment> {
         let index = *self.augment_id_to_index.get(&id)?;
         self.augment_list.get(index)
+    }
+
+    /// Gets all augments by a name prefix.
+    pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> {
+        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augment_list.get(i))
     }
 
     /// Gets unique augments by their associated ship ID.

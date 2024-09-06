@@ -55,6 +55,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     Ok(Augment {
         augment_id: set.id,
         name: read!("name"),
+        rarity: convert_al::to_augment_rarity(read!("rarity")),
         stat_bonuses: vec![
             AugmentStatBonus {
                 stat_kind: read_stat!("attribute_1"),
@@ -68,6 +69,8 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
             }
         ],
         allowed: {
+            // CMBK: this seems to be mostly empty
+            // figure out what actually indicates allowed hull types
             let allowed: Vec<u32> = read!("usability");
             allowed.into_iter().map(convert_al::to_hull_type).collect()
         },

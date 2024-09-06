@@ -91,6 +91,8 @@ define_button_args! {
     ViewEquip(azur::equip::View),
     /// Open the equipment search.
     ViewSearchEquip(azur::search_equip::View),
+    /// Open the augment search.
+    ViewSearchAugment(azur::search_augment::View),
 }
 
 impl ButtonArgs {

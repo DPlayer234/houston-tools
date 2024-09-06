@@ -124,6 +124,15 @@ pub fn to_equip_rarity(num: u32) -> EquipRarity {
     }
 }
 
+/// Converts a number to an augment rarity.
+pub fn to_augment_rarity(num: u32) -> AugmentRarity {
+    match num {
+        ..=2 => AugmentRarity::R,
+        3 => AugmentRarity::E,
+        _ => AugmentRarity::SR,
+    }
+}
+
 /// Converts a name to a stat kind.
 pub fn to_stat_kind(stat: &str) -> StatKind {
     match stat {

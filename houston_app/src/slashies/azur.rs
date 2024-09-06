@@ -10,7 +10,11 @@ use crate::buttons;
 /// Information about mobile game Azur Lane.
 #[poise::command(
     slash_command,
-    subcommands("ship", "search_ship", "equip", "search_equip"),
+    subcommands(
+        "ship", "search_ship",
+        "equip", "search_equip",
+        "augment", "search_augment",
+    ),
     subcommand_required
 )]
 pub async fn azur(_: HContext<'_>) -> HResult {
@@ -110,6 +114,62 @@ async fn search_equip(
     Ok(())
 }
 
+/// Shows information about an augment module.
+#[poise::command(slash_command)]
+async fn augment(
+    ctx: HContext<'_>,
+    #[description = "The equipment name. This supports auto completion."]
+    #[autocomplete = "autocomplete_augment_name"]
+    name: String
+) -> HResult {
+    let augment = parse_id_input(&name).map(|id| ctx.data().azur_lane().augment_by_id(id))
+        .unwrap_or_else(|| ctx.data().azur_lane().augments_by_prefix(&name).next())
+        .ok_or(HArgError("Unknown augment module."))?;
+
+    let view = buttons::azur::augment::View::new(augment.augment_id);
+    ctx.send(view.modify_with_augment(ctx.data(), ctx.create_reply(), augment)).await?;
+    Ok(())
+}
+
+/// Searches for augment modules.
+#[poise::command(slash_command, rename = "search-augment")]
+async fn search_augment(
+    ctx: HContext<'_>,
+    #[description = "A name to search for."]
+    name: Option<String>,
+    #[description = "The allowed hull type."]
+    hull_type: Option<EHullType>,
+    #[description = "The rarity to select."]
+    rarity: Option<EAugmentRarity>,
+    #[description = "The name of the ship it is uniquely for."]
+    #[autocomplete = "autocomplete_ship_name"]
+    for_ship: Option<String>,
+) -> HResult {
+    use crate::buttons::azur::search_augment::*;
+
+    let unique_ship_id = match for_ship {
+        None => None,
+        Some(for_ship) => {
+            let ship = parse_id_input(&for_ship).map(|id| ctx.data().azur_lane().ship_by_id(id))
+                .unwrap_or_else(|| ctx.data().azur_lane().ships_by_prefix(&for_ship).next())
+                .ok_or(HArgError("Unknown ship."))?;
+            Some(ship.group_id)
+        }
+    };
+
+    let filter = Filter {
+        name,
+        hull_type: hull_type.map(EHullType::convert),
+        rarity: rarity.map(EAugmentRarity::convert),
+        unique_ship_id,
+    };
+
+    let view = View::new(filter);
+    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
+
+    Ok(())
+}
+
 fn parse_id_input(input: &str) -> Option<u32> {
     input.strip_prefix("/id:")?.parse().ok()
 }
@@ -124,6 +184,12 @@ async fn autocomplete_equip_name<'a>(ctx: HContext<'a>, partial: &'a str) -> imp
     ctx.data().azur_lane()
         .equips_by_prefix(partial)
         .map(|e| AutocompleteChoice::new(e.name.as_str(), format!("/id:{}", e.equip_id)))
+}
+
+async fn autocomplete_augment_name<'a>(ctx: HContext<'a>, partial: &'a str) -> impl Iterator<Item = AutocompleteChoice> + 'a {
+    ctx.data().azur_lane()
+        .augments_by_prefix(partial)
+        .map(|e| AutocompleteChoice::new(e.name.as_str(), format!("/id:{}", e.augment_id)))
 }
 
 macro_rules! make_choice {
@@ -231,4 +297,10 @@ make_choice!(EEquipRarity for EquipRarity {
     #[name = "4* Elite"] E,
     #[name = "5* SR"] SR,
     #[name = "6* UR"] UR,
+});
+
+make_choice!(EAugmentRarity for AugmentRarity {
+    #[name = "2* Rare"] R,
+    #[name = "3* Elite"] E,
+    #[name = "4* SR"] SR,
 });

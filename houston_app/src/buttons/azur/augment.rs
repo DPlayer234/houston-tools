@@ -1,5 +1,4 @@
 use azur_lane::equip::*;
-use azur_lane::ship::*;
 use azur_lane::skill::*;
 
 use crate::buttons::*;
@@ -9,29 +8,30 @@ use super::AugmentParseError;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub augment_id: u32,
-    pub back: Option<CustomData>
+    mode: ButtonMessageMode,
 }
 
 impl View {
     /// Creates a new instance.
-    #[allow(dead_code)] // planned for future use
     pub fn new(augment_id: u32) -> Self {
-        Self { augment_id, back: None }
+        Self { augment_id, mode: ButtonMessageMode::Edit }
     }
 
-    /// Creates a new instance including a button to go back with some custom ID.
-    pub fn with_back(augment_id: u32, back: CustomData) -> Self {
-        Self { augment_id, back: Some(back) }
+    /// Makes the button send a new message.
+    pub fn new_message(mut self) -> Self {
+        self.mode = ButtonMessageMode::New;
+        self
     }
 
     /// Modifies the create-reply with a preresolved augment.
-    pub fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
+    pub fn modify_with_augment(mut self, data: &HBotData, create: CreateReply, augment: &Augment) -> CreateReply {
+        self.mode = ButtonMessageMode::Edit;
         let description = format!("{}", crate::fmt::azur::Stats::augment(augment));
 
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(&augment.name))
             .description(description)
-            .color(ShipRarity::SR.color_rgb())
+            .color(augment.rarity.color_rgb())
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref().map(|s| &s.skill)));
 
@@ -43,11 +43,19 @@ impl View {
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
-        if let Some(back) = self.back {
-            components.insert(0, CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
+        if let Some(ship) = augment.unique_ship_id.and_then(|s| data.azur_lane().ship_by_id(s)) {
+            let view = super::ship::View::new(ship.group_id).new_message();
+            let label = utils::text::truncate(format!("For: {}", ship.name), 25);
+            components.push(CreateButton::new(view.to_custom_id()).label(label));
         }
 
-        create.embed(embed).components(vec![CreateActionRow::Buttons(components)])
+        let components = if components.is_empty() {
+            vec![]
+        } else {
+            vec![CreateActionRow::Buttons(components)]
+        };
+
+        create.embed(embed).components(components)
     }
 
     /// Creates the field for a skill summary.
@@ -61,6 +69,10 @@ impl View {
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
         let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
-        Ok(self.modify_with_augment(ctx.create_reply(), augment))
+        Ok(self.modify_with_augment(ctx.data, ctx.create_reply(), augment))
+    }
+
+    fn message_mode(&self) -> ButtonMessageMode {
+        self.mode
     }
 }
