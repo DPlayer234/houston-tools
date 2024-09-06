@@ -50,6 +50,7 @@ impl Texture2DData<'_> {
         let width = u32::try_from(self.texture.width)?;
         let height = u32::try_from(self.texture.height)?;
 
+        let args = Args::new(width, height)?;
         match self.texture.format() {
             TextureFormat::RGBA32 => {
                 // this matches the Rgba<u8> layout
@@ -59,39 +60,78 @@ impl Texture2DData<'_> {
                 Ok(image)
             },
             TextureFormat::ETC2_RGBA8 => {
-                let width_s = usize::try_from(width)?;
-                let height_s = usize::try_from(height)?;
-                let size = width_s.checked_mul(height_s)
-                    .and_then(|s| s.checked_mul(size_of::<u32>()))
-                    .ok_or(UnityError::InvalidData("image size overflows address space"))?;
-
-                // allocate buffer as Vec<u8> since that's the final data type needed
-                // the size has been multiplied by 4 already to match the pixel width
-                let mut buffer = vec![0u8; size];
-
-                // cast the vec's slice to u32. this can't fail since the buffer's size is a multiple of 4.
-                // following that, try to decode the image data
-                let buffer_u32 = bytemuck::cast_slice_mut::<u8, u32>(&mut buffer);
-                texture2ddecoder::decode_etc2_rgba8(self.data, width_s, height_s, buffer_u32)
-                    .map_err(UnityError::InvalidData)?;
-
-                // Swap red and green channels
-                for px in buffer_u32 {
-                    if cfg!(target_endian = "little") {
-                        *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
-                    } else {
-                        *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
-                    }
-                }
-
-                let image = RgbaImage::from_raw(width, height, buffer)
-                    .expect("buffer allocated with the correct size");
-                Ok(image)
+                args.decode_with(|args, buf| {
+                    texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
+                        .map_err(UnityError::InvalidData)
+                })
             },
             _ => Err(UnityError::Unsupported(
                 format!("texture format not implemented: {:?}", self.texture.format())
             ))?,
         }
+    }
+}
+
+/// Stores validated image arguments.
+struct Args {
+    width: usize,
+    height: usize,
+    size: usize,
+}
+
+impl Args {
+    /// Creates a new [`Args`], validating the width, height, and total size.
+    fn new(width: u32, height: u32) -> anyhow::Result<Args> {
+        let width = usize::try_from(width)?;
+        let height = usize::try_from(height)?;
+        let size = width.checked_mul(height)
+            .and_then(|s| s.checked_mul(size_of::<u32>()))
+            .filter(|s| isize::try_from(*s).is_ok())
+            .ok_or(UnityError::InvalidData("image size overflows address space"))?;
+
+        Ok(Self { width, height, size })
+    }
+
+    /// Decodes the image with a given decoder function.
+    fn decode_with<F>(self, decode: F) -> anyhow::Result<RgbaImage>
+    where
+        F: FnOnce(&Self, &mut [u32]) -> Result<(), UnityError>,
+    {
+        // allocate buffer as Vec<u8> since that's the final data type needed
+        // the size has been multiplied by 4 already to match the pixel width
+        let mut buffer = vec![0u8; self.size];
+        let mut buffer_u32 = None;
+
+        // cast the vec's slice to u32.
+        // while this can't fail for the obvious reason (this size of a multiple of 4),
+        // it could fail because the allocation isn't sufficiently aligned.
+        // no system allocator (at least on expected platforms) actually allocates
+        // with an alignment of less than 8, but we may as well handle it.
+        // to do that, we allocate a new buffer of u32s and copy it back later.
+        let slice_u32 = match bytemuck::try_cast_slice_mut::<u8, u32>(&mut buffer) {
+            Ok(b) => b,
+            _ => buffer_u32.insert(vec![0u32; buffer.len() / size_of::<u32>()]),
+        };
+
+        decode(&self, slice_u32)?;
+
+        // Swap red and green channels
+        for px in slice_u32 {
+            if cfg!(target_endian = "little") {
+                *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
+            } else {
+                *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
+            }
+        }
+
+        if let Some(buffer_u32) = buffer_u32 {
+            buffer.copy_from_slice(bytemuck::cast_slice::<u32, u8>(&buffer_u32));
+        }
+
+        #[allow(clippy::cast_possible_truncation)]
+        let image = RgbaImage::from_raw(self.width as u32, self.height as u32, buffer)
+            .expect("buffer allocated with the correct size");
+        Ok(image)
     }
 }
 
