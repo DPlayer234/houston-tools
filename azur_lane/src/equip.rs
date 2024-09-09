@@ -17,15 +17,13 @@ pub struct Equip {
     pub rarity: EquipRarity,
     pub faction: Faction,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub hull_allowed: Vec<HullType>,
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub hull_disallowed: Vec<HullType>,
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub weapons: Vec<Weapon>,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub skills: Vec<Skill>,
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub stat_bonuses: Vec<EquipStatBonus>
+    pub stat_bonuses: Vec<EquipStatBonus>,
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub hull_disallowed: Vec<HullType>,
 }
 
 /// A weapon that is part of [`Equip`] or [`Skill`].
@@ -84,12 +82,15 @@ fn is_none_bullet_extra(extra: &BulletExtra) -> bool {
 /// Additional bullet data.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum BulletExtra {
+    /// No extra data.
     #[default] None,
+    /// The bullet has hit spread and AOE.
     Spread(BulletSpread),
+    /// The bullet is a beam attack.
     Beam(BulletBeam),
 }
 
-/// How far a bullet's hit spread is. Only applicable to main gun fire and bombs.
+/// How far a bullet's hit spread and AOE is. Only applicable to main gun fire and bombs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulletSpread {
     pub spread_x: f64,
@@ -144,13 +145,20 @@ pub struct Augment {
     pub name: String,
     pub rarity: AugmentRarity,
     pub stat_bonuses: Vec<AugmentStatBonus>,
-    pub allowed: Vec<HullType>,
+    pub usability: AugmentUsability,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub unique_ship_id: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skill_upgrade: Option<AugmentSkillUpgrade>,
+}
+
+/// Represents who an Augment Module can be used on.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AugmentUsability {
+    /// Only certain hull types are allowed.
+    HullTypes(Vec<HullType>),
+    /// Only a certain unique ship is allowed.
+    UniqueShipId(u32),
 }
 
 /// Bonus stats gained by equipping the associated augment.
@@ -335,6 +343,24 @@ define_data_enum! {
         E(3, "E", 0xC4ADFF),
         /// 4* SR (Super Rare)
         SR(4, "SR", 0xEDDD76)
+    }
+}
+
+impl AugmentUsability {
+    /// If restricted by hull types, gets the hull types. Otherwise, returns [`None`].
+    pub fn hull_types(&self) -> Option<&[HullType]> {
+        match self {
+            Self::HullTypes(h) => Some(h.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// If restricted to a unique ship, gets its ID. Otherwise, returns [`None`].
+    pub fn unique_ship_id(&self) -> Option<u32> {
+        match self {
+            Self::UniqueShipId(i) => Some(*i),
+            _ => None,
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::skill::*;
+use utils::Discard;
 
 use crate::buttons::*;
 use super::AugmentParseError;
@@ -43,19 +44,23 @@ impl View {
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
-        if let Some(ship) = augment.unique_ship_id.and_then(|s| data.azur_lane().ship_by_id(s)) {
-            let view = super::ship::View::new(ship.group_id).new_message();
-            let label = utils::text::truncate(format!("For: {}", ship.name), 25);
-            components.push(CreateButton::new(view.to_custom_id()).label(label));
-        }
+        components.push(match &augment.usability {
+            AugmentUsability::HullTypes(hull_types) => {
+                let mut label = "For: ".to_owned();
+                crate::fmt::write_join(&mut label, hull_types.iter().map(|h| h.designation()), ", ").discard();
+                let label = utils::text::truncate(label, 25);
+                CreateButton::new("=dummy-usability").label(label).disabled(true)
+            },
+            AugmentUsability::UniqueShipId(ship_id) => if let Some(ship) = data.azur_lane().ship_by_id(*ship_id) {
+                let view = super::ship::View::new(ship.group_id).new_message();
+                let label = utils::text::truncate(format!("For: {}", ship.name), 25);
+                CreateButton::new(view.to_custom_id()).label(label)
+            } else {
+                CreateButton::new("=dummy-usability").label("<Invalid>").disabled(true)
+            },
+        });
 
-        let components = if components.is_empty() {
-            vec![]
-        } else {
-            vec![CreateActionRow::Buttons(components)]
-        };
-
-        create.embed(embed).components(components)
+        create.embed(embed).components(vec![CreateActionRow::Buttons(components)])
     }
 
     /// Creates the field for a skill summary.

@@ -113,7 +113,7 @@ impl Filter {
     fn predicate<'a>(&self, data: &'a HAzurLane) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
         fn next_hull_type<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
             match f.hull_type {
-                Some(filter) => next_rarity(f, data, move |s| base(s) && s.allowed.contains(&filter)),
+                Some(filter) => next_rarity(f, data, move |s| base(s) && s.usability.hull_types().is_some_and(|h| h.contains(&filter))),
                 None => next_rarity(f, data, base),
             }
         }
@@ -127,7 +127,7 @@ impl Filter {
 
         fn next_unique_ship_id<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
             match f.unique_ship_id {
-                Some(filter) => finish(f, data, move |s| base(s) && s.unique_ship_id == Some(filter)),
+                Some(filter) => finish(f, data, move |s| base(s) && s.usability.unique_ship_id() == Some(filter)),
                 None => finish(f, data, base),
             }
         }

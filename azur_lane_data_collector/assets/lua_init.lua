@@ -132,3 +132,11 @@ function require_skill(id)
         return require("gamecfg.skill.skill_" .. id)
     end
 end
+
+-- Helper for augment parsing
+function get_augment_ship_types(kind)
+    local sp = pg.spweapon_type[kind]
+    if sp then
+        return sp.ship_type
+    end
+end

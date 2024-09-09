@@ -247,7 +247,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
         idk!(
             join("\n", barrage.attacks.iter().filter_map(get_skill_attack_summary)),
             "__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n{sum}"
-            // `Fix.  | 12 x  58.0 | Nor.: 120/ 80/ 80 | 100% AVI |   s`
+            // `Fix.  | 12 x  58.0 | Nor.: 120/ 80/ 80 | 100% AVI | ---`
         )
     }
 

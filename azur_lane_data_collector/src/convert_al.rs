@@ -62,7 +62,9 @@ pub fn to_hull_type(num: u32) -> HullType {
         6 => HullType::LightCarrier,
         7 => HullType::AircraftCarrier,
         8 => HullType::Submarine,
+        // 9 => HullType::AviationCruiser,
         10 => HullType::AviationBattleship,
+        // 11 => HullType::TorpedoCruiser,
         12 => HullType::RepairShip,
         13 => HullType::Monitor,
         17 => HullType::AviationSubmarine,
@@ -75,6 +77,14 @@ pub fn to_hull_type(num: u32) -> HullType {
         24 => HullType::FrigateM,
         _ => HullType::Unknown
     }
+}
+
+/// Converts an ID to a known hull type.
+///
+/// Returns [`None`] if it is unknown.
+pub fn to_known_hull_type(num: u32) -> Option<HullType> {
+    let hull_type = to_hull_type(num);
+    (hull_type != HullType::Unknown).then_some(hull_type)
 }
 
 /// Converts an ID to an armor type.

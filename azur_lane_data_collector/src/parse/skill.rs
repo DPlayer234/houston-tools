@@ -105,22 +105,10 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         }};
     }
 
-    // CMBK: we might want to split this
-    let hull_allowed = {
-        let mut main: Vec<u32> = statistics.get("part_main").with_context(context!("part_main for equip with id {equip_id}"))?;
-        let sub: Vec<u32> = statistics.get("part_sub").with_context(context!("part_sub for equip with id {equip_id}"))?;
-
-        for id in sub {
-            if !main.contains(&id) { main.push(id) }
-        }
-
-        main.into_iter().map(convert_al::to_hull_type).filter(|w| *w != HullType::Unknown).collect()
-    };
-
     let hull_disallowed = match template {
         Some(template) => {
             let forbidden: Vec<u32> = template.get("ship_type_forbidden").with_context(context!("ship_type_forbidden for equip with id {equip_id}"))?;
-            forbidden.into_iter().map(convert_al::to_hull_type).filter(|w| *w != HullType::Unknown).collect()
+            forbidden.into_iter().filter_map(convert_al::to_known_hull_type).collect()
         },
         None => Vec::new(),
     };
@@ -132,7 +120,6 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         rarity: convert_al::to_equip_rarity(statistics.get("rarity").with_context(context!("rarity for equip with id {equip_id}"))?),
         kind: convert_al::to_equip_type(statistics.get("type").with_context(context!("type for equip with id {equip_id}"))?),
         faction: convert_al::to_faction(statistics.get("nationality").with_context(context!("nationality for equip with id {equip_id}"))?),
-        hull_allowed,
         hull_disallowed,
         weapons,
         skills,

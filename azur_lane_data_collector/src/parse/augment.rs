@@ -50,7 +50,17 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     // ID of the only ship group this can be equipped to, if unique.
     // As with the effect, always present but 0 if not used.
     let unique_ship_id: u32 = read!("unique");
-    let unique_ship_id = (unique_ship_id != 0).then_some(unique_ship_id);
+
+    let usability = if unique_ship_id != 0 {
+        // if non-zero, this is the only valid ship
+        AugmentUsability::UniqueShipId(unique_ship_id)
+    } else {
+        // otherwise, look up the allowed types via `pg.spweapon_type[kind].ship_type`
+        // `usability` seems to only exist as a helper for the gear hull type overview
+        let kind: LuaValue = read!("type");
+        let ship_types: Vec<u32> = lua.globals().call_function("get_augment_ship_types", kind)?;
+        AugmentUsability::HullTypes(ship_types.into_iter().filter_map(convert_al::to_known_hull_type).collect())
+    };
 
     Ok(Augment {
         augment_id: set.id,
@@ -68,15 +78,8 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
                 random: read!("value_2_random")
             }
         ],
-        allowed: {
-            // CMBK: this seems to be mostly empty
-            // figure out what actually indicates allowed hull types
-            let allowed: Vec<u32> = read!("usability");
-            allowed.into_iter().map(convert_al::to_hull_type).collect()
-        },
+        usability,
         effect,
-        unique_ship_id,
         skill_upgrade,
     })
 }
-

@@ -69,7 +69,7 @@ impl HAzurLane {
             augment_id_to_index.insert(data.augment_id, index);
             augment_simsearch.insert(index, &data.name);
 
-            if let Some(ship_id) = data.unique_ship_id {
+            if let Some(ship_id) = data.usability.unique_ship_id() {
                 ship_id_to_augment_index.entry(ship_id)
                     .and_modify(|v| v.push(index))
                     .or_insert(vec![index]);
