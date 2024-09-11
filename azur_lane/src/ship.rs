@@ -282,11 +282,11 @@ define_data_enum! {
         AviationSubmarine("SSV", "Aviation Submarine", TeamType::Submarine),
         LargeCruiser("CB", "Large Cruiser", TeamType::Vanguard),
         MunitionShip("AE", "Munition Ship", TeamType::Vanguard),
-        MissileDestroyerV("DDG v", "Missile Destroyer V", TeamType::Vanguard),
-        MissileDestroyerM("DDG m", "Missile Destroyer M", TeamType::MainFleet),
-        FrigateS("IX s", "Sailing Frigate S", TeamType::Submarine),
-        FrigateV("IX v", "Sailing Frigate V", TeamType::Vanguard),
-        FrigateM("IX m", "Sailing Frigate M", TeamType::MainFleet)
+        MissileDestroyerV("DDGv", "Missile Destroyer V", TeamType::Vanguard),
+        MissileDestroyerM("DDGm", "Missile Destroyer M", TeamType::MainFleet),
+        FrigateS("IXs", "Sailing Frigate S", TeamType::Submarine),
+        FrigateV("IXv", "Sailing Frigate V", TeamType::Vanguard),
+        FrigateM("IXm", "Sailing Frigate M", TeamType::MainFleet)
     }
 }
 
@@ -397,17 +397,13 @@ impl Default for ShipStat {
     }
 }
 
-impl std::ops::Add<Self> for ShipStat {
-    type Output = Self;
+utils::impl_op_via_assign!(copy ShipStat, [std::ops::AddAssign]::add_assign, [std::ops::Add]::add);
 
-    fn add(self, rhs: ShipStat) -> Self::Output {
-        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-
-impl std::ops::AddAssign for ShipStat {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
+impl std::ops::AddAssign<&Self> for ShipStat {
+    fn add_assign(&mut self, rhs: &Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+        self.2 += rhs.2;
     }
 }
 

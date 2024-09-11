@@ -1,6 +1,6 @@
 [package]
 name = "azur_lane"
-version = "1.6.0"
+version = "1.6.1"
 edition = "2021"
 rust-version = "1.80"
 
@@ -8,6 +8,9 @@ rust-version = "1.80"
 
 [lints]
 workspace = true
+
+[dependencies]
+utils = { path = "../utils" }
 
 [dependencies.bitflags]
 version = "2.6.0"

@@ -106,7 +106,7 @@ impl Filter {
         let predicate = self.predicate(data);
         match &self.name {
             Some(name) => Box::new(data.equips_by_prefix(name.as_str()).filter(predicate)),
-            None => Box::new(data.equip_list.iter().filter(predicate))
+            None => Box::new(data.equips().iter().filter(predicate))
         }
     }
 

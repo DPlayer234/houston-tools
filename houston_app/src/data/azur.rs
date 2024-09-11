@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -12,9 +12,9 @@ use azur_lane::ship::*;
 #[derive(Debug, Default)]
 pub struct HAzurLane {
     data_path: PathBuf,
-    pub ship_list: Vec<ShipData>,
-    pub equip_list: Vec<Equip>,
-    pub augment_list: Vec<Augment>,
+    ships: Vec<ShipData>,
+    equips: Vec<Equip>,
+    augments: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
     ship_simsearch: SimSearch<usize>,
     equip_id_to_index: HashMap<u32, usize>,
@@ -29,7 +29,7 @@ impl HAzurLane {
     /// Constructs extended data from definitions.
     #[must_use]
     pub fn load_from(data_path: PathBuf) -> Self {
-        let data = match Self::load_definitions(&data_path) {
+        let mut data = match Self::load_definitions(&data_path) {
             Ok(data) => data,
             Err(err) => {
                 log::error!("No Azur Lane data: {err}");
@@ -50,12 +50,28 @@ impl HAzurLane {
         let mut augment_simsearch = SimSearch::new_with(prefix_options);
         let mut ship_id_to_augment_index = HashMap::<u32, Vec<usize>>::with_capacity(data.augments.len());
 
+        // we trim away "hull_disallowed" equip values that never matter in practice to give nicer outputs
+        // otherwise we'd have outputs that state that dive bombers cannot be equipped to frigates. like, duh.
+        let mut actual_equip_exist = HashSet::new();
+        fn insert_equip_exist(actual_equip_exist: &mut HashSet<(EquipKind, HullType)>, data: &ShipData) {
+            for equip_kind in data.equip_slots.iter().flat_map(|h| &h.allowed) {
+                actual_equip_exist.insert((*equip_kind, data.hull_type));
+            }
+
+            for retrofit in &data.retrofits {
+                insert_equip_exist(actual_equip_exist, retrofit);
+            }
+        }
+
         for (index, data) in data.ships.iter().enumerate() {
             ship_id_to_index.insert(data.group_id, index);
             ship_simsearch.insert(index, &data.name);
+
+            // collect known "equip & hull" pairs
+            insert_equip_exist(&mut actual_equip_exist, data);
         }
 
-        for (index, data) in data.equips.iter().enumerate() {
+        for (index, data) in data.equips.iter_mut().enumerate() {
             equip_id_to_index.insert(data.equip_id, index);
             equip_simsearch.insert_tokens(index, &[
                 &data.name,
@@ -63,6 +79,9 @@ impl HAzurLane {
                 data.kind.name(),
                 data.rarity.name()
             ]);
+
+            // trim away irrelevant disallowed hulls
+            data.hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
         }
 
         for (index, data) in data.augments.iter().enumerate() {
@@ -78,9 +97,9 @@ impl HAzurLane {
 
         HAzurLane {
             data_path,
-            ship_list: data.ships,
-            equip_list: data.equips,
-            augment_list: data.augments,
+            ships: data.ships,
+            equips: data.equips,
+            augments: data.augments,
             ship_id_to_index,
             ship_simsearch,
             equip_id_to_index,
@@ -98,42 +117,57 @@ impl HAzurLane {
         Ok(data)
     }
 
+    /// Gets all known ships.
+    pub fn ships(&self) -> &[ShipData] {
+        &self.ships
+    }
+
+    /// Gets all known equipments.
+    pub fn equips(&self) -> &[Equip] {
+        &self.equips
+    }
+
+    /// Gets all known augment modules.
+    pub fn augments(&self) -> &[Augment] {
+        &self.augments
+    }
+
     /// Gets a ship by its ID.
     pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
         let index = *self.ship_id_to_index.get(&id)?;
-        self.ship_list.get(index)
+        self.ships.get(index)
     }
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ship_list.get(i))
+        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ships.get(i))
     }
 
     /// Gets an equip by its ID.
     pub fn equip_by_id(&self, id: u32) -> Option<&Equip> {
         let index = *self.equip_id_to_index.get(&id)?;
-        self.equip_list.get(index)
+        self.equips.get(index)
     }
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> {
-        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equip_list.get(i))
+        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equips.get(i))
     }
 
     /// Gets an augment by its ID.
     pub fn augment_by_id(&self, id: u32) -> Option<&Augment> {
         let index = *self.augment_id_to_index.get(&id)?;
-        self.augment_list.get(index)
+        self.augments.get(index)
     }
 
     /// Gets all augments by a name prefix.
     pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> {
-        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augment_list.get(i))
+        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augments.get(i))
     }
 
     /// Gets unique augments by their associated ship ID.
     pub fn augments_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Augment> {
-        self.ship_id_to_augment_index.get(&ship_id).into_iter().flatten().filter_map(|i| self.augment_list.get(*i))
+        self.ship_id_to_augment_index.get(&ship_id).into_iter().flatten().filter_map(|i| self.augments.get(*i))
     }
 
     /// Gets a chibi's image data.

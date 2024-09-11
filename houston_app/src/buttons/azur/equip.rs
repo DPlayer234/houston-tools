@@ -1,4 +1,5 @@
 use azur_lane::equip::*;
+use utils::Discard;
 
 use crate::buttons::*;
 use super::EquipParseError;
@@ -44,9 +45,19 @@ impl View {
                 format!("{} {}", skill.category.emoji(), skill.name),
                 utils::text::truncate(&skill.description, 1000),
                 false,
-            )));
+            )))
+            .fields(self.get_disallowed_field(equip));
 
         create.embed(embed).components(vec![])
+    }
+
+    fn get_disallowed_field(&self, equip: &Equip) -> Option<SimpleEmbedFieldCreate> {
+        (!equip.hull_disallowed.is_empty()).then(|| {
+            let mut text = "> ".to_owned();
+            let designations = equip.hull_disallowed.iter().map(|h| h.designation());
+            crate::fmt::write_join(&mut text, designations, ", ").discard();
+            ("Cannot be equipped by:", text, false)
+        })
     }
 }
 

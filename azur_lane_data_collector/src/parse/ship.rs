@@ -48,7 +48,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     let mut buff_list: Vec<u32> = read!(set.template, "buff_list");
     let buff_list_display: Vec<u32> = read!(set.template, "buff_list_display");
     let hide_buff_list: Vec<u32> = read!(set.template, "hide_buff_list");
-    intersect(&mut buff_list, &buff_list_display);
+    buff_list.retain(|i| buff_list_display.contains(i));
 
     // Speaking of, skill 1 is BB MGM+1 and skill 2 is BB MGM+2, so let's just hard-code this.
     // The actual skill data re-fires the weapon, so it would work as a multiplier.
@@ -61,26 +61,28 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     /// The second one optionally specifies which index the mount data uses.
     macro_rules! make_equip_slot {
         ($allowed_at:literal, $index:literal) => {{
-            let allow: Vec<u32> = read!(set.template, $allowed_at);
             let mut mounts: u8 = read!(base_list, $index);
             if $index == 1 { mounts *= main_mount_mult; }
 
             EquipSlot {
-                allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
+                allowed: make_equip_slot!(@allowed $allowed_at),
                 mount: Some(EquipWeaponMount {
                     efficiency: read!(equipment_proficiency, $index),
                     mounts,
                     parallel: read!(parallel_max, $index),
-                    preload: read!(preload_count, $index)
-                })
+                    preload: read!(preload_count, $index),
+                }),
             }
         }};
         ($allowed_at:literal) => {{
-            let allow: Vec<u32> = read!(set.template, $allowed_at);
             EquipSlot {
-                allowed: allow.iter().map(|&n| convert_al::to_equip_type(n)).collect(),
-                mount: None
+                allowed: make_equip_slot!(@allowed $allowed_at),
+                mount: None,
             }
+        }};
+        (@allowed $allowed_at:literal) => {{
+            let allow: Vec<u32> = read!(set.template, $allowed_at);
+            allow.into_iter().map(convert_al::to_equip_type).collect()
         }};
     }
 
@@ -189,21 +191,4 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
     }
 
     Ok(ship)
-}
-
-/// Intersects a vector with a slice.
-/// In other words, removes all elements from the vector that aren't in the slice.
-fn intersect<T: Eq>(target: &mut Vec<T>, other: &[T]) {
-    // This isn't really efficient, but it's easy and works.
-    let mut try_again = true;
-    while try_again {
-        try_again = false;
-        for (index, item) in target.iter().enumerate() {
-            if !other.contains(item) {
-                target.remove(index);
-                try_again = true;
-                break;
-            }
-        }
-    }
 }
