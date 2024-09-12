@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
@@ -264,20 +262,26 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
     }
 
     fn get_barrage_summary(barrage: &Barrage, target: Option<SkillAttackTarget>) -> Option<String> {
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        struct Key { kind: BulletKind, ammo: AmmoKind }
         struct Value<'a> { amount: u32, bullet: &'a Bullet }
 
-        let mut sets: HashMap<Key, Value> = HashMap::new();
-        for bullet in &barrage.bullets {
-            let key = Key { kind: bullet.kind, ammo: bullet.ammo };
-            sets.entry(key)
-                .and_modify(|v| v.amount += bullet.amount)
-                .or_insert(Value { amount: bullet.amount, bullet });
+        fn match_key(a: &Bullet, b: &Bullet) -> bool {
+            a.kind == b.kind &&
+            a.ammo == b.ammo &&
+            a.modifiers == b.modifiers
         }
 
-        join("\n", sets.into_iter().map(|(key, Value { amount, bullet })| {
+        let mut sets: Vec<Value> = Vec::new();
+        for bullet in &barrage.bullets {
+            // find & modify, or insert
+            match sets.iter_mut().find(|i| match_key(i.bullet, bullet)) {
+                Some(entry) => entry.amount += bullet.amount,
+                None => sets.push(Value { amount: bullet.amount, bullet }),
+            }
+        }
+
+        join("\n", sets.into_iter().map(|Value { amount, bullet }| {
             let ArmorModifiers(l, m, h) = bullet.modifiers;
+            let sprapnel_mark = if bullet.kind == BulletKind::Shrapnel { "*" } else { " " };
             format!(
                 // damage with coeff |
                 // ammo type & mods |
@@ -285,13 +289,13 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 // amount | totals
                 "`\
                 {: <5} |\
-                {: >3} x{: >6.1} |\
+                {: >3} x{: >6.1}{}|\
                 {: >5}: {: >3.0}/{: >3.0}/{: >3.0} |\
                 {: >4.0}% {: <3} | \
                 {}`",
                 target.map(|t| t.short_name()).unwrap_or(""),
-                amount, barrage.damage * barrage.coefficient,
-                key.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
+                amount, barrage.damage * barrage.coefficient, sprapnel_mark,
+                bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
                 barrage.scaling * 100f64, barrage.scaling_stat.name(),
                 get_bullet_flags(bullet),
             )
@@ -302,7 +306,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
         let mut res = [b'-'; 3];
         if bullet.pierce != 0 { res[0] = b'P'; }
         if bullet.flags.contains(BulletFlags::IGNORE_SHIELD) { res[1] = b'I'; }
-        if bullet.flags.dive_filter().is_empty() { res[2] = b'S'; }
+        if bullet.flags.dive_filter().is_empty() { res[2] = b'D'; }
 
         // SAFETY: Always ASCII here.
         unsafe { InlineStr::from_utf8_unchecked(res) }

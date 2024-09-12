@@ -278,6 +278,7 @@ fn get_sub_barrage(
     *salvo_time += f64::from(senior_repeat + 1) * senior_delay;
 
     let mut flags = BulletFlags::IGNORE_DIVE;
+    let mut shrapnel_parts = Vec::new();
 
     if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
         if let Ok(dive_filter) = extra_param.get::<_, Vec<u32>>("diveFilter") {
@@ -301,10 +302,10 @@ fn get_sub_barrage(
             for emitter in shrapnel {
                 let bullet_id: u32 = emitter.get("bullet_ID").context("bullet id in emitter for bullet")?;
                 let barrage_id: u32 = emitter.get("barrage_ID").context("barrage id in emitter for bullet")?;
-                get_sub_barrage(lua, bullets, &mut 0.0, bullet_id, barrage_id, amount)?;
+                get_sub_barrage(lua, &mut shrapnel_parts, &mut 0.0, bullet_id, barrage_id, amount)?;
             }
 
-            return Ok(senior_delay);
+            // return Ok(senior_delay);
         }
 
         // note: dive filter code above overwrites the flags, so keep this lower
@@ -379,6 +380,7 @@ fn get_sub_barrage(
         });
     }
 
+    bullets.extend(shrapnel_parts);
     Ok(senior_delay)
 }
 
