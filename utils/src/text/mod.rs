@@ -2,8 +2,10 @@
 
 pub mod __private;
 mod inline_str;
+mod truncate_impl;
 
 pub use inline_str::InlineStr;
+pub use truncate_impl::{Truncate, truncate};
 
 /// Given a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
 ///
@@ -122,18 +124,6 @@ macro_rules! join {
         const JOIN: $crate::text::InlineStr<N> = $crate::text::__private::join_str_const(STRS);
         JOIN.as_str()
     }};
-}
-
-/// Ensures a string is at most `len` in size.
-/// If it exceeds the size, it is truncated to the specified size, including appending ellipses at the end.
-#[must_use]
-pub fn truncate(str: impl Into<String>, len: usize) -> String {
-    let str: String = str.into();
-    if str.len() < len { return str; }
-
-    str.chars().take(len - 1)
-        .chain(std::iter::once('\u{2026}'))
-        .collect()
 }
 
 /// Allows conversion of a type to a byte slice, indicating the bytes hold some sort of string data.

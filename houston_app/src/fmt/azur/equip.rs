@@ -5,29 +5,33 @@ use azur_lane::ship::StatKind;
 
 /// Implements [`Display`] to nicely format a equipment stats.
 #[must_use]
-pub struct Stats<'a>(StatsInner<'a>);
+pub struct EquipStats<'a>(&'a Equip);
 
-enum StatsInner<'a> {
-    Equip(&'a [EquipStatBonus]),
-    Augment(&'a [AugmentStatBonus]),
-}
+/// Implements [`Display`] to nicely format a augment stats.
+#[must_use]
+pub struct AugmentStats<'a>(&'a Augment);
 
-impl<'a> Stats<'a> {
-    pub fn equip(equip: &'a Equip) -> Self {
-        Self(StatsInner::Equip(&equip.stat_bonuses))
-    }
-
-    pub fn augment(augment: &'a Augment) -> Self {
-        Self(StatsInner::Augment(&augment.stat_bonuses))
+impl<'a> EquipStats<'a> {
+    pub fn new(equip: &'a Equip) -> Self {
+        Self(equip)
     }
 }
 
-impl Display for Stats<'_> {
+impl<'a> AugmentStats<'a> {
+    pub fn new(augment: &'a Augment) -> Self {
+        Self(augment)
+    }
+}
+
+impl Display for EquipStats<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        match self.0 {
-            StatsInner::Equip(a) => write_stats(a, |i| (i.stat_kind, i.amount), f),
-            StatsInner::Augment(a) => write_stats(a, |i| (i.stat_kind, i.amount + i.random), f),
-        }
+        write_stats(&self.0.stat_bonuses, |i| (i.stat_kind, i.amount), f)
+    }
+}
+
+impl Display for AugmentStats<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write_stats(&self.0.stat_bonuses, |i| (i.stat_kind, i.amount + i.random), f)
     }
 }
 

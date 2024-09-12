@@ -289,7 +289,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
             let base_id = base_id.unwrap_or(id);
 
             groups.entry(base_id)
-                .and_modify(|e| { if *e < id { *e = id } })
+                .and_modify(|e| if *e < id { *e = id })
                 .or_insert(id);
 
             Ok(())

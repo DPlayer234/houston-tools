@@ -6,49 +6,49 @@ use azur_lane::equip::*;
 ///
 /// Alternate formatting (`{:#}`) omits the weapon kind.
 #[must_use]
-pub struct DisplayWeapon<'a> {
+pub struct Details<'a> {
     weapon: &'a Weapon,
-    flags: DisplayWeaponFlags,
+    flags: DetailFlags,
 }
 
 bitflags::bitflags! {
     #[derive(Clone, Copy)]
     #[repr(transparent)]
-    struct DisplayWeaponFlags: usize {
+    struct DetailFlags: usize {
         const NO_KIND = 1 << 0;
         const NO_FIRE_RATE = 1 << 1;
     }
 }
 
-impl<'a> DisplayWeapon<'a> {
+impl<'a> Details<'a> {
     /// Creates a new value.
     pub const fn new(weapon: &'a Weapon) -> Self {
         Self {
             weapon,
-            flags: DisplayWeaponFlags::empty(),
+            flags: DetailFlags::empty(),
         }
     }
 
     pub fn no_kind(mut self) -> Self {
-        self.flags.insert(DisplayWeaponFlags::NO_KIND);
+        self.flags.insert(DetailFlags::NO_KIND);
         self
     }
 
     pub fn no_fire_rate(mut self) -> Self {
-        self.flags.insert(DisplayWeaponFlags::NO_FIRE_RATE);
+        self.flags.insert(DetailFlags::NO_FIRE_RATE);
         self
     }
 }
 
-impl Display for DisplayWeapon<'_> {
+impl Display for Details<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let weapon = self.weapon;
 
-        if !self.flags.contains(DisplayWeaponFlags::NO_KIND) {
+        if !self.flags.contains(DetailFlags::NO_KIND) {
             writeln!(f, "**Kind:** {}", weapon.kind.name())?;
         }
 
-        if !self.flags.contains(DisplayWeaponFlags::NO_FIRE_RATE) {
+        if !self.flags.contains(DetailFlags::NO_FIRE_RATE) {
             format_fire_rate(weapon, f)?;
         }
 

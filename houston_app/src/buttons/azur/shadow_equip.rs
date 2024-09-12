@@ -35,7 +35,7 @@ impl View {
 
             let mut value = String::new();
             for weapon in weapons {
-                write!(value, "{}\n\n", crate::fmt::azur::DisplayWeapon::new(weapon)).discard();
+                write!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon)).discard();
             }
 
             Some(value)

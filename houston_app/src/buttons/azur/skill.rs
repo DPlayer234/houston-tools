@@ -119,7 +119,7 @@ impl View {
 
                 embed = embed.field(
                     format!("'{}' Bonus Stats", augment.name),
-                    format!("{}", crate::fmt::azur::Stats::augment(augment)),
+                    format!("{}", crate::fmt::azur::AugmentStats::new(augment)),
                     false
                 );
             }
@@ -161,7 +161,7 @@ impl View {
     fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
         [(
             format!("{} {}", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000),
+            utils::text::truncate(&skill.description, 1000).into_owned(),
             false
         )]
     }
@@ -170,7 +170,7 @@ impl View {
     fn create_ex_skill_fields(&self, skill: &Skill) -> Vec<OwnedCreateEmbedField> {
         let mut fields = vec![(
             format!("{} __{}__", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000),
+            utils::text::truncate(&skill.description, 1000).into_owned(),
             false
         )];
 
@@ -186,7 +186,7 @@ impl View {
         }
 
         for buff in &skill.new_weapons {
-            let fmt = crate::fmt::azur::DisplayWeapon::new(&buff.weapon);
+            let fmt = crate::fmt::azur::Details::new(&buff.weapon);
             fields.push((
                 format!("__{}__", buff.weapon.name.as_deref().unwrap_or("Special Weapon")),
                 match buff.duration {

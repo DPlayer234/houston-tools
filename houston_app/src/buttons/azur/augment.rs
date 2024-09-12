@@ -27,7 +27,7 @@ impl View {
     /// Modifies the create-reply with a preresolved augment.
     pub fn modify_with_augment(mut self, data: &HBotData, create: CreateReply, augment: &Augment) -> CreateReply {
         self.mode = ButtonMessageMode::Edit;
-        let description = format!("{}", crate::fmt::azur::Stats::augment(augment));
+        let description = format!("{}", crate::fmt::azur::AugmentStats::new(augment));
 
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(&augment.name))
