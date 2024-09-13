@@ -71,12 +71,8 @@ pub struct Bullet {
     pub attach_buff: Vec<BuffInfo>,
 
     /// Extra data depending on the bullet type.
-    #[serde(default, skip_serializing_if = "is_none_bullet_extra")]
+    #[serde(default, skip_serializing_if = "BulletExtra::is_none")]
     pub extra: BulletExtra,
-}
-
-fn is_none_bullet_extra(extra: &BulletExtra) -> bool {
-    matches!(extra, BulletExtra::None)
 }
 
 /// Additional bullet data.
@@ -181,15 +177,12 @@ bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
     #[repr(transparent)]
     pub struct BulletFlags: u8 {
+        /// Ignores bullet shields.
         const IGNORE_SHIELD = 1 << 0;
+        /// Ignores surface ships.
         const IGNORE_SURFACE = 1 << 1;
+        /// Ignores diving ships.
         const IGNORE_DIVE = 1 << 2;
-    }
-}
-
-impl BulletFlags {
-    pub fn dive_filter(self) -> Self {
-        self & (BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE)
     }
 }
 
@@ -346,6 +339,20 @@ define_data_enum! {
     }
 }
 
+impl BulletExtra {
+    pub fn is_none(&self) -> bool {
+        matches!(self, BulletExtra::None)
+    }
+}
+
+impl BulletFlags {
+    /// Filters to the flags that are relevant for the dive filter,
+    /// i.e. which targets the bullet can't hit.
+    pub fn dive_filter(self) -> Self {
+        self & (BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE)
+    }
+}
+
 impl AugmentUsability {
     /// If restricted by hull types, gets the hull types. Otherwise, returns [`None`].
     pub fn hull_types(&self) -> Option<&[HullType]> {
@@ -377,23 +384,28 @@ impl ArmorModifiers {
     /// Sets the modifier for a specific kind of armor.
     #[must_use]
     pub fn with_modifier(mut self, armor_kind: ShipArmor, value: f64) -> Self {
-        *match armor_kind {
+        *self.modifier_mut(armor_kind) = value;
+        self
+    }
+
+    #[inline]
+    fn modifier_mut(&mut self, armor_kind: ShipArmor) -> &mut f64 {
+        match armor_kind {
             ShipArmor::Light => &mut self.0,
             ShipArmor::Medium => &mut self.1,
             ShipArmor::Heavy => &mut self.2,
-        } = value;
-        self
+        }
     }
 }
 
 impl From<[f64; 3]> for ArmorModifiers {
-    fn from(value: [f64; 3]) -> Self {
-        ArmorModifiers(value[0], value[1], value[2])
+    fn from([l, m, h]: [f64; 3]) -> Self {
+        Self(l, m, h)
     }
 }
 
 impl From<(f64, f64, f64)> for ArmorModifiers {
-    fn from(value: (f64, f64, f64)) -> Self {
-        ArmorModifiers(value.0, value.1, value.2)
+    fn from((l, m, h): (f64, f64, f64)) -> Self {
+        Self(l, m, h)
     }
 }

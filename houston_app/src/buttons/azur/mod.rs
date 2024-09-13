@@ -16,6 +16,8 @@ utils::define_simple_error!(AugmentParseError: "unknown augment");
 
 /// Gets the URL to a ship on the wiki.
 fn get_ship_wiki_url(base_ship: &azur_lane::ship::ShipData) -> CreateEmbedAuthor {
-    let wiki_url = config::azur_lane::WIKI_BASE_URL.to_owned() + &urlencoding::encode(&base_ship.name);
+    let mut wiki_url = config::azur_lane::WIKI_BASE_URL.to_owned();
+    urlencoding::Encoded::new(&base_ship.name).append_to(&mut wiki_url);
+
     CreateEmbedAuthor::new(&base_ship.name).url(wiki_url)
 }

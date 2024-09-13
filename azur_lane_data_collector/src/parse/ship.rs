@@ -29,14 +29,6 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
         }};
     }
 
-    /// Reads the values for a stat without level growth.
-    macro_rules! get_non_grow_stat {
-        ($index:literal) => {{
-            let base: f64 = attrs.get($index)?;
-            base
-        }};
-    }
-
     let base_list: LuaTable = read!(set.statistics, "base_list");
     let parallel_max: LuaTable = read!(set.statistics, "parallel_max");
     let preload_count: LuaTable = read!(set.statistics, "preload_count");
@@ -105,8 +97,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
             avi: get_stat!(5),
             acc: get_stat!(8),
             asw: get_stat!(12),
-            spd: get_non_grow_stat!(10),
-            lck: get_non_grow_stat!(11),
+            spd: attrs.get(10)?,
+            lck: attrs.get(11)?,
             cost: read!(set.template, "oil_at_end"),
             oxy: read!(set.statistics, "oxy_max"),
             amo: read!(set.statistics, "ammo")

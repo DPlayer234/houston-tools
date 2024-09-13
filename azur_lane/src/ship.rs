@@ -352,7 +352,7 @@ impl ShipStat {
         Self(0f64, 0f64, 0f64)
     }
 
-    /// Sets the base value, aka the level 1 stats.
+    /// Sets the base value.
     #[must_use]
     pub const fn with_base(mut self, base: f64) -> Self {
         self.0 = base;
@@ -373,7 +373,10 @@ impl ShipStat {
         self
     }
 
-    /// The base value, aka the level 1 stats.
+    /// The base value.
+    ///
+    /// This isn't the level 1 value and includes various enhancements.
+    /// See also: [`ShipStat::calc`]
     pub const fn base(&self) -> f64 { self.0 }
 
     /// The level growth value.
@@ -384,7 +387,9 @@ impl ShipStat {
 
     /// Calculates the actual value.
     ///
-    /// Depending on how the data was stored, this may be inaccurate for levels below 100.
+    /// It should be noted that, due to the way this is generally stored, asking for levels
+    /// below 100 will lead to inaccurate results. In particular, stats from Limit Breaks,
+    /// Enhancement, Dev, Fate Simulation, and META Repair always represent the maxed state.
     #[must_use]
     pub fn calc(&self, level: u32, affinity: f64) -> f64 {
         (self.base() + self.growth() * f64::from(level - 1) * 0.001) * affinity + self.fixed()
