@@ -1,3 +1,9 @@
+//! Provides helper functions to work with blocks of memory.
+//!
+//! For example, this allows const-time conversion of slices into arrays via [`as_sized`].
+
+use std::cell::UnsafeCell;
+
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
 ///
@@ -143,5 +149,24 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     unsafe {
         transmute_slice(slice)
+    }
+}
+
+/// Temporary until the std's version is stabilized.
+#[derive(Default)]
+#[repr(transparent)]
+pub(crate) struct SyncUnsafeCell<T: ?Sized> {
+    value: UnsafeCell<T>,
+}
+
+unsafe impl<T: Sync + ?Sized> Sync for SyncUnsafeCell<T> {}
+
+impl<T> SyncUnsafeCell<T> {
+    pub const fn new(value: T) -> Self {
+        Self { value: UnsafeCell::new(value) }
+    }
+
+    pub const fn get(&self) -> *mut T {
+        self.value.get()
     }
 }

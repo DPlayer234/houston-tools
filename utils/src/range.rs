@@ -1,3 +1,8 @@
+//! Provides numeric ranges with compile-time provided limits
+//! with enforcement at both compile and runtime.
+//!
+//! The primary intent is to allow easy parsing of user range inputs.
+
 use std::fmt::{Display, Debug};
 use std::ops::{RangeBounds, Bound};
 use std::error::Error as StdError;
@@ -67,6 +72,7 @@ impl<T: Display + RangeNum> Display for OutOfRange<T> {
     }
 }
 
+/// Const `?` as long as the error type matches.
 macro_rules! try_const {
     ($e:expr) => {{
         match $e {
@@ -76,7 +82,9 @@ macro_rules! try_const {
     }};
 }
 
+/// Marker trait for number types used within the range types of this module.
 pub trait RangeNum {
+    /// The error type for the [`std::str::FromStr`] implementation.
     type FromStrError: StdError;
 }
 

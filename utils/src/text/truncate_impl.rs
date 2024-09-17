@@ -1,5 +1,7 @@
 use std::borrow::{Borrow, Cow};
 
+const ELLIPSIS: char = '\u{2026}';
+
 /// Truncates a string to the given `len` (in terms of [`char`], not [`u8`]).
 /// If a truncation happens, appends an ellipsis.
 ///
@@ -10,7 +12,7 @@ use std::borrow::{Borrow, Cow};
 ///
 /// Given an _immutable reference_, it will return a [`Cow<str>`], either referencing the original or storing a modified copy.
 ///
-/// Give a _mutable reference_, it will modify the value in place.
+/// Given a _mutable reference_, it will modify the value in place.
 ///
 /// # Panics
 ///
@@ -54,6 +56,12 @@ pub fn truncate<T: Truncate>(str: T, len: usize) -> T::Output {
     T::truncate(str, len)
 }
 
+// Note: allowing `&mut &mut str` seems tempting, but the ellipsis character takes 3 bytes in UTF-8.
+// Furthermore, actually mutating a `&mut str` not only requires unsafe code, it would need to be
+// unsafe to call because the caller has to make sure the source reference isn't used anymore as
+// the full buffer may no longer even be valid UTF-8.
+// Plus, I don't have a reason for it currently.
+
 #[inline]
 fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
     assert!(len >= 1, "cannot truncate to less than 1 character");
@@ -65,6 +73,8 @@ fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
     indices.next().and(Some(end_at))
 }
 
+/// Exists to support the [`truncate`] function.
+///
 /// Not public API.
 #[doc(hidden)]
 pub trait Truncate {
@@ -97,7 +107,7 @@ impl<'a, 'b> Truncate for &'b mut Cow<'a, str> {
         if let Some(end_at) = find_truncate_at(this, len) {
             let str = this.to_mut();
             str.truncate(end_at);
-            str.push('\u{2026}');
+            str.push(ELLIPSIS);
         }
     }
 }
@@ -133,7 +143,7 @@ impl<'a> Truncate for &'a mut String {
     fn truncate(this: Self, len: usize) -> Self::Output {
         if let Some(end_at) = find_truncate_at(this, len) {
             this.truncate(end_at);
-            this.push('\u{2026}');
+            this.push(ELLIPSIS);
         }
     }
 }

@@ -1,11 +1,29 @@
+//! Provides ways to encode binary data as valid UTF-8 strings and
+//! convert those strings back into binary data.
+//!
+//! To avoid trimming of white-space at the start and end of strings,
+//! every string output has delimiters added.
+//!
+//! The current supported formats are:
+//!
+//! ## Base 256
+//!
+//! Via [`to_b256`] and [`from_b256`]:
+//! Encodes each byte as one [`char`] of the output with the equivalent code point value.
+//!
+//! ## Base 65536:
+//!
+//! Via [`to_b65536`] and [`from_b65536`]:
+//! Encodes pairs of bytes as one [`char`] of the output with a unique code point for each possible input.
+
 crate::define_simple_error!(
-    /// Error decoding base256 data in [`from_b256`].
+    /// Error decoding base 256 data in [`from_b256`].
     Base256Error(()):
     "base256 data is invalid"
 );
 
 crate::define_simple_error!(
-    /// Error decoding base65536 data in [`from_b65536`].
+    /// Error decoding base 65536 data in [`from_b65536`].
     Base65536Error(()):
     "base65536 data is invalid"
 );
@@ -41,17 +59,16 @@ pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
 
 /// Converts the bytes to "base 65535".
 ///
-/// Byte will be paired. The combined value of each pair will mapped to UTF-8 characters
+/// Bytes will be paired. The combined value of each pair will mapped to UTF-8 characters
 /// and the sequence is then joined. A marker for whether the input sequence had an odd
 /// amount of bytes will be stored.
 ///
 /// The sequence will be prefixed with a header character and ends with `&`.
 #[must_use]
 pub fn to_b65536(bytes: &[u8]) -> String {
-    // A little testing indicates that the output
-    // generally takes 25%-50% more bytes.
-    let expected_size = 2 + bytes.len() + (bytes.len() >> 1);
-
+    // Testing indicates more than 100% is normal, usually about ~130%.
+    // But more isn't uncommon and more than 200% is rare, so we go for that.
+    let expected_size = 2 + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
     // Note that this '&' is unsafely assumed
@@ -95,7 +112,11 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
         })
         .ok_or(Base65536Error(()))?;
 
-    let mut result = Vec::new();
+    // Extending the logic in `to_b65536`, less than ~130% is also common.
+    // This almost always has enough space and rarely leads to more than
+    // half the capacity going entirely unused.
+    let expected_size = str.len();
+    let mut result = Vec::with_capacity(expected_size);
     for c in str.chars() {
         let bytes = char_to_bytes(c)?;
         result.extend(bytes);
@@ -208,7 +229,7 @@ mod test {
     }
 
     #[test]
-    fn invalid_char_b65535_fails() {
+    fn invalid_char_b65536_fails() {
         let encoded = black_box("#\u{0100}&");
         from_b256(encoded).expect_err("U+256 is out of range");
     }

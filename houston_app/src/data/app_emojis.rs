@@ -5,7 +5,7 @@ use serenity::all::{Emoji, Http, ReactionType};
 use super::HBotConfig;
 
 macro_rules! generate {
-    ({ $($key:ident = $name:literal $(if $condition:path)?;)* }) => {
+    ({ $($key:ident = $name:literal $(if $condition:expr)?;)* }) => {
         #[derive(Debug)]
         pub struct HAppEmojiStore {
             $(pub $key: ReactionType,)*

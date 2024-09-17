@@ -59,6 +59,7 @@ Additionally, when Azur Lane data is loaded, the azur command becomes available.
 | azur search-equip   | Searches for equipment. |
 | azur augment        | Shows information about an augment module. |
 | azur search-augment | Searches for augment modules. |
+| azur reload-time    | Calculates the actual reload time for a weapon. |
 
 # Azur Lane Data Collector
 

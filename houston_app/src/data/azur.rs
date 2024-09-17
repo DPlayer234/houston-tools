@@ -29,10 +29,35 @@ impl HAzurLane {
     /// Constructs extended data from definitions.
     #[must_use]
     pub fn load_from(data_path: PathBuf) -> Self {
-        let mut data = match Self::load_definitions(&data_path) {
+        // loads the actual definition file from disk
+        // the error is just a short description of the error
+        fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
+            use anyhow::Context;
+            let f = std::fs::File::open(data_path.join("main.json")).context("Failed to read Azur Lane data.")?;
+            let data = simd_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
+            Ok(data)
+        }
+
+        // this function should ensure we don't deal with empty paths, absolute or rooted paths,
+        // or ones that refer to parent directories to detect potential path traversal attacks
+        // when loading untrusted data. note: we only log this, we don't abort.
+        fn is_path_sus(path: &Path) -> bool {
+            path.components().any(|p| !matches!(p, std::path::Component::Normal(_))) ||
+            path.components().next().is_none()
+        }
+
+        fn verify_ship(ship: &ShipData) {
+            for skin in &ship.skins {
+                if is_path_sus(Path::new(&skin.image_key)) {
+                    log::warn!("image_key '{}' for ship skin {} ({}) may be part of path traversal attack", skin.image_key, skin.skin_id, skin.name);
+                }
+            }
+        }
+
+        let mut data = match load_definitions(&data_path) {
             Ok(data) => data,
             Err(err) => {
-                log::error!("No Azur Lane data: {err}");
+                log::error!("No Azur Lane data: {err:?}");
                 return Self::default();
             }
         };
@@ -64,6 +89,8 @@ impl HAzurLane {
         }
 
         for (index, data) in data.ships.iter().enumerate() {
+            verify_ship(data);
+
             ship_id_to_index.insert(data.group_id, index);
             ship_simsearch.insert(index, &data.name);
 
@@ -109,12 +136,6 @@ impl HAzurLane {
             ship_id_to_augment_index,
             chibi_sprite_cache: DashMap::new()
         }
-    }
-
-    fn load_definitions(data_path: &Path) -> Result<azur_lane::DefinitionData, &'static str> {
-        let f = std::fs::File::open(data_path.join("main.json")).map_err(|_| "Failed to read Azur Lane data.")?;
-        let data = simd_json::from_reader(f).map_err(|_| "Failed to parse Azur Lane data.")?;
-        Ok(data)
     }
 
     /// Gets all known ships.

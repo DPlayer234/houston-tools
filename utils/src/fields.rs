@@ -1,3 +1,5 @@
+//! Provides traits and macros to refer to a field of a struct.
+
 /// Represents access to a field of a struct.
 ///
 /// Use the [`field`] macro to obtain instances.

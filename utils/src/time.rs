@@ -2,13 +2,22 @@
 
 use chrono::prelude::*;
 
+use crate::mem::SyncUnsafeCell;
+
 /// Discord's epoch starts at "2015-01-01T00:00:00+00:00"
 const DISCORD_EPOCH: u64 = 1_420_070_400_000;
 
-/// Stores a timestamp on when the bot was started.
-static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
+/// Stores a timestamp on when the application was started.
+//
+// I don't think it's actually possible to cause safety issues on _expected hardware_
+// with `DateTime` - it has invariants, but they exist per field and those are small
+// enough to have atomic writes/reads.
+// Either way, it's still UB to Rust, so we treat it with the appropriate care.
+static STARTUP_TIME: SyncUnsafeCell<DateTime<Utc>> = SyncUnsafeCell::new(DateTime::UNIX_EPOCH);
 
 /// Marks the current time as the startup time of the application.
+///
+/// This should be called once at the start of your `main` entry point.
 ///
 /// # Safety
 ///
@@ -16,7 +25,7 @@ static mut STARTUP_TIME: DateTime<Utc> = DateTime::UNIX_EPOCH;
 /// This must not be called concurrently with itself or [`get_startup_time`].
 pub unsafe fn mark_startup_time() {
     // SAFETY: Caller guarantees exclusive access
-    unsafe { STARTUP_TIME = Utc::now(); }
+    unsafe { *STARTUP_TIME.get() = Utc::now(); }
 }
 
 /// Gets the marked startup time of the application.
@@ -25,7 +34,7 @@ pub unsafe fn mark_startup_time() {
 #[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
     // SAFETY: only concurrent reads
-    unsafe { STARTUP_TIME }
+    unsafe { *STARTUP_TIME.get() }
 }
 
 /// Gets the creation time from a snowflake
@@ -41,12 +50,19 @@ pub trait TimeMentionable {
     /// Formats a mention for a timestamp.
     fn mention(&self, format: &'static str) -> TimeMention;
 
+    /// Formats a mention with the short time (t) format.
     fn short_time(&self) -> TimeMention { self.mention("t") }
+    /// Formats a mention with the long time (T) format.
     fn long_time(&self) -> TimeMention { self.mention("T") }
+    /// Formats a mention with the short date (d) format.
     fn short_date(&self) -> TimeMention { self.mention("d") }
+    /// Formats a mention with the long date (D) format.
     fn long_date(&self) -> TimeMention { self.mention("D") }
+    /// Formats a mention with the short date time (f) format.
     fn short_date_time(&self) -> TimeMention { self.mention("f") }
+    /// Formats a mention with the long date time (F) format.
     fn long_date_time(&self) -> TimeMention { self.mention("F") }
+    /// Formats a mention with the relative (R) format.
     fn relative(&self) -> TimeMention { self.mention("R") }
 }
 
