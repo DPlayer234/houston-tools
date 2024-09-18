@@ -13,7 +13,7 @@ lto = true
 panic = 'abort'
 
 [patch.crates-io]
-serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "c7540cd3ee97662a7494516ce58a26c83fcf9419" }
+serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "d3665b7f25019b0fbf163c38014fe2cd31935416" }
 poise = { git = "https://github.com/serenity-rs/poise.git", rev = "575025909b063c3b998659abf9d241c8790404ee" }
 
 [workspace.lints.rust]

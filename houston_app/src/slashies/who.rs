@@ -203,6 +203,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         flag!(SEND_VOICE_MESSAGES),
         flag!(SET_VOICE_CHANNEL_STATUS),
         flag!(SEND_POLLS),
+        flag!(USE_EXTERNAL_APPS),
     ];
 
     write!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits()).discard();
