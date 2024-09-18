@@ -3,6 +3,7 @@
 //! For example, this allows const-time conversion of slices into arrays via [`as_sized`].
 
 use std::cell::UnsafeCell;
+use std::mem::MaybeUninit;
 
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
@@ -149,6 +150,18 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     unsafe {
         transmute_slice(slice)
+    }
+}
+
+/// Casts a slice of [`MaybeUninit`] to a slice of its inner type.
+///
+/// # Safety
+///
+/// The memory of the slice must have been initialized for `T`.
+pub(crate) unsafe fn assume_init_slice_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
+    // SAFETY: same layout, caller guarantees the memory is initialized
+    unsafe {
+        std::mem::transmute::<&mut [MaybeUninit<T>], &mut [T]>(slice)
     }
 }
 

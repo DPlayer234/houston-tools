@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "1.6.3"
+version = "1.7.0"
 edition = "2021"
 rust-version = "1.80"
 
@@ -25,7 +25,6 @@ rand = "0.8.5"
 serde = "1.0.210"
 serde_bare = "0.5.0"
 simd-json = { version = "0.13.10", features = ["serde"] }
-simsearch = "0.2.5"
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 

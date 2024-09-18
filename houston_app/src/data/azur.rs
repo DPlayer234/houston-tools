@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use simsearch::SimSearch;
+use utils::fuzzy::Search;
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
@@ -16,11 +16,11 @@ pub struct HAzurLane {
     equips: Vec<Equip>,
     augments: Vec<Augment>,
     ship_id_to_index: HashMap<u32, usize>,
-    ship_simsearch: SimSearch<usize>,
+    ship_simsearch: Search<()>,
     equip_id_to_index: HashMap<u32, usize>,
-    equip_simsearch: SimSearch<usize>,
+    equip_simsearch: Search<()>,
     augment_id_to_index: HashMap<u32, usize>,
-    augment_simsearch: SimSearch<usize>,
+    augment_simsearch: Search<()>,
     ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
     chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
 }
@@ -62,17 +62,14 @@ impl HAzurLane {
             }
         };
 
-        let prefix_options = simsearch::SearchOptions::new()
-            .threshold(0.9);
-
         let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
-        let mut ship_simsearch = SimSearch::new_with(prefix_options.clone());
+        let mut ship_simsearch = Search::new();
 
         let mut equip_id_to_index = HashMap::with_capacity(data.equips.len());
-        let mut equip_simsearch = SimSearch::new_with(prefix_options.clone());
+        let mut equip_simsearch = Search::new();
 
         let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
-        let mut augment_simsearch = SimSearch::new_with(prefix_options);
+        let mut augment_simsearch = Search::new();
         let mut ship_id_to_augment_index = HashMap::<u32, Vec<usize>>::with_capacity(data.augments.len());
 
         // we trim away "hull_disallowed" equip values that never matter in practice to give nicer outputs
@@ -92,7 +89,7 @@ impl HAzurLane {
             verify_ship(data);
 
             ship_id_to_index.insert(data.group_id, index);
-            ship_simsearch.insert(index, &data.name);
+            ship_simsearch.insert(&data.name, ());
 
             // collect known "equip & hull" pairs
             insert_equip_exist(&mut actual_equip_exist, data);
@@ -100,12 +97,13 @@ impl HAzurLane {
 
         for (index, data) in data.equips.iter_mut().enumerate() {
             equip_id_to_index.insert(data.equip_id, index);
-            equip_simsearch.insert_tokens(index, &[
-                &data.name,
+            equip_simsearch.insert(&format!(
+                "{} {} {} {} {}",
+                data.name,
                 data.faction.name(), data.faction.prefix().unwrap_or("EX"),
                 data.kind.name(),
                 data.rarity.name()
-            ]);
+            ), ());
 
             // trim away irrelevant disallowed hulls
             data.hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
@@ -113,7 +111,7 @@ impl HAzurLane {
 
         for (index, data) in data.augments.iter().enumerate() {
             augment_id_to_index.insert(data.augment_id, index);
-            augment_simsearch.insert(index, &data.name);
+            augment_simsearch.insert(&data.name, ());
 
             if let Some(ship_id) = data.usability.unique_ship_id() {
                 ship_id_to_augment_index.entry(ship_id)
@@ -121,6 +119,10 @@ impl HAzurLane {
                     .or_insert(vec![index]);
             }
         }
+
+        ship_simsearch.shrink_to_fit();
+        equip_simsearch.shrink_to_fit();
+        augment_simsearch.shrink_to_fit();
 
         HAzurLane {
             data_path,
@@ -161,7 +163,7 @@ impl HAzurLane {
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ships.get(i))
+        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ships.get(i.index))
     }
 
     /// Gets an equip by its ID.
@@ -172,7 +174,7 @@ impl HAzurLane {
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> {
-        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equips.get(i))
+        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equips.get(i.index))
     }
 
     /// Gets an augment by its ID.
@@ -183,7 +185,7 @@ impl HAzurLane {
 
     /// Gets all augments by a name prefix.
     pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> {
-        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augments.get(i))
+        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augments.get(i.index))
     }
 
     /// Gets unique augments by their associated ship ID.
