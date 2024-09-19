@@ -1,4 +1,47 @@
+//! Provides a collection that allows fuzzy text searching.
+//!
+//! Build a [`Search`] to be able to search for things by a text value,
+//! and then [search](`Search::search`) it for [Matches](`Match`).
+//!
+//! Searches happen by normalized text fragments with sizes based on the `MIN` and `MAX`
+//! parameters to the [`Search`]. It first searches for the larger fragments, falling
+//! back to smaller ones if no matches are found.
+//!
+//! # Fragmenting
+//!
+//! The normalized text is fragmented as moving windows of a given size, similar to the
+//! [`windows`](std::slice::Windows) method on slices.
+//!
+//! These fragments are compared to known fragments and the corresponding values are
+//! considered as match candidates.
+//!
+//! # Match Score
+//!
+//! The [`Match::score`] is based on how many of these fragments matched the original text.
+//! `1.0` indicates _every_ fragment of the input had a match, but this doesn't indicate
+//! an exact match with the original text.
+//!
+//! The final set of matches will often contain vaguely similar texts, even if there is an
+//! exact match. Furthermore, since the [`Match::score`] cannot be used to check for exact
+//! matches, _multiple_ matches may have a score of `1.0` for the same search.
+//!
+//! This could, for instance, happen if one were to search for `"egg"` when the search
+//! contains `"Eggs and Bacon"` and `"Egg (raw)"`.
+//!
+//! # Text Normalization
+//!
+//! The normalization lowercases the entire text, and non-alphanumeric sequences are
+//! translated into "separators". A separator is added to the start and end also.
+//!
+//! For instance, the following texts are equivalent after normalization:
+//! - `"Hello World!"`
+//! - `hello-world`
+//! - `(hELLO)(wORLD)`
+
 use std::collections::HashMap;
+
+use arrayvec::ArrayVec;
+use smallvec::SmallVec;
 
 // exists to save some memory.
 // this only becomes an issue once more than 4 BILLION elements have been added to the Search.
@@ -7,6 +50,14 @@ use std::collections::HashMap;
 type MatchIndex = u32;
 #[cfg(target_pointer_width = "16")]
 type MatchIndex = u16;
+
+// amount of MatchIndex values that can be stored within a SmallVec without increasing its size.
+#[cfg(target_pointer_width = "64")]
+const MATCH_INLINE: usize = 4;
+#[cfg(target_pointer_width = "32")]
+const MATCH_INLINE: usize = 2;
+#[cfg(target_pointer_width = "16")]
+const MATCH_INLINE: usize = 2;
 
 /// Provides a fuzzy text searcher.
 ///
@@ -19,7 +70,7 @@ type MatchIndex = u16;
 #[derive(Debug, Clone)]
 pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
     min_match_score: f64,
-    match_map: HashMap<Segment<MAX>, Vec<MatchIndex>>,
+    match_map: HashMap<Segment<MAX>, SmallVec<[MatchIndex; MATCH_INLINE]>>,
     values: Vec<T>,
 }
 
@@ -29,17 +80,23 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         const { assert!(MIN <= MAX); }
 
         Self {
-            min_match_score: 0.3,
+            min_match_score: 0.5,
             match_map: HashMap::new(),
             values: Vec::new(),
         }
     }
 
     /// Changes the minimum matching score for returned values.
-    /// The default is `0.3`.
+    /// The default is `0.5`.
     ///
     /// Check [`Match::score`] for more details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided score is less than `0.0` or greater than `1.0`.
     pub fn with_min_match_score(mut self, score: f64) -> Self {
+        assert!((0.0..=1.0).contains(&score));
+
         self.min_match_score = score;
         self
     }
@@ -69,7 +126,8 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
     /// Searches for a given text.
     ///
-    /// The returned entries are sortede by their score.
+    /// The returned entries are sorted by their score.
+    /// The first match will have the highest score.
     ///
     /// Check [`Match::score`] for more details.
     pub fn search<'st>(&'st self, value: &str) -> Vec<Match<&'st T>> {
@@ -79,8 +137,8 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         if norm.len() >= MIN {
             let upper = MAX.min(norm.len());
 
-            for s in (MIN..=upper).rev() {
-                results = self.find_with_segment_size(&norm, s);
+            for size in (MIN..=upper).rev() {
+                results = self.find_with_segment_size(&norm, size);
 
                 if !results.is_empty() {
                     break;
@@ -104,72 +162,61 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     }
 
     #[inline]
-    fn add_segments_of(&mut self, norm: &[u16], gram_size: usize) {
+    fn add_segments_of(&mut self, norm: &[u16], size: usize) {
         let index: MatchIndex = self.values.len()
             .try_into()
             .expect("cannot add more than u32::MAX elements to Search");
 
-        for s in Segment::iterate(norm, gram_size) {
+        for segment in iter_segments(norm, size) {
             self.match_map
-                .entry(s)
+                .entry(segment)
                 .or_default()
                 .push(index);
         }
     }
 
     fn find_with_segment_size<'st>(&'st self, norm: &[u16], size: usize) -> Vec<Match<&'st T>> {
-        use std::mem::MaybeUninit;
+        const MAX_MATCHES: usize = 32;
 
-        #[derive(Clone, Copy)]
-        struct Pair {
-            key: MatchIndex,
-            value: usize,
+        struct MatchInfo {
+            count: MatchIndex,
+            index: MatchIndex,
         }
 
-        let mut match_set = [<MaybeUninit<Pair>>::uninit(); 32];
-        let mut match_count: usize = 0;
+        let mut results = <ArrayVec<MatchInfo, MAX_MATCHES>>::new();
+        let mut total = 0usize;
 
-        let mut results = Vec::new();
+        for segment in iter_segments(norm, size) {
+            total += 1;
+            let Some(match_entry) = self.match_map.get(&segment) else { continue };
 
-        for s in Segment::iterate(norm, size) {
-            let Some(match_entry) = self.match_map.get(&s) else { continue };
+            for &index in match_entry {
+                let res = results
+                    .iter_mut()
+                    .find(|m| m.index == index);
 
-            for &match_index in match_entry {
-                // SAFETY: the memory region we take must have been initialized by now
-                let real_set = unsafe { crate::mem::assume_init_slice_mut(&mut match_set[..match_count]) };
-                let real_count = real_set.iter_mut().find(|p| p.key == match_index);
-
-                if let Some(pair) = real_count {
-                    pair.value += 1
-                } else if match_count < match_set.len() {
-                    results.push(Match {
-                        score: 0.0,
-                        index: match_index as usize,
-                        data: &self.values[match_index as usize],
-                    });
-
-                    match_set[match_count].write(Pair {
-                        key: match_index,
-                        value: 1,
-                    });
-
-                    match_count += 1;
+                if let Some(res) = res {
+                    res.count += 1;
+                } else {
+                    // discard results past the max capacity
+                    _ = results.try_push(MatchInfo { count: 1, index });
                 }
             }
         }
 
-        let total = (norm.len() + 1 - size) as f64;
-        for (index, r#match) in results.iter_mut().enumerate() {
-            let count = unsafe { match_set[index].assume_init_ref() }.value as f64;
-            r#match.score = count / total;
-        }
+        let total = total as f64;
+        let match_count = total * self.min_match_score;
 
-        results.retain(|r| r.score >= self.min_match_score);
+        results.retain(|r| f64::from(r.count) >= match_count);
+        results.sort_by_key(|r| !r.count);
 
-        #[allow(clippy::cast_possible_wrap)]
-        #[allow(clippy::cast_possible_truncation)]
-        results.sort_by_key(|r| -(r.score.to_bits() as isize));
-        results
+        results.into_iter()
+            .map(|r| Match {
+                score: f64::from(r.count) / total,
+                index: r.index as usize,
+                data: &self.values[r.index as usize],
+            })
+            .collect()
     }
 }
 
@@ -197,32 +244,76 @@ pub struct Match<T> {
 }
 
 /// A search segment. Used as a key.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-struct Segment<const N: usize>([u16; N]);
+type Segment<const N: usize> = [u16; N];
 
-impl<const N: usize> Segment<N> {
-    unsafe fn new_unchecked(pts: &[u16]) -> Self {
-        let mut res = Segment([0; N]);
+unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
+    let mut res = [0u16; N];
 
-        // SAFETY: Caller never passes segments larger than the MAX_SIZE.
-        unsafe { res.0.get_unchecked_mut(..pts.len()) }.copy_from_slice(pts);
-        res
-    }
-
-    fn iterate(slice: &[u16], size: usize) -> impl Iterator<Item = Self> + '_ {
-        assert!((1..=N).contains(&size));
-        slice.windows(size)
-            .map(|w| unsafe { Segment::new_unchecked(w) })
-    }
+    // SAFETY: Caller passes segments with size N.
+    unsafe { res.get_unchecked_mut(..pts.len()) }.copy_from_slice(pts);
+    res
 }
 
-fn norm_str(str: &str) -> Vec<u16> {
-    let del = std::iter::once(1u16);
-    let main = str
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .filter(|c| c.is_alphanumeric())
-        .map(|c| c as u16);
+fn iter_segments<const N: usize>(slice: &[u16], size: usize) -> impl Iterator<Item = Segment<N>> + '_ {
+    assert!((1..=N).contains(&size));
 
-    del.clone().chain(main).chain(del).collect()
+    slice.windows(size)
+        .map(|w| unsafe { new_segment(w) })
+}
+
+fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
+    let mut out = SmallVec::new();
+    let mut whitespace = true;
+
+    out.push(1u16);
+
+    for c in str.chars() {
+        if c.is_alphanumeric() {
+            let lowercase = c.to_lowercase()
+                .filter(|c| c.is_alphanumeric())
+                .map(|c| c as u16);
+
+            out.extend(lowercase);
+            whitespace = false;
+        } else if !whitespace {
+            out.push(1);
+            whitespace = true;
+        }
+    }
+
+    if !whitespace {
+        out.push(1u16);
+    }
+
+    out
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Search, Match};
+
+    type TSearch = Search<u8>;
+
+    #[test]
+    fn search() {
+        let search = {
+            let mut search = TSearch::new().with_min_match_score(0.2);
+            search.insert("Hello World!", 1u8);
+            search.insert("Hello There.", 2);
+            search.insert("World Welcome", 3);
+            search.insert("Nonmatch", 4);
+            search
+        };
+
+        assert_eq!(&just_data(search.search("ello")), &[1, 2]);
+        assert_eq!(&just_data(search.search("world")), &[1, 3]);
+        assert_eq!(&just_data(search.search("el e")), &[1, 2, 3]);
+        assert_eq!(&just_data(search.search("non")), &[4]);
+    }
+
+    fn just_data(v: Vec<Match<&u8>>) -> Vec<u8> {
+        let mut v: Vec<u8> = v.into_iter().map(|p| *p.data).collect();
+        v.sort();
+        v
+    }
 }
