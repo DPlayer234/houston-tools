@@ -2,7 +2,7 @@
 
 use chrono::prelude::*;
 
-use crate::mem::SyncUnsafeCell;
+use crate::private::cell::SyncUnsafeCell;
 
 /// Discord's epoch starts at "2015-01-01T00:00:00+00:00"
 const DISCORD_EPOCH: u64 = 1_420_070_400_000;

@@ -5,11 +5,12 @@ use std::fmt::Debug;
 pub mod fields;
 pub mod fuzzy;
 pub mod mem;
-pub mod prefix_map;
 pub mod range;
 pub mod str_as_data;
 pub mod text;
 pub mod time;
+
+mod private;
 
 /// Convenience method to calculate the hash of a value with the [`std::hash::DefaultHasher`].
 #[must_use]

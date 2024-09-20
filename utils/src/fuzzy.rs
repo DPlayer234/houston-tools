@@ -39,9 +39,12 @@
 //! - `(hELLO)(wORLD)`
 
 use std::collections::HashMap;
+use std::ptr::NonNull;
 
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
+
+use crate::private::ptr::RawRef;
 
 // exists to save some memory.
 // this only becomes an issue once more than 4 BILLION elements have been added to the Search.
@@ -70,6 +73,9 @@ const MATCH_INLINE: usize = 2;
 #[derive(Debug, Clone)]
 pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
     min_match_score: f64,
+
+    // Safety invariant: Every value in the vectors within `match_map`
+    // _must_ be a valid index into `values`. Unsafe code may rely on this.
     match_map: HashMap<Segment<MAX>, SmallVec<[MatchIndex; MATCH_INLINE]>>,
     values: Vec<T>,
 }
@@ -110,18 +116,23 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// The second item would be `1`, the third `2`, and so on.
     pub fn insert(&mut self, value: &str, data: T) -> usize {
         let norm = norm_str(value);
-        let index = self.values.len();
+        let index: MatchIndex = self.values.len()
+            .try_into()
+            .expect("cannot add more than u32::MAX elements to Search");
+
+        // add the data first so safety invariants aren't violated if a panic occurs.
+        self.values.push(data);
 
         if norm.len() >= MIN {
             let upper = MAX.min(norm.len());
 
             for s in (MIN..=upper).rev() {
-                self.add_segments_of(&norm, s);
+                // SAFETY: index is a valid index into values
+                unsafe { self.add_segments_of(index, &norm, s); }
             }
         }
 
-        self.values.push(data);
-        index
+        index as usize
     }
 
     /// Searches for a given text.
@@ -130,16 +141,15 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// The first match will have the highest score.
     ///
     /// Check [`Match::score`] for more details.
-    pub fn search<'st>(&'st self, value: &str) -> Vec<Match<&'st T>> {
+    pub fn search<'st>(&'st self, value: &str) -> MatchIter<'st, T> {
         let norm = norm_str(value);
-        let mut results = Vec::new();
+        let mut results = MatchIter::new_empty();
 
         if norm.len() >= MIN {
             let upper = MAX.min(norm.len());
 
             for size in (MIN..=upper).rev() {
                 results = self.find_with_segment_size(&norm, size);
-
                 if !results.is_empty() {
                     break;
                 }
@@ -161,12 +171,13 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         // println!("seg: {}, mem: ~{}", self.match_map.len(), self.match_map.len() * 60 + self.match_map.values().map(|v| v.len()).sum::<usize>() * size_of::<MatchIndex>());
     }
 
+    /// Adds the segments of the `norm` slice to [`Self::match_map`].
+    ///
+    /// # Safety
+    ///
+    /// `index as usize` must be a valid index into [`Self::values`].
     #[inline]
-    fn add_segments_of(&mut self, norm: &[u16], size: usize) {
-        let index: MatchIndex = self.values.len()
-            .try_into()
-            .expect("cannot add more than u32::MAX elements to Search");
-
+    unsafe fn add_segments_of(&mut self, index: MatchIndex, norm: &[u16], size: usize) {
         for segment in iter_segments(norm, size) {
             self.match_map
                 .entry(segment)
@@ -175,13 +186,8 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         }
     }
 
-    fn find_with_segment_size<'st>(&'st self, norm: &[u16], size: usize) -> Vec<Match<&'st T>> {
+    fn find_with_segment_size<'st>(&'st self, norm: &[u16], size: usize) -> MatchIter<'st, T> {
         const MAX_MATCHES: usize = 32;
-
-        struct MatchInfo {
-            count: MatchIndex,
-            index: MatchIndex,
-        }
 
         let mut results = <ArrayVec<MatchInfo, MAX_MATCHES>>::new();
         let mut total = 0usize;
@@ -191,6 +197,11 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
             let Some(match_entry) = self.match_map.get(&segment) else { continue };
 
             for &index in match_entry {
+                debug_assert!(
+                    (index as usize) < self.values.len(),
+                    "Search safety invariant not met"
+                );
+
                 let res = results
                     .iter_mut()
                     .find(|m| m.index == index);
@@ -210,13 +221,15 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         results.retain(|r| f64::from(r.count) >= match_count);
         results.sort_by_key(|r| !r.count);
 
-        results.into_iter()
-            .map(|r| Match {
-                score: f64::from(r.count) / total,
-                index: r.index as usize,
-                data: &self.values[r.index as usize],
-            })
-            .collect()
+        // box the results so we don't copy the data around too much.
+        // this isn't _massive_ (only about 260 bytes), but since every
+        // iterator adapter is another potential full copy, let's just
+        // put it on the heap.
+        let results = Box::from(results.as_slice());
+
+        // SAFETY: every index in `results` is a valid index into `values`
+        // as guaranteed by the type invariants; indices come from `match_map`.
+        unsafe { MatchIter::new(total, results, &self.values) }
     }
 }
 
@@ -227,9 +240,9 @@ impl<T, const MIN: usize, const MAX: usize> Default for Search<T, MIN, MAX> {
 }
 
 /// A matched value from a [`Search`].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 #[non_exhaustive]
-pub struct Match<T> {
+pub struct Match<'st, T> {
     /// The match score.
     ///
     /// The score is calculated based on how many segments of the input matched the found value.
@@ -240,7 +253,120 @@ pub struct Match<T> {
     pub index: usize,
 
     /// The associated data.
-    pub data: T,
+    pub data: &'st T,
+}
+
+impl<'st, T> Copy for Match<'st, T> {}
+impl<'st, T> Clone for Match<'st, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MatchInfo {
+    count: MatchIndex,
+    index: MatchIndex,
+}
+
+/// An iterator over [`Matches`](Match) returned by [`Search::search`].
+#[derive(Debug, Clone)]
+pub struct MatchIter<'st, T> {
+    total: f64,
+
+    // Safety invariant: Every index within here must be a valid index into
+    // the memory pointed to by `search_values`.
+    inner: std::vec::IntoIter<MatchInfo>,
+
+    // This could be implemented with safe code but this saves a usize in memory.
+    search_values: RawRef<'st, T>,
+}
+
+impl<'st, T> MatchIter<'st, T> {
+    /// Constructs a new [`MatchIter`].
+    ///
+    /// # Safety
+    ///
+    /// The `search_values` must come the same [`Search`] as the `inner`'s indices.
+    unsafe fn new(total: f64, inner: Box<[MatchInfo]>, search_values: &'st [T]) -> Self {
+        debug_assert!(
+            inner.iter().all(|m| (m.index as usize) < search_values.len()),
+            "MatchIter safety invariant not met"
+        );
+
+        Self {
+            total,
+            inner: IntoIterator::into_iter(inner),
+            search_values: RawRef::from(search_values).cast(),
+        }
+    }
+
+    fn new_empty() -> Self {
+        Self {
+            total: 0.0,
+            // use an empty iterator
+            inner: std::vec::IntoIter::default(),
+            // no sound code would be able to index this anyways
+            search_values: NonNull::dangling().into(),
+        }
+    }
+
+    /// Constructs a match.
+    ///
+    /// # Safety
+    ///
+    /// The `info` must come from the `inner` iterator.
+    unsafe fn make_match(&self, info: MatchInfo) -> Match<'st, T> {
+        Match {
+            score: f64::from(info.count) / self.total,
+            index: info.index as usize,
+            // SAFETY: caller guarantees the match info comes from the inner iterator
+            // `new` requires that the indices are valid for the search values
+            data: unsafe { self.search_values.add(info.index as usize).as_ref() },
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.inner.len() == 0
+    }
+}
+
+// to not repeat the same safety comment for every unsafe block wrapping make_match:
+// SAFETY: make_match is safe to call when used with a value coming from the inner iterator
+impl<'st, T> Iterator for MatchIter<'st, T> {
+    type Item = Match<'st, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|m| unsafe { self.make_match(m) })
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.inner.nth(n).map(|m| unsafe { self.make_match(m) })
+    }
+
+    fn last(mut self) -> Option<Self::Item> {
+        (&mut self.inner).last().map(|m| unsafe { self.make_match(m) })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<'st, T> DoubleEndedIterator for MatchIter<'st, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back().map(|m| unsafe { self.make_match(m) })
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        self.inner.nth_back(n).map(|m| unsafe { self.make_match(m) })
+    }
+}
+
+impl<'st, T> ExactSizeIterator for MatchIter<'st, T> {
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 /// A search segment. Used as a key.
@@ -290,7 +416,7 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
 #[cfg(test)]
 mod test {
-    use super::{Search, Match};
+    use super::{MatchIter, Search};
 
     type TSearch = Search<u8>;
 
@@ -311,8 +437,8 @@ mod test {
         assert_eq!(&just_data(search.search("non")), &[4]);
     }
 
-    fn just_data(v: Vec<Match<&u8>>) -> Vec<u8> {
-        let mut v: Vec<u8> = v.into_iter().map(|p| *p.data).collect();
+    fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
+        let mut v: Vec<u8> = v.map(|p| *p.data).collect();
         v.sort();
         v
     }

@@ -163,7 +163,7 @@ impl HAzurLane {
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> {
-        self.ship_simsearch.search(prefix).into_iter().filter_map(|i| self.ships.get(i.index))
+        self.ship_simsearch.search(prefix).filter_map(|i| self.ships.get(i.index))
     }
 
     /// Gets an equip by its ID.
@@ -174,7 +174,7 @@ impl HAzurLane {
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> {
-        self.equip_simsearch.search(prefix).into_iter().filter_map(|i| self.equips.get(i.index))
+        self.equip_simsearch.search(prefix).filter_map(|i| self.equips.get(i.index))
     }
 
     /// Gets an augment by its ID.
@@ -185,7 +185,7 @@ impl HAzurLane {
 
     /// Gets all augments by a name prefix.
     pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> {
-        self.augment_simsearch.search(prefix).into_iter().filter_map(|i| self.augments.get(i.index))
+        self.augment_simsearch.search(prefix).filter_map(|i| self.augments.get(i.index))
     }
 
     /// Gets unique augments by their associated ship ID.
