@@ -48,7 +48,8 @@ use crate::private::ptr::RawRef;
 
 // exists to save some memory.
 // this only becomes an issue once more than 4 BILLION elements have been added to the Search.
-// at that point, the current behavior is to panic
+// at that point, the current behavior is to panic.
+// for 32- or 16-bit systems, allocating for the values Vec will panic first.
 #[cfg(not(target_pointer_width = "16"))]
 type MatchIndex = u32;
 #[cfg(target_pointer_width = "16")]
@@ -57,9 +58,7 @@ type MatchIndex = u16;
 // amount of MatchIndex values that can be stored within a SmallVec without increasing its size.
 #[cfg(target_pointer_width = "64")]
 const MATCH_INLINE: usize = 4;
-#[cfg(target_pointer_width = "32")]
-const MATCH_INLINE: usize = 2;
-#[cfg(target_pointer_width = "16")]
+#[cfg(not(target_pointer_width = "64"))]
 const MATCH_INLINE: usize = 2;
 
 /// Provides a fuzzy text searcher.
@@ -83,7 +82,11 @@ pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
 impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// Creates a new empty search instance.
     pub fn new() -> Self {
-        const { assert!(MIN <= MAX); }
+        const {
+            assert!(MIN <= MAX, "MIN must be <= MAX");
+            assert!(MIN > 0, "MIN must be > 0");
+            assert!(MAX < MatchIndex::MAX as usize, "MAX must be < u32::MAX");
+        }
 
         Self {
             min_match_score: 0.5,
@@ -272,11 +275,17 @@ struct MatchInfo {
 /// An iterator over [`Matches`](Match) returned by [`Search::search`].
 #[derive(Debug, Clone)]
 pub struct MatchIter<'st, T> {
-    total: f64,
-
     // Safety invariant: Every index within here must be a valid index into
-    // the memory pointed to by `search_values`.
+    // the memory pointed to by `state.search_values`.
     inner: std::vec::IntoIter<MatchInfo>,
+    state: MatchIterState<'st, T>,
+}
+
+/// Split data needed to construct [`Matches`](Match) from [`MatchIter`] to allow
+/// disjointed borrows when the iterator is already mutably borrowed or consumed.
+#[derive(Debug, Clone)]
+struct MatchIterState<'st, T> {
+    total: f64,
 
     // This could be implemented with safe code but this saves a usize in memory.
     search_values: RawRef<'st, T>,
@@ -295,27 +304,36 @@ impl<'st, T> MatchIter<'st, T> {
         );
 
         Self {
-            total,
             inner: IntoIterator::into_iter(inner),
-            search_values: RawRef::from(search_values).cast(),
+            state: MatchIterState {
+                total,
+                search_values: RawRef::from(search_values).cast(),
+            },
         }
     }
 
     fn new_empty() -> Self {
         Self {
-            total: 0.0,
-            // use an empty iterator
             inner: std::vec::IntoIter::default(),
-            // no sound code would be able to index this anyways
-            search_values: NonNull::dangling().into(),
+            state: MatchIterState {
+                total: 0.0,
+                // no sound code would be able to index this anyways
+                search_values: NonNull::dangling().into(),
+            },
         }
     }
 
+    fn is_empty(&self) -> bool {
+        self.inner.len() == 0
+    }
+}
+
+impl<'st, T> MatchIterState<'st, T> {
     /// Constructs a match.
     ///
     /// # Safety
     ///
-    /// The `info` must come from the `inner` iterator.
+    /// The `info` must come from the associated `inner` iterator.
     unsafe fn make_match(&self, info: MatchInfo) -> Match<'st, T> {
         Match {
             score: f64::from(info.count) / self.total,
@@ -325,10 +343,6 @@ impl<'st, T> MatchIter<'st, T> {
             data: unsafe { self.search_values.add(info.index as usize).as_ref() },
         }
     }
-
-    fn is_empty(&self) -> bool {
-        self.inner.len() == 0
-    }
 }
 
 // to not repeat the same safety comment for every unsafe block wrapping make_match:
@@ -337,29 +351,34 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
     type Item = Match<'st, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|m| unsafe { self.make_match(m) })
+        self.inner.next().map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner.nth(n).map(|m| unsafe { self.make_match(m) })
+        self.inner.nth(n).map(|m| unsafe { self.state.make_match(m) })
     }
 
-    fn last(mut self) -> Option<Self::Item> {
-        (&mut self.inner).last().map(|m| unsafe { self.make_match(m) })
+    fn last(self) -> Option<Self::Item> {
+        self.inner.last().map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.inner.size_hint()
     }
+
+    fn collect<B: FromIterator<Self::Item>>(self) -> B {
+        // this should optimize a bit better than a direct collect()
+        self.inner.map(|m| unsafe { self.state.make_match(m) }).collect()
+    }
 }
 
 impl<'st, T> DoubleEndedIterator for MatchIter<'st, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(|m| unsafe { self.make_match(m) })
+        self.inner.next_back().map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner.nth_back(n).map(|m| unsafe { self.make_match(m) })
+        self.inner.nth_back(n).map(|m| unsafe { self.state.make_match(m) })
     }
 }
 

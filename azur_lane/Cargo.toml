@@ -10,12 +10,7 @@ rust-version = "1.80"
 workspace = true
 
 [dependencies]
+bitflags = { version = "2.6.0", features = ["serde"] }
+serde = { version = "1.0.210", features = ["derive"] }
+
 utils = { path = "../utils" }
-
-[dependencies.bitflags]
-version = "2.6.0"
-features = ["serde"]
-
-[dependencies.serde]
-version = "1.0.210"
-features = ["derive"]
