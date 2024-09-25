@@ -8,12 +8,21 @@ use crate::equip::Weapon;
 /// Represents a single skill.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Skill {
+    /// The skill's ID.
+    ///
+    /// This is named `buff_id` since skills, as shown in-game, actually refer to buffs.
+    /// A buff stays attached, while a skill is an instant effect.
     pub buff_id: u32,
+    /// The skill's name.
     pub name: String,
+    /// The skill's description, with placeholders already replaced.
     pub description: String,
+    /// The category of this skill.
     pub category: SkillCategory,
+    /// Barrages this skill can fire.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub barrages: Vec<SkillBarrage>,
+    /// Weapons this skill may add to the ship.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub new_weapons: Vec<BuffWeapon>,
 }
@@ -21,21 +30,29 @@ pub struct Skill {
 /// Represents a skill barrage.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillBarrage {
+    /// The ID of the skill that fires this barrage.
     pub skill_id: u32,
+    /// The attacks within this barrage.
     pub attacks: Vec<SkillAttack>,
 }
 
 /// Represents a skill barrage's attack.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillAttack {
+    /// The target this attack fires at.
     pub target: SkillAttackTarget,
+    /// The weapon fired by this attack.
     pub weapon: Weapon,
 }
 
 /// Represents a buff's bonus weapon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuffWeapon {
+    /// How long this weapon lasts.
+    ///
+    /// [`None`] means it will last indefinitely.
     pub duration: Option<f64>,
+    /// The weapon to be attached.
     pub weapon: Weapon,
 }
 

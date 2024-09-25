@@ -8,6 +8,7 @@ macro_rules! define_data_enum {
     } => {
         $(#[$attr])*
         #[derive(Debug, Clone)]
+        #[non_exhaustive]
         $vd struct $data {
             $(
                 $(#[$data_attr])*

@@ -10,18 +10,37 @@ use super::Faction;
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equip {
+    /// The equipment's ID. This differs per upgrade step.
     pub equip_id: u32,
+    /// The equipment's display name.
     pub name: String,
+    /// The equipment's description.
+    ///
+    /// This is not the skill description. Instead, it is the description shown when attempting
+    /// to buy equipment from a shop. It is never seen for most gear, but often still contains flavor text.
     pub description: String,
+    /// The kind of equipment, determining whether it is allowed in a ship's slots.
     pub kind: EquipKind,
+    /// The equipment's rarity and star rating.
     pub rarity: EquipRarity,
+    /// The manufacturer faction.
     pub faction: Faction,
+    /// The weapons this equipment carries.
+    ///
+    /// This will usually just hold a single element.
+    /// The most common case where this doesn't hold is aircraft with intercept;
+    /// the strike and intercept versions are different weapons.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub weapons: Vec<Weapon>,
+    /// Skills this equipment activates when equipped.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub skills: Vec<Skill>,
+    /// The stat bonuses provided when equipped.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub stat_bonuses: Vec<EquipStatBonus>,
+    /// Hull types that this equipment cannot be equipped on, even if the [`Equip::kind`] would allow it.
+    ///
+    /// Data on "allowed hull types" is excluded since it's purely informative, and not accurately at that.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub hull_disallowed: Vec<HullType>,
 }
@@ -29,41 +48,72 @@ pub struct Equip {
 /// A weapon that is part of [`Equip`] or [`Skill`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Weapon {
+    /// The weapon's ID. This differs per upgrade step/skill level.
     pub weapon_id: u32,
+    /// The weapon's display name, if any.
+    ///
+    /// This is the label for a weapon on an aircraft.
     pub name: Option<String>,
+    /// The base reload time.
+    ///
+    /// This component is affected by the ship's RLD stat.
+    /// The value stored here is the reload time at 100 RLD.
     pub reload_time: f64,
+    /// A fixed delay between reloads.
     pub fixed_delay: f64,
+    /// The kind of weapon.
     pub kind: WeaponKind,
-    pub data: WeaponData
+    /// The actual data for the weapon.
+    pub data: WeaponData,
 }
 
 /// A bullet barrage pattern for a [`Weapon`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Barrage {
+    /// The damage per bullet.
     pub damage: f64,
+    /// The coefficient. This is a straight up damage multiplier.
     pub coefficient: f64,
+    /// How much of the [`Barrage::scaling_stat`] is considered for the damage.
+    ///
+    /// F.e. `1.0` would mean you use 100% of the scaling stat for damage calculation,
+    /// whereas `0.8` would mean you only use 80% of it.
+    /// This leads to slightly different results than a damage multiplier.
     pub scaling: f64,
+    /// The stat this barrage's damage scales with.
     pub scaling_stat: StatKind,
+    /// How far the bullets will launch.
     pub range: f64,
+    /// The potential firing and lock-on angle.
     pub firing_angle: f64,
+    /// The time it takes for the salvo to fire. This is another fixed delay between reloads.
     pub salvo_time: f64,
+    /// The bullets fired by this barrage.
     pub bullets: Vec<Bullet>
 }
 
 /// Bullet information for a [`Barrage`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bullet {
+    /// The bullet's ID.
     pub bullet_id: u32,
 
     // From barrage template:
+    /// The amount of bullets fired by this component.
     pub amount: u32,
 
     // From bullet template:
+    /// The kind of bullet fired.
     pub kind: BulletKind,
+    /// The kind of ammo this bullet uses.
     pub ammo: AmmoKind,
+    /// How often the bullets can pierce enemies before it disappears.
     pub pierce: u32,
+    /// The velocity these bullets are fired at.
     pub velocity: f64,
+    /// The armor modifiers.
     pub modifiers: ArmorModifiers,
+    /// Additional flags for the bullets.
     pub flags: BulletFlags,
 
     /// Buffs caused by the bullet hit.
@@ -89,26 +139,37 @@ pub enum BulletExtra {
 /// How far a bullet's hit spread and AOE is. Only applicable to main gun fire and bombs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulletSpread {
+    /// Horizontal spread.
     pub spread_x: f64,
+    /// Vertical spread.
     pub spread_y: f64,
+    /// The range for the splash damage.
     pub hit_range: f64,
 }
 
 /// Additional information about a beam.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulletBeam {
+    /// The total duration of the beam.
     pub duration: f64,
+    /// The delay between damage ticks.
     pub tick_delay: f64,
 }
 
 /// Aircraft data for a [`Weapon`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Aircraft {
+    /// The aircraft's ID. This differs per upgrade step/skill level.
     pub aircraft_id: u32,
+    /// The amount of aircraft launched.
     pub amount: u32,
+    /// The aircrafts' flight speed.
     pub speed: f64,
+    /// The aircrafts' individual health.
     pub health: ShipStat,
+    /// How often each aircraft is allowed to dodge attacks.
     pub dodge_limit: u32,
+    /// The aircraft-mounted weapons.
     pub weapons: Vec<Weapon>,
 }
 
@@ -125,25 +186,41 @@ pub enum WeaponData {
 
 /// Armor modifiers to apply to the damage.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ArmorModifiers(pub f64, pub f64, pub f64);
+pub struct ArmorModifiers(
+    /// Modifier to Light armor.
+    pub f64,
+    /// Modifier to Medium armor.
+    pub f64,
+    /// Modifier to Heavy armor.
+    pub f64,
+);
 
 /// Bonus stats gained by equipping the associated equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipStatBonus {
+    /// The stat increased.
     pub stat_kind: StatKind,
-    pub amount: f64
+    /// How much the stat is increased by.
+    pub amount: f64,
 }
 
 /// Represents an Augment Module.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Augment {
+    /// The augment's ID.
     pub augment_id: u32,
+    /// The augment's display name.
     pub name: String,
+    /// The augment's rarity and star rating.
     pub rarity: AugmentRarity,
+    /// The stat bonuses provided by the augment.
     pub stat_bonuses: Vec<AugmentStatBonus>,
+    /// Who can equip this augment.
     pub usability: AugmentUsability,
+    /// The augment's primary effect skill.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
+    /// The augment's skill upgrade.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skill_upgrade: Option<AugmentSkillUpgrade>,
 }
@@ -160,15 +237,20 @@ pub enum AugmentUsability {
 /// Bonus stats gained by equipping the associated augment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AugmentStatBonus {
+    /// The stat increased.
     pub stat_kind: StatKind,
+    /// How much the stat is increased by at minimum.
     pub amount: f64,
+    /// The maximum additional random component.
     pub random: f64
 }
 
 /// A skill upgraded by an augment module.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AugmentSkillUpgrade {
+    /// The ID of the original skill to replace.
     pub original_id: u32,
+    /// The replacement skill.
     pub skill: Skill,
 }
 
@@ -189,6 +271,7 @@ bitflags::bitflags! {
 define_data_enum! {
     /// The possible kinds of equipment.
     pub enum EquipKind for EquipKindData {
+        /// A friendly name for the equipment kind.
         pub name: &'static str;
 
         DestroyerGun("DD Gun"),
@@ -260,6 +343,7 @@ define_data_enum! {
 
 define_data_enum! {
     pub enum WeaponKind for WeaponKindData {
+        /// A friendly name for the weapon kind.
         pub name: &'static str;
 
         MainGun("Main Gun"),
@@ -340,6 +424,7 @@ define_data_enum! {
 }
 
 impl BulletExtra {
+    /// Whether this bullet extra is empty.
     pub fn is_none(&self) -> bool {
         matches!(self, BulletExtra::None)
     }
@@ -347,7 +432,7 @@ impl BulletExtra {
 
 impl BulletFlags {
     /// Filters to the flags that are relevant for the dive filter,
-    /// i.e. which targets the bullet can't hit.
+    /// i.e. which targets the bullet _can't_ hit.
     pub fn dive_filter(self) -> Self {
         self & (BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE)
     }

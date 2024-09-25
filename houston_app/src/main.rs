@@ -68,12 +68,16 @@ async fn main() -> anyhow::Result<()> {
 
 async fn create_commands(ctx: &Context, framework: &HFramework) -> HResult {
     let cmds = poise_command_builder::build_commands(&framework.options().commands);
-    if let Err(err) = ctx.http().create_global_commands(&cmds).await {
-        log::error!("{err:?}");
-        return Err(err.into());
+    match ctx.http().create_global_commands(&cmds).await {
+        Ok(cmds) => {
+            log::trace!("Created {} global commands.", cmds.len());
+            Ok(())
+        }
+        Err(err) => {
+            log::error!("{err:?}");
+            Err(err.into())
+        }
     }
-
-    Ok(())
 }
 
 async fn load_azur_lane(bot_data: Arc<HBotData>) {

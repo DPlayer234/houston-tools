@@ -12,24 +12,51 @@ use super::Faction;
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
+    /// The group ID. This is the same for the base and its retrofits.
     pub group_id: u32,
+    /// The ship's display name.
     pub name: String,
+    /// The ship's rarity.
+    ///
+    /// For its star rating, see [`ShipData::stars`].
     pub rarity: ShipRarity,
+    /// The faction this ship belongs to.
     pub faction: Faction,
+    /// The hull type/designation.
     pub hull_type: HullType,
+    /// The star rating for the ship.
     pub stars: u8,
+    /// How the ship is enhanced.
     #[serde(default)]
     pub enhance_kind: EnhanceKind,
+    /// The ship's stats.
     pub stats: ShipStatBlock,
+    /// The ID of the default skin.
+    /// Retrofits will have the retrofit skin set as the default.
+    ///
+    /// [`ShipData::skin_by_id`] can be used to easily get skin data.
     pub default_skin_id: u32,
+    /// The real equipment slots visible in-game, including auxiliary slots.
     pub equip_slots: Vec<EquipSlot>,
+    /// Additional shadow or hidden equipment that's fixed to the ship.
+    ///
+    /// Most commonly, this is a secondary gun for torpedo CLs or CAs.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub shadow_equip: Vec<ShadowEquip>,
+    /// Default equipped depth charges.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub depth_charges: Vec<Equip>,
+    /// The list of skills. Excludes inactive or hidden skills.
     pub skills: Vec<Skill>,
+    /// Available retrofits for this ship in their maxed-out state.
+    ///
+    /// As of now, only DDGs have "multiple" retrofits, with their vanguard
+    /// and main fleet states being considered different ones.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub retrofits: Vec<ShipData>,
+    /// The ship's skins, including their default and all retrofit skins.
+    ///
+    /// This will be empty for nested retrofits. Access the base's skins.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub skins: Vec<ShipSkin>,
 }
@@ -99,24 +126,36 @@ pub struct ShadowEquip {
 /// Data for a ship skin. This may represent the default skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkin {
+    /// The skin's ID. [`ShipData::skin_by_id`] searches for this.
     pub skin_id: u32,
+    /// The image/asset key.
+    ///
+    /// Asset bundles and chibi sprites from the collector will use this as their filename.
     pub image_key: String,
+    /// The skin's display name.
     pub name: String,
+    /// The skin's description.
     pub description: String,
     /// The default dialogue lines.
     pub words: ShipSkinWords,
     /// Replacement dialogue lines, usually after oath.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub words_extra: Option<Box<ShipSkinWords>>
+    pub words_extra: Option<Box<ShipSkinWords>>,
 }
 
 /// The block of dialogue for a given skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkinWords {
+    /// The skin's description.
+    ///
+    /// Note that [`ShipSkin::description`] originates from the skin's template,
+    /// whereas this field is actually part of the skin's words.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// The "introduction". In-game, this is the profile text in the archive.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub introduction: Option<String>,
+    /// Dialogue played when the ship is obtained.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub acquisition: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -179,8 +218,11 @@ pub struct ShipMainScreenLine(usize, String);
 /// Data for voices lines that may be played when sortieing other specific ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipCoupleEncourage {
+    /// The line to be played.
     pub line: String,
+    /// The amount of allies that need to match the condition.
     pub amount: u32,
+    /// The condition rule.
     pub condition: ShipCouple
 }
 
@@ -293,6 +335,7 @@ define_data_enum! {
 define_data_enum! {
     /// The armor thickness of a ship.
     pub enum ShipArmor for ShipArmorData {
+        /// The display name for the armor type.
         pub name: &'static str;
 
         Light("Light"),
@@ -304,6 +347,7 @@ define_data_enum! {
 define_data_enum! {
     /// The sortie team types.
     pub enum TeamType for TeamTypeData {
+        /// The display name for the team type.
         pub name: &'static str;
 
         Vanguard("Vanguard"),
@@ -319,6 +363,9 @@ impl Display for ShipArmor {
 }
 
 impl ShipData {
+    /// Gets a skin for this ship by its ID.
+    ///
+    /// Retrofits will have empty skin lists. Call this on the base ship.
     #[must_use]
     pub fn skin_by_id(&self, skin_id: u32) -> Option<&ShipSkin> {
         self.skins.iter().find(|s| s.skin_id == skin_id)
@@ -327,6 +374,8 @@ impl ShipData {
 
 impl ShipStatBlock {
     /// Gets and calculates a certain stat value.
+    ///
+    /// Refer to [`ShipStat::calc`] for potential caveats.
     #[must_use]
     pub fn calc_stat(&self, kind: StatKind, level: u32, affinity: f64) -> f64 {
         match kind {
@@ -340,7 +389,7 @@ impl ShipStatBlock {
             StatKind::ACC => self.acc.calc(level, affinity),
             StatKind::ASW => self.asw.calc(level, affinity),
             StatKind::SPD => self.spd,
-            StatKind::LCK => self.lck
+            StatKind::LCK => self.lck,
         }
     }
 }
