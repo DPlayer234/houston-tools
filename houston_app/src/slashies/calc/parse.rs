@@ -100,8 +100,8 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
     let iter = text.as_bytes()
         .split(|c| c.is_ascii_whitespace())
         .flat_map(|s| s.split_inclusive(|c| is_special_char(*c)))
-        .flat_map(|s| match s.split_last() {
-            Some((last, rest)) if is_special_char(*last) => std::iter::once(rest).chain(Some(std::slice::from_ref(last))),
+        .flat_map(|s| match s {
+            [rest @ .., last] if is_special_char(*last) => std::iter::once(rest).chain(Some(std::slice::from_ref(last))),
             _ => std::iter::once(s).chain(None),
         })
         .filter(|s| !s.is_empty())

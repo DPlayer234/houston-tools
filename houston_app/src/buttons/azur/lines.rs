@@ -114,73 +114,80 @@ impl View {
     }
 }
 
+/// Higher-order macro to share code logic for [`ViewPart`] functions.
+macro_rules! impl_view_part_fn {
+    ($self:expr, $words:expr, $add:ident) => {
+        match $self {
+            ViewPart::Info => {
+                $add!("Description", description);
+                $add!("Profile", introduction);
+                $add!("Acquisition", acquisition);
+            }
+            ViewPart::Main1 => {
+                $add!("Login", login);
+
+                for line in &$words.main_screen {
+                    $add!(main line);
+                }
+
+                $add!("Touch", touch);
+                $add!("Special Touch", special_touch);
+                $add!("Rub", rub);
+            }
+            ViewPart::Main2 => {
+                $add!("Mission Reminder", mission_reminder);
+                $add!("Mission Complete", mission_complete);
+                $add!("Mail Reminder", mail_reminder);
+                $add!("Return to Port", return_to_port);
+                $add!("Commission Complete", commission_complete);
+            }
+            ViewPart::Affinity => {
+                $add!("Details", details);
+                $add!("Disappointed", disappointed);
+                $add!("Stranger", stranger);
+                $add!("Friendly", friendly);
+                $add!("Crush", crush);
+                $add!("Love", love);
+                $add!("Oath", oath);
+            }
+            ViewPart::Combat => {
+                $add!("Enhance", enhance);
+                $add!("Flagship Fight", flagship_fight);
+                $add!("Victory", victory);
+                $add!("Defeat", defeat);
+                $add!("Skill", skill);
+                $add!("Low Health", low_health);
+
+                for opt in &$words.couple_encourage {
+                    $add!(couple opt);
+                }
+            }
+        }
+    };
+}
+
 impl ViewPart {
     /// Creates the embed description for the current state.
     fn get_description(self, data: &HBotData, words: &ShipSkinWords) -> String {
+        use crate::fmt::discord::escape_markdown;
+
         let mut result = String::new();
 
-        fn norm(input: &str) -> String {
-            input.replace('*', "\\*").replace('`', "\\`").replace('_', "\\_")
-        }
-
         macro_rules! add {
-            ($label:literal, $key:ident) => {{
-                if let Some(ref text) = words.$key {
-                    write!(result, concat!("- **", $label, ":** {}\n"), norm(text)).discard();
+            ($label:literal, $key:ident) => {
+                if let Some(text) = &words.$key {
+                    write!(result, concat!("- **", $label, ":** {}\n"), escape_markdown(text)).discard();
                 }
-            }};
-            (dyn $label:literal, $($extra:tt)*) => {{
-                write!(result, concat!("- **", $label, ":** {}\n"), $($extra)*).discard();
-            }};
+            };
+            (main $line:expr) => {
+                write!(result, "- **Main Screen {}:** {}\n", $line.index() + 1, escape_markdown($line.text())).discard();
+            };
+            (couple $opt:expr) => {
+                write!(result, "- **{}:** {}\n", get_label_for_ship_couple_encourage(data, $opt), escape_markdown(&$opt.line)).discard();
+            };
         }
 
-        match self {
-            ViewPart::Info => {
-                add!("Description", description);
-                add!("Profile", introduction);
-                add!("Acquisition", acquisition);
-            }
-            ViewPart::Main1 => {
-                add!("Login", login);
-
-                for line in &words.main_screen {
-                    add!(dyn "Main Screen {}", line.index() + 1, norm(line.text()));
-                }
-
-                add!("Touch", touch);
-                add!("Special Touch", special_touch);
-                add!("Rub", rub);
-            }
-            ViewPart::Main2 => {
-                add!("Mission Reminder", mission_reminder);
-                add!("Mission Complete", mission_complete);
-                add!("Mail Reminder", mail_reminder);
-                add!("Return to Port", return_to_port);
-                add!("Commission Complete", commission_complete);
-            }
-            ViewPart::Affinity => {
-                add!("Details", details);
-                add!("Disappointed", disappointed);
-                add!("Stranger", stranger);
-                add!("Friendly", friendly);
-                add!("Crush", crush);
-                add!("Love", love);
-                add!("Oath", oath);
-            }
-            ViewPart::Combat => {
-                add!("Enhance", enhance);
-                add!("Flagship Fight", flagship_fight);
-                add!("Victory", victory);
-                add!("Defeat", defeat);
-                add!("Skill", skill);
-                add!("Low Health", low_health);
-
-                for opt in &words.couple_encourage {
-                    let label = get_label_for_ship_couple_encourage(data, opt);
-                    add!(dyn "{}", label, norm(&opt.line));
-                }
-            }
-        }
+        impl_view_part_fn!(self, words, add);
 
         if result.is_empty() {
             result.push_str("<nothing>");
@@ -191,62 +198,20 @@ impl ViewPart {
 
     /// Determines whether this part shows any lines.
     fn has_texts(self, words: &ShipSkinWords) -> bool {
-        // I love duplicated code.
         macro_rules! check {
-            ($key:ident) => {{
+            ($_:literal, $key:ident) => {
                 if words.$key.is_some() {
                     return true;
                 }
-            }};
+            };
+            ($_:ident $arg:expr) => {
+                // ignore arg, we only care that the list is non-empty
+                _ = $arg;
+                return true;
+            };
         }
 
-        match self {
-            ViewPart::Info => {
-                check!(description);
-                check!(introduction);
-                check!(acquisition);
-            }
-            ViewPart::Main1 => {
-                check!(login);
-
-                if !words.main_screen.is_empty() {
-                    return true;
-                }
-
-                check!(touch);
-                check!(special_touch);
-                check!(rub);
-            }
-            ViewPart::Main2 => {
-                check!(mission_reminder);
-                check!(mission_complete);
-                check!(mail_reminder);
-                check!(return_to_port);
-                check!(commission_complete);
-            }
-            ViewPart::Affinity => {
-                check!(details);
-                check!(disappointed);
-                check!(stranger);
-                check!(friendly);
-                check!(crush);
-                check!(love);
-                check!(oath);
-            }
-            ViewPart::Combat => {
-                check!(enhance);
-                check!(flagship_fight);
-                check!(victory);
-                check!(defeat);
-                check!(skill);
-                check!(low_health);
-
-                if !words.couple_encourage.is_empty() {
-                    return true;
-                }
-            }
-        }
-
+        impl_view_part_fn!(self, words, check);
         false
     }
 }
@@ -319,11 +284,12 @@ fn join_natural_or<'a>(iter: impl Iterator<Item = &'a str>) -> String {
 
 fn join_natural<'a>(iter: impl Iterator<Item = &'a str>, join: &str, join_last: &str, join_once: &str) -> String {
     let data = iter.collect::<Vec<_>>();
-    match data.split_last() {
-        None => String::new(),
-        Some((&last, [])) => last.to_owned(),
-        Some((&last, &[head])) => head.to_owned() + join_once + last,
-        Some((&last, head)) => {
+
+    match data.as_slice() {
+        [] => String::new(),
+        &[last] => last.to_owned(),
+        &[head, last] => head.to_owned() + join_once + last,
+        [head @ .., last] => {
             let mut result = head.join(join);
             result.push_str(join_last);
             result.push_str(last);

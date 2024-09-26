@@ -119,5 +119,6 @@ mod test {
         is_correct!("sin(pi)", 0.0);
         is_correct!("min(2, max(-3, +5, 2), 21) * log(100, 10)", 4.0);
         is_correct!("min()", 0.0);
+        is_correct!("1--2", 3.0);
     }
 }

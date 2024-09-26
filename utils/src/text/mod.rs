@@ -1,9 +1,11 @@
 //! Provides helper methods to work with displayed text.
 
 pub mod __private;
+mod escape;
 mod inline_str;
 mod truncate_impl;
 
+pub use escape::{escape_by_char, EscapeByChar};
 pub use inline_str::InlineStr;
 pub use truncate_impl::{Truncate, truncate};
 

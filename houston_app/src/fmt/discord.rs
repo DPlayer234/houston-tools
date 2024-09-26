@@ -14,6 +14,16 @@ pub fn get_unique_username(user: &User) -> String {
         .unwrap_or_else(|| user.name.clone())
 }
 
+/// Escapes markdown sequences.
+#[must_use]
+pub fn escape_markdown(input: &str) -> impl Display + '_ {
+    utils::text::escape_by_char(
+        input,
+        |c| matches!(c, '*' | '`' | '_' | '>'),
+        |c| ['\\', c]
+    )
+}
+
 /// Implements [`Display`] to format resolved command arguments.
 #[must_use]
 pub enum DisplayResolvedArgs<'a> {
