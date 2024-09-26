@@ -85,3 +85,19 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
         };
     }
 }
+
+macro_rules! command_group {
+    ($(#[$meta:meta])* $vis:vis $name:ident, $($sub_command:literal),* $(,)?) => {
+        $(#[$meta])*
+        #[::poise::command(
+            slash_command,
+            subcommands($($sub_command),*),
+            subcommand_required
+        )]
+        $vis async fn $name(_: $crate::data::HContext<'_>) -> $crate::data::HResult {
+            $crate::data::HResult::Err($crate::data::HArgError(concat!(stringify!($name), " cannot be invoked directly")).into())
+        }
+    };
+}
+
+use command_group;

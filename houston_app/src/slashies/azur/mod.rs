@@ -7,20 +7,14 @@ mod find;
 
 use choices::*;
 
-/// Information about mobile game Azur Lane.
-#[poise::command(
-    slash_command,
-    subcommands(
-        "ship", "search_ship",
-        "equip", "search_equip",
-        "augment", "search_augment",
-        "reload_time",
-    ),
-    subcommand_required
-)]
-pub async fn azur(_: HContext<'_>) -> HResult {
-    Ok(())
-}
+super::command_group!(
+    /// Information about mobile game Azur Lane.
+    pub azur,
+    "ship", "search_ship",
+    "equip", "search_equip",
+    "augment", "search_augment",
+    "reload_time",
+);
 
 /// Shows information about a ship.
 #[poise::command(slash_command)]

@@ -1,14 +1,10 @@
 use crate::prelude::*;
 
-/// Provides (temporary) configuration for this app.
-#[poise::command(
-    slash_command,
-    subcommands("config_hide"),
-    subcommand_required
-)]
-pub async fn config(_: HContext<'_>) -> HResult {
-    Ok(())
-}
+super::command_group!(
+    /// Provides (temporary) configuration for this app.
+    pub config,
+    "config_hide",
+);
 
 /// Configures whether responses to your commands are hidden from other users.
 #[poise::command(slash_command, rename = "hide")]

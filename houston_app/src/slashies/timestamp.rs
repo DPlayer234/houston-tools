@@ -11,15 +11,11 @@ const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
 const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
 const SNOWFLAKE_INVALID: HArgError = HArgError("The Discord snowflake is invalid.");
 
-/// Provides methods for localized timestamps.
-#[poise::command(
-    slash_command,
-    subcommands("timestamp_in", "timestamp_at", "timestamp_of"),
-    subcommand_required
-)]
-pub async fn timestamp(_: HContext<'_>) -> HResult {
-    Ok(())
-}
+super::command_group!(
+    /// Provides methods for localized timestamps.
+    pub timestamp,
+    "timestamp_in", "timestamp_at", "timestamp_of"
+);
 
 /// Gets a timestamp offset from the current time.
 #[poise::command(slash_command, rename = "in")]
