@@ -232,9 +232,9 @@ impl<'a> UnityFsNode<'a> {
         // however, it's not impossible to construct a scenario where `UnityFsFile -> reader -> UnityFsFile` holds true,
         // in which case this would trigger. if that wasn't possible, an `UnsafeCell` might be appropriate.
         //
-        // `buf` is returned after the loop.
-        let buf = self.file.buf.take()
-            .expect("reader passed to UnityFsFile should not access the same UnityFsFile instance");
+        // `buf` is returned after the loop or when this function returns early.
+        let mut guard = BufGuard::take(self.file);
+        let buf = guard.buf();
 
         for block in &self.file.blocks_info.blocks[index ..] {
             // Read and decompress the entire block
@@ -266,8 +266,8 @@ impl<'a> UnityFsNode<'a> {
             uncompressed_offset += u64::from(block.uncompressed_size);
         }
 
-        // return the buffer so future operations have access to it again
-        self.file.buf.set(Some(buf));
+        // sanity check to ensure the guard is still valid here and can be dropped
+        drop(guard);
 
         debug_assert!(result.len() as u64 == self.node.size);
         Ok(result)
@@ -287,12 +287,20 @@ impl<'a> UnityFsNode<'a> {
             Ok(UnityFsData::RawData(buf))
         }
     }
-}
 
-impl UnityFsNode<'_> {
     /// Gets the path name for this node.
+    ///
+    /// This will allocate a UTF-8 string with escape sequences for invalid characters in the underlying data.
+    /// If you don't care about that or want to avoid the allocation, use [`Self::path_raw`] instead.
     pub fn path(&self) -> String {
         String::from_utf8_lossy(&self.node.path.0).into_owned()
+    }
+
+    /// Gets the path name for this node as raw bytes.
+    ///
+    /// This is the raw data as it appears in the file and doesn't necessarily represent valid UTF-8.
+    pub fn path_raw(&self) -> &[u8] {
+        &self.node.path.0
     }
 }
 
@@ -313,7 +321,7 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) 
         }
         _ => Err(UnityError::Unsupported(
             format!("unsupported compression method: {compression:?}")
-        ))?
+        ).into())
     }
 }
 
@@ -355,5 +363,35 @@ impl<T> std::fmt::Debug for DebugIgnore<T> {
 impl<T: std::fmt::Display> std::fmt::Display for DebugIgnore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+/// Allows easy exclusive access to the buffer that's backing a [`UnityFsFile`].
+struct BufGuard<'a> {
+    file: &'a UnityFsFile<'a>,
+    buf: Option<&'a mut dyn SeekRead>,
+}
+
+impl<'a> BufGuard<'a> {
+    /// Takes the buffer. Panics if it isn't available.
+    fn take(file: &'a UnityFsFile<'a>) -> Self {
+        let buf = file.buf.take()
+            .expect("reader passed to UnityFsFile should not access the same UnityFsFile instance");
+
+        Self { file, buf: Some(buf) }
+    }
+
+    /// Gets the buffer.
+    fn buf(&mut self) -> &mut dyn SeekRead {
+        // `as_mut` is required to get the reborrow to work correctly
+        self.buf.as_mut()
+            .expect("buf cannot be accessed after drop")
+    }
+}
+
+impl Drop for BufGuard<'_> {
+    fn drop(&mut self) {
+        // return the buf to the file
+        self.file.buf.set(self.buf.take());
     }
 }

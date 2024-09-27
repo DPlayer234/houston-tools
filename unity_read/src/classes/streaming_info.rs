@@ -30,8 +30,8 @@ impl StreamingInfo {
 
     /// Loads the streaming data.
     pub fn load_data<'a>(&self, fs: &'a UnityFsFile<'a>) -> anyhow::Result<&'a [u8]> {
-        let path = self.path.split('/').last().ok_or(UnityError::InvalidData("streaming data path incorrect"))?;
-        let node = fs.entries().find(|e| e.path().as_str() == path).ok_or(UnityError::InvalidData("streaming data file not found"))?;
+        let path = self.path.split('/').last().ok_or(UnityError::InvalidData("streaming data path incorrect"))?.as_bytes();
+        let node = fs.entries().find(|e| e.path_raw() == path).ok_or(UnityError::InvalidData("streaming data file not found"))?;
 
         let offset = usize::try_from(self.offset.0)?;
         let size = usize::try_from(self.size)?;
