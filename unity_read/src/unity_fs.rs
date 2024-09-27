@@ -74,7 +74,7 @@ struct ArchiveFlags {
 
 #[binread]
 #[br(big)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct BlocksInfo {
     data_hash: [u8; 16],
     #[br(temp)]
@@ -113,7 +113,7 @@ struct BlockFlags {
 
 #[binread]
 #[br(big)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 struct Node {
     offset: u64,
     size: u64,
@@ -123,7 +123,7 @@ struct Node {
     /// Stores the uncompressed bytes for this node.
     /// This is initialized lazily when [`UnityFsNode::read_raw`] is called.
     #[br(ignore)]
-    uncompressed_cache: std::rc::Rc<once_cell::unsync::OnceCell<Vec<u8>>>
+    uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
 }
 
 #[repr(u32)]
