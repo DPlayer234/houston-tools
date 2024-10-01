@@ -6,7 +6,7 @@ use crate::buttons::*;
 use super::AugmentParseError;
 
 /// Views an augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub augment_id: u32,
     mode: ButtonMessageMode,

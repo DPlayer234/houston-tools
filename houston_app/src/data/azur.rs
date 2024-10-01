@@ -3,10 +3,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use utils::fuzzy::Search;
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use utils::fuzzy::Search;
 
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug, Default)]

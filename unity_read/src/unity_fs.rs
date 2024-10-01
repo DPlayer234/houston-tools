@@ -269,7 +269,7 @@ impl<'a> UnityFsNode<'a> {
         // sanity check to ensure the guard is still valid here and can be dropped
         drop(guard);
 
-        debug_assert!(result.len() as u64 == self.node.size);
+        debug_assert!(u64::try_from(result.len())? == self.node.size);
         Ok(result)
     }
 

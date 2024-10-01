@@ -106,6 +106,661 @@
                     ]
                 }
             ]
+        },
+        "110010": {
+            "buff_id": 110010,
+            "name": "Twin Blades - Followup Slash",
+            "description": "When the battle starts: increases this ship's Crit DMG by 15.0% for every Senran Kagura collab character in your fleet(can be stacked up to 3 times).\nEvery 12s: applies a debuff to the enemy with the lowest HP remaining, increasing their DMG taken from Senran Kagura collab characters by 10.0%, and performs a Lv.10 special attack - Twin Blades - Followup Slash (DMG is based on the skill's level and this ship's FP and TRP stats). When this attack activates, if there is only 1 enemy on the battlefield: this attack deals guaranteed Crit DMG. ,If this special attack sinks an enemy: performs Twin Blades - Followup Slash again (10s cooldown between activations).",
+            "category": "Offense",
+            "barrages": [
+                {
+                    "skill_id": 110010,
+                    "attacks": [
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163630,
+                                "name": null,
+                                "reload_time": 2.6602896,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 100.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "FP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163612,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 3.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163620,
+                                "name": null,
+                                "reload_time": 2.6602896,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 100.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163611,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 3.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "skill_id": 110023,
+                    "attacks": [
+                        {
+                            "target": "PriorityTarget",
+                            "weapon": {
+                                "weapon_id": 163650,
+                                "name": null,
+                                "reload_time": 19.952172,
+                                "fixed_delay": 0.0,
+                                "kind": "BomberPreCastAlert",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 50.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "FP",
+                                        "range": 95.0,
+                                        "firing_angle": 120.0,
+                                        "salvo_time": 0.5,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163641,
+                                                "amount": 6,
+                                                "kind": "Bomb",
+                                                "ammo": "AP",
+                                                "pierce": 0,
+                                                "velocity": 15.0,
+                                                "modifiers": [
+                                                    0.75,
+                                                    1.15,
+                                                    0.75
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 4.0,
+                                                        "spread_y": 4.0,
+                                                        "hit_range": 12.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "skill_id": 110033,
+                    "attacks": [
+                        {
+                            "target": "PriorityTarget",
+                            "weapon": {
+                                "weapon_id": 163660,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 50.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "FP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163651,
+                                                "amount": 2,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 8.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163670,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 50.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163652,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 8.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163680,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 20.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163671,
+                                                "amount": 10,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163690,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 150.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163673,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "bullet_id": 163674,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "110030": {
+            "buff_id": 110030,
+            "name": "Twin Blades Combo Strike+",
+            "description": "Increases this ship's FP and TRP by 15.0%. When the battle starts, if there is another Senran Kagura collab character in your fleet: increases this ship's EVA by 15.0%.\nOnce per battle, when this ship's HP falls below 30.0% as a result of DMG taken: increases this ship's Evasion Rate by 10.0% and performs a Lv.10 Secret Ninja Art: Hanzō-Style Full Bloom (DMG is based on the skill's level and this ship's FP and TRP stats). Restores this ship's HP equal to 15.0% of the DMG dealt by this Secret Ninja Art.\nWhen this Secret Ninja Art activates, if there is only 1 enemy on the battlefield: this attack deals guaranteed Crit DMG. ,If Hanzō-Style Full Bloom sinks an enemy: additionally performs Twin Blades - Followup Slash 3 times.",
+            "category": "Offense",
+            "barrages": [
+                {
+                    "skill_id": 110031,
+                    "attacks": [
+                        {
+                            "target": "PriorityTarget",
+                            "weapon": {
+                                "weapon_id": 163710,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 50.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "FP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163653,
+                                                "amount": 2,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 8.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163720,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 50.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163654,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 8.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163730,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 20.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163676,
+                                                "amount": 10,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163740,
+                                "name": null,
+                                "reload_time": 63.181878000000005,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 150.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 500.0,
+                                        "firing_angle": 16.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163675,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "bullet_id": 163674,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 20.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "skill_id": 110011,
+                    "attacks": [
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163630,
+                                "name": null,
+                                "reload_time": 2.6602896,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 100.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "FP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163612,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 3.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "target": "Fixed",
+                            "weapon": {
+                                "weapon_id": 163620,
+                                "name": null,
+                                "reload_time": 2.6602896,
+                                "fixed_delay": 0.0,
+                                "kind": "SubGun",
+                                "data": {
+                                    "Bullets": {
+                                        "damage": 100.0,
+                                        "coefficient": 1.0,
+                                        "scaling": 1.0,
+                                        "scaling_stat": "TRP",
+                                        "range": 120.0,
+                                        "firing_angle": 360.0,
+                                        "salvo_time": 0.0,
+                                        "bullets": [
+                                            {
+                                                "bullet_id": 163611,
+                                                "amount": 1,
+                                                "kind": "Bomb",
+                                                "ammo": "Bomb",
+                                                "pierce": 0,
+                                                "velocity": 0.0,
+                                                "modifiers": [
+                                                    1.0,
+                                                    1.0,
+                                                    1.0
+                                                ],
+                                                "flags": "IGNORE_DIVE",
+                                                "extra": {
+                                                    "Spread": {
+                                                        "spread_x": 0.0,
+                                                        "spread_y": 0.0,
+                                                        "hit_range": 3.0
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     }
 }

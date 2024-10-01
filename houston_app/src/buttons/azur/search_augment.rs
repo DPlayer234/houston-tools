@@ -6,13 +6,13 @@ use utils::Discard;
 
 use crate::buttons::*;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
     filter: Filter
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Filter {
     pub name: Option<String>,
     pub hull_type: Option<HullType>,

@@ -235,7 +235,7 @@ macro_rules! impl_op_via_assign {
     (copy $Lhs:ty, Rhs=$Rhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
         $crate::impl_op_via_assign!($Lhs, Rhs=$Rhs, [$($TrAssign)*]::$assign, [$($Tr)*]::$inline);
 
-        impl $($Tr)*<$Rhs> for &$Lhs where $Lhs: ::core::marker::Copy {
+        impl $($Tr)*<$Rhs> for &$Lhs where $Lhs: ::std::marker::Copy {
             type Output = $Lhs;
 
             #[inline]
@@ -244,7 +244,7 @@ macro_rules! impl_op_via_assign {
             }
         }
 
-        impl $($Tr)*<&$Rhs> for &$Lhs where $Lhs: ::core::marker::Copy {
+        impl $($Tr)*<&$Rhs> for &$Lhs where $Lhs: ::std::marker::Copy {
             type Output = $Lhs;
 
             #[inline]

@@ -23,7 +23,7 @@ pub use text_asset::*;
 pub use texture2d::*;
 
 /// Trait that allows reading Unity object data in a structured form.
-pub trait UnityClass: Default {
+pub trait UnityClass: Sized {
     /// Parses a tree into a structure.
     ///
     /// `tree` holds the necessary part of the tree to parse children.
@@ -86,7 +86,7 @@ pub trait UnityClass: Default {
 ///
 /// If this trait is implemented, a blanket implementation will cover the actual [`UnityClass`] implementation.
 #[doc(hidden)]
-pub trait AutoUnityClass: UnityClass {
+pub trait AutoUnityClass: UnityClass + Default {
     /// The type name for this Unity class.
     const TYPE_NAME: &'static str;
 
@@ -95,7 +95,7 @@ pub trait AutoUnityClass: UnityClass {
 }
 
 impl<T: AutoUnityClass> UnityClass for T {
-    // blanket implementation for `define_unity_class` generates types.
+    // blanket implementation for `define_unity_class` generated types.
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
         if root.type_name.as_str() != Self::TYPE_NAME {
             Err(UnityError::Mismatch(UnityMismatch {
@@ -107,7 +107,7 @@ impl<T: AutoUnityClass> UnityClass for T {
         let mut result = Self::default();
         result.parse_tree_into(r, is_big_endian, tree)?;
 
-        if (root.meta_flags & 0x4000) != 0 {
+        if root.needs_align_after() {
             Self::align_reader(r)?;
         }
 
@@ -143,7 +143,10 @@ pub fn split_tree(tree: &[TypeTreeNode]) -> Option<(&TypeTreeNode, &[TypeTreeNod
 /// The [`UnityClass`] implementation will skip unknown fields and leave ones not found as default.
 /// If this needs to be known, wrap fields in an [`Option`].
 ///
-/// The resulting class will additionally implement [`Default`], [`Clone`], and [`std::fmt::Debug`].
+/// The resulting struct will additionally implement [`Default`], [`Clone`], and [`Debug`](std::fmt::Debug).
+/// Subsequently, all fields must also implement those traits.
+///
+/// Additional attributes added to the class or fields will also be added to the resulting struct.
 ///
 /// # Example
 ///
@@ -164,14 +167,16 @@ macro_rules! define_unity_class {
         $(#[$attr:meta])*
         $v:vis class $Type:ident = $type_key:literal {
             $(
+                $(#[$field_attr:meta])*
                 $field_vis:vis $field_name:ident : $FieldType:ty = $key:literal
             ),* $(,)?
         }
     ) => {
         $(#[$attr])*
-        #[derive(Debug, Clone, Default)]
+        #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::default::Default)]
         $v struct $Type {
             $(
+                $(#[$field_attr])*
                 $field_vis $field_name : $FieldType
             ),*
         }
@@ -179,10 +184,10 @@ macro_rules! define_unity_class {
         impl $crate::classes::AutoUnityClass for $Type {
             const TYPE_NAME: &'static str = $type_key;
 
-            fn parse_tree_into(&mut self, r: &mut ::std::io::Cursor<&[u8]>, is_big_endian: bool, tree: &[$crate::serialized_file::TypeTreeNode]) -> anyhow::Result<()> {
+            fn parse_tree_into(&mut self, r: &mut ::std::io::Cursor<&[u8]>, is_big_endian: bool, tree: &[$crate::serialized_file::TypeTreeNode]) -> $crate::__private::anyhow::Result<()> {
                 let mut rest = tree;
                 while let Some((next, children, siblings)) = $crate::classes::split_tree(rest) {
-                    match next.name.as_str() {
+                    match ::std::string::String::as_str(&next.name) {
                         $(
                             $key => { self.$field_name = <$FieldType as $crate::classes::UnityClass>::parse_tree(r, is_big_endian, next, children)?; },
                         )*
@@ -192,7 +197,7 @@ macro_rules! define_unity_class {
                     rest = siblings;
                 }
 
-                ::core::result::Result::Ok(())
+                ::std::result::Result::Ok(())
             }
         }
     };

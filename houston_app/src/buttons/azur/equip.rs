@@ -5,7 +5,7 @@ use crate::buttons::*;
 use super::EquipParseError;
 
 /// Views an augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub equip_id: u32,
     mode: ButtonMessageMode,

@@ -9,7 +9,7 @@ use super::ShipParseError;
 use super::ship::View as ShipView;
 
 /// View a ship's shadow equip.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub inner: ShipView,
 }

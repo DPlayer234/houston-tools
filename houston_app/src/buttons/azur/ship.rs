@@ -8,7 +8,7 @@ use crate::buttons::*;
 use super::ShipParseError;
 
 /// View general ship details.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub ship_id: u32,
     pub level: u8,
@@ -18,7 +18,7 @@ pub struct View {
 }
 
 /// The affinity used to calculate stat values.
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum ViewAffinity {
     Neutral,
     Love,
@@ -140,19 +140,25 @@ impl View {
             ])),
             _ => rows.push(CreateActionRow::Buttons(
                 std::iter::once(base_button)
-                    .chain(
-                        base_ship.retrofits.iter()
-                            .enumerate()
-                            .filter_map(|(index, retro)| {
-                                let index = u8::try_from(index).ok()?;
-                                let result = self.button_with_retrofit(Some(index))
-                                    .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
-                                Some(result)
-                            })
-                    )
+                    .chain(self.multi_retro_buttons(base_ship))
                     .collect()
             )),
         };
+    }
+
+    fn multi_retro_buttons<'a>(&'a mut self, base_ship: &'a ShipData) -> impl Iterator<Item = CreateButton> + 'a {
+        base_ship.retrofits.iter()
+            .enumerate()
+            .filter_map(|(index, retro)| {
+                let index = u8::try_from(index).ok()?;
+
+                // using team_type for the label since currently only DDGs have multiple
+                // retro states and their main identifier is what fleet they go in
+                let result = self.button_with_retrofit(Some(index))
+                    .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
+
+                Some(result)
+            })
     }
 
     /// Gets a button that redirects to a different level.

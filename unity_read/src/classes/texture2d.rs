@@ -128,6 +128,7 @@ impl Args {
             buffer.copy_from_slice(bytemuck::cast_slice::<u32, u8>(&buffer_u32));
         }
 
+        // truncation is fine -- source values were u32 already
         #[allow(clippy::cast_possible_truncation)]
         let image = RgbaImage::from_raw(self.width as u32, self.height as u32, buffer)
             .expect("buffer allocated with the correct size");

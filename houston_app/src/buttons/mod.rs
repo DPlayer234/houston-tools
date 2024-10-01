@@ -1,12 +1,17 @@
 use std::sync::Arc;
 
 use serenity::prelude::*;
+use smallvec::SmallVec;
+
 use utils::fields::FieldMut;
 
 pub use crate::prelude::*;
 
 pub mod azur;
 pub mod common;
+
+#[cfg(test)]
+mod test;
 
 utils::define_simple_error!(InvalidInteractionError(()): "Invalid interaction.");
 
@@ -17,7 +22,7 @@ macro_rules! define_button_args {
         ///
         /// This is owned data that can be deserialized into.
         /// To serialize it, call [`ButtonArgs::borrow`] first.
-        #[derive(Debug, Clone, serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
         pub enum ButtonArgs {
             $(
                 $(#[$attr])*
@@ -28,7 +33,7 @@ macro_rules! define_button_args {
         /// The supported button interaction arguments.
         ///
         /// This is borrowed data that can be serialized.
-        #[derive(Debug, Clone, Copy, serde::Serialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
         pub enum ButtonArgsRef<'a> {
             $(
                 $(#[$attr])*
@@ -61,7 +66,7 @@ macro_rules! define_button_args {
                 }
             }
 
-            pub async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+            async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
                 match self {
                     $(
                         ButtonArgs::$name(args) => args.reply(ctx).await,
@@ -98,7 +103,8 @@ define_button_args! {
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
     pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
-        let bytes = utils::str_as_data::from_b65536(id)?;
+        let mut bytes = SmallVec::new();
+        utils::str_as_data::decode_b65536(&mut bytes, id)?;
         CustomData(bytes).to_button_args()
     }
 }
@@ -119,7 +125,7 @@ impl ButtonEventHandler {
     /// Creates a new handler.
     #[must_use]
     pub const fn new(bot_data: Arc<HBotData>) -> Self {
-        ButtonEventHandler {
+        Self {
             bot_data
         }
     }
@@ -305,12 +311,12 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
 }
 
 /// Represents custom data for another menu.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CustomData(Vec<u8>);
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CustomData(SmallVec<[u8; 16]>);
 
 impl CustomData {
     /// Gets an empty value.
-    pub const EMPTY: Self = Self(Vec::new());
+    pub const EMPTY: Self = Self(SmallVec::new_const());
 
     /// Converts this instance to a component custom ID.
     #[must_use]
@@ -326,8 +332,9 @@ impl CustomData {
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
     pub fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
-        match serde_bare::to_vec(&args) {
-            Ok(data) => Self(data),
+        let mut data = SmallVec::new();
+        match serde_bare::to_writer(&mut data, &args) {
+            Ok(()) => Self(data),
             Err(err) => {
                 log::error!("Error [{err:?}] serializing: {args:?}");
                 Self::EMPTY

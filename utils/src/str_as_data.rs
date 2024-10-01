@@ -15,6 +15,8 @@
 //!
 //! Via [`to_b65536`] and [`from_b65536`]:
 //! Encodes pairs of bytes as one [`char`] of the output with a unique code point for each possible input.
+//!
+//! If you wish to write to existing buffers, you may also use [`encode_b65536`] and [`decode_b65536`].
 
 crate::define_simple_error!(
     /// Error decoding base 256 data in [`from_b256`].
@@ -24,9 +26,39 @@ crate::define_simple_error!(
 
 crate::define_simple_error!(
     /// Error decoding base 65536 data in [`from_b65536`].
-    Base65536Error(()):
-    "base65536 data is invalid"
+    Base65536Error(ErrorReason):
+    s => "base65536: {}", s.0
 );
+
+/// The decoding error reason.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum ErrorReason {
+    /// The data was invalid.
+    Invalid,
+    /// The written buffer returned an error.
+    Io(std::io::Error),
+}
+
+impl Base65536Error {
+    const fn invalid() -> Self {
+        Self(ErrorReason::Invalid)
+    }
+
+    /// Gets the underlying error reason.
+    pub fn kind(&self) -> &ErrorReason {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for ErrorReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Invalid => f.write_str("data is invalid"),
+            Self::Io(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
 
 /// Converts the bytes to "base 256".
 ///
@@ -67,40 +99,88 @@ pub fn from_b256(str: &str) -> Result<Vec<u8>, Base256Error> {
 #[must_use]
 pub fn to_b65536(bytes: &[u8]) -> String {
     // Testing indicates more than 100% is normal, usually about ~130%.
-    // But more isn't uncommon and more than 200% is rare, so we go for that.
+    // But more is still common and more than 200% is rare, so we go for that.
     let expected_size = 2 + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
-    // Note that this '&' is unsafely assumed
-    // to be present later in this function.
-    result.push('&');
+    encode_b65536(&mut result, bytes)
+        .expect("write to String cannot fail");
+
+    result
+}
+
+/// Encodes the bytes to "base 65535", writing them to a buffer.
+///
+/// See [`to_b65536`] for more information.
+///
+/// This can only return an [`Err`] if the `writer` does so.
+pub fn encode_b65536<W: std::fmt::Write>(mut writer: W, bytes: &[u8]) -> std::fmt::Result {
+    let skip_last = bytes.len() % 2 != 0;
+    writer.write_char(match skip_last {
+        false => '&',
+        true => '%',
+    })?;
 
     let mut iter = bytes.chunks_exact(2);
     for chunk in iter.by_ref() {
         // Conversion cannot fail and check is optimized out.
         let chunk = <[u8; 2]>::try_from(chunk).unwrap();
-        result.push(bytes_to_char(chunk));
+        writer.write_char(bytes_to_char(chunk))?;
     }
 
     if let &[last] = iter.remainder() {
         let chunk = [last, 0];
-        result.push(bytes_to_char(chunk));
-        unsafe {
-            // SAFETY: result starts with '&'.
-            // We can replace this ASCII character with another.
-            *result.as_bytes_mut().get_unchecked_mut(0) = b'%';
-        }
+        writer.write_char(bytes_to_char(chunk))?;
     }
 
-    result.push('&');
-    result
+    writer.write_char('&')
 }
 
 /// Reverses the operation done by [`to_b65536`].
 ///
 /// If the data is invalid or lacks the required markers, returns an error.
-pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
-    let (skip_last, str) = str
+pub fn from_b65536(input: &str) -> Result<Vec<u8>, Base65536Error> {
+    // Extending the logic in `to_b65536`, less than ~130% is also common.
+    // This almost always has enough space and rarely leads to more than
+    // half the capacity going entirely unused.
+    let expected_size = input.len().saturating_sub(2);
+    let mut result = Vec::with_capacity(expected_size);
+
+    decode_b65536(&mut result, input)?;
+    Ok(result)
+}
+
+/// Reverses the operation done by [`to_b65536`], writing to a given buffer.
+///
+/// If the data is invalid or lacks the required markers, returns an error.
+pub fn decode_b65536<W: std::io::Write>(mut writer: W, input: &str) -> Result<(), Base65536Error> {
+    const fn io_err(err: std::io::Error) -> Base65536Error {
+        Base65536Error(ErrorReason::Io(err))
+    }
+
+    let (skip_last, input) = try_strip_b65536_input(input)?;
+
+    let mut chars = input.chars();
+    if let Some(last) = chars.next_back() {
+        let last = char_to_bytes(last)?;
+
+        for c in chars {
+            let bytes = char_to_bytes(c)?;
+            writer.write_all(&bytes).map_err(io_err)?;
+        }
+
+        writer.write_all(match skip_last {
+            false => &last[..],
+            true => &last[..1],
+        }).map_err(io_err)?;
+    }
+
+    Ok(())
+}
+
+/// Tries to strip a base 65536 input, returning `skip_last` and the stripped input.
+fn try_strip_b65536_input(str: &str) -> Result<(bool, &str), Base65536Error> {
+    str
         // strip the end marker
         .strip_suffix('&')
         // strip the start marker
@@ -110,23 +190,8 @@ pub fn from_b65536(str: &str) -> Result<Vec<u8>, Base65536Error> {
             // otherwise, % may be used to indicate the last byte is skipped
             .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
         })
-        .ok_or(Base65536Error(()))?;
-
-    // Extending the logic in `to_b65536`, less than ~130% is also common.
-    // This almost always has enough space and rarely leads to more than
-    // half the capacity going entirely unused.
-    let expected_size = str.len();
-    let mut result = Vec::with_capacity(expected_size);
-    for c in str.chars() {
-        let bytes = char_to_bytes(c)?;
-        result.extend(bytes);
-    }
-
-    if skip_last && result.pop().is_none() {
-        return Err(Base65536Error(()));
-    }
-
-    Ok(result)
+        .filter(|(skip_last, str)| !skip_last || !str.is_empty())
+        .ok_or(Base65536Error::invalid())
 }
 
 const OFFSET: u32 = 0xE000 - 0xD800;
@@ -140,7 +205,7 @@ fn char_to_bytes(c: char) -> Result<[u8; 2], Base65536Error> {
     // char codes greater than 0x107FF would wrap around
     match u16::try_from(int) {
         Ok(i) => Ok(i.to_le_bytes()),
-        Err(_) => Err(Base65536Error(())),
+        Err(_) => Err(Base65536Error::invalid()),
     }
 }
 

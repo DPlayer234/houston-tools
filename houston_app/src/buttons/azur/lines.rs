@@ -1,5 +1,7 @@
 use std::fmt::Write;
 
+use smallvec::SmallVec;
+
 use azur_lane::ship::*;
 use utils::Discard;
 
@@ -7,7 +9,7 @@ use crate::buttons::*;
 use super::ShipParseError;
 
 /// Views ship lines.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub ship_id: u32,
     pub skin_index: u8,
@@ -17,7 +19,7 @@ pub struct View {
 }
 
 /// Which part of the lines to display.
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ViewPart {
     Info,
     Main1,
@@ -226,6 +228,14 @@ impl ButtonMessage for View {
 
 /// Creates a label for a couple line.
 fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourage) -> String {
+    fn fmt_sortie_count<'a>(label: &str, amount: u32, iter: impl Iterator<Item = &'a str>) -> String {
+        let plural = if amount != 1 { "s" } else { "" };
+        format!(
+            "Sortie with {} more {}{}{}",
+            amount, join_natural_or(iter), label, plural,
+        )
+    }
+
     match &opt.condition {
         ShipCouple::ShipGroup(ship_ids) => {
             let ships = ship_ids.iter()
@@ -266,14 +276,6 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
     }
 }
 
-fn fmt_sortie_count<'a>(label: &str, amount: u32, iter: impl Iterator<Item = &'a str>) -> String {
-    let plural = if amount != 1 { "s" } else { "" };
-    format!(
-        "Sortie with {} more {}{}{}",
-        amount, join_natural_or(iter), label, plural,
-    )
-}
-
 fn join_natural_and<'a>(iter: impl Iterator<Item = &'a str>) -> String {
     join_natural(iter, ", ", ", and ", " and ")
 }
@@ -283,7 +285,7 @@ fn join_natural_or<'a>(iter: impl Iterator<Item = &'a str>) -> String {
 }
 
 fn join_natural<'a>(iter: impl Iterator<Item = &'a str>, join: &str, join_last: &str, join_once: &str) -> String {
-    let data = iter.collect::<Vec<_>>();
+    let data: SmallVec<[_; 16]> = iter.collect();
 
     match data.as_slice() {
         [] => String::new(),

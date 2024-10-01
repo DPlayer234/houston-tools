@@ -1,6 +1,7 @@
-use azur_lane::ship::HullType;
 use once_cell::sync::Lazy;
 use serenity::all::{Emoji, Http, ReactionType};
+
+use azur_lane::ship::HullType;
 
 use super::HBotConfig;
 

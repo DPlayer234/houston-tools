@@ -15,6 +15,10 @@ pub mod serialized_file;
 mod unity_fs_common_str;
 pub mod unity_fs;
 
+// not public API
+#[doc(hidden)]
+pub mod __private;
+
 #[derive(Debug, Clone)]
 pub enum UnityError {
     UnexpectedEof,

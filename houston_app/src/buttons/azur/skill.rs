@@ -7,7 +7,7 @@ use super::AugmentParseError;
 use super::ShipParseError;
 
 /// View skill details of a ship or augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
@@ -16,13 +16,13 @@ pub struct View {
 }
 
 /// Where to load the skills from.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ViewSource {
     Ship(ShipViewSource),
     Augment(u32),
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ShipViewSource {
     pub ship_id: u32,
     pub retrofit: Option<u8>,
