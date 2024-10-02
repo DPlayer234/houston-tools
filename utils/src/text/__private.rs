@@ -12,7 +12,7 @@ pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u
 
     let mut index = 0usize;
     while index < LEN {
-        (value[index], is_start) = super::titlecase_transform(value[index], is_start);
+        (value[index], is_start) = super::titlecase_impl::titlecase_transform(value[index], is_start);
         index += 1;
     }
 

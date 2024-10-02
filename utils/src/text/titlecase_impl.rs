@@ -1,0 +1,92 @@
+use super::MutStrLike;
+
+/// Given a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+///
+/// # Examples
+///
+/// ```
+/// let mut s = String::from("HELLO_NEW_WORLD");
+/// utils::text::to_titlecase(&mut s);
+/// assert_eq!(&s, "Hello New World");
+/// ```
+///
+/// Or, with a byte string:
+/// ```
+/// let mut s = b"HELLO_NEW_WORLD".to_vec();
+/// utils::text::to_titlecase(&mut s);
+/// assert_eq!(&s, b"Hello New World");
+/// ```
+pub fn to_titlecase<S: MutStrLike + ?Sized>(value: &mut S) {
+    // SAFETY: `to_titlecase_u8` only transforms
+    // ASCII characters into other ASCII characters.
+    unsafe {
+        let slice = value.as_bytes_mut();
+        to_titlecase_u8(slice);
+    }
+}
+
+/// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+/// The slice is mutated in-place.
+fn to_titlecase_u8(slice: &mut [u8]) {
+    let mut is_start = true;
+
+    for item in slice {
+        (*item, is_start) = titlecase_transform(*item, is_start);
+    }
+}
+
+#[must_use]
+pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
+    if c == b'_' {
+        (b' ', true)
+    } else if !is_start {
+        (c.to_ascii_lowercase(), false)
+    } else {
+        (c.to_ascii_uppercase(), false)
+    }
+}
+
+/// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version (i.e. `Snake Case`).
+/// The resulting value is still const.
+///
+/// # Examples
+///
+/// ```
+/// const TITLE: &str = utils::titlecase!("HELLO_NEW_WORLD");
+/// assert_eq!(TITLE, "Hello New World");
+/// ```
+///
+/// Also works with lower snake case:
+/// ```
+/// const TITLE: &str = utils::titlecase!("hello_new_world");
+/// assert_eq!(TITLE, "Hello New World");
+/// ```
+///
+/// Or byte strings, if prefixed with `b:`:
+/// ```
+/// const TITLE: &[u8] = utils::titlecase!(b: b"HELLO_NEW_WORLD");
+/// assert_eq!(TITLE, b"Hello New World");
+/// ```
+#[macro_export]
+macro_rules! titlecase {
+    ($input:expr) => {{
+        // Ensure input is a `&'static str`
+        const INPUT_STR: &str = $input;
+
+        // Transmute result back to a str.
+        const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
+        unsafe { ::std::str::from_utf8_unchecked(BYTES) }
+    }};
+    (b: $input:expr) => {{
+        // Ensure input is a `&'static [u8]`
+        const INPUT: &[u8] = $input;
+
+        // Reusable const for byte length
+        const N: usize = INPUT.len();
+
+        // Include length in constant for next call.
+        const CLONE: [u8; N] = *$crate::mem::as_sized(INPUT);
+        const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
+        &RESULT as &[u8]
+    }};
+}
