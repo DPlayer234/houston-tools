@@ -1,5 +1,9 @@
 //! A variety of utility types and functions for use across the crates in this repo.
 
+// for benchmarks
+#[cfg(test)]
+use criterion as _;
+
 use std::fmt::Debug;
 
 pub mod fields;

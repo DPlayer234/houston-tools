@@ -27,10 +27,7 @@ impl<'a, T: ?Sized> Clone for RawRef<'a, T> {
 
 impl<'a, T: ?Sized> RawRef<'a, T> {
     pub fn cast<U>(self) -> RawRef<'a, U> {
-        RawRef {
-            ptr: self.ptr.cast(),
-            _lifetime: PhantomData,
-        }
+        RawRef::from(self.ptr.cast())
     }
 
     /// Returns a shared reference to the value.
@@ -46,10 +43,7 @@ impl<'a, T: Sized> RawRef<'a, T> {
     ///
     /// Retains the lifetime.
     pub unsafe fn add(self, offset: usize) -> Self {
-        RawRef {
-            ptr: unsafe { self.ptr.add(offset) },
-            _lifetime: PhantomData,
-        }
+        Self::from(unsafe { self.ptr.add(offset) })
     }
 }
 

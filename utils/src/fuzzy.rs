@@ -146,7 +146,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// Check [`Match::score`] for more details.
     pub fn search<'st>(&'st self, value: &str) -> MatchIter<'st, T> {
         let norm = norm_str(value);
-        let mut results = MatchIter::new_empty();
+        let mut results = MatchIter::default();
 
         if norm.len() >= MIN {
             let upper = MAX.min(norm.len());
@@ -312,17 +312,6 @@ impl<'st, T> MatchIter<'st, T> {
         }
     }
 
-    fn new_empty() -> Self {
-        Self {
-            inner: std::vec::IntoIter::default(),
-            state: MatchIterState {
-                total: 0.0,
-                // no sound code would be able to index this anyways
-                search_values: NonNull::dangling().into(),
-            },
-        }
-    }
-
     fn is_empty(&self) -> bool {
         self.inner.len() == 0
     }
@@ -341,6 +330,20 @@ impl<'st, T> MatchIterState<'st, T> {
             // SAFETY: caller guarantees the match info comes from the inner iterator
             // `new` requires that the indices are valid for the search values
             data: unsafe { self.search_values.add(info.index as usize).as_ref() },
+        }
+    }
+}
+
+impl<T> Default for MatchIter<'_, T> {
+    /// Creates an empty iterator with no matches.
+    fn default() -> Self {
+        Self {
+            inner: std::vec::IntoIter::default(),
+            state: MatchIterState {
+                total: 0.0,
+                // no sound code would be able to index this anyways
+                search_values: NonNull::dangling().into(),
+            },
         }
     }
 }

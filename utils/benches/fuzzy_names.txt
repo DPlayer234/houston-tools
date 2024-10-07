@@ -1,0 +1,731 @@
+Laffey II
+San Diego
+New Jersey
+Yorktown II
+Guam
+Kearsarge
+Vanguard
+Implacable
+Plymouth
+Shimakaze
+Yuudachi
+Unzen
+Musashi
+Shinano
+Amagi(CV)
+Azuma
+Hakuryuu
+Ulrich von Hutten
+Bismarck Zwei
+Friedrich der Große
+Ägir
+Hindenburg
+Sovetsky Soyuz
+Kronshtadt
+Admiral Nakhimov
+Alsace
+Mogador
+Allen M. Sumner
+Ingraham
+Helena
+Houston II
+San Francisco
+Saratoga
+Intrepid
+Independence
+Seattle
+Anchorage
+Scylla
+Perseus
+Unicorn
+Ark Royal
+Indomitable
+Cheshire
+Ayanami
+Kazagumo
+Hatsuzuki
+Noshiro
+Nagato
+Zuihou
+Ibuki
+Shimanto
+Daisen
+Magdeburg
+Emden
+Blücher
+Prinz Heinrich
+Seydlitz
+Lützow
+U-96
+U-37
+Odin
+August von Parseval
+Prinz Rupprecht
+An Shan
+Chang Chun
+Tai Yuan
+Attilio Regolo
+Chapayev
+Voroshilov
+Pamiat' Merkuria
+Volga
+Joffre
+Helena META
+Pamiat' Merkuria META
+Nagato META
+Marie Rose
+Rikka Takarada
+Akane Shinjo
+Klaudia Valentz
+Asuka
+Stephen Potter
+Hammann II
+Vampire
+Kashino
+Elbe
+Jade
+U-522
+Ying Swei
+Chao Ho
+Vampire META
+Cassin
+Glasgow
+Eldridge
+Warspite
+Drake
+Napoli
+Brest
+Laffey
+Nicholas
+Bristol
+Montpelier
+Reno
+Fargo
+New Orleans
+Minneapolis
+Baltimore
+Bremerton
+Pittsburgh
+Constellation
+Maryland
+North Carolina
+Washington
+South Dakota
+Indiana
+Massachusetts
+Alabama
+West Virginia
+Enterprise
+Essex
+Hornet II
+Ticonderoga
+Bunker Hill
+Shangri-La
+Cavalla
+Archerfish
+Georgia
+Halford
+Javelin
+Jervis
+Janus
+Nubian
+Dido
+Belfast
+Sirius
+Swiftsure
+Hermione
+Dido µ
+York
+Exeter
+London
+Hood
+King George V
+Prince of Wales
+Duke of York
+Howe
+Royal Oak
+Nelson
+Centaur
+Albion
+Theseus
+Illustrious
+Victorious
+Formidable
+Illustrious µ
+Formidable µ
+Neptune
+Monarch
+Shigure
+Yukikaze
+Kawakaze
+Kasumi
+Suzutsuki
+Wakatsuki
+Yuubari
+Kinu
+Jintsuu
+Sakawa
+Noshiro µ
+Watarase
+Chikuma
+Takao
+Atago
+Maya
+Choukai
+Mogami
+Amagi
+Kaga (Battleship)
+Tosa
+Mikasa
+Kii
+Owari
+Suruga
+Ryuuhou
+Akagi
+Kaga
+Souryuu
+Hiryuu
+Shoukaku
+Zuikaku
+Taihou
+Akagi µ
+Taihou µ
+Katsuragi
+I-168
+Akashi
+I-13
+Izumo
+Kitakaze
+Z1
+Z23
+Z46
+Z47
+Otto von Alvensleben
+Regensburg
+Prinz Eugen
+Roon µ
+Prinz Adalbert
+Friedrich Carl
+Brünhilde
+Alvitr
+Bismarck
+Tirpitz
+Graf Zeppelin
+Peter Strasser
+U-81
+U-47
+Roon
+Mainz
+Felix Schultz
+Ning Hai
+Ping Hai
+Yat Sen
+Huan Ch'ang
+Chen Hai
+Harbin
+Pompeo Magno
+Duca degli Abruzzi
+Giuseppe Garibaldi
+Zara
+Pola
+Gorizia
+Vittorio Veneto
+Littorio
+Roma
+Aquila
+Impero
+Leonardo da Vinci
+Marco Polo
+Tashkent
+Kiev
+Ognevoy
+Avrora
+Kirov
+Kuybyshev
+Tallinn
+Kursk
+Sovetskaya Belorussiya
+Sovetskaya Rossiya
+Chkalov
+Le Triomphant
+Le Terrible
+Émile Bertin
+Jeanne d'Arc
+Guichen
+Brennus
+Richelieu
+Painlevé
+Saint Louis
+Champagne
+Bayard
+Le Malin
+L'Indomptable
+L'Audacieux
+Marseillaise
+Algérie
+Strasbourg
+Jean Bart
+Clemenceau
+Gascogne µ
+Gascogne
+Flandre
+Royal Fortune
+São Martinho
+Golden Hind
+Mary Celeste
+Jintsuu META
+Kirov META
+Algérie META
+Wichita META
+Gneisenau META
+Scharnhorst META
+Repulse META
+Renown META
+Arizona META
+Queen Elizabeth META
+Rodney META
+Hiryuu META
+Ark Royal META
+Souryuu META
+Béarn META
+Tokino Sora
+Honoka
+Luna
+Tamaki
+Yume Minami
+Chise Asukagawa
+The 2nd
+Reisalin Stout
+Patricia Abelheim
+Kala Ideas
+Ikaruga
+Yumi
+Fubuki (Senran Kagura)
+Hammann
+Bailey
+Cooper
+Morrison
+Cleveland
+Columbia
+Denver
+Birmingham
+Biloxi
+Boise
+Juneau
+Houston
+Portland
+Vincennes
+Wichita
+Louisville
+Arizona
+Colorado
+Long Island
+Lexington
+Yorktown
+Hornet
+Princeton
+Langley II
+Bataan
+San Jacinto
+Little Enterprise
+Vestal
+Ardent
+Eskimo
+Hero
+Ajax
+Sheffield
+Manchester
+Edinburgh
+Aurora
+Newcastle
+Penelope
+Enterprise (Royal Navy)
+Suffolk
+Dorsetshire
+Shropshire
+Devonshire
+Renown
+Little Renown
+Queen Elizabeth
+Rodney
+Valiant
+Revenge
+Argus
+Chaser
+Eagle
+Glorious
+Little Illustrious
+Little Formidable
+Erebus
+Terror
+Abercrombie
+Fubuki
+Miyuki
+Kagerou
+Nowaki
+Hatsuharu
+Hatsushimo
+Ariake
+Yuugure
+Kamikaze
+Matsukaze
+Tanikaze
+Uranami
+Makinami
+Hanazuki
+Naganami
+Asanagi
+Isuzu
+Natori
+Yura
+Mikuma
+Sendai
+Agano
+Ashigara
+Haguro
+Suzuya
+Kumano
+Kongou
+Hiei
+Haruna
+Kirishima
+Hiei-chan
+Amagi-chan
+Kongou µ
+Mutsu
+Houshou
+Shouhou
+Ryuujou
+Chitose
+Chiyoda
+Akagi-chan
+Taihou-chan
+I-26
+Fusou
+Yamashiro
+Ise
+Hyuuga
+Z2
+Z16
+Z24
+Z25
+Z26
+Z28
+Z35
+Z36
+Z43
+Leipzig
+Nürnberg
+Elbing
+Admiral Hipper
+Deutschland
+Admiral Graf Spee
+Yorck
+Scharnhorst
+Gneisenau
+Thüringen
+Weser
+Zeppy
+U-31
+Fu Shun
+Lung Wu
+Hai Tien
+Hwah Jah
+Maestrale
+Libeccio
+Nicoloso da Recco
+Alfredo Oriani
+Emanuele Pessagno
+Trieste
+Bolzano
+Giulio Cesare
+Andrea Doria
+Minsk
+Gremyashchy
+Murmansk
+Gangut
+Arkhangelsk
+Sevastopol
+Poltava
+Forbin
+Maillé Brézé
+Suffren
+Lyon
+Béarn
+Surcouf
+Vauquelin
+Kersaint
+Fleuret
+La Galissonnière
+Foch
+Dupleix
+Dunkerque
+Whydah
+Adventure Galley
+Hatakaze META
+Memphis META
+Sheffield META
+La Galissonnière META
+Foch META
+Fusou META
+Yamashiro META
+Hiyou META
+Junyou META
+Princeton META
+Vestal META
+Erebus META
+Vert
+Murasaki Shion
+Ōkami Mio
+Nagisa
+Nyotengu
+Hass
+Mujina
+Lila Decyrus
+Serri Glaus
+Murasaki
+Yūyaki
+Dewey
+Stanly
+Brooklyn
+Phoenix
+Atlanta
+Honolulu
+Memphis
+Concord
+Marblehead
+Northampton
+Nevada
+Oklahoma
+Pennsylvania
+Tennessee
+California
+Bogue
+Casablanca
+Langley
+Ranger
+Wasp
+Leander
+Kent
+Norfolk
+Sussex
+Repulse
+Hermes
+Shiratsuyu
+Shiranui
+Wakaba
+Oyashio
+Mutsuki
+Fumizuki
+Kiyonami
+Asashio
+Ooshio
+Michishio
+Arashio
+Hatakaze
+Oite
+Abukuma
+Naka
+Furutaka
+Kako
+Hiyou
+Junyou
+Z18
+Z19
+Karlsruhe
+Köln
+Trento
+Conte di Cavour
+Salt Lake City
+Königsberg
+Suzunami
+Hiei META
+Ayase
+Trento META
+Houshou META
+Specialized Bulin Custom MKIII
+Prototype Bulin MKII
+Charles Ausburne
+Northampton II
+Albacore
+Flasher
+Charybdis
+I-19
+Prinz Eugen µ
+U-101
+Tashkent µ
+Le Malin µ
+U-556 META
+Purple Heart
+Black Heart
+White Heart
+Green Heart
+Elegant Kizuna AI
+Anniversary Kizuna AI
+Super Gamer Kizuna AI
+Shirakami Fubuki
+Minato Aqua
+Kasumi (Venus Vacation)
+Misaki
+Haruka Amami
+Chihaya Kisaragi
+Iori Minase
+Azusa Miura
+Princess Hime
+Homura
+Universal Bulin
+Maury
+Sims
+Mullany
+Bell
+St. Louis
+Lena
+Clevelad
+Li'l Sandy
+Cleveland µ
+Boise µ
+Indianapolis
+Astoria
+Quincy
+Baltimore µ
+Dace
+Bluegill
+Albacore µ
+Nautilus
+Herring
+Acasta
+Fortune
+Grenville
+Glowworm
+Hardy
+Matchless
+Musketeer
+Icarus
+Amazon
+Achilles
+Gloucester
+Little Bel
+Curacoa
+Curlew
+Black Prince
+Sheffield µ
+Bellona
+Liverpool
+Little Cheshire
+Shirayuki
+Hibiki
+Umikaze
+Yamakaze
+Niizuki
+Harutsuki
+Yoizuki
+Hamakaze
+Nachi
+Shinano-chan
+I-58
+I-25
+I-56
+Admiral Hipper µ
+Little Prinz Eugen
+Little Spee
+Little Friedrich
+U-557
+U-556
+U-73
+U-110
+U-410
+U-1206
+Hu Pen
+Fei Yuen
+Hai Chi
+Chi An
+Ting An
+Carabiniere
+Vincenzo Gioberti
+Torricelli
+Grozny
+Stremitelny
+Gromky
+Soobrazitelny
+Svirepy
+Le Téméraire
+L'Opiniâtre
+Le Téméraire µ
+Le Mars
+Tartu
+Épée
+Hunter META
+Fortune META
+Kimberly META
+Kasumi META
+Neptune (Neptunia)
+Noire
+Blanc
+Kizuna AI
+Natsuiro Matsuri
+Nakiri Ayame
+Monica
+Ritsuko Akizuki
+Ami Futami
+Mami Futami
+Namiko
+Downes
+Gridley
+Fletcher
+Thatcher
+Benson
+Radford
+Jenkins
+Bush
+Hazelwood
+Bache
+Hobby
+Kalk
+Kimberly
+Aylwin
+Smalley
+Halsey Powell
+San Juan
+Chicago
+Comet
+Crescent
+Cygnet
+Foxhound
+Hunter
+Juno
+Jupiter
+Jersey
+Echo
+Southampton
+Arethusa
+Galatea
+Fiji
+Jamaica
+Akatsuki
+Ikazuchi
+Inazuma
+Kuroshio
+Kisaragi
+Nagatsuki
+Urakaze
+Isokaze
+Myoukou
+Craven
+McCall
+Aulick
+Foote
+Spence
+Omaha
+Raleigh
+Richmond
+Pensacola
+Beagle
+Bulldog
+Uzuki
+Minazuki
+Mikazuki
+Nagara
+Aoba
+Kinugasa
+Z20
+Z21

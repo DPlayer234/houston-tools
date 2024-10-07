@@ -11,7 +11,7 @@ const DISCORD_EPOCH: u64 = 1_420_070_400_000;
 //
 // I don't think it's actually possible to cause safety issues on _expected hardware_
 // with `DateTime` - it has invariants, but they exist per field and those are small
-// enough to have atomic writes/reads.
+// enough to have atomic writes/reads - as long as you don't keep references around.
 // Either way, it's still UB to Rust, so we treat it with the appropriate care.
 static STARTUP_TIME: SyncUnsafeCell<DateTime<Utc>> = SyncUnsafeCell::new(DateTime::UNIX_EPOCH);
 
@@ -101,7 +101,7 @@ pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOf
                 .earliest()
                 .map(|d| d.fixed_offset());
         }
-    };
+    }
 
     None
 }
