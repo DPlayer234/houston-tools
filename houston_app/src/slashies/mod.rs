@@ -61,14 +61,17 @@ pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HErro
     }
 
     async fn command_error(ctx: &HContext<'_>, err: &HError) {
-        let message = match err.downcast_ref::<HArgError>() {
-            Some(err) => {
-                format!("Command error: ```{err}```")
-            }
-            None => {
+        let message = if let Some(err) = err.downcast_ref::<HArgError>() {
+            format!("Command error: ```{err}```")
+        } else {
+            if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
+                // print both errors to preserve the stack trace, if present
+                log::warn!("Discord error in command: {ser_err:?} / {err:?}")
+            } else {
                 log::error!("Error in command: {err:?}");
-                format!("Internal error: ```{err}```")
             }
+
+            format!("Internal error: ```{err}```")
         };
 
         context_error(ctx, message).await

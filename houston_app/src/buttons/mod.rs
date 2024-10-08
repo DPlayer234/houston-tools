@@ -152,8 +152,9 @@ impl ButtonEventHandler {
 
     #[cold]
     async fn handle_dispatch_error(&self, ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
-        if let Some(err) = err.downcast_ref::<serenity::Error>() {
-            log::warn!("Discord interaction error: {err}");
+        if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
+            // print both errors to preserve the stack trace, if present
+            log::warn!("Discord interaction error: {ser_err:?} / {err:?}");
             return;
         }
 
