@@ -163,7 +163,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "1.7.0"
+version = "1.7.1"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -2639,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "unity_read"
-version = "3.1.1"
+version = "3.1.2"
 dependencies = [
  "anyhow",
  "binrw",
