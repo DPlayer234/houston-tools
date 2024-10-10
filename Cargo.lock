@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "1.7.4"
+version = "1.7.5"
 dependencies = [
  "anyhow",
  "azur_lane",

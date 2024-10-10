@@ -396,9 +396,10 @@ type Segment<const N: usize> = [u16; N];
 
 unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
     let mut res = [0u16; N];
+    debug_assert!(pts.len() <= N);
 
-    // SAFETY: Caller passes segments with size N.
-    unsafe { res.get_unchecked_mut(..pts.len()) }.copy_from_slice(pts);
+    // SAFETY: Caller passes segments with size N or less.
+    unsafe { std::ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len()); }
     res
 }
 

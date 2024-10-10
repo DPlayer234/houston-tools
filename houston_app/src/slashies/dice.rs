@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 use rand::{thread_rng, Rng};
 use rand::distributions::Uniform;
+use smallvec::SmallVec;
 
 use utils::Discard;
 
@@ -16,7 +17,7 @@ pub async fn dice(
     #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]
     sets: DiceSetVec,
 ) -> HResult {
-    let sets = sets.into_vec();
+    let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
     if dice_count > 255 {
         Err(HArgError("You can't roll more than 255 dice at once."))?;
@@ -32,7 +33,7 @@ pub async fn dice(
     Ok(())
 }
 
-fn get_dice_roll_result(sets: Vec<DiceSet>) -> (u32, String) {
+fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     let mut content = String::new();
     let mut rng = thread_rng();
 
@@ -40,8 +41,7 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> (u32, String) {
     // so we won't ever exceed the needed space
     let mut total_sum = 0u32;
 
-    let len = sets.len();
-    for d in sets {
+    for &d in sets {
         write!(content, "- **{}d{}:**", d.count, d.faces).discard();
 
         let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()));
@@ -53,7 +53,7 @@ fn get_dice_roll_result(sets: Vec<DiceSet>) -> (u32, String) {
             write!(content, " {}", roll).discard();
         }
 
-        if d.count.get() > 1 && len > 1 {
+        if d.count.get() > 1 && sets.len() > 1 {
             write!(content, " *(\u{2211}{})*", local_sum).discard();
         }
 
@@ -93,18 +93,20 @@ impl FromStr for DiceSet {
     }
 }
 
+type InnerVec = SmallVec<[DiceSet; 4]>;
+
 #[derive(Debug)]
-struct DiceSetVec(Vec<DiceSet>);
+struct DiceSetVec(InnerVec);
 
 impl DiceSetVec {
     #[must_use]
-    fn from_vec(vec: Vec<DiceSet>) -> Option<Self> {
+    fn from_vec(vec: InnerVec) -> Option<Self> {
         (!vec.is_empty()).then_some(Self(vec))
     }
 
     #[must_use]
-    fn into_vec(self) -> Vec<DiceSet> {
-        self.0
+    fn as_slice(&self) -> &[DiceSet] {
+        self.0.as_slice()
     }
 }
 
@@ -115,7 +117,7 @@ impl FromStr for DiceSetVec {
         s.split(|c: char| c.is_whitespace() || c.is_ascii_punctuation())
             .filter(|s| !s.is_empty())
             .map(DiceSet::from_str)
-            .collect::<Result<Vec<DiceSet>, Self::Err>>()
+            .collect::<Result<InnerVec, Self::Err>>()
             .and_then(|v| DiceSetVec::from_vec(v).ok_or(DiceParseError(())))
     }
 }

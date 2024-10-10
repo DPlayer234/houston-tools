@@ -55,7 +55,7 @@ impl View {
             .color(ship.rarity.color_rgb())
             .fields(self.get_stats_field(ship))
             .fields(self.get_equip_field(ship))
-            .fields(self.get_skills_field(ship));
+            .fields(self.get_skills_field(data, ship));
 
         let mut rows = Vec::new();
         self.add_upgrade_row(&mut rows);
@@ -258,18 +258,25 @@ impl View {
     }
 
     /// Creates the embed field that display the skill summary.
-    fn get_skills_field(&self, ship: &ShipData) -> Option<SimpleEmbedFieldCreate> {
-        match ship.skills.len() {
-            0 => None,
-            _ => {
-                let mut text = String::new();
-                for s in &ship.skills {
-                    if !text.is_empty() { text.push('\n'); }
-                    write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
-                }
-                Some(("Skills", text, false))
+    fn get_skills_field(&self, data: &HBotData, ship: &ShipData) -> Option<SimpleEmbedFieldCreate> {
+        // There isn't any way a unique augment can do anything if there are no skills
+        // so we still skip the field if there are no skills but there is an augment.
+        // ... Not that there are any ships without skills to begin with.
+        (!ship.skills.is_empty()).then(|| {
+            let mut text = String::new();
+            for s in &ship.skills {
+                if !text.is_empty() { text.push('\n'); }
+                write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
             }
-        }
+
+            let augments = data.azur_lane().augments_by_ship_id(ship.group_id);
+            for augment in augments {
+                if !text.is_empty() { text.push('\n'); }
+                write!(text, "-# UA: **{}**", augment.name).discard();
+            }
+
+            ("Skills", text, false)
+        })
     }
 }
 
