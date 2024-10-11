@@ -86,16 +86,21 @@ impl HBotData {
         _ = self.azur_lane();
     }
 
+    /// Gets the bot configuration.
     #[must_use]
     pub fn config(&self) -> &HBotConfig {
         &self.config
     }
 
+    /// Gets the loaded app emojis.
     #[must_use]
     pub fn app_emojis(&self) -> HAppEmojis {
         HAppEmojis(self.app_emojis.get())
     }
 
+    /// Loads all app emojis.
+    ///
+    /// This doesn't return them. Use [`Self::app_emojis`].
     pub async fn load_app_emojis(&self, ctx: &Http) -> HResult {
         if self.app_emojis.get().is_none() {
             _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
