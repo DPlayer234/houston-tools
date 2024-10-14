@@ -3,7 +3,8 @@ use std::io::{Cursor, Read, Seek};
 use binrw::{BinRead, BinResult, Endian};
 use half::f16;
 
-use crate::{define_unity_class, UnityError};
+use crate::{define_unity_class, FromInt};
+use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
 use super::StreamingInfo;
 
@@ -95,7 +96,7 @@ pub struct MeshVertexData<'t> {
 
 impl Mesh {
     /// Reads the mesh's vertex data.
-    pub fn read_vertex_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> anyhow::Result<MeshVertexData<'t>> {
+    pub fn read_vertex_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> crate::Result<MeshVertexData<'t>> {
         Ok(MeshVertexData {
             mesh: self,
             data: self.stream_data.load_data_or_else(fs, || &self.vertex_data.data_size)?
@@ -105,7 +106,7 @@ impl Mesh {
 
 impl MeshVertexData<'_> {
     // Only assuming Unity 2018 and newer.
-    pub fn resolve_meshes(&self) -> anyhow::Result<Vec<ResolvedMesh>> {
+    pub fn resolve_meshes(&self) -> crate::Result<Vec<ResolvedMesh>> {
         // Would you believe me if this handles barely anything a mesh can store?
         let (index_size, index_buffer) = self.load_index_buffer()?;
         let streams = self.load_streams()?;
@@ -114,7 +115,7 @@ impl MeshVertexData<'_> {
 
         for sub_mesh in &self.mesh.sub_meshes {
             let mut result = ResolvedMesh {
-                vertices: vec![Vertex::default(); sub_mesh.vertex_count.try_into()?],
+                vertices: vec![Vertex::default(); usize::from_int(sub_mesh.vertex_count)?],
                 ..Default::default()
             };
 
@@ -132,10 +133,10 @@ impl MeshVertexData<'_> {
                     * u64::from(sub_mesh.vertex_count)
                     + u64::from(stream.offset);
 
-                if channel_size > stream.stride || stream_size > self.data.len().try_into()? { continue }
+                if channel_size > stream.stride || stream_size > u64::from_int(self.data.len())? { continue }
 
                 // assert that the loops below can always cast `i as usize`
-                _ = usize::try_from(sub_mesh.vertex_count)?;
+                _ = usize::from_int(sub_mesh.vertex_count)?;
 
                 match index {
                     0 => { // pos
@@ -165,8 +166,8 @@ impl MeshVertexData<'_> {
 
             let index_offset = sub_mesh.first_byte / index_size;
             let mut index_iter = index_buffer.iter()
-                .skip(index_offset.try_into()?)
-                .take(sub_mesh.index_count.try_into()?);
+                .skip(usize::from_int(index_offset)?)
+                .take(usize::from_int(sub_mesh.index_count)?);
 
             // This is only used to switch triangle winding
             let mut topology_offset = index_offset % 2u32;
@@ -176,9 +177,9 @@ impl MeshVertexData<'_> {
                 let Some(&vertex_index_2) = index_iter.next() else { break };
 
                 let mut triangle = (
-                    usize::try_from(vertex_index_0 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
-                    usize::try_from(vertex_index_1 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
-                    usize::try_from(vertex_index_2 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
+                    usize::from_int(vertex_index_0 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
+                    usize::from_int(vertex_index_1 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
+                    usize::from_int(vertex_index_2 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
                 );
 
                 if sub_mesh.topology != 0 && (topology_offset & 1) != 0 {
@@ -204,7 +205,7 @@ impl MeshVertexData<'_> {
             cursor
         }
 
-        fn read_f32_vector<const N: usize>(cursor: &mut Cursor<&[u8]>, t: u8) -> anyhow::Result<[f32; N]> {
+        fn read_f32_vector<const N: usize>(cursor: &mut Cursor<&[u8]>, t: u8) -> crate::Result<[f32; N]> {
             match t {
                 0 => read_vector_of::<f32, N>(cursor),
                 1 => read_vector_of::<ReadF16, N>(cursor).map(NormFloat::to_f32_array),
@@ -212,13 +213,11 @@ impl MeshVertexData<'_> {
                 4 => read_vector_of::<Norm<i8>, N>(cursor).map(NormFloat::to_f32_array),
                 5 => read_vector_of::<Norm<u16>, N>(cursor).map(NormFloat::to_f32_array),
                 6 => read_vector_of::<Norm<i16>, N>(cursor).map(NormFloat::to_f32_array),
-                _ => Err(UnityError::Unsupported(
-                    format!("unsupported mesh data type: {t}")
-                ))?
+                _ => Err(Error::Unsupported(format!("unsupported mesh data type: {t}")))?
             }
         }
 
-        fn read_vector_of<T, const N: usize>(cursor: &mut Cursor<&[u8]>) -> anyhow::Result<[T; N]>
+        fn read_vector_of<T, const N: usize>(cursor: &mut Cursor<&[u8]>) -> crate::Result<[T; N]>
         where
             T: Copy + Default + BinRead,
             for<'a> T::Args<'a>: Default,
@@ -232,7 +231,7 @@ impl MeshVertexData<'_> {
         }
     }
 
-    fn load_index_buffer(&self) -> anyhow::Result<(u32, Vec<u32>)> {
+    fn load_index_buffer(&self) -> crate::Result<(u32, Vec<u32>)> {
         match self.mesh.index_format {
             0 => { // UInt16
                 Ok((2, self.mesh.index_buffer.chunks_exact(2)
@@ -245,13 +244,13 @@ impl MeshVertexData<'_> {
                     .collect()))
             }
             _ => {
-                Err(UnityError::InvalidData("unexpected mesh index format"))?
+                Err(Error::InvalidData("unexpected mesh index format"))?
             }
         }
     }
 
-    fn load_streams(&self) -> anyhow::Result<Vec<StreamInfo>> {
-        let data_size: u32 = self.data.len().try_into()?;
+    fn load_streams(&self) -> crate::Result<Vec<StreamInfo>> {
+        let data_size = u32::from_int(self.data.len())?;
         let vertex_data = &self.mesh.vertex_data;
 
         let mut streams = vertex_data.streams
@@ -286,7 +285,7 @@ impl MeshVertexData<'_> {
             }
 
             if cur_offset > data_size {
-                Err(UnityError::InvalidData("mesh channel info specified too much stream data"))?;
+                Err(Error::InvalidData("mesh channel info specified too much stream data"))?;
             }
 
             if streams.len() == 2 {

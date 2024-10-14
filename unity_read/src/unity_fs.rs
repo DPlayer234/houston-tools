@@ -3,7 +3,7 @@
 
 use std::borrow::Cow;
 use std::cell::Cell;
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, SeekFrom};
 use std::ops::Deref;
 
 use binrw::{binread, BinRead, NullString};
@@ -11,10 +11,11 @@ use num_enum::TryFromPrimitive;
 use modular_bitfield::{bitfield, BitfieldSpecifier};
 use modular_bitfield::specifiers::*;
 
+use crate::{SeekRead, FromInt};
+use crate::error::Error;
 use crate::serialized_file::SerializedFile;
-use crate::UnityError;
 
-// Since UnityFsFile stores a `dyn SeekRead`, it cannot be !Send and !Sync.
+// Since UnityFsFile stores a `dyn SeekRead`, it cannot be `Send` and `Sync`.
 // While that would be nice, short of requiring it for *every* reader there is no nice way around it.
 // Subsequently, none of the code here bothers to support synchronization.
 
@@ -98,7 +99,7 @@ struct Block {
 
 #[bitfield]
 #[binread]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 #[br(map = |x: u16| Self::from_bytes(x.to_le_bytes()))]
 struct BlockFlags {
     #[bits = 6]
@@ -126,8 +127,8 @@ struct Node {
     uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
 }
 
-#[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, TryFromPrimitive, BitfieldSpecifier)]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, BitfieldSpecifier)]
 #[bits = 6]
 enum Compression {
     None = 0,
@@ -146,7 +147,7 @@ struct BlockOffset {
 
 impl<'a> UnityFsFile<'a> {
     /// Reads a UnityFS from a reader.
-    pub fn open(mut buf: &'a mut dyn SeekRead) -> anyhow::Result<Self> {
+    pub fn open(mut buf: &'a mut dyn SeekRead) -> crate::Result<Self> {
         let header = UnityFsHeader::read(&mut buf)?;
 
         // Load blocks info
@@ -156,7 +157,7 @@ impl<'a> UnityFsFile<'a> {
                 buf.align_to(16)?;
             }
 
-            let mut compressed_data = vec![0u8; header.compressed_blocks_info_size.try_into()?];
+            let mut compressed_data = vec![0u8; usize::from_int(header.compressed_blocks_info_size)?];
 
             if header.flags.blocks_info_at_end() {
                 let pos = buf.stream_position()?;
@@ -218,13 +219,13 @@ impl<'a> UnityFsFile<'a> {
 }
 
 impl<'a> UnityFsNode<'a> {
-    fn decompress(&self) -> anyhow::Result<Vec<u8>> {
+    fn decompress(&self) -> crate::Result<Vec<u8>> {
         let uncompressed_start = self.node.offset;
         let BlockOffset {
             index,
             mut compressed_offset,
             mut uncompressed_offset
-        } = self.file.get_block_index_by_offset(uncompressed_start).ok_or(UnityError::InvalidData("compressed data position out of bounds"))?;
+        } = self.file.get_block_index_by_offset(uncompressed_start).ok_or(Error::InvalidData("compressed data position out of bounds"))?;
 
         let mut result = Vec::new();
 
@@ -239,7 +240,7 @@ impl<'a> UnityFsNode<'a> {
         for block in &self.file.blocks_info.blocks[index ..] {
             // Read and decompress the entire block
             let start = compressed_offset + self.file.data_offset;
-            let mut compressed_data = vec![0u8; block.compressed_size.try_into()?];
+            let mut compressed_data = vec![0u8; usize::from_int(block.compressed_size)?];
 
             buf.seek(SeekFrom::Start(start))?;
             buf.read_exact(&mut compressed_data)?;
@@ -251,8 +252,8 @@ impl<'a> UnityFsNode<'a> {
             )?;
 
             // Determine the relative offsets for this file into this block
-            let sub_start = usize::try_from(uncompressed_start.saturating_sub(uncompressed_offset))?;
-            let missing_size = usize::try_from(self.node.size - u64::try_from(result.len())?)?;
+            let sub_start = usize::from_int(uncompressed_start.saturating_sub(uncompressed_offset))?;
+            let missing_size = usize::from_int(self.node.size - u64::from_int(result.len())?)?;
             let sub_end = sub_start + missing_size;
 
             if sub_end <= uncompressed_data.len() {
@@ -269,17 +270,17 @@ impl<'a> UnityFsNode<'a> {
         // sanity check to ensure the guard is still valid here and can be dropped
         drop(guard);
 
-        debug_assert!(u64::try_from(result.len())? == self.node.size);
+        debug_assert!(u64::from_int(result.len())? == self.node.size);
         Ok(result)
     }
 
     /// Reads the raw binary data for this node.
-    pub fn read_raw(&self) -> anyhow::Result<&'a [u8]> {
+    pub fn read_raw(&self) -> crate::Result<&'a [u8]> {
         Ok(self.node.uncompressed_cache.get_or_try_init(|| self.decompress())?)
     }
 
     /// Reads the data for this node.
-    pub fn read(&self) -> anyhow::Result<UnityFsData<'a>>{
+    pub fn read(&self) -> crate::Result<UnityFsData<'a>>{
         let buf = self.read_raw()?;
         if SerializedFile::is_serialized_file(buf) {
             Ok(UnityFsData::SerializedFile(SerializedFile::read(buf)?))
@@ -304,14 +305,14 @@ impl<'a> UnityFsNode<'a> {
     }
 }
 
-fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> anyhow::Result<Cow<[u8]>> {
+fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> crate::Result<Cow<[u8]>> {
     match compression {
         Compression::None => Ok(Cow::Borrowed(compressed_data)),
-        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, Some(size.try_into()?))?)),
+        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, Some(i32::from_int(size)?))?)),
         Compression::Lzma => {
             use lzma_rs::decompress::*;
 
-            let mut output = Cursor::new(Vec::with_capacity(size.try_into()?));
+            let mut output = Cursor::new(Vec::with_capacity(usize::from_int(size)?));
             let mut reader = Cursor::new(compressed_data);
             lzma_rs::lzma_decompress_with_options(&mut reader, &mut output, &Options {
                 unpacked_size: UnpackedSize::UseProvided(Some(u64::from(size))),
@@ -319,29 +320,11 @@ fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) 
             })?;
             Ok(Cow::Owned(output.into_inner()))
         }
-        _ => Err(UnityError::Unsupported(
+        _ => Err(Error::Unsupported(
             format!("unsupported compression method: {compression:?}")
-        ).into())
+        ))
     }
 }
-
-pub trait SeekRead: Read + Seek {
-    #[inline]
-    fn align_to(&mut self, align: u16) -> std::io::Result<()> {
-        let pos = self.stream_position()?;
-        let offset = pos % u64::from(align);
-
-        if offset != 0 {
-            // offset is within (0..=u16::MAX) and thus cannot wrap
-            #[allow(clippy::cast_possible_wrap)]
-            self.seek(SeekFrom::Current(i64::from(align) - offset as i64))?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<T: Read + Seek> SeekRead for T {}
 
 #[derive(Clone)]
 struct DebugIgnore<T>(pub T);

@@ -5,41 +5,39 @@
 //!
 //! Inspired and made by referencing https://github.com/gameltb/io_unity and https://github.com/yuanyan3060/unity-rs for file formats.
 
-use std::fmt::{Debug, Display};
-use std::error::Error;
-use std::io::{Read, Seek};
+use std::fmt::Display;
+use std::io::{Read, Seek, SeekFrom};
 
 pub mod classes;
+pub mod error;
 pub mod object;
 pub mod serialized_file;
 mod unity_fs_common_str;
 pub mod unity_fs;
 
-// not public API
-#[doc(hidden)]
-pub mod __private;
+/// Result type with [`Error`] error variant.
+pub type Result<T> = std::result::Result<T, error::Error>;
 
-#[derive(Debug, Clone)]
-pub enum UnityError {
-    UnexpectedEof,
-    InvalidData(&'static str),
-    Mismatch(UnityMismatch),
-    Unsupported(String),
-}
+/// Trait combining [`Read`] and [`Seek`] with read-alignment support.
+///
+/// Blanket-implemented for any type that implements both [`Read`] and [`Seek`].
+pub trait SeekRead: Read + Seek {
+    #[inline]
+    fn align_to(&mut self, align: u16) -> std::io::Result<()> {
+        let pos = self.stream_position()?;
+        let offset = pos % u64::from(align);
 
-#[derive(Debug, Clone)]
-pub struct UnityMismatch {
-    pub expected: String,
-    pub received: String,
-}
+        if offset != 0 {
+            // offset is within (0..=u16::MAX) and thus cannot wrap
+            #[allow(clippy::cast_possible_wrap)]
+            self.seek(SeekFrom::Current(i64::from(align) - offset as i64))?;
+        }
 
-impl Display for UnityError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(self, f)
+        Ok(())
     }
 }
 
-impl Error for UnityError {}
+impl<T: Read + Seek> SeekRead for T {}
 
 /// Extension type to allow specifying the endianness of the read with a bool.
 trait BinReadEndian: Sized {
@@ -58,5 +56,24 @@ where
         };
 
         T::read_options(reader, endian, T::Args::default())
+    }
+}
+
+/// Internal int-to-int conversion.
+trait FromInt<T>: Sized {
+    fn from_int(value: T) -> Result<Self>;
+}
+
+impl<T, U> FromInt<T> for U
+where
+    T: Copy + Display,
+    U: TryFrom<T, Error = std::num::TryFromIntError>,
+{
+    /// Casts from `T` to `U`. This cast is not expected to fail.
+    fn from_int(value: T) -> Result<Self> {
+        U::try_from(value).map_err(|_| error::Error::Unsupported(format!(
+            "cast from value {} of type {} to {} failed",
+            value, std::any::type_name::<T>(), std::any::type_name::<U>(),
+        )))
     }
 }

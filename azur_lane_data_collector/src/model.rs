@@ -124,3 +124,11 @@ impl Display for DataError {
         Debug::fmt(self, f)
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn static_config() {
+        once_cell::sync::Lazy::force(&super::CONFIG);
+    }
+}

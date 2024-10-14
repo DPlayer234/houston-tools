@@ -4,9 +4,9 @@ use std::io::{Cursor, Read};
 
 use binrw::{binread, BinRead, NullString};
 
+use crate::{SeekRead, BinReadEndian, FromInt};
+use crate::error::Error;
 use crate::object::{ObjectInfo, ObjectRef};
-use crate::unity_fs::SeekRead;
-use crate::{BinReadEndian, UnityError};
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]
@@ -51,13 +51,13 @@ pub struct TypeTreeNode {
 
 impl<'a> SerializedFile<'a> {
     /// Enumerates the objects listed within this file.
-    pub fn objects(&'a self) -> impl Iterator<Item = anyhow::Result<ObjectRef<'a>>> {
+    pub fn objects(&'a self) -> impl Iterator<Item = crate::Result<ObjectRef<'a>>> {
         self.objects.iter().map(|obj| Ok(ObjectRef {
             file: self,
             ser_type: obj.class_id
                 .and_then(|c| self.types.iter().find(|t| t.class_id == i32::from(c)))
                 .or_else(|| self.types.get(usize::try_from(obj.type_id).ok()?))
-                .ok_or(UnityError::InvalidData("object data references invalid type"))?,
+                .ok_or(Error::InvalidData("object data references invalid type"))?,
             object: obj.clone()
         }))
     }
@@ -91,7 +91,7 @@ impl<'a> SerializedFile<'a> {
     }
 
     /// Reads a buffer into a [`SerializedFile`] struct.
-    pub fn read(buf: &'a [u8]) -> anyhow::Result<Self> {
+    pub fn read(buf: &'a [u8]) -> crate::Result<Self> {
         let cursor = &mut Cursor::new(buf);
 
         let mut result = SerializedFile::default();
@@ -154,7 +154,7 @@ impl<'a> SerializedFile<'a> {
         Ok(result)
     }
 
-    fn read_serialized_type(&self, cursor: &mut LocalCursor, is_ref_type: bool) -> anyhow::Result<SerializedType> {
+    fn read_serialized_type(&self, cursor: &mut LocalCursor, is_ref_type: bool) -> crate::Result<SerializedType> {
         let mut result = SerializedType {
             class_id: i32::read_endian(cursor, self.is_big_endian)?,
             .. SerializedType::default()
@@ -200,10 +200,10 @@ impl<'a> SerializedFile<'a> {
         Ok(result)
     }
 
-    fn read_type_tree_blob(&self, cursor: &mut LocalCursor) -> anyhow::Result<Vec<TypeTreeNode>> {
+    fn read_type_tree_blob(&self, cursor: &mut LocalCursor) -> crate::Result<Vec<TypeTreeNode>> {
         let node_count = u32::read_endian(cursor, self.is_big_endian)?;
         let str_buf_size = u32::read_endian(cursor, self.is_big_endian)?;
-        let str_buf_size = usize::try_from(str_buf_size)?;
+        let str_buf_size = usize::from_int(str_buf_size)?;
 
         let mut raw_nodes = Vec::new();
 
@@ -222,7 +222,7 @@ impl<'a> SerializedFile<'a> {
         let mut str_buf = vec![0u8; str_buf_size];
         cursor.read_exact(&mut str_buf)?;
 
-        fn read_str(cursor: &mut LocalCursor, offset: u32) -> anyhow::Result<String> {
+        fn read_str(cursor: &mut LocalCursor, offset: u32) -> crate::Result<String> {
             // If the last bit is set, the remainder indicates an index into a table
             // of common known strings rather than actually storing the data.
             Ok(if (offset & 0x8000_0000) == 0 {
@@ -231,7 +231,7 @@ impl<'a> SerializedFile<'a> {
             } else {
                 super::unity_fs_common_str::index_to_common_string(offset & 0x7FFF_FFFF)
                     .map(String::from)
-                    .ok_or_else(|| UnityError::Unsupported(format!("unknown common str key: {offset}")))?
+                    .ok_or_else(|| Error::Unsupported(format!("unknown common str key: {offset}")))?
             })
         }
 
@@ -251,10 +251,10 @@ impl<'a> SerializedFile<'a> {
                 meta_flags: raw_node.meta_flags,
                 level: raw_node.level,
             }))
-            .collect::<anyhow::Result<Vec<_>>>()
+            .collect::<crate::Result<Vec<_>>>()
     }
 
-    fn read_type_tree_old(&self, cursor: &mut LocalCursor, level: u8) -> anyhow::Result<Vec<TypeTreeNode>> {
+    fn read_type_tree_old(&self, cursor: &mut LocalCursor, level: u8) -> crate::Result<Vec<TypeTreeNode>> {
         // this format is dogshit
         let mut node = TypeTreeNode {
             level,
@@ -288,7 +288,7 @@ impl<'a> SerializedFile<'a> {
         Ok(nodes)
     }
 
-    fn read_object_info(&self, cursor: &mut LocalCursor) -> anyhow::Result<ObjectInfo> {
+    fn read_object_info(&self, cursor: &mut LocalCursor) -> crate::Result<ObjectInfo> {
         let mut object: ObjectInfo = match (self.version, self.big_id_enabled) {
             // Big ID flag only exists from v7 to v13
             (7..=13, Some(false)) | (..=6, None) => ObjectBlob::read_endian(cursor, self.is_big_endian)?.into(),

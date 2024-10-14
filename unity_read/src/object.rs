@@ -2,9 +2,10 @@
 
 use num_enum::FromPrimitive;
 
-use crate::serialized_file::{SerializedFile, SerializedType};
+use crate::FromInt;
 use crate::classes::{ClassID, UnityClass};
-use crate::UnityError;
+use crate::error::Error;
+use crate::serialized_file::{SerializedFile, SerializedType};
 
 /// Internal struct with object data.
 #[derive(Debug, Clone)]
@@ -41,19 +42,19 @@ impl ObjectRef<'_> {
     }
 
     /// Gets the block of memory with the object data.
-    pub fn data(&self) -> anyhow::Result<&[u8]> {
-        let offset = usize::try_from(self.object.start + self.file.data_offset)?;
-        let size = usize::try_from(self.object.size)?;
+    pub fn data(&self) -> crate::Result<&[u8]> {
+        let offset = usize::from_int(self.object.start + self.file.data_offset)?;
+        let size = usize::from_int(self.object.size)?;
 
         let data = self.file.buf
-            .get(offset..).ok_or(UnityError::InvalidData("object start out of file range"))?
-            .get(..size).ok_or(UnityError::InvalidData("object size out of file range"))?;
+            .get(offset..).ok_or(Error::InvalidData("object start out of file range"))?
+            .get(..size).ok_or(Error::InvalidData("object size out of file range"))?;
 
         Ok(data)
     }
 
     /// Tries to read the object into the specified type.
-    pub fn try_into_class<T: UnityClass>(&self) -> anyhow::Result<T> {
+    pub fn try_into_class<T: UnityClass>(&self) -> crate::Result<T> {
         T::try_from_obj(self)
     }
 }

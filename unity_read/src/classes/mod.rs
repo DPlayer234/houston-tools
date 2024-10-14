@@ -2,11 +2,10 @@
 
 use std::io::{Cursor, Seek, SeekFrom};
 
+use crate::{SeekRead, BinReadEndian};
+use crate::error::Error;
 use crate::object::ObjectRef;
-use crate::unity_fs::SeekRead;
-use crate::{UnityError, UnityMismatch};
 use crate::serialized_file::TypeTreeNode;
-use crate::BinReadEndian;
 
 mod asset_bundle;
 mod class_id;
@@ -27,27 +26,27 @@ pub trait UnityClass: Sized {
     /// Parses a tree into a structure.
     ///
     /// `tree` holds the necessary part of the tree to parse children.
-    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self>;
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self>;
 
     /// Tries to load a structure from an object reference.
-    fn try_from_obj(obj: &ObjectRef) -> anyhow::Result<Self> {
+    fn try_from_obj(obj: &ObjectRef) -> crate::Result<Self> {
         let cursor = &mut Cursor::new(obj.data()?);
         if let Some((root, tree)) = obj.ser_type.type_tree.split_first() {
             Self::parse_tree(cursor, obj.is_big_endian(), root, tree)
         } else {
-            Err(UnityError::InvalidData("type tree is unexpectedly empty"))?
+            Err(Error::InvalidData("type tree is unexpectedly empty"))?
         }
     }
 
     /// Aligns the reader to the next 4-byte boundary.
     #[doc(hidden)]
-    fn align_reader(r: &mut Cursor<&[u8]>) -> anyhow::Result<()> {
+    fn align_reader(r: &mut Cursor<&[u8]>) -> crate::Result<()> {
         Ok(r.align_to(4)?)
     }
 
     /// Skips the object the current reader is at.
     #[doc(hidden)]
-    fn skip(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<()> {
+    fn skip(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<()> {
         if root.size >= 0 {
             r.seek(SeekFrom::Current(i64::from(root.size)))?;
         } else {
@@ -58,7 +57,7 @@ pub trait UnityClass: Sized {
                     let size = u32::read_endian(r, is_big_endian)?;
                     let (next, children) = tree.get(1usize ..)
                         .and_then(|o| o.split_first())
-                        .ok_or(UnityError::InvalidData("skipped array type data does not contain data element"))?;
+                        .ok_or(Error::InvalidData("skipped array type data does not contain data element"))?;
 
                     for _ in 0 .. size {
                         Self::skip(r, is_big_endian, next, children)?;
@@ -91,17 +90,17 @@ pub trait AutoUnityClass: UnityClass + Default {
     const TYPE_NAME: &'static str;
 
     /// Like [`UnityClass::parse_tree`], but fills an existing object.
-    fn parse_tree_into(&mut self, r: &mut Cursor<&[u8]>, is_big_endian: bool, tree: &[TypeTreeNode]) -> anyhow::Result<()>;
+    fn parse_tree_into(&mut self, r: &mut Cursor<&[u8]>, is_big_endian: bool, tree: &[TypeTreeNode]) -> crate::Result<()>;
 }
 
 impl<T: AutoUnityClass> UnityClass for T {
     // blanket implementation for `define_unity_class` generated types.
-    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
         if root.type_name.as_str() != Self::TYPE_NAME {
-            Err(UnityError::Mismatch(UnityMismatch {
+            Err(Error::Mismatch {
                 expected: Self::TYPE_NAME.to_owned(),
                 received: root.type_name.clone()
-            }))?
+            })?
         }
 
         let mut result = Self::default();
@@ -184,7 +183,7 @@ macro_rules! define_unity_class {
         impl $crate::classes::AutoUnityClass for $Type {
             const TYPE_NAME: &'static str = $type_key;
 
-            fn parse_tree_into(&mut self, r: &mut ::std::io::Cursor<&[u8]>, is_big_endian: bool, tree: &[$crate::serialized_file::TypeTreeNode]) -> $crate::__private::anyhow::Result<()> {
+            fn parse_tree_into(&mut self, r: &mut ::std::io::Cursor<&[u8]>, is_big_endian: bool, tree: &[$crate::serialized_file::TypeTreeNode]) -> $crate::Result<()> {
                 let mut rest = tree;
                 while let Some((next, children, siblings)) = $crate::classes::split_tree(rest) {
                     match ::std::string::String::as_str(&next.name) {
@@ -207,21 +206,21 @@ macro_rules! check_mismatch {
     ($root:expr, $expected:literal $(| $extra:literal)*) => {{
         match $root.type_name.as_str() {
             $expected $(| $extra)* => (),
-            _ => Err(UnityError::Mismatch(UnityMismatch {
-                expected: $expected.into(),
+            _ => Err(Error::Mismatch {
+                expected: $expected.to_owned(),
                 received: $root.type_name.clone()
-            }))?
+            })?
         }
     }};
 }
 
 impl UnityClass for String {
-    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
         check_mismatch!(root, "string");
 
         // string should always have an Array of char nested
         let (next, children) = tree.split_first()
-            .ok_or(UnityError::InvalidData("string type data does not contain children"))?;
+            .ok_or(Error::InvalidData("string type data does not contain children"))?;
 
         let data = <Vec<u8>>::parse_tree(r, is_big_endian, next, children)?;
 
@@ -230,7 +229,7 @@ impl UnityClass for String {
 }
 
 impl<T: UnityClass> UnityClass for Option<T> {
-    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
         // Just delegates to the inner type and wraps it in Some
         // This is mostly intended for cases when the field might be missing in the data
         T::parse_tree(r, is_big_endian, root, tree).map(Some)
@@ -238,10 +237,10 @@ impl<T: UnityClass> UnityClass for Option<T> {
 }
 
 impl<T: UnityClass> UnityClass for Vec<T> {
-    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
         if matches!(root.type_name.as_str(), "vector" | "string") {
             let (next, children) = tree.split_first()
-                .ok_or(UnityError::InvalidData("vector type data does not contain children"))?;
+                .ok_or(Error::InvalidData("vector type data does not contain children"))?;
 
             let result = Self::parse_tree(r, is_big_endian, next, children)?;
 
@@ -259,7 +258,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
         let len = u32::read_endian(r, is_big_endian)?;
         let (next, children) = tree.get(1usize ..)
             .and_then(|o| o.split_first())
-            .ok_or(UnityError::InvalidData("array type data does not contain data element"))?;
+            .ok_or(Error::InvalidData("array type data does not contain data element"))?;
 
         let mut result = Vec::new();
         for _ in 0 .. len {
@@ -277,7 +276,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
 macro_rules! impl_unity_class_primitive {
     ($Type:ty, $expected:literal $(| $extra:literal)*) => {
         impl UnityClass for $Type {
-            fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, _tree: &[TypeTreeNode]) -> anyhow::Result<Self> {
+            fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, _tree: &[TypeTreeNode]) -> crate::Result<Self> {
                 check_mismatch!(root, $expected $(| $extra)*);
 
                 let value = <$Type>::read_endian(r, is_big_endian)?;

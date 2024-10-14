@@ -1,7 +1,8 @@
 use num_enum::FromPrimitive;
 use image::RgbaImage;
 
-use crate::{define_unity_class, UnityError};
+use crate::{define_unity_class, FromInt};
+use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
 use super::StreamingInfo;
 
@@ -31,7 +32,7 @@ impl Texture2D {
     }
 
     /// Reads the texture data.
-    pub fn read_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> anyhow::Result<Texture2DData<'t>> {
+    pub fn read_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> crate::Result<Texture2DData<'t>> {
         Ok(Texture2DData {
             texture: self,
             data: self.stream_data.load_data_or_else(fs, || &self.image_data)?
@@ -46,26 +47,26 @@ impl Texture2DData<'_> {
     }
 
     /// Decodes the image data.
-    pub fn decode(&self) -> anyhow::Result<RgbaImage> {
-        let width = u32::try_from(self.texture.width)?;
-        let height = u32::try_from(self.texture.height)?;
+    pub fn decode(&self) -> crate::Result<RgbaImage> {
+        let width = u32::from_int(self.texture.width)?;
+        let height = u32::from_int(self.texture.height)?;
 
         let args = Args::new(width, height)?;
         match self.texture.format() {
             TextureFormat::RGBA32 => {
                 // this matches the Rgba<u8> layout
                 let image = RgbaImage::from_raw(width, height, self.data.to_vec())
-                    .ok_or(UnityError::InvalidData("image data size incorrect"))?;
+                    .ok_or(Error::InvalidData("image data size incorrect"))?;
 
                 Ok(image)
             },
             TextureFormat::ETC2_RGBA8 => {
                 args.decode_with(|args, buf| {
                     texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
-                        .map_err(UnityError::InvalidData)
+                        .map_err(Error::InvalidData)
                 })
             },
-            _ => Err(UnityError::Unsupported(
+            _ => Err(Error::Unsupported(
                 format!("texture format not implemented: {:?}", self.texture.format())
             ))?,
         }
@@ -81,21 +82,21 @@ struct Args {
 
 impl Args {
     /// Creates a new [`Args`], validating the width, height, and total size.
-    fn new(width: u32, height: u32) -> anyhow::Result<Args> {
-        let width = usize::try_from(width)?;
-        let height = usize::try_from(height)?;
+    fn new(width: u32, height: u32) -> crate::Result<Args> {
+        let width = usize::from_int(width)?;
+        let height = usize::from_int(height)?;
         let size = width.checked_mul(height)
             .and_then(|s| s.checked_mul(size_of::<u32>()))
             .filter(|s| isize::try_from(*s).is_ok())
-            .ok_or(UnityError::InvalidData("image size overflows address space"))?;
+            .ok_or(Error::InvalidData("image size overflows address space"))?;
 
         Ok(Self { width, height, size })
     }
 
     /// Decodes the image with a given decoder function.
-    fn decode_with<F>(self, decode: F) -> anyhow::Result<RgbaImage>
+    fn decode_with<F>(self, decode: F) -> crate::Result<RgbaImage>
     where
-        F: FnOnce(&Self, &mut [u32]) -> Result<(), UnityError>,
+        F: FnOnce(&Self, &mut [u32]) -> Result<(), Error>,
     {
         // allocate buffer as Vec<u8> since that's the final data type needed
         // the size has been multiplied by 4 already to match the pixel width
