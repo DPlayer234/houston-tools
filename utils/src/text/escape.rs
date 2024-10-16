@@ -26,6 +26,20 @@ pub struct EscapeByChar<'a, P, F> {
     escape_as: F,
 }
 
+impl<'a, P, F> EscapeByChar<'a, P, F> {
+    /// Produces an equivalent value with the `pat` and `escape_as` used by-ref.
+    ///
+    /// This is only necessary when the original value is not [`Copy`] and
+    /// is consumed for some reason, f.e. by calling [`EscapeByChar::into_iter`].
+    pub fn by_ref(&self) -> EscapeByChar<'a, &P, &F> {
+        EscapeByChar {
+            source: self.source,
+            pat: &self.pat,
+            escape_as: &self.escape_as,
+        }
+    }
+}
+
 impl<'a, P, F, I> Display for EscapeByChar<'a, P, F>
 where
     P: Fn(char) -> bool,
@@ -74,6 +88,7 @@ where
 /// If you just want to [`collect`](Iterator::collect) it into a [`String`],
 /// use [`to_string`](ToString) on [`EscapeByChar`] instead.
 #[derive(Debug, Clone)]
+#[must_use = "iterators are lazy and do nothing if not used"]
 pub struct EscapeByCharIter<'a, P, F, I> {
     source: Chars<'a>,
     pat: P,
@@ -101,20 +116,22 @@ where
     type Item = char;
 
     fn next(&mut self) -> Option<char> {
-        if let Some(iter) = &mut self.iter {
-            match iter.next() {
-                Some(c) => return Some(c),
-                None => self.iter = None,
+        loop {
+            if let Some(iter) = &mut self.iter {
+                match iter.next() {
+                    Some(c) => break Some(c),
+                    None => self.iter = None,
+                }
             }
-        }
 
-        let next = self.source.next();
-        if let Some(iter) = next.and_then(|c| self.try_escape_as(c)) {
-            self.iter = Some(iter.into_iter());
-            return self.next();
-        }
+            let next = self.source.next();
+            if let Some(iter) = next.and_then(|c| self.try_escape_as(c)) {
+                self.iter = Some(iter.into_iter());
+                continue;
+            }
 
-        next
+            break next;
+        }
     }
 }
 
