@@ -1,6 +1,6 @@
 [package]
 name = "unity_read"
-version = "4.0.0"
+version = "4.1.0"
 edition = "2021"
 rust-version = "1.80"
 
@@ -21,3 +21,4 @@ lz4 = "1.27.0"
 lzma-rs = "0.3.0"
 once_cell = "1.19.0"
 texture2ddecoder = "0.1.1"
+thiserror = "1.0.64"

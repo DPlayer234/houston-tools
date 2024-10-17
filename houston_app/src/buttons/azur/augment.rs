@@ -1,9 +1,8 @@
 use azur_lane::equip::*;
 use azur_lane::skill::*;
-use utils::Discard;
 
 use crate::buttons::*;
-use super::AugmentParseError;
+use super::AzurParseError;
 
 /// Views an augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -47,7 +46,9 @@ impl View {
         components.push(match &augment.usability {
             AugmentUsability::HullTypes(hull_types) => {
                 let mut label = "For: ".to_owned();
-                crate::fmt::write_join(&mut label, hull_types.iter().map(|h| h.designation()), ", ").discard();
+                crate::fmt::write_join(&mut label, hull_types.iter().map(|h| h.designation()), ", ")
+                    .expect("writing to string should not fail");
+
                 let label = utils::text::truncate(label, 25);
                 CreateButton::new("=dummy-usability").label(label).disabled(true)
             },
@@ -73,7 +74,7 @@ impl View {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AugmentParseError)?;
+        let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AzurParseError::Augment)?;
         Ok(self.modify_with_augment(ctx.data, ctx.create_reply(), augment))
     }
 

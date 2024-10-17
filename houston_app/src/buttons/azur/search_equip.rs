@@ -1,8 +1,6 @@
-use std::fmt::Write;
-
 use azur_lane::Faction;
 use azur_lane::equip::*;
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
 
@@ -38,11 +36,11 @@ impl View {
                 break
             }
 
-            writeln!(
+            writeln_str!(
                 desc,
                 "- **{}** [{} {} {}]",
                 equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
-            ).discard();
+            );
 
             let view_equip = super::equip::View::new(equip.equip_id).new_message();
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));

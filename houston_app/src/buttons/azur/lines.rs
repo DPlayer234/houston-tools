@@ -1,12 +1,10 @@
-use std::fmt::Write;
-
 use smallvec::SmallVec;
 
 use azur_lane::ship::*;
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
-use super::ShipParseError;
+use super::AzurParseError;
 
 /// Views ship lines.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -178,14 +176,14 @@ impl ViewPart {
         macro_rules! add {
             ($label:literal, $key:ident) => {
                 if let Some(text) = &words.$key {
-                    write!(result, concat!("- **", $label, ":** {}\n"), escape_markdown(text)).discard();
+                    write_str!(result, concat!("- **", $label, ":** {}\n"), escape_markdown(text));
                 }
             };
             (main $line:expr) => {
-                write!(result, "- **Main Screen {}:** {}\n", $line.index() + 1, escape_markdown($line.text())).discard();
+                write_str!(result, "- **Main Screen {}:** {}\n", $line.index() + 1, escape_markdown($line.text()));
             };
             (couple $opt:expr) => {
-                write!(result, "- **{}:** {}\n", get_label_for_ship_couple_encourage(data, $opt), escape_markdown(&$opt.line)).discard();
+                write_str!(result, "- **{}:** {}\n", get_label_for_ship_couple_encourage(data, $opt), escape_markdown(&$opt.line));
             };
         }
 
@@ -220,8 +218,8 @@ impl ViewPart {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
-        let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(ShipParseError)?;
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
+        let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
         Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, skin))
     }
 }

@@ -13,8 +13,6 @@ pub mod common;
 #[cfg(test)]
 mod test;
 
-utils::define_simple_error!(InvalidInteractionError(()): "Invalid interaction.");
-
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
 macro_rules! define_button_args {
     ($($(#[$attr:meta])* $name:ident($Ty:ty)),* $(,)?) => {
@@ -137,7 +135,7 @@ impl ButtonEventHandler {
         let custom_id = match &interaction.data.kind {
             Kind::StringSelect { values } if values.len() == 1 => &values[0],
             Kind::Button => &interaction.data.custom_id,
-            _ => Err(InvalidInteractionError(()))?,
+            _ => anyhow::bail!("Invalid interaction."),
         };
 
         let args = ButtonArgs::from_custom_id(custom_id)?;

@@ -1,11 +1,10 @@
-use std::fmt::Write;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::{Discard, join};
+use utils::join;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
-use super::ShipParseError;
+use super::AzurParseError;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -228,7 +227,7 @@ impl View {
         for (allowed, mount) in slots {
             if !text.is_empty() { text.push('\n'); }
 
-            write!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f64, mount.mounts).discard();
+            write_str!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f64, mount.mounts);
 
             for (index, &kind) in allowed.iter().enumerate() {
                 if index != 0 { text.push('/'); }
@@ -236,7 +235,7 @@ impl View {
             }
 
             if mount.preload != 0 {
-                write!(text, " `PRE x{}`", mount.preload).discard();
+                write_str!(text, " `PRE x{}`", mount.preload);
             }
 
             if mount.parallel > 1 {
@@ -246,12 +245,12 @@ impl View {
 
         for mount in &ship.shadow_equip {
             if !text.is_empty() { text.push('\n'); }
-            write!(text, "-# **`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name).discard();
+            write_str!(text, "-# **`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name);
         }
 
         for equip in &ship.depth_charges {
             if !text.is_empty() { text.push('\n'); }
-            write!(text, "-# **`ASW:`** {}", equip.name).discard();
+            write_str!(text, "-# **`ASW:`** {}", equip.name);
         }
 
         [("Equipment", text, false)]
@@ -266,13 +265,13 @@ impl View {
             let mut text = String::new();
             for s in &ship.skills {
                 if !text.is_empty() { text.push('\n'); }
-                write!(text, "{} **{}**", s.category.emoji(), s.name).discard();
+                write_str!(text, "{} **{}**", s.category.emoji(), s.name);
             }
 
             let augments = data.azur_lane().augments_by_ship_id(ship.group_id);
             for augment in augments {
                 if !text.is_empty() { text.push('\n'); }
-                write!(text, "-# UA: **{}**", augment.name).discard();
+                write_str!(text, "-# UA: **{}**", augment.name);
             }
 
             ("Skills", text, false)
@@ -282,7 +281,7 @@ impl View {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(ShipParseError)?;
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.modify_with_ship(ctx.data, ctx.create_reply(), ship, None),
             Some(retrofit) => self.modify_with_ship(ctx.data, ctx.create_reply(), retrofit, Some(ship))

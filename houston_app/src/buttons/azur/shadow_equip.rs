@@ -1,11 +1,9 @@
-use std::fmt::Write;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
-use super::ShipParseError;
+use super::AzurParseError;
 use super::ship::View as ShipView;
 
 /// View a ship's shadow equip.
@@ -35,7 +33,7 @@ impl View {
 
             let mut value = String::new();
             for weapon in weapons {
-                write!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon)).discard();
+                write_str!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon));
             }
 
             Some(value)
@@ -74,7 +72,7 @@ impl View {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(ShipParseError)?;
+        let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.modify_with_ship(ctx.create_reply(), ship, None),
             Some(retrofit) => self.modify_with_ship(ctx.create_reply(), retrofit, Some(ship))

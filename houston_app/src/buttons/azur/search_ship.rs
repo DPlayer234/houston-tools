@@ -1,8 +1,6 @@
-use std::fmt::Write;
-
 use azur_lane::Faction;
 use azur_lane::ship::*;
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
 
@@ -41,11 +39,11 @@ impl View {
 
             let emoji = data.app_emojis().hull(ship.hull_type);
 
-            writeln!(
+            writeln_str!(
                 desc,
                 "- {emoji} **{}** [{} {} {}]",
                 ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
-            ).discard();
+            );
 
             let view_ship = super::ship::View::new(ship.group_id).new_message();
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));

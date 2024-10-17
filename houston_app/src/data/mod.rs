@@ -45,19 +45,12 @@ pub struct HUserData {
 }
 
 /// A simple error that can return any error message.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{0}")]
 pub struct HArgError(
     /// The error message
     pub &'static str
 );
-
-impl std::error::Error for HArgError {}
-
-impl std::fmt::Display for HArgError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.0)
-    }
-}
 
 impl std::fmt::Debug for HBotData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

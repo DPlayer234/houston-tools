@@ -1,12 +1,11 @@
 use std::num::NonZero;
 use std::str::FromStr;
-use std::fmt::Write;
 
 use rand::{thread_rng, Rng};
 use rand::distributions::Uniform;
 use smallvec::SmallVec;
 
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::prelude::*;
 
@@ -42,7 +41,7 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     let mut total_sum = 0u32;
 
     for &d in sets {
-        write!(content, "- **{}d{}:**", d.count, d.faces).discard();
+        write_str!(content, "- **{}d{}:**", d.count, d.faces);
 
         let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()));
         let mut local_sum = 0u32;
@@ -50,11 +49,11 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
             let roll = rng.sample(sample);
             local_sum += roll;
 
-            write!(content, " {}", roll).discard();
+            write_str!(content, " {}", roll);
         }
 
         if d.count.get() > 1 && sets.len() > 1 {
-            write!(content, " *(\u{2211}{})*", local_sum).discard();
+            write_str!(content, " *(\u{2211}{})*", local_sum);
         }
 
         total_sum += local_sum;
@@ -64,11 +63,9 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     (total_sum, content)
 }
 
-utils::define_simple_error!(
-    #[derive(Clone, Copy)]
-    DiceParseError(()):
-    "Expected inputs like '2d6' or '1d20 2d4'. The maximum is '255d65535'."
-);
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[error("Expected inputs like '2d6' or '1d20 2d4'. The maximum is '255d65535'.")]
+struct DiceParseError(());
 
 #[derive(Debug, Clone, Copy)]
 #[repr(align(4))]

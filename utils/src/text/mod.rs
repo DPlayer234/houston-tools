@@ -5,6 +5,7 @@ mod escape;
 mod inline_str;
 mod titlecase_impl;
 mod truncate_impl;
+pub mod write_str;
 
 pub use escape::{escape_by_char, EscapeByChar, EscapeByCharIter};
 pub use inline_str::InlineStr;

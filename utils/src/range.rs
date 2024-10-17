@@ -3,14 +3,15 @@
 //!
 //! The primary intent is to allow easy parsing of user range inputs.
 
-use std::fmt::{Display, Debug};
+use std::fmt::Debug;
 use std::ops::{RangeBounds, Bound};
 use std::error::Error as StdError;
 
 /// An error that can occur when constructing bounded ranges.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum OutOfRange<T: RangeNum> {
     /// The provided value was below the `MIN`.
+    #[error("value must be at least {min}, was {actual}")]
     BelowMin {
         /// The actual value provided.
         actual: T,
@@ -19,6 +20,7 @@ pub enum OutOfRange<T: RangeNum> {
     },
 
     /// The provided value was above the `MAX`.
+    #[error("value must be at most {max}, was {actual}")]
     AboveMax {
         /// The actual value provided.
         actual: T,
@@ -28,16 +30,18 @@ pub enum OutOfRange<T: RangeNum> {
 
     /// The low value was above the high value.
     /// This variant stores the provided low and high values.
+    #[error("low ({low}) is greater than high ({high})")]
     LowAboveHigh {
         low: T,
         high: T,
     },
 
     /// Parsing failed.
+    #[error("expected range within limits [{min}..{max}]; {source}")]
     Parse {
         min: T,
         max: T,
-        source: T::FromStrError,
+        #[source] source: T::FromStrError,
     },
 }
 
@@ -56,22 +60,6 @@ impl<T: RangeNum> OutOfRange<T> {
     }
 }
 
-impl<T: Display + Debug + RangeNum> StdError for OutOfRange<T> {}
-
-impl<T: Display + RangeNum> Display for OutOfRange<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OutOfRange::BelowMin { actual, min } => write!(f, "value must be at least {min}, was {actual}"),
-            OutOfRange::AboveMax { actual, max } => write!(f, "value must be at most {max}, was {actual}"),
-            OutOfRange::LowAboveHigh { low, high } => write!(f, "low ({low}) is greater than high ({high})"),
-            OutOfRange::Parse { min, max, source: error } => {
-                write!(f, "expected range within limits [{min}..{max}]; ")?;
-                Display::fmt(error, f)
-            },
-        }
-    }
-}
-
 /// Const `?` as long as the error type matches.
 macro_rules! try_const {
     ($e:expr) => {{
@@ -85,7 +73,7 @@ macro_rules! try_const {
 /// Marker trait for number types used within the range types of this module.
 pub trait RangeNum {
     /// The error type for the [`std::str::FromStr`] implementation.
-    type FromStrError: StdError;
+    type FromStrError: StdError + 'static;
 }
 
 macro_rules! impl_range {

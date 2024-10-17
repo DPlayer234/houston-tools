@@ -10,9 +10,12 @@ pub mod shadow_equip;
 pub mod ship;
 pub mod skill;
 
-utils::define_simple_error!(ShipParseError: "unknown ship");
-utils::define_simple_error!(EquipParseError: "unknown equipment");
-utils::define_simple_error!(AugmentParseError: "unknown augment");
+#[derive(Debug, thiserror::Error)]
+enum AzurParseError {
+    #[error("unknown ship")] Ship,
+    #[error("unknown equip")] Equip,
+    #[error("unknown augment")] Augment,
+}
 
 /// Gets the URL to a ship on the wiki.
 fn get_ship_wiki_url(base_ship: &azur_lane::ship::ShipData) -> CreateEmbedAuthor {

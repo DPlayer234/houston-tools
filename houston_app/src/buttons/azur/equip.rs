@@ -1,8 +1,7 @@
 use azur_lane::equip::*;
-use utils::Discard;
 
 use crate::buttons::*;
-use super::EquipParseError;
+use super::AzurParseError;
 
 /// Views an augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -55,7 +54,10 @@ impl View {
         (!equip.hull_disallowed.is_empty()).then(|| {
             let mut text = "> ".to_owned();
             let designations = equip.hull_disallowed.iter().map(|h| h.designation());
-            crate::fmt::write_join(&mut text, designations, ", ").discard();
+
+            crate::fmt::write_join(&mut text, designations, ", ")
+                .expect("writing to string should not fail");
+
             ("Cannot be equipped by:", text, false)
         })
     }
@@ -63,7 +65,7 @@ impl View {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
-        let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(EquipParseError)?;
+        let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(AzurParseError::Equip)?;
         Ok(self.modify_with_equip(ctx.create_reply(), equip))
     }
 

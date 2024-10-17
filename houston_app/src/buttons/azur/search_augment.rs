@@ -1,8 +1,6 @@
-use std::fmt::Write;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::Discard;
+use utils::text::write_str::*;
 
 use crate::buttons::*;
 
@@ -38,11 +36,11 @@ impl View {
                 break
             }
 
-            writeln!(
+            writeln_str!(
                 desc,
                 "- **{}** [{}]",
                 augment.name, augment.rarity.name(),
-            ).discard();
+            );
 
             let view = super::augment::View::new(augment.augment_id).new_message();
             options.push(CreateSelectMenuOption::new(&augment.name, view.to_custom_id()));

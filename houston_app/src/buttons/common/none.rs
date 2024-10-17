@@ -1,7 +1,5 @@
 use crate::buttons::*;
 
-utils::define_simple_error!(Unused(()): "this button is not intended to be used");
-
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.
 ///
 /// Its [`ButtonArgsReply`] implementation will always return an error.
@@ -23,6 +21,6 @@ impl None {
 
 impl ButtonArgsReply for None {
     async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
-        Err(Unused(()))?
+        anyhow::bail!("this button is not intended to be used");
     }
 }

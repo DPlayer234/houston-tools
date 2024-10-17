@@ -14,11 +14,10 @@
 #[repr(transparent)]
 pub struct InlineStr<const LEN: usize>([u8; LEN]);
 
-crate::define_simple_error!(
-    /// Converting to [`InlineStr`] from [`str`] failed because of a length mismatch.
-    FromStrError(()):
-    "length of input does not match result length"
-);
+/// Converting to [`InlineStr`] from [`str`] failed because of a length mismatch.
+#[derive(Debug, thiserror::Error)]
+#[error("length of input does not match result length")]
+pub struct FromStrError(());
 
 impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].

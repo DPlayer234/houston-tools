@@ -3,8 +3,7 @@ use azur_lane::ship::*;
 use azur_lane::skill::*;
 
 use crate::buttons::*;
-use super::AugmentParseError;
-use super::ShipParseError;
+use super::AzurParseError;
 
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -214,12 +213,12 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
         match &self.source {
             ViewSource::Ship(source) => {
-                let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(ShipParseError)?;
+                let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;
                 let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
                 Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
-                let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AugmentParseError)?;
+                let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AzurParseError::Augment)?;
                 Ok(self.modify_with_augment(ctx.create_reply(), augment))
             }
         }
