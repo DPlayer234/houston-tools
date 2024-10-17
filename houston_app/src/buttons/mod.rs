@@ -56,7 +56,7 @@ macro_rules! define_button_args {
         impl ButtonArgs {
             /// Borrows the inner data.
             #[must_use]
-            pub const fn borrow(&self) -> ButtonArgsRef {
+            pub const fn borrow(&self) -> ButtonArgsRef<'_> {
                 match self {
                     $(
                         ButtonArgs::$name(v) => ButtonArgsRef::$name(v),

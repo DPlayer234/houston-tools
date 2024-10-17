@@ -17,6 +17,7 @@ serenity = { git = "https://github.com/serenity-rs/serenity.git", rev = "d3665b7
 poise = { git = "https://github.com/serenity-rs/poise.git", rev = "575025909b063c3b998659abf9d241c8790404ee" }
 
 [workspace.lints.rust]
+# elided_lifetimes_in_paths = "warn"
 unsafe_op_in_unsafe_fn = "deny"
 unused_crate_dependencies = "warn"
 unused_macro_rules = "warn"

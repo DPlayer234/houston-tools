@@ -305,7 +305,7 @@ impl<'a> UnityFsNode<'a> {
     }
 }
 
-fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> crate::Result<Cow<[u8]>> {
+fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> crate::Result<Cow<'_, [u8]>> {
     match compression {
         Compression::None => Ok(Cow::Borrowed(compressed_data)),
         Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, Some(i32::from_int(size)?))?)),

@@ -5,7 +5,7 @@ use std::str::Chars;
 /// the characters listed in `pat` through `escape_as`.
 ///
 /// Can also be converted to an [`Iterator`] over [`char`].
-pub fn escape_by_char<P, F, I>(source: &str, pat: P, escape_as: F) -> EscapeByChar<P, F>
+pub fn escape_by_char<P, F, I>(source: &str, pat: P, escape_as: F) -> EscapeByChar<'_, P, F>
 where
     P: Fn(char) -> bool,
     F: Fn(char) -> I,

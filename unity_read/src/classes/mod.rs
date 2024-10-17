@@ -29,7 +29,7 @@ pub trait UnityClass: Sized {
     fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self>;
 
     /// Tries to load a structure from an object reference.
-    fn try_from_obj(obj: &ObjectRef) -> crate::Result<Self> {
+    fn try_from_obj(obj: &ObjectRef<'_>) -> crate::Result<Self> {
         let cursor = &mut Cursor::new(obj.data()?);
         if let Some((root, tree)) = obj.ser_type.type_tree.split_first() {
             Self::parse_tree(cursor, obj.is_big_endian(), root, tree)

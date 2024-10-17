@@ -92,7 +92,7 @@ enum MathError<'a> {
 }
 
 /// Fully evaluates an equation text.
-fn eval_text(text: &str) -> Result<f64> {
+fn eval_text(text: &str) -> Result<'_, f64> {
     let mut tokens = parse::tokenize(text);
     parse::read_expr(&mut tokens)
 }

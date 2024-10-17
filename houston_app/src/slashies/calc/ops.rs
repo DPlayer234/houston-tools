@@ -24,7 +24,7 @@ macro_rules! define_op_kind {
             }
 
             /// Tries to get an operator from a token.
-            pub fn from_token(t: Token) -> Option<Self> {
+            pub fn from_token(t: Token<'_>) -> Option<Self> {
                 match t.text {
                     $( $lit => Some(Self::$name), )*
                     _ => None,

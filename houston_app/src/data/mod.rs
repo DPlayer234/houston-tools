@@ -87,7 +87,7 @@ impl HBotData {
 
     /// Gets the loaded app emojis.
     #[must_use]
-    pub fn app_emojis(&self) -> HAppEmojis {
+    pub fn app_emojis(&self) -> HAppEmojis<'_> {
         HAppEmojis(self.app_emojis.get())
     }
 

@@ -154,7 +154,7 @@ impl<'a> SerializedFile<'a> {
         Ok(result)
     }
 
-    fn read_serialized_type(&self, cursor: &mut LocalCursor, is_ref_type: bool) -> crate::Result<SerializedType> {
+    fn read_serialized_type(&self, cursor: &mut Cursor<&[u8]>, is_ref_type: bool) -> crate::Result<SerializedType> {
         let mut result = SerializedType {
             class_id: i32::read_endian(cursor, self.is_big_endian)?,
             .. SerializedType::default()
@@ -200,7 +200,7 @@ impl<'a> SerializedFile<'a> {
         Ok(result)
     }
 
-    fn read_type_tree_blob(&self, cursor: &mut LocalCursor) -> crate::Result<Vec<TypeTreeNode>> {
+    fn read_type_tree_blob(&self, cursor: &mut Cursor<&[u8]>) -> crate::Result<Vec<TypeTreeNode>> {
         let node_count = u32::read_endian(cursor, self.is_big_endian)?;
         let str_buf_size = u32::read_endian(cursor, self.is_big_endian)?;
         let str_buf_size = usize::from_int(str_buf_size)?;
@@ -222,7 +222,7 @@ impl<'a> SerializedFile<'a> {
         let mut str_buf = vec![0u8; str_buf_size];
         cursor.read_exact(&mut str_buf)?;
 
-        fn read_str(cursor: &mut LocalCursor, offset: u32) -> crate::Result<String> {
+        fn read_str(cursor: &mut Cursor<&[u8]>, offset: u32) -> crate::Result<String> {
             // If the last bit is set, the remainder indicates an index into a table
             // of common known strings rather than actually storing the data.
             Ok(if (offset & 0x8000_0000) == 0 {
@@ -254,7 +254,7 @@ impl<'a> SerializedFile<'a> {
             .collect::<crate::Result<Vec<_>>>()
     }
 
-    fn read_type_tree_old(&self, cursor: &mut LocalCursor, level: u8) -> crate::Result<Vec<TypeTreeNode>> {
+    fn read_type_tree_old(&self, cursor: &mut Cursor<&[u8]>, level: u8) -> crate::Result<Vec<TypeTreeNode>> {
         // this format is dogshit
         let mut node = TypeTreeNode {
             level,
@@ -288,7 +288,7 @@ impl<'a> SerializedFile<'a> {
         Ok(nodes)
     }
 
-    fn read_object_info(&self, cursor: &mut LocalCursor) -> crate::Result<ObjectInfo> {
+    fn read_object_info(&self, cursor: &mut Cursor<&[u8]>) -> crate::Result<ObjectInfo> {
         let mut object: ObjectInfo = match (self.version, self.big_id_enabled) {
             // Big ID flag only exists from v7 to v13
             (7..=13, Some(false)) | (..=6, None) => ObjectBlob::read_endian(cursor, self.is_big_endian)?.into(),
@@ -342,8 +342,6 @@ impl TypeTreeNode {
         (self.meta_flags & 0x4000) != 0
     }
 }
-
-type LocalCursor<'a> = Cursor<&'a [u8]>;
 
 #[binread]
 #[br(big)]
