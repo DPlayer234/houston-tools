@@ -212,7 +212,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
             let mut mlb = parse::ship::load_ship_data(&lua, raw_mlb)?;
             if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
-                mlb.name = name_override.clone();
+                mlb.name.clone_from(name_override);
             }
 
             if let Some(retrofit_data) = &raw_mlb.retrofit_data {

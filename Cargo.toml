@@ -24,6 +24,7 @@ unused_macro_rules = "warn"
 
 [workspace.lints.clippy]
 # pedantic
+assigning_clones = "warn"
 borrow_as_ptr = "deny"
 cast_lossless = "warn"
 cast_possible_truncation = "warn"
