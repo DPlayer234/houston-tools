@@ -99,41 +99,41 @@ impl ButtonMessage for View {
     }
 }
 
+type FIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
+
 impl Filter {
-    fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Augment> + 'a> {
-        let predicate = self.predicate(data);
+    fn iterate<'a>(&self, data: &'a HAzurLane) -> FIter<'a> {
         match &self.name {
-            Some(name) => Box::new(data.augments_by_prefix(name.as_str()).filter(predicate)),
-            None => Box::new(data.augments().iter().filter(predicate))
+            Some(name) => self.apply_filter(data, data.augments_by_prefix(name.as_str())),
+            None => self.apply_filter(data, data.augments().iter()),
         }
     }
 
-    fn predicate<'a>(&self, data: &'a HAzurLane) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
-        fn next_hull_type<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
+    fn apply_filter<'a, I>(&self, data: &'a HAzurLane, iter: I) -> FIter<'a>
+    where
+        I: Iterator<Item = &'a Augment> + 'a,
+    {
+        fn next_hull_type<'a>(f: &Filter, data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a> {
             match f.hull_type {
-                Some(filter) => next_rarity(f, data, move |s| base(s) && s.usability.hull_types().is_some_and(|h| h.contains(&filter))),
-                None => next_rarity(f, data, base),
+                Some(filter) => next_rarity(f, data, iter.filter(move |s| s.usability.hull_types().is_some_and(|h| h.contains(&filter)))),
+                None => next_rarity(f, data, iter),
             }
         }
 
-        fn next_rarity<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
+        fn next_rarity<'a>(f: &Filter, data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a> {
             match f.rarity {
-                Some(filter) => next_unique_ship_id(f, data, move |s| base(s) && s.rarity == filter),
-                None => next_unique_ship_id(f, data, base),
+                Some(filter) => next_unique_ship_id(f, data, iter.filter(move |s| s.rarity == filter)),
+                None => next_unique_ship_id(f, data, iter),
             }
         }
 
-        fn next_unique_ship_id<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
+        fn next_unique_ship_id<'a>(f: &Filter, _data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a>{
             match f.unique_ship_id {
-                Some(filter) => finish(f, data, move |s| base(s) && s.usability.unique_ship_id() == Some(filter)),
-                None => finish(f, data, base),
+                Some(filter) => Box::new(iter.filter(move |s| s.usability.unique_ship_id() == Some(filter))),
+                None => Box::new(iter),
             }
         }
 
-        fn finish<'a>(_f: &Filter, _data: &'a HAzurLane, base: impl FnMut(&&Augment) -> bool + 'a) -> Box<dyn FnMut(&&Augment) -> bool + 'a> {
-            Box::new(base)
-        }
-
-        next_hull_type(self, data, |_| true)
+        next_hull_type(self, data, iter)
     }
 }

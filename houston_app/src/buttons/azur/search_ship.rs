@@ -104,20 +104,27 @@ impl ButtonMessage for View {
 
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
-        let predicate = self.predicate(data);
         match &self.name {
-            Some(name) => Box::new(data.ships_by_prefix(name.as_str()).filter(predicate)),
-            None => Box::new(data.ships().iter().filter(predicate))
+            Some(name) => self.apply_filter(data, data.ships_by_prefix(name.as_str())),
+            None => self.apply_filter(data, data.ships().iter()),
         }
     }
 
-    fn predicate<'a>(&self, data: &'a HAzurLane) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
+    fn apply_filter<'a, I>(&self, data: &'a HAzurLane, iter: I) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
+    where
+        I: Iterator<Item = &'a ShipData> + 'a,
+    {
         macro_rules! def_and_filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
-                fn $fn_name<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&ShipData) -> bool + 'a) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
+                fn $fn_name<'a>(
+                    f: &Filter,
+                    data: &'a HAzurLane,
+                    iter: impl Iterator<Item = &'a ShipData> + 'a
+                ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
+                {
                     match f.$field {
-                        Some(filter) => $next(f, data, move |s| base(s) && s.$field == filter),
-                        None => $next(f, data, base)
+                        Some(filter) => $next(f, data, iter.filter(move |s| s.$field == filter)),
+                        None => $next(f, data, iter)
                     }
                 }
             }
@@ -125,17 +132,20 @@ impl Filter {
 
         def_and_filter!(next_faction: faction => next_hull_type);
         def_and_filter!(next_hull_type: hull_type => next_rarity);
-        def_and_filter!(next_rarity: rarity => finish);
+        def_and_filter!(next_rarity: rarity => next_has_augment);
 
-        fn finish<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&ShipData) -> bool + 'a) -> Box<dyn FnMut(&&ShipData) -> bool + 'a> {
+        fn next_has_augment<'a>(
+            f: &Filter,
+            data: &'a HAzurLane,
+            iter: impl Iterator<Item = &'a ShipData> + 'a
+        ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
+        {
             match f.has_augment {
-                Some(filter) => {
-                    Box::new(move |s| base(s) && data.augments_by_ship_id(s.group_id).next().is_some() == filter)
-                }
-                None => Box::new(base)
+                Some(filter) => Box::new(iter.filter(move |s| data.augments_by_ship_id(s.group_id).next().is_some() == filter)),
+                None => Box::new(iter),
             }
         }
 
-        next_faction(self, data, |_| true)
+        next_faction(self, data, iter)
     }
 }

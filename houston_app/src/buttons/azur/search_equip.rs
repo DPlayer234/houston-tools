@@ -101,20 +101,26 @@ impl ButtonMessage for View {
 
 impl Filter {
     fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
-        let predicate = self.predicate(data);
         match &self.name {
-            Some(name) => Box::new(data.equips_by_prefix(name.as_str()).filter(predicate)),
-            None => Box::new(data.equips().iter().filter(predicate))
+            Some(name) => self.apply_filter(data.equips_by_prefix(name.as_str())),
+            None => self.apply_filter(data.equips().iter()),
         }
     }
 
-    fn predicate<'a>(&self, data: &'a HAzurLane) -> Box<dyn FnMut(&&Equip) -> bool + 'a> {
+    fn apply_filter<'a, I>(&self, iter: I) -> Box<dyn Iterator<Item = &'a Equip> + 'a>
+    where
+        I: Iterator<Item = &'a Equip> + 'a,
+    {
         macro_rules! def_and_filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
-                fn $fn_name<'a>(f: &Filter, data: &'a HAzurLane, mut base: impl FnMut(&&Equip) -> bool + 'a) -> Box<dyn FnMut(&&Equip) -> bool + 'a> {
+                fn $fn_name<'a>(
+                    f: &Filter,
+                    iter: impl Iterator<Item = &'a Equip> + 'a
+                ) -> Box<dyn Iterator<Item = &'a Equip> + 'a>
+                {
                     match f.$field {
-                        Some(filter) => $next(f, data, move |s| base(s) && s.$field == filter),
-                        None => $next(f, data, base)
+                        Some(filter) => $next(f, iter.filter(move |s| s.$field == filter)),
+                        None => $next(f, iter)
                     }
                 }
             }
@@ -124,10 +130,14 @@ impl Filter {
         def_and_filter!(next_hull_type: kind => next_rarity);
         def_and_filter!(next_rarity: rarity => finish);
 
-        fn finish<'a>(_f: &Filter, _data: &'a HAzurLane, base: impl FnMut(&&Equip) -> bool + 'a) -> Box<dyn FnMut(&&Equip) -> bool + 'a> {
-            Box::new(base)
+        fn finish<'a>(
+            _f: &Filter,
+            iter: impl Iterator<Item = &'a Equip> + 'a
+        ) -> Box<dyn Iterator<Item = &'a Equip> + 'a>
+        {
+            Box::new(iter)
         }
 
-        next_faction(self, data, |_| true)
+        next_faction(self, iter)
     }
 }

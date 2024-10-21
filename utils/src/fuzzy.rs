@@ -205,15 +205,11 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
                     "Search safety invariant not met"
                 );
 
-                let res = results
-                    .iter_mut()
-                    .find(|m| m.index == index);
-
-                if let Some(res) = res {
-                    res.count += 1;
-                } else {
+                // find & modify, or insert
+                match results.iter_mut().find(|m| m.index == index) {
+                    Some(res) => res.count += 1,
                     // discard results past the max capacity
-                    _ = results.try_push(MatchInfo { count: 1, index });
+                    None => _ = results.try_push(MatchInfo { count: 1, index }),
                 }
             }
         }
