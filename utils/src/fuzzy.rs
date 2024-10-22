@@ -218,7 +218,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let match_count = total * self.min_match_score;
 
         results.retain(|r| f64::from(r.count) >= match_count);
-        results.sort_by_key(|r| !r.count);
+        results.sort_unstable_by(|a, b| a.cmp(b).reverse());
 
         // box the results so we don't copy the data around too much.
         // this isn't _massive_ (only about 260 bytes), but since every
@@ -262,8 +262,9 @@ impl<'st, T> Clone for Match<'st, T> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct MatchInfo {
+    // for Ord: `count` first so it orders by it first
     count: MatchIndex,
     index: MatchIndex,
 }
@@ -474,7 +475,7 @@ mod test {
 
     fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
         let mut v: Vec<u8> = v.map(|p| *p.data).collect();
-        v.sort();
+        v.sort_unstable();
         v
     }
 }

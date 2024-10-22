@@ -242,7 +242,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
         println!("Built Ship data. ({:.2?})", start.elapsed());
 
-        ships.sort_by_key(|t| t.group_id);
+        ships.sort_unstable_by_key(|t| t.group_id);
         ships
     };
 
@@ -273,7 +273,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
         println!("Built Equip data. ({:.2?})", start.elapsed());
 
-        equips.sort_by_key(|t| t.faction);
+        equips.sort_unstable_by_key(|t| (t.faction, t.kind, t.equip_id));
         equips
     };
 
@@ -305,7 +305,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
         println!("Built Augment data. ({:.2?})", start.elapsed());
 
-        augments.sort_by_key(|t| t.augment_id);
+        augments.sort_unstable_by_key(|t| t.augment_id);
         augments
     };
 
