@@ -1,9 +1,8 @@
-use smallvec::SmallVec;
-
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
 use crate::buttons::*;
+use crate::fmt::JoinNatural;
 use super::AzurParseError;
 
 /// Views ship lines.
@@ -230,8 +229,19 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         let plural = if amount != 1 { "s" } else { "" };
         format!(
             "Sortie with {} more {}{}{}",
-            amount, join_natural_or(iter), label, plural,
+            amount, JoinNatural::or(iter), label, plural,
         )
+    }
+
+    fn fmt_ships_count<'a>(amount: u32, iter: impl Iterator<Item = &'a str>) -> String {
+        format!(
+            "Sortie with {} of {}",
+            amount, JoinNatural::or(iter),
+        )
+    }
+
+    fn fmt_ships_all<'a>(iter: impl Iterator<Item = &'a str>) -> String {
+        format!("Sortie with {}", JoinNatural::and(iter))
     }
 
     match &opt.condition {
@@ -241,13 +251,9 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
                 .map(|ship| ship.name.as_str());
 
             if ship_ids.len() == opt.amount.try_into().unwrap_or(0) {
-                format!("Sortie with {}", join_natural_and(ships))
+                fmt_ships_all(ships)
             } else {
-                format!(
-                    "Sortie with {} of {}",
-                    opt.amount,
-                    join_natural_or(ships)
-                )
+                fmt_ships_count(opt.amount, ships)
             }
         }
         ShipCouple::HullType(hull_types) => {
@@ -270,30 +276,6 @@ fn get_label_for_ship_couple_encourage(data: &HBotData, opt: &ShipCoupleEncourag
         }
         ShipCouple::Illustrator => {
             format!("Sortie with {} more ships by the same illustrator", opt.amount)
-        }
-    }
-}
-
-fn join_natural_and<'a>(iter: impl Iterator<Item = &'a str>) -> String {
-    join_natural(iter, ", ", ", and ", " and ")
-}
-
-fn join_natural_or<'a>(iter: impl Iterator<Item = &'a str>) -> String {
-    join_natural(iter, ", ", ", or ", " or ")
-}
-
-fn join_natural<'a>(iter: impl Iterator<Item = &'a str>, join: &str, join_last: &str, join_once: &str) -> String {
-    let data: SmallVec<[_; 16]> = iter.collect();
-
-    match data.as_slice() {
-        [] => String::new(),
-        &[last] => last.to_owned(),
-        &[head, last] => head.to_owned() + join_once + last,
-        [head @ .., last] => {
-            let mut result = head.join(join);
-            result.push_str(join_last);
-            result.push_str(last);
-            result
         }
     }
 }
