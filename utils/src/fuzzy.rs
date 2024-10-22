@@ -269,7 +269,7 @@ struct MatchInfo {
 }
 
 /// An iterator over [`Matches`](Match) returned by [`Search::search`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MatchIter<'st, T> {
     // Safety invariant: Every index within here must be a valid index into
     // the memory pointed to by `state.search_values`.
@@ -279,7 +279,7 @@ pub struct MatchIter<'st, T> {
 
 /// Split data needed to construct [`Matches`](Match) from [`MatchIter`] to allow
 /// disjointed borrows when the iterator is already mutably borrowed or consumed.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct MatchIterState<'st, T> {
     total: f64,
 
@@ -327,6 +327,22 @@ impl<'st, T> MatchIterState<'st, T> {
             // `new` requires that the indices are valid for the search values
             data: unsafe { self.search_values.add(info.index as usize).as_ref() },
         }
+    }
+}
+
+impl<T> Clone for MatchIter<'_, T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            state: self.state,
+        }
+    }
+}
+
+impl<T> Copy for MatchIterState<'_, T> {}
+impl<T> Clone for MatchIterState<'_, T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 

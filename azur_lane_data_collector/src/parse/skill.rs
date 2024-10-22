@@ -545,7 +545,7 @@ struct ReferencedWeaponsContext {
     seen_buffs: HashSet<u32>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct SkillContext<'a> {
     lua: &'a Lua,
     skill: &'a LuaTable<'a>,
@@ -553,13 +553,13 @@ struct SkillContext<'a> {
     quota: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 enum RoughWeaponType {
     Bullet,
     Aircraft,
     AntiAir,
     Melee,
-    Irrelevant
+    Irrelevant,
 }
 
 impl RoughWeaponType {
