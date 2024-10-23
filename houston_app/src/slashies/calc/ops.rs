@@ -51,9 +51,9 @@ impl BinaryOp {
     /// Relevant for order-of-operations.
     pub const fn priority(self) -> isize {
         match self {
-            BinaryOp::Add | BinaryOp::Sub => 1,
-            BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => 2,
-            BinaryOp::Pow => 3,
+            Self::Add | Self::Sub => 1,
+            Self::Mul | Self::Div | Self::Mod => 2,
+            Self::Pow => 3,
         }
     }
 }

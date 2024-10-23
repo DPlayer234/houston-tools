@@ -22,8 +22,8 @@ pub struct Filter {
 const PAGE_SIZE: usize = 15;
 
 impl View {
-    pub fn new(filter: Filter) -> View {
-        View { page: 0, filter }
+    pub fn new(filter: Filter) -> Self {
+        Self { page: 0, filter }
     }
 
     pub fn modify_with_iter<'a>(

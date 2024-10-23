@@ -22,7 +22,7 @@ const PAGE_SIZE: usize = 15;
 
 impl View {
     pub fn new(filter: Filter) -> Self {
-        View { page: 0, filter }
+        Self { page: 0, filter }
     }
 
     pub fn modify_with_iter<'a>(

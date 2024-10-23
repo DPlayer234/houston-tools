@@ -25,6 +25,7 @@ impl UnityClass for Offset {
 }
 
 impl StreamingInfo {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.path.is_empty()
     }

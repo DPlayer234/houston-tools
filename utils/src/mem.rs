@@ -100,7 +100,7 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 
     // SAFETY: Both pointers are to the slice, so the offset must be valid.
     let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
-    debug_assert!(byte_len >= 0);
+    debug_assert!(byte_len >= 0, "sanity: end >= start, so byte_len must be positive");
 
     let src_size = size_of::<Src>();
     let dst_size = size_of::<Dst>();

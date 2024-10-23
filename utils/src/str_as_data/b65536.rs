@@ -118,9 +118,9 @@ fn char_to_bytes(c: char) -> Result<[u8; 2], Error> {
 
 #[must_use]
 fn bytes_to_char(bytes: [u8; 2]) -> char {
-    // SAFETY: Reverse of `char_to_bytes`.
     let int = u32::from(u16::from_le_bytes(bytes));
     match int {
+        // SAFETY: Reverse of `char_to_bytes`.
         0 ..= 0xD7FF => unsafe { char::from_u32_unchecked(int) },
         _ => unsafe { char::from_u32_unchecked(int + OFFSET) },
     }

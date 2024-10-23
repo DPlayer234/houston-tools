@@ -42,7 +42,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// All bytes passed in must be valid UTF-8.
     #[must_use]
     pub const unsafe fn from_utf8_unchecked(bytes: [u8; LEN]) -> Self {
-        // SAFETY: Caller has to ensure the bytes are valid UTF-8
+        // Caller has to ensure the bytes are valid UTF-8
         Self(bytes)
     }
 
@@ -54,7 +54,7 @@ impl<const LEN: usize> InlineStr<LEN> {
         match crate::mem::try_as_sized(str.as_bytes()) {
             Some(slice) => Ok(unsafe {
                 // SAFETY: InlineStr<LEN> is a transparent wrapper around [u8; LEN].
-                std::mem::transmute::<&[u8; LEN], &InlineStr<LEN>>(slice)
+                std::mem::transmute::<&[u8; LEN], &Self>(slice)
             }),
             None => Err(FromStrError(())),
         }

@@ -100,7 +100,7 @@ define_button_args! {
 
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
-    pub fn from_custom_id(id: &str) -> anyhow::Result<ButtonArgs> {
+    pub fn from_custom_id(id: &str) -> anyhow::Result<Self> {
         let mut bytes = SmallVec::new();
         utils::str_as_data::decode_b65536(&mut bytes, id)?;
         CustomData(bytes).to_button_args()
@@ -269,6 +269,7 @@ pub trait ButtonMessage: Sized {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>>;
 
     /// How to post the message. Defaults to [`ButtonMessageMode::Edit`].
+    #[must_use]
     fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }
 }
 

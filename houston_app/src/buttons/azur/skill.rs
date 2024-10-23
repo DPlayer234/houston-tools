@@ -161,7 +161,7 @@ impl View {
 
     /// Shared logic for buttons that use a `Option<u8>` field.
     fn button_with_u8<'a>(&mut self, field: impl FieldMut<Self, Option<u8>>, index: Option<u8>) -> CreateButton<'a> {
-        self.new_button(field, index, |u| u.map(u16::from).unwrap_or(u16::MAX))
+        self.new_button(field, index, |u| u.map_or(u16::MAX, u16::from))
     }
 
     /// Creates the embed field for a skill.
@@ -302,7 +302,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 {: >5}: {: >3.0}/{: >3.0}/{: >3.0} |\
                 {: >4.0}% {: <3} | \
                 {}`",
-                target.map(|t| t.short_name()).unwrap_or(""),
+                target.map_or("", |t| t.short_name()),
                 amount, barrage.damage * barrage.coefficient, sprapnel_mark,
                 bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
                 barrage.scaling * 100f64, barrage.scaling_stat.name(),

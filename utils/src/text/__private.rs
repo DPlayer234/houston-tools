@@ -66,7 +66,7 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
         slice_index += 1;
     }
 
-    assert!(offset == N);
+    assert!(offset == N, "total input length must be N");
     unsafe {
         // SAFETY: Only UTF-8 data was joined.
         InlineStr::from_utf8_unchecked(out)

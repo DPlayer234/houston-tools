@@ -122,8 +122,8 @@ impl Error for DataError {}
 impl Display for DataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DataError::NoMlb => f.write_str("no mlb state found"),
-            DataError::NoStrengthen => f.write_str("no strengthen info found"),
+            Self::NoMlb => f.write_str("no mlb state found"),
+            Self::NoStrengthen => f.write_str("no strengthen info found"),
         }
     }
 }

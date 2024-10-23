@@ -118,7 +118,7 @@ impl HAzurLane {
             if let Some(ship_id) = data.usability.unique_ship_id() {
                 ship_id_to_augment_index.entry(ship_id)
                     .and_modify(|v| v.push(index))
-                    .or_insert(vec![index]);
+                    .or_insert_with(|| vec![index]);
             }
         }
 
@@ -126,7 +126,7 @@ impl HAzurLane {
         equip_simsearch.shrink_to_fit();
         augment_simsearch.shrink_to_fit();
 
-        HAzurLane {
+        Self {
             data_path,
             ships: data.ships,
             equips: data.equips,
@@ -143,21 +143,25 @@ impl HAzurLane {
     }
 
     /// Gets all known ships.
+    #[must_use]
     pub fn ships(&self) -> &[ShipData] {
         &self.ships
     }
 
     /// Gets all known equipments.
+    #[must_use]
     pub fn equips(&self) -> &[Equip] {
         &self.equips
     }
 
     /// Gets all known augment modules.
+    #[must_use]
     pub fn augments(&self) -> &[Augment] {
         &self.augments
     }
 
     /// Gets a ship by its ID.
+    #[must_use]
     pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
         let index = *self.ship_id_to_index.get(&id)?;
         self.ships.get(index)
@@ -169,6 +173,7 @@ impl HAzurLane {
     }
 
     /// Gets an equip by its ID.
+    #[must_use]
     pub fn equip_by_id(&self, id: u32) -> Option<&Equip> {
         let index = *self.equip_id_to_index.get(&id)?;
         self.equips.get(index)
@@ -180,6 +185,7 @@ impl HAzurLane {
     }
 
     /// Gets an augment by its ID.
+    #[must_use]
     pub fn augment_by_id(&self, id: u32) -> Option<&Augment> {
         let index = *self.augment_id_to_index.get(&id)?;
         self.augments.get(index)
@@ -196,6 +202,7 @@ impl HAzurLane {
     }
 
     /// Gets a chibi's image data.
+    #[must_use]
     pub fn get_chibi_image(&self, image_key: &str) -> Option<&'static [u8]> {
         // Consult the cache first. If the image has been seen already, it will be stored here.
         // It may also have a None entry if the image was requested but not found.

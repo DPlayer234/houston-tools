@@ -115,6 +115,6 @@ impl FromStr for DiceSetVec {
             .filter(|s| !s.is_empty())
             .map(DiceSet::from_str)
             .collect::<Result<InnerVec, Self::Err>>()
-            .and_then(|v| DiceSetVec::from_vec(v).ok_or(DiceParseError(())))
+            .and_then(|v| Self::from_vec(v).ok_or(DiceParseError(())))
     }
 }

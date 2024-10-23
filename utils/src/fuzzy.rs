@@ -81,6 +81,7 @@ pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
 
 impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// Creates a new empty search instance.
+    #[must_use]
     pub fn new() -> Self {
         const {
             assert!(MIN <= MAX, "MIN must be <= MAX");
@@ -103,8 +104,12 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// # Panics
     ///
     /// Panics if the provided score is less than `0.0` or greater than `1.0`.
+    #[must_use]
     pub fn with_min_match_score(mut self, score: f64) -> Self {
-        assert!((0.0..=1.0).contains(&score));
+        assert!(
+            (0.0..=1.0).contains(&score),
+            "score must be within 0.0..=1.0, but was {score}"
+        );
 
         self.min_match_score = score;
         self
@@ -271,6 +276,7 @@ struct MatchInfo {
 
 /// An iterator over [`Matches`](Match) returned by [`Search::search`].
 #[derive(Debug)]
+#[must_use = "iterators are lazy and do nothing until iterated"]
 pub struct MatchIter<'st, T> {
     // Safety invariant: Every index within here must be a valid index into
     // the memory pointed to by `state.search_values`.
@@ -409,7 +415,10 @@ type Segment<const N: usize> = [u16; N];
 
 unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
     let mut res = [0u16; N];
-    debug_assert!(pts.len() <= N);
+    debug_assert!(
+        pts.len() <= N,
+        "safety: pts.len() must be at most {N} but is {}", pts.len()
+    );
 
     // SAFETY: Caller passes segments with size N or less.
     unsafe { std::ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len()); }
@@ -417,7 +426,10 @@ unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
 }
 
 fn iter_segments<const N: usize>(slice: &[u16], size: usize) -> impl Iterator<Item = Segment<N>> + '_ {
-    assert!((1..=N).contains(&size));
+    assert!(
+        (1..=N).contains(&size),
+        "size must be within 1..={N}, but is {size}"
+    );
 
     slice.windows(size)
         .map(|w| unsafe { new_segment(w) })

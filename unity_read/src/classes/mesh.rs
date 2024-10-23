@@ -232,20 +232,27 @@ impl MeshVertexData<'_> {
     }
 
     fn load_index_buffer(&self) -> crate::Result<(u32, Vec<u32>)> {
+        macro_rules! map_buffer {
+            ($Ty:ty) => {{
+                const N: usize = size_of::<$Ty>();
+                let vec = self.mesh.index_buffer
+                    .chunks_exact(N)
+                    .map(|chunk| {
+                        // cannot fail since chunk size == N
+                        let chunk = <[u8; N]>::try_from(chunk).unwrap();
+                        <$Ty>::from_le_bytes(chunk).into()
+                    })
+                    .collect();
+
+                #[allow(clippy::cast_possible_truncation)]
+                (const { N as u32 }, vec)
+            }};
+        }
+
         match self.mesh.index_format {
-            0 => { // UInt16
-                Ok((2, self.mesh.index_buffer.chunks_exact(2)
-                    .map(|m| u32::from(u16::from(m[0]) | (u16::from(m[1]) << 8)))
-                    .collect()))
-            }
-            1 => { // UInt32
-                Ok((4, self.mesh.index_buffer.chunks_exact(4)
-                    .map(|m| u32::from(m[0]) | (u32::from(m[1]) << 8) | (u32::from(m[2]) << 16) | (u32::from(m[3]) << 24))
-                    .collect()))
-            }
-            _ => {
-                Err(Error::InvalidData("unexpected mesh index format"))?
-            }
+            0 => Ok(map_buffer!(u16)), // UInt16
+            1 => Ok(map_buffer!(u32)), // UInt32
+            _ => Err(Error::InvalidData("unexpected mesh index format")),
         }
     }
 
@@ -314,10 +321,12 @@ impl ChannelInfo {
 }
 
 impl ResolvedMesh {
+    #[must_use]
     pub fn vertices(&self) -> &[Vertex] {
         &self.vertices
     }
 
+    #[must_use]
     pub fn triangles(&self) -> impl ExactSizeIterator<Item = (&Vertex, &Vertex, &Vertex)> {
         self.triangle_data.iter().map(|t| (
             &self.vertices[t.0],
@@ -378,7 +387,7 @@ impl<T: BinRead> BinRead for Norm<T> {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        Ok(Norm(T::read_options(reader, endian, args)?))
+        Ok(Self(T::read_options(reader, endian, args)?))
     }
 }
 
@@ -399,24 +408,24 @@ impl BinRead for ReadF16 {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        u16::read_options(reader, endian, args).map(|b| ReadF16(f16::from_bits(b)))
+        u16::read_options(reader, endian, args).map(|b| Self(f16::from_bits(b)))
     }
 }
 
 impl From<[f32; 1]> for Vector3f {
     fn from(value: [f32; 1]) -> Self {
-        Vector3f { x: value[0], y: 0f32, z: 0f32 }
+        Self { x: value[0], y: 0f32, z: 0f32 }
     }
 }
 
 impl From<[f32; 2]> for Vector3f {
     fn from(value: [f32; 2]) -> Self {
-        Vector3f { x: value[0], y: value[1], z: 0f32 }
+        Self { x: value[0], y: value[1], z: 0f32 }
     }
 }
 
 impl From<[f32; 3]> for Vector3f {
     fn from(value: [f32; 3]) -> Self {
-        Vector3f { x: value[0], y: value[1], z: value[2] }
+        Self { x: value[0], y: value[1], z: value[2] }
     }
 }

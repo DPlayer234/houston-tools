@@ -331,7 +331,7 @@ fn get_sub_barrage(
 
                 attach_buff.push(BuffInfo {
                     buff_id,
-                    probability: probability.map(|f| f * 0.0001).unwrap_or(1f64),
+                    probability: probability.map_or(1f64, |f| f * 0.0001),
                     level: level.unwrap_or(1)
                 })
             }
@@ -563,15 +563,15 @@ enum RoughWeaponType {
 }
 
 impl RoughWeaponType {
-    fn from(num: u32) -> RoughWeaponType {
+    fn from(num: u32) -> Self {
         // note: 24 is BEAM, might need other handling
         // note: 4 is air-to-air attacks
         match num {
-            1 | 2 | 3 | 16 | 17 | 19 | 23 | 24 | 25 | 28 | 29 | 31 | 32 | 33 => RoughWeaponType::Bullet,
-            10 | 11 => RoughWeaponType::Aircraft,
-            4 | 22 | 26 | 30 => RoughWeaponType::AntiAir,
-            18 => RoughWeaponType::Melee,
-            _ => RoughWeaponType::Irrelevant
+            1 | 2 | 3 | 16 | 17 | 19 | 23 | 24 | 25 | 28 | 29 | 31 | 32 | 33 => Self::Bullet,
+            10 | 11 => Self::Aircraft,
+            4 | 22 | 26 | 30 => Self::AntiAir,
+            18 => Self::Melee,
+            _ => Self::Irrelevant
         }
     }
 }

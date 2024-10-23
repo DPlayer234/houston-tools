@@ -27,6 +27,7 @@ pub struct Texture2DData<'t> {
 
 impl Texture2D {
     /// Gets the texture format.
+    #[must_use]
     pub fn format(&self) -> TextureFormat {
         TextureFormat::from_primitive(self.format)
     }
@@ -42,6 +43,7 @@ impl Texture2D {
 
 impl Texture2DData<'_> {
     /// Gets the block of data.
+    #[must_use]
     pub fn data(&self) -> &[u8] {
         self.data
     }
@@ -82,7 +84,7 @@ struct Args {
 
 impl Args {
     /// Creates a new [`Args`], validating the width, height, and total size.
-    fn new(width: u32, height: u32) -> crate::Result<Args> {
+    fn new(width: u32, height: u32) -> crate::Result<Self> {
         let width = usize::from_int(width)?;
         let height = usize::from_int(height)?;
         let size = width.checked_mul(height)

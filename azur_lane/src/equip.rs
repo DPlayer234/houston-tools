@@ -425,21 +425,24 @@ define_data_enum! {
 
 impl BulletExtra {
     /// Whether this bullet extra is empty.
+    #[must_use]
     pub fn is_none(&self) -> bool {
-        matches!(self, BulletExtra::None)
+        matches!(self, Self::None)
     }
 }
 
 impl BulletFlags {
     /// Filters to the flags that are relevant for the dive filter,
     /// i.e. which targets the bullet _can't_ hit.
+    #[must_use]
     pub fn dive_filter(self) -> Self {
-        self & (BulletFlags::IGNORE_SURFACE | BulletFlags::IGNORE_DIVE)
+        self & (Self::IGNORE_SURFACE | Self::IGNORE_DIVE)
     }
 }
 
 impl AugmentUsability {
     /// If restricted by hull types, gets the hull types. Otherwise, returns [`None`].
+    #[must_use]
     pub fn hull_types(&self) -> Option<&[HullType]> {
         match self {
             Self::HullTypes(h) => Some(h.as_slice()),
@@ -448,6 +451,7 @@ impl AugmentUsability {
     }
 
     /// If restricted to a unique ship, gets its ID. Otherwise, returns [`None`].
+    #[must_use]
     pub fn unique_ship_id(&self) -> Option<u32> {
         match self {
             Self::UniqueShipId(i) => Some(*i),
@@ -458,6 +462,7 @@ impl AugmentUsability {
 
 impl ArmorModifiers {
     /// Gets the modifier for a specific kind of armor.
+    #[must_use]
     pub fn modifier(&self, armor_kind: ShipArmor) -> f64 {
         match armor_kind {
             ShipArmor::Light => self.0,

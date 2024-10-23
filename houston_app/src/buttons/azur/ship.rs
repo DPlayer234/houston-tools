@@ -172,7 +172,7 @@ impl View {
 
     /// Creates a button that redirects to a retrofit state.
     fn button_with_retrofit<'a>(&mut self, retrofit: Option<u8>) -> CreateButton<'a> {
-        self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| u.map(u16::from).unwrap_or(u16::MAX))
+        self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| u.map_or(u16::MAX, u16::from))
     }
 
     /// Creates the embed field that display the stats.
@@ -297,9 +297,9 @@ impl ViewAffinity {
     /// Converts the affinity to a stat multiplier.
     fn to_mult(self) -> f64 {
         match self {
-            ViewAffinity::Neutral => 1.0,
-            ViewAffinity::Love => 1.06,
-            ViewAffinity::Oath => 1.12,
+            Self::Neutral => 1.0,
+            Self::Love => 1.06,
+            Self::Oath => 1.12,
         }
     }
 }

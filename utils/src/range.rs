@@ -139,16 +139,19 @@ macro_rules! impl_range {
             }
 
             /// Gets the low end of this range.
+            #[must_use]
             pub const fn low(self) -> $Num {
                 self.0
             }
 
             /// Gets the high end of this range.
+            #[must_use]
             pub const fn high(self) -> $Num {
                 self.1
             }
 
             /// Gets a tuple of the components.
+            #[must_use]
             pub const fn tuple(self) -> ($Num, $Num) {
                 (self.0, self.1)
             }

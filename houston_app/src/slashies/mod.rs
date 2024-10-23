@@ -34,14 +34,11 @@ pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<HB
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
     log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {
-        HContext::Application(ctx) => {
-            ctx.interaction.data.target()
-                .map(DisplayResolvedArgs::Target)
-                .unwrap_or_else(|| DisplayResolvedArgs::Options(ctx.args))
-        },
-        HContext::Prefix(ctx) => {
-            DisplayResolvedArgs::String(ctx.args)
-        }
+        HContext::Application(ctx) => ctx.interaction.data.target().map_or(
+            DisplayResolvedArgs::Options(ctx.args),
+            DisplayResolvedArgs::Target,
+        ),
+        HContext::Prefix(ctx) => DisplayResolvedArgs::String(ctx.args),
     })
 }
 

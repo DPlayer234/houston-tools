@@ -46,7 +46,7 @@ impl View {
         skin: &'a ShipSkin,
     ) -> CreateReply<'a> {
         let words = match (&self, skin) {
-            (View { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
+            (Self { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
         };
 

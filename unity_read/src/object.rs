@@ -27,16 +27,19 @@ pub struct ObjectRef<'a> {
 
 impl ObjectRef<'_> {
     /// Gets the object's path ID.
+    #[must_use]
     pub fn path_id(&self) -> i64 {
         self.object.path_id
     }
 
     /// Gets the class ID for this object's type.
+    #[must_use]
     pub fn class_id(&self) -> ClassID {
         ClassID::from_primitive(self.ser_type.class_id)
     }
 
     /// Whether the data should be read as big endian.
+    #[must_use]
     pub fn is_big_endian(&self) -> bool {
         self.file.is_big_endian
     }

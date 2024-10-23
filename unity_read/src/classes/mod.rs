@@ -121,6 +121,7 @@ impl<T: AutoUnityClass> UnityClass for T {
 /// - its siblings
 ///
 /// If empty, returns [`None`].
+#[must_use]
 pub fn split_tree(tree: &[TypeTreeNode]) -> Option<(&TypeTreeNode, &[TypeTreeNode], &[TypeTreeNode])> {
     let (next, other) = tree.split_first()?;
 
@@ -224,7 +225,7 @@ impl UnityClass for String {
 
         let data = <Vec<u8>>::parse_tree(r, is_big_endian, next, children)?;
 
-        Ok(String::from_utf8(data)?)
+        Ok(Self::from_utf8(data)?)
     }
 }
 
@@ -260,7 +261,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
             .and_then(|o| o.split_first())
             .ok_or(Error::InvalidData("array type data does not contain data element"))?;
 
-        let mut result = Vec::new();
+        let mut result = Self::new();
         for _ in 0 .. len {
             result.push(T::parse_tree(r, is_big_endian, next, children)?);
         }

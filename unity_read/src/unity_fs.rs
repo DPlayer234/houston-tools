@@ -270,7 +270,10 @@ impl<'a> UnityFsNode<'a> {
         // sanity check to ensure the guard is still valid here and can be dropped
         drop(guard);
 
-        debug_assert!(u64::from_int(result.len())? == self.node.size);
+        debug_assert!(
+            u64::from_int(result.len())? == self.node.size,
+            "sanity: result len is {}, but the node specified {}", result.len(), self.node.size
+        );
         Ok(result)
     }
 
@@ -293,6 +296,7 @@ impl<'a> UnityFsNode<'a> {
     ///
     /// This will allocate a UTF-8 string with escape sequences for invalid characters in the underlying data.
     /// If you don't care about that or want to avoid the allocation, use [`Self::path_raw`] instead.
+    #[must_use]
     pub fn path(&self) -> String {
         String::from_utf8_lossy(&self.node.path.0).into_owned()
     }
@@ -300,6 +304,7 @@ impl<'a> UnityFsNode<'a> {
     /// Gets the path name for this node as raw bytes.
     ///
     /// This is the raw data as it appears in the file and doesn't necessarily represent valid UTF-8.
+    #[must_use]
     pub fn path_raw(&self) -> &[u8] {
         &self.node.path.0
     }

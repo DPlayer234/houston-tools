@@ -61,7 +61,7 @@ impl HBotData {
     #[must_use]
     pub fn new(config: HBotConfig) -> Self {
         let data_path = config.azur_lane_data.clone();
-        HBotData {
+        Self {
             config,
             app_emojis: OnceCell::new(),
             user_data: DashMap::new(),
@@ -124,7 +124,7 @@ impl HBotData {
 
 impl Default for HUserData {
     fn default() -> Self {
-        HUserData {
+        Self {
             ephemeral: true
         }
     }

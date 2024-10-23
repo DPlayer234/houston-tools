@@ -152,7 +152,7 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
     )?;
 
     for weapon in &aircraft.weapons {
-        writeln!(f, "__**{}:**__", weapon.name.as_deref().unwrap_or(weapon.kind.name()))?;
+        writeln!(f, "__**{}:**__", weapon.name.as_deref().unwrap_or_else(|| weapon.kind.name()))?;
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => {
