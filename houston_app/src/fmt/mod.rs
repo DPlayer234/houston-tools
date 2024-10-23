@@ -22,6 +22,7 @@ where
     Ok(())
 }
 
+#[must_use]
 pub struct JoinNatural<'a> {
     data: SmallVec<[&'a str; 15]>,
     join: &'a JoinBlock<'a>,

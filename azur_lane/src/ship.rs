@@ -426,15 +426,12 @@ impl ShipStat {
     ///
     /// This isn't the level 1 value and includes various enhancements.
     /// See also: [`ShipStat::calc`]
-    #[must_use]
     pub const fn base(&self) -> f64 { self.0 }
 
     /// The level growth value.
-    #[must_use]
     pub const fn growth(&self) -> f64 { self.1 }
 
     /// A fixed addition unaffected by affinity.
-    #[must_use]
     pub const fn fixed(&self) -> f64 { self.2 }
 
     /// Calculates the actual value.
@@ -472,13 +469,11 @@ impl ShipMainScreenLine {
     }
 
     /// Gets the index for the line. Relevant for replacement.
-    #[must_use]
     pub fn index(&self) -> usize {
         self.0
     }
 
     /// Gets the text associated with the line.
-    #[must_use]
     pub fn text(&self) -> &str {
         &self.1
     }

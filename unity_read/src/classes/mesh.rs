@@ -321,12 +321,10 @@ impl ChannelInfo {
 }
 
 impl ResolvedMesh {
-    #[must_use]
     pub fn vertices(&self) -> &[Vertex] {
         &self.vertices
     }
 
-    #[must_use]
     pub fn triangles(&self) -> impl ExactSizeIterator<Item = (&Vertex, &Vertex, &Vertex)> {
         self.triangle_data.iter().map(|t| (
             &self.vertices[t.0],

@@ -22,8 +22,12 @@ pub struct HAzurLane {
     augment_simsearch: Search<()>,
     ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
 
-    // holds static references (leaked boxes) so we can avoid
-    // copying the data every time the sprite needs to be uploaded
+    // holds static references (leaked boxes) so we can avoid copying
+    // the data every time the sprite needs to be uploaded.
+    //
+    // important: avoid simple `insert` calls since those could
+    // _unintentionally_ leak memory. dropping the cache (or this struct
+    // as a whole) would leak it too, but that's not a concern for now.
     chibi_sprite_cache: DashMap<String, Option<&'static [u8]>>,
 }
 
@@ -143,19 +147,16 @@ impl HAzurLane {
     }
 
     /// Gets all known ships.
-    #[must_use]
     pub fn ships(&self) -> &[ShipData] {
         &self.ships
     }
 
     /// Gets all known equipments.
-    #[must_use]
     pub fn equips(&self) -> &[Equip] {
         &self.equips
     }
 
     /// Gets all known augment modules.
-    #[must_use]
     pub fn augments(&self) -> &[Augment] {
         &self.augments
     }
@@ -221,9 +222,13 @@ impl HAzurLane {
         match std::fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.
-                let data = Box::leak(data.into_boxed_slice());
-                self.chibi_sprite_cache.insert(image_key.to_owned(), Some(data));
-                Some(data)
+                use dashmap::mapref::entry::Entry;
+                match self.chibi_sprite_cache.entry(image_key.to_owned()) {
+                    // data race: loaded concurrently, someone else was faster. drop the current data.
+                    Entry::Occupied(entry) => *entry.get(),
+                    // still empty: leak the current data via Box and store the ref.
+                    Entry::Vacant(entry) => *entry.insert(Some(Box::leak(data.into_boxed_slice()))),
+                }
             },
             Err(err) => {
                 // Reading failed. Check the error kind.
@@ -231,8 +236,15 @@ impl HAzurLane {
                 match err.kind() {
                     // Most errors aren't interesting and may be transient issues.
                     // However, these ones imply permanent problems. Store None to prevent repeated attempts.
-                    NotFound | PermissionDenied => { self.chibi_sprite_cache.insert(image_key.to_owned(), None); },
-                    _ => ()
+                    NotFound | PermissionDenied => {
+                        // insert, but do not replace a present entry
+                        self.chibi_sprite_cache
+                            .entry(image_key.to_owned())
+                            .or_default();
+                    },
+                    _ => {
+                        log::warn!("Failed to load chibi sprite '{image_key}': {err:?}");
+                    }
                 };
 
                 None

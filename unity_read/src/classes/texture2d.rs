@@ -27,7 +27,6 @@ pub struct Texture2DData<'t> {
 
 impl Texture2D {
     /// Gets the texture format.
-    #[must_use]
     pub fn format(&self) -> TextureFormat {
         TextureFormat::from_primitive(self.format)
     }

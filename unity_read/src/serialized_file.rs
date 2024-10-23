@@ -63,7 +63,6 @@ impl<'a> SerializedFile<'a> {
     }
 
     /// Gets the serialized types.
-    #[must_use]
     pub fn types(&self) -> &[SerializedType] {
         &self.types
     }
