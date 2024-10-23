@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use serenity::prelude::*;
 use smallvec::SmallVec;
@@ -114,25 +114,25 @@ impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
 }
 
 /// Event handler for custom button menus.
-#[derive(Debug, Clone)]
-pub struct ButtonEventHandler {
-    bot_data: Arc<HBotData>
-}
+pub mod handler {
+    use super::*;
 
-impl ButtonEventHandler {
-    /// Creates a new handler.
-    #[must_use]
-    pub const fn new(bot_data: Arc<HBotData>) -> Self {
-        Self {
-            bot_data
+    /// To be called in [`EventHandler::interaction_create`].
+    pub async fn interaction_create(ctx: Context, interaction: Interaction) {
+        // We only care about component interactions.
+        let Interaction::Component(interaction) = interaction else { return };
+
+        // Dispatch, then handle errors.
+        if let Err(err) = interaction_dispatch(&ctx, &interaction).await {
+            handle_dispatch_error(ctx, interaction, err).await
         }
     }
 
     /// Handles the component interaction dispatch.
-    async fn interaction_dispatch(&self, ctx: &Context, interaction: &ComponentInteraction) -> HResult {
+    async fn interaction_dispatch(ctx: &Context, interaction: &ComponentInteraction) -> HResult {
         use ComponentInteractionDataKind as Kind;
 
-        let custom_id = match &interaction.data.kind {
+        let custom_id: &str = match &interaction.data.kind {
             Kind::StringSelect { values } if values.len() == 1 => &values[0],
             Kind::Button => &interaction.data.custom_id,
             _ => anyhow::bail!("Invalid interaction."),
@@ -143,13 +143,13 @@ impl ButtonEventHandler {
 
         args.reply(ButtonContext {
             interaction,
-            http: &ctx.http,
-            data: &self.bot_data
+            http: ctx.http(),
+            data: &ctx.data(),
         }).await
     }
 
     #[cold]
-    async fn handle_dispatch_error(&self, ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
+    async fn handle_dispatch_error(ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
         if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
             // print both errors to preserve the stack trace, if present
             log::warn!("Discord interaction error: {ser_err:?} / {err:?}");
@@ -163,22 +163,9 @@ impl ButtonEventHandler {
             .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
         let response = reply.to_slash_initial_response(Default::default());
 
-        let res = interaction.create_response(ctx, CreateInteractionResponse::Message(response)).await;
+        let res = interaction.create_response(ctx.http(), CreateInteractionResponse::Message(response)).await;
         if let Err(res) = res {
             log::warn!("Error sending component error: {res}");
-        }
-    }
-}
-
-#[serenity::async_trait]
-impl serenity::client::EventHandler for ButtonEventHandler {
-    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        // We only care about component interactions.
-        let Interaction::Component(interaction) = interaction else { return };
-
-        // Dispatch, then handle errors.
-        if let Err(err) = self.interaction_dispatch(&ctx, &interaction).await {
-            self.handle_dispatch_error(ctx, interaction, err).await
         }
     }
 }
@@ -200,7 +187,7 @@ pub trait ToCustomData {
     /// Creates a new button that would switch to a state where one field is changed.
     ///
     /// If the field value is the same, instead returns a disabled button with the sentinel value.
-    fn new_button<T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton {
+    fn new_button<'a, T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton<'a> {
         let disabled = *field.get(self) == value;
         if disabled {
             // This value is intended to be unique for a given object.
@@ -216,7 +203,7 @@ pub trait ToCustomData {
     }
 
     /// Creates a new select option that would switch to a state where one field is changed.
-    fn new_select_option<T: PartialEq>(&mut self, label: impl Into<String>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption {
+    fn new_select_option<'a, T: PartialEq>(&mut self, label: impl Into<Cow<'a, str>>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption<'a> {
         let default = *field.get(self) == value;
         let custom_id = self.to_custom_id_with(field, value);
 
@@ -260,12 +247,12 @@ pub struct ButtonContext<'a> {
 
 impl ButtonContext<'_> {
     /// Replies to the interaction.
-    pub async fn reply(&self, create: CreateInteractionResponse) -> HResult {
+    pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> HResult {
         Ok(self.interaction.create_response(self.http, create).await?)
     }
 
     /// Creates a fitting base reply.
-    pub fn create_reply(&self) -> CreateReply {
+    pub fn create_reply<'a>(&self) -> CreateReply<'a> {
         self.data.get_user_data(self.interaction.user.id).create_reply()
     }
 }
@@ -279,7 +266,7 @@ pub trait ButtonArgsReply: Sized {
 /// Provides a way for button arguments to modify the create-reply payload.
 pub trait ButtonMessage: Sized {
     /// Modifies the create-reply payload.
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply>;
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>>;
 
     /// How to post the message. Defaults to [`ButtonMessageMode::Edit`].
     fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }

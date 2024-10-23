@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "1.7.7"
+version = "2.0.0-beta.1"
 edition = "2021"
 rust-version = "1.80"
 
@@ -34,17 +34,17 @@ azur_lane = { path = "../azur_lane" }
 utils = { path = "../utils" }
 
 [dependencies.serenity]
-# note: the workspace currently overrides this dependency to a specific commit
-# so that we get new features without having poise select a different version
-version = "0.12.2"
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
 default-features = false
 features = [
     "rustls_backend",
-    "builder", "chrono", "client", "framework", "gateway", "model", "http", "utils", "simd_json"
+    "builder", "chrono", "framework", "gateway", "model", "http", "utils"
 ]
 
 [dependencies.poise]
-version = "0.6.1"
+git = "https://github.com/serenity-rs/poise.git"
+branch = "serenity-next"
 default-features = false
 features = [
     "chrono", "handle_panics"

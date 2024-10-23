@@ -37,7 +37,7 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    pub fn modify_with_ship<'a>(mut self, data: &'a HBotData, mut create: CreateReply<'a>, ship: &'a ShipData, base_ship: Option<&'a ShipData>) -> CreateReply<'a> {
         self.mode = ButtonMessageMode::Edit;
         let base_ship = base_ship.unwrap_or(ship);
 
@@ -63,7 +63,7 @@ impl View {
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-                create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.webp", skin.image_key)));
+                create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
                 embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
             }
         }
@@ -71,9 +71,9 @@ impl View {
         create.embed(embed).components(rows)
     }
 
-    fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow>) {
+    fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow<'_>>) {
         rows.push(
-            CreateActionRow::Buttons(vec![
+            CreateActionRow::buttons(vec![
                 self.button_with_level(120)
                     .label("Lv.120"),
                 self.button_with_level(125)
@@ -86,7 +86,7 @@ impl View {
         );
     }
 
-    fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
+    fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
         let self_custom_data = self.to_custom_data();
 
         let mut row = Vec::new();
@@ -122,30 +122,30 @@ impl View {
         }
 
         if !row.is_empty() {
-            rows.push(CreateActionRow::Buttons(row));
+            rows.push(CreateActionRow::buttons(row));
         }
     }
 
-    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow>) {
+    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
         let base_button = self.button_with_retrofit(None)
             .label("Base");
 
         match base_ship.retrofits.len() {
             0 => {},
-            1 => rows.push(CreateActionRow::Buttons(vec![
+            1 => rows.push(CreateActionRow::buttons(vec![
                 base_button,
                 self.button_with_retrofit(Some(0))
                     .label("Retrofit")
             ])),
-            _ => rows.push(CreateActionRow::Buttons(
+            _ => rows.push(CreateActionRow::buttons(
                 std::iter::once(base_button)
                     .chain(self.multi_retro_buttons(base_ship))
-                    .collect()
+                    .collect::<Vec<_>>()
             )),
         };
     }
 
-    fn multi_retro_buttons<'a>(&'a mut self, base_ship: &'a ShipData) -> impl Iterator<Item = CreateButton> + 'a {
+    fn multi_retro_buttons<'a, 'b>(&'a mut self, base_ship: &'a ShipData) -> impl Iterator<Item = CreateButton<'b>> + 'a {
         base_ship.retrofits.iter()
             .enumerate()
             .filter_map(|(index, retro)| {
@@ -161,22 +161,22 @@ impl View {
     }
 
     /// Gets a button that redirects to a different level.
-    fn button_with_level(&mut self, level: u8) -> CreateButton {
+    fn button_with_level<'a>(&mut self, level: u8) -> CreateButton<'a> {
         self.new_button(utils::field_mut!(Self: level), level, u8::into)
     }
 
     /// Gets a button that redirects to a different affinity.
-    fn button_with_affinity(&mut self, affinity: ViewAffinity) -> CreateButton {
+    fn button_with_affinity<'a>(&mut self, affinity: ViewAffinity) -> CreateButton<'a> {
         self.new_button(utils::field_mut!(Self: affinity), affinity, |u| u as u16)
     }
 
     /// Creates a button that redirects to a retrofit state.
-    fn button_with_retrofit(&mut self, retrofit: Option<u8>) -> CreateButton {
+    fn button_with_retrofit<'a>(&mut self, retrofit: Option<u8>) -> CreateButton<'a> {
         self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| u.map(u16::from).unwrap_or(u16::MAX))
     }
 
     /// Creates the embed field that display the stats.
-    fn get_stats_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
+    fn get_stats_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
         let stats = &ship.stats;
         let affinity = self.affinity.to_mult();
 
@@ -219,7 +219,7 @@ impl View {
     }
 
     /// Creates the embed field that displays the weapon equipment slots.
-    fn get_equip_field(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate; 1] {
+    fn get_equip_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
         let slots = ship.equip_slots.iter()
             .filter_map(|e| e.mount.as_ref().map(|m| (&e.allowed, m)));
 
@@ -257,7 +257,7 @@ impl View {
     }
 
     /// Creates the embed field that display the skill summary.
-    fn get_skills_field(&self, data: &HBotData, ship: &ShipData) -> Option<SimpleEmbedFieldCreate> {
+    fn get_skills_field<'a>(&self, data: &HBotData, ship: &ShipData) -> Option<SimpleEmbedFieldCreate<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
@@ -280,7 +280,7 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.modify_with_ship(ctx.data, ctx.create_reply(), ship, None),

@@ -4,6 +4,10 @@ Small Discord bot intended to be self-hosted.
 
 Optionally loads Azur Lane game data collected by the Azur Lane Data Collector in this repo.
 
+> [!WARNING]
+> This branch uses serenity and poise "next" versions without pinning the revision.
+> Expect spurious compilation failures.
+
 ## Setup
 
 The minimum setup requires setting the environment variable `DISCORD__TOKEN` to your Discord bot token (note: 2 underscores).

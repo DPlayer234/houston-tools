@@ -39,7 +39,7 @@ impl From<ShipViewSource> for ViewSource {
     }
 }
 
-type OwnedCreateEmbedField = (String, String, bool);
+type EmbedFieldCreate<'a> = (String, Cow<'a, str>, bool);
 
 impl View {
     /// Creates a new instance including a button to go back with some custom ID.
@@ -48,7 +48,11 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved list of skills and a base embed.
-    fn modify_with_skills<'a>(mut self, iterator: impl Iterator<Item = &'a Skill>, mut embed: CreateEmbed) -> (CreateEmbed, CreateActionRow) {
+    fn modify_with_skills<'a>(
+        mut self,
+        iterator: impl Iterator<Item = &'a Skill>,
+        mut embed: CreateEmbed<'a>,
+    ) -> (CreateEmbed<'a>, CreateActionRow<'a>) {
         let mut components = Vec::new();
 
         for (t_index, skill) in iterator.enumerate().take(5) {
@@ -71,11 +75,17 @@ impl View {
             }
         }
 
-        (embed, CreateActionRow::Buttons(components))
+        (embed, CreateActionRow::buttons(components))
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn modify_with_ship(mut self, data: &HBotData, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    fn modify_with_ship<'a>(
+        mut self,
+        data: &'a HBotData,
+        create: CreateReply<'a>,
+        ship: &'a ShipData,
+        base_ship: Option<&'a ShipData>,
+    ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
@@ -123,15 +133,15 @@ impl View {
         }
 
         let (embed, row) = self.modify_with_skills(skills.into_iter(), embed);
-        create.embed(embed).components(rows_without_empty([CreateActionRow::Buttons(components), row]))
+        create.embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
-    fn modify_with_augment(self, create: CreateReply, augment: &Augment) -> CreateReply {
+    fn modify_with_augment<'a>(self, create: CreateReply<'a>, augment: &'a Augment) -> CreateReply<'a> {
         let embed = CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name));
         let skills = augment.effect.iter().chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
 
-        let nav_row = self.back.as_ref().map(|back| CreateActionRow::Buttons(vec![
+        let nav_row = self.back.as_ref().map(|back| CreateActionRow::buttons(vec![
             CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back")
         ]));
 
@@ -140,34 +150,34 @@ impl View {
     }
 
     /// Creates a button that redirects to a skill index.
-    fn button_with_skill(&mut self, index: Option<u8>) -> CreateButton {
+    fn button_with_skill<'a>(&mut self, index: Option<u8>) -> CreateButton<'a> {
         self.button_with_u8(utils::field_mut!(Self: skill_index), index)
     }
 
     /// Creates a button that redirects to a skill index.
-    fn button_with_augment(&mut self, index: Option<u8>) -> CreateButton {
+    fn button_with_augment<'a>(&mut self, index: Option<u8>) -> CreateButton<'a> {
         self.button_with_u8(utils::field_mut!(Self: augment_index), index)
     }
 
     /// Shared logic for buttons that use a `Option<u8>` field.
-    fn button_with_u8(&mut self, field: impl FieldMut<Self, Option<u8>>, index: Option<u8>) -> CreateButton {
+    fn button_with_u8<'a>(&mut self, field: impl FieldMut<Self, Option<u8>>, index: Option<u8>) -> CreateButton<'a> {
         self.new_button(field, index, |u| u.map(u16::from).unwrap_or(u16::MAX))
     }
 
     /// Creates the embed field for a skill.
-    fn create_skill_field(&self, skill: &Skill) -> [OwnedCreateEmbedField; 1] {
+    fn create_skill_field<'a>(&self, skill: &'a Skill) -> [EmbedFieldCreate<'a>; 1] {
         [(
             format!("{} {}", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000).into_owned(),
-            false
+            utils::text::truncate(&skill.description, 1000),
+            false,
         )]
     }
 
     /// Creates the embed fields for the selected skill.
-    fn create_ex_skill_fields(&self, skill: &Skill) -> Vec<OwnedCreateEmbedField> {
+    fn create_ex_skill_fields<'a>(&self, skill: &'a Skill) -> Vec<EmbedFieldCreate<'a>> {
         let mut fields = vec![(
             format!("{} __{}__", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000).into_owned(),
+            utils::text::truncate(&skill.description, 1000),
             false
         )];
 
@@ -176,7 +186,7 @@ impl View {
                 "__Barrage__".to_owned(),
                 {
                     let m = get_skills_extra_summary(skill);
-                    if m.len() <= 1024 { m } else { log::warn!("barrage:\n{m}"); "<barrage data too long>".to_owned() }
+                    if m.len() <= 1024 { m.into() } else { log::warn!("barrage:\n{m}"); "<barrage data too long>".into() }
                 },
                 false
             ));
@@ -187,8 +197,8 @@ impl View {
             fields.push((
                 format!("__{}__", buff.weapon.name.as_deref().unwrap_or("Special Weapon")),
                 match buff.duration {
-                    Some(_) => fmt.no_fire_rate().to_string(),
-                    None => fmt.to_string(),
+                    Some(_) => fmt.no_fire_rate().to_string().into(),
+                    None => fmt.to_string().into(),
                 },
                 true
             ))
@@ -198,10 +208,10 @@ impl View {
     }
 }
 
-fn rows_without_empty<I, T>(rows: I) -> Vec<CreateActionRow>
+fn rows_without_empty<'a, I, T>(rows: I) -> Vec<CreateActionRow<'a>>
 where
     I: IntoIterator<Item = T>,
-    T: Into<Option<CreateActionRow>>,
+    T: Into<Option<CreateActionRow<'a>>>,
 {
     rows.into_iter()
         .filter_map(|a| a.into())
@@ -210,7 +220,7 @@ where
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         match &self.source {
             ViewSource::Ship(source) => {
                 let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;

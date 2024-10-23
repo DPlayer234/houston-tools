@@ -20,17 +20,21 @@ pub async fn upload(
         .description(description);
 
     if attachment.dimensions().is_some() {
-        embed = embed.thumbnail(attachment.proxy_url);
+        embed = embed.thumbnail(attachment.proxy_url.as_str());
     }
 
-    let components = CreateActionRow::Buttons(vec![
+    let buttons = [
         CreateButton::new_link(attachment.url)
             .label("Download")
-    ]);
+    ];
+
+    let components = [
+        CreateActionRow::buttons(&buttons)
+    ];
 
     let reply = ctx.create_ephemeral_reply()
         .embed(embed)
-        .components(vec![components]);
+        .components(&components);
 
     ctx.send(reply).await?;
     Ok(())

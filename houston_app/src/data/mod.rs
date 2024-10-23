@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dashmap::DashMap;
 use once_cell::sync::{Lazy, OnceCell};
 use poise::reply::CreateReply;
@@ -19,7 +17,7 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 /// The error type used for the poise context.
 pub type HError = anyhow::Error;
 /// The full poise context type.
-pub type HContext<'a> = poise::Context<'a, Arc<HBotData>, HError>;
+pub type HContext<'a> = poise::Context<'a, HBotData, HError>;
 /// The poise command result type.
 pub type HResult = Result<(), HError>;
 
@@ -135,7 +133,7 @@ impl Default for HUserData {
 impl HUserData {
     /// Creates a reply matching the user data.
     #[must_use]
-    pub fn create_reply(&self) -> CreateReply {
+    pub fn create_reply<'a>(&self) -> CreateReply<'a> {
         CreateReply::default()
             .ephemeral(self.ephemeral)
     }
@@ -152,11 +150,11 @@ pub trait HContextExtensions {
 
     /// Creates a reply matching the user data.
     #[must_use]
-    fn create_reply(&self) -> CreateReply;
+    fn create_reply<'a>(&self) -> CreateReply<'a>;
 
     /// Always creates an ephemeral reply.
     #[must_use]
-    fn create_ephemeral_reply(&self) -> CreateReply;
+    fn create_ephemeral_reply<'a>(&self) -> CreateReply<'a>;
 }
 
 impl HContextExtensions for HContext<'_> {
@@ -168,11 +166,11 @@ impl HContextExtensions for HContext<'_> {
         self.data().set_user_data(self.author().id, data)
     }
 
-    fn create_reply(&self) -> CreateReply {
+    fn create_reply<'a>(&self) -> CreateReply<'a> {
         self.get_user_data().create_reply()
     }
 
-    fn create_ephemeral_reply(&self) -> CreateReply {
+    fn create_ephemeral_reply<'a>(&self) -> CreateReply<'a> {
         CreateReply::default().ephemeral(true)
     }
 }

@@ -19,7 +19,12 @@ impl View {
         }
     }
 
-    pub fn modify_with_ship(self, create: CreateReply, ship: &ShipData, base_ship: Option<&ShipData>) -> CreateReply {
+    pub fn modify_with_ship<'a>(
+        self,
+        create: CreateReply<'a>,
+        ship: &'a ShipData,
+        base_ship: Option<&'a ShipData>,
+    ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut embed = CreateEmbed::new()
@@ -60,7 +65,7 @@ impl View {
         }
 
         let components = vec![
-            CreateActionRow::Buttons(vec![{
+            CreateActionRow::buttons(vec![{
                 let back = self.inner.to_custom_id();
                 CreateButton::new(back).emoji('⏪').label("Back")
             }])
@@ -71,7 +76,7 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.modify_with_ship(ctx.create_reply(), ship, None),

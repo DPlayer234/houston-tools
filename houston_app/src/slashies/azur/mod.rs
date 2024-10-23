@@ -24,10 +24,11 @@ async fn ship(
     #[autocomplete = "autocomplete::ship_name"]
     name: String
 ) -> HResult {
-    let ship = find::ship(&ctx, &name)?;
+    let data = ctx.data();
+    let ship = find::ship(&data, &name)?;
 
     let view = buttons::azur::ship::View::new(ship.group_id);
-    ctx.send(view.modify_with_ship(ctx.data(), ctx.create_reply(), ship, None)).await?;
+    ctx.send(view.modify_with_ship(&data, ctx.create_reply(), ship, None)).await?;
     Ok(())
 }
 
@@ -50,6 +51,8 @@ async fn search_ship(
 ) -> HResult {
     use crate::buttons::azur::search_ship::*;
 
+    let data = ctx.data();
+
     let filter = Filter {
         name,
         faction: faction.map(EFaction::convert),
@@ -59,7 +62,7 @@ async fn search_ship(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
+    ctx.send(view.modify(&data, ctx.create_reply())).await?;
 
     Ok(())
 }
@@ -72,7 +75,8 @@ async fn equip(
     #[autocomplete = "autocomplete::equip_name"]
     name: String
 ) -> HResult {
-    let equip = find::equip(&ctx, &name)?;
+    let data = ctx.data();
+    let equip = find::equip(&data, &name)?;
 
     let view = buttons::azur::equip::View::new(equip.equip_id);
     ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
@@ -94,6 +98,8 @@ async fn search_equip(
 ) -> HResult {
     use crate::buttons::azur::search_equip::*;
 
+    let data = ctx.data();
+
     let filter = Filter {
         name,
         faction: faction.map(EFaction::convert),
@@ -102,7 +108,7 @@ async fn search_equip(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
+    ctx.send(view.modify(&data, ctx.create_reply())).await?;
 
     Ok(())
 }
@@ -115,10 +121,11 @@ async fn augment(
     #[autocomplete = "autocomplete::augment_name"]
     name: String
 ) -> HResult {
-    let augment = find::augment(&ctx, &name)?;
+    let data = ctx.data();
+    let augment = find::augment(&data, &name)?;
 
     let view = buttons::azur::augment::View::new(augment.augment_id);
-    ctx.send(view.modify_with_augment(ctx.data(), ctx.create_reply(), augment)).await?;
+    ctx.send(view.modify_with_augment(&data, ctx.create_reply(), augment)).await?;
     Ok(())
 }
 
@@ -139,8 +146,10 @@ async fn search_augment(
 ) -> HResult {
     use crate::buttons::azur::search_augment::*;
 
+    let data = ctx.data();
+
     let unique_ship_id = match for_ship {
-        Some(for_ship) => Some(find::ship(&ctx, &for_ship)?.group_id),
+        Some(for_ship) => Some(find::ship(&data, &for_ship)?.group_id),
         None => None,
     };
 
@@ -152,7 +161,7 @@ async fn search_augment(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(ctx.data(), ctx.create_reply())).await?;
+    ctx.send(view.modify(&data, ctx.create_reply())).await?;
 
     Ok(())
 }

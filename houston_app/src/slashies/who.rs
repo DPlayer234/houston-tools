@@ -32,7 +32,7 @@ pub async fn who(
 
 /* Format the embeds */
 
-fn who_user_embed(user: &User) -> CreateEmbed {
+fn who_user_embed(user: &User) -> CreateEmbed<'_> {
     CreateEmbed::new()
         .author(CreateEmbedAuthor::new(get_unique_username(user)))
         .thumbnail(user.face())
@@ -65,9 +65,9 @@ fn who_user_info(user: &User) -> String {
         write_public_flags(&mut f, public_flags);
     }
 
-    let label = if user.bot {
+    let label = if user.bot() {
         "Bot Account"
-    } else if user.system {
+    } else if user.system() {
         "System Account"
     } else {
         "User Account"
@@ -149,8 +149,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
     }
 
     // use const size to catch when new flags are added
-    // `-1` because one flag is deprecated/duplicated
-    const FLAG_COUNT: usize = Permissions::FLAGS.len() - 1;
+    const FLAG_COUNT: usize = Permissions::FLAGS.len();
     const FLAGS: [(Permissions, &str); FLAG_COUNT] = [
         flag!(CREATE_INSTANT_INVITE),
         flag!(KICK_MEMBERS),

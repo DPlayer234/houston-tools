@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
@@ -14,7 +12,7 @@ mod upload;
 mod who;
 
 /// Gets all poise commands.
-pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<Arc<HBotData>, HError>> {
+pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<HBotData, HError>> {
     let mut result = vec![
         coin::coin(),
         config::config(),
@@ -49,7 +47,7 @@ pub async fn pre_command(ctx: HContext<'_>) {
 
 /// Command execution error handler.
 #[cold]
-pub async fn error_handler(error: poise::FrameworkError<'_, Arc<HBotData>, HError>) {
+pub async fn error_handler(error: poise::FrameworkError<'_, HBotData, HError>) {
     match &error {
         poise::FrameworkError::Command { error, ctx, .. } => {
             command_error(ctx, error).await

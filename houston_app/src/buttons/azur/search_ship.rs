@@ -26,7 +26,12 @@ impl View {
         View { page: 0, filter }
     }
 
-    pub fn modify_with_iter<'a>(mut self, data: &HBotData, create: CreateReply, iter: impl Iterator<Item = &'a ShipData>) -> CreateReply {
+    pub fn modify_with_iter<'a>(
+        mut self,
+        data: &'a HBotData,
+        create: CreateReply<'a>,
+        iter: impl Iterator<Item = &'a ShipData>,
+    ) -> CreateReply<'a> {
         let mut desc = String::new();
         let mut options = Vec::new();
         let mut has_next = false;
@@ -63,19 +68,18 @@ impl View {
             .description(desc)
             .color(DEFAULT_EMBED_COLOR);
 
-        let options = CreateSelectMenuKind::String { options };
-        let mut rows = vec![
-            CreateActionRow::SelectMenu(CreateSelectMenu::new(self.to_custom_id(), options).placeholder("View ship..."))
-        ];
-
+        let mut rows = Vec::new();
         if let Some(pagination) = super::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {
-            rows.insert(0, pagination);
+            rows.push(pagination);
         }
+
+        let options = CreateSelectMenuKind::String { options: options.into() };
+        rows.push(CreateActionRow::SelectMenu(CreateSelectMenu::new(self.to_custom_id(), options).placeholder("View ship...")));
 
         create.embed(embed).components(rows)
     }
 
-    pub fn modify(self, data: &HBotData, create: CreateReply) -> CreateReply {
+    pub fn modify<'a>(self, data: &'a HBotData, create: CreateReply<'a>) -> CreateReply<'a> {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
@@ -85,7 +89,7 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         Ok(self.modify(ctx.data, ctx.create_reply()))
     }
 }

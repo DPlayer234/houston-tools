@@ -24,7 +24,12 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved augment.
-    pub fn modify_with_augment(mut self, data: &HBotData, create: CreateReply, augment: &Augment) -> CreateReply {
+    pub fn modify_with_augment<'a>(
+        mut self,
+        data: &'a HBotData,
+        create: CreateReply<'a>,
+        augment: &'a Augment,
+    ) -> CreateReply<'a> {
         self.mode = ButtonMessageMode::Edit;
         let description = format!("{}", crate::fmt::azur::AugmentStats::new(augment));
 
@@ -61,11 +66,11 @@ impl View {
             },
         });
 
-        create.embed(embed).components(vec![CreateActionRow::Buttons(components)])
+        create.embed(embed).components(vec![CreateActionRow::buttons(components)])
     }
 
     /// Creates the field for a skill summary.
-    fn get_skill_field(&self, label: &'static str, skill: Option<&Skill>) -> Option<SimpleEmbedFieldCreate> {
+    fn get_skill_field<'a>(&self, label: &'a str, skill: Option<&Skill>) -> Option<SimpleEmbedFieldCreate<'a>> {
         skill.map(|s| {
             (label, format!("{} **{}**", s.category.emoji(), s.name), false)
         })
@@ -73,7 +78,7 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AzurParseError::Augment)?;
         Ok(self.modify_with_augment(ctx.data, ctx.create_reply(), augment))
     }

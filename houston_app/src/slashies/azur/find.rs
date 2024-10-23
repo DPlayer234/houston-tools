@@ -1,7 +1,7 @@
 use azur_lane::ship::ShipData;
 use azur_lane::equip::{Equip, Augment};
 
-use crate::data::{HContext, HArgError};
+use crate::data::{HBotData, HArgError};
 
 fn parse_id_input(input: &str) -> Option<u32> {
     input.strip_prefix("/id:")?.parse().ok()
@@ -9,8 +9,8 @@ fn parse_id_input(input: &str) -> Option<u32> {
 
 macro_rules! make_find {
     ($fn_name:ident -> $T:ty, $by_id:ident, $by_prefix:ident, $error:literal) => {
-        pub fn $fn_name<'a>(ctx: &HContext<'a>, name: &str) -> anyhow::Result<&'a $T> {
-            let azur_lane = ctx.data().azur_lane();
+        pub fn $fn_name<'a>(data: &'a HBotData, name: &str) -> anyhow::Result<&'a $T> {
+            let azur_lane = data.azur_lane();
             parse_id_input(name).map(|id| azur_lane.$by_id(id))
                 .unwrap_or_else(|| azur_lane.$by_prefix(name).next())
                 .ok_or(HArgError($error).into())

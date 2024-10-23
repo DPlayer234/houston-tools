@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use dashmap::DashMap;
 
@@ -22,7 +21,10 @@ pub struct HAzurLane {
     augment_id_to_index: HashMap<u32, usize>,
     augment_simsearch: Search<()>,
     ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
-    chibi_sprite_cache: DashMap<String, Option<Arc<[u8]>>>,
+
+    // holds static references (leaked boxes) so we can avoid
+    // copying the data every time the sprite needs to be uploaded
+    chibi_sprite_cache: DashMap<String, Option<&'static [u8]>>,
 }
 
 impl HAzurLane {
@@ -194,17 +196,17 @@ impl HAzurLane {
     }
 
     /// Gets a chibi's image data.
-    pub fn get_chibi_image(&self, image_key: &str) -> Option<Arc<[u8]>> {
+    pub fn get_chibi_image(&self, image_key: &str) -> Option<&'static [u8]> {
         // Consult the cache first. If the image has been seen already, it will be stored here.
         // It may also have a None entry if the image was requested but not found.
         match self.chibi_sprite_cache.get(image_key) {
-            Some(entry) => Option::clone(&entry),
+            Some(entry) => *entry,
             _ => self.load_and_cache_chibi_image(image_key),
         }
     }
 
     #[cold]
-    fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<Arc<[u8]>> {
+    fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<&'static [u8]> {
         // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
         // files outside of `data_path`. Currently, this doesn't take user-input, but this should
         // be considered for the future.
@@ -212,8 +214,8 @@ impl HAzurLane {
         match std::fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.
-                let data = Arc::from(data);
-                self.chibi_sprite_cache.insert(image_key.to_owned(), Some(Arc::clone(&data)));
+                let data = Box::leak(data.into_boxed_slice());
+                self.chibi_sprite_cache.insert(image_key.to_owned(), Some(data));
                 Some(data)
             },
             Err(err) => {

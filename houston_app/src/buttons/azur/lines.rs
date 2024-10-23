@@ -38,7 +38,13 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship and skin data.
-    pub fn modify_with_ship(mut self, data: &HBotData, mut create: CreateReply, ship: &ShipData, skin: &ShipSkin) -> CreateReply {
+    pub fn modify_with_ship<'a>(
+        mut self,
+        data: &'a HBotData,
+        mut create: CreateReply<'a>,
+        ship: &'a ShipData,
+        skin: &'a ShipSkin,
+    ) -> CreateReply<'a> {
         let words = match (&self, skin) {
             (View { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
@@ -62,10 +68,10 @@ impl View {
         }
 
         if !top_row.is_empty() {
-            components.push(CreateActionRow::Buttons(top_row));
+            components.push(CreateActionRow::buttons(top_row));
         }
 
-        components.push(CreateActionRow::Buttons(vec![
+        components.push(CreateActionRow::buttons(vec![
             self.button_with_part(ViewPart::Info, words).label("1").style(ButtonStyle::Secondary),
             self.button_with_part(ViewPart::Main1, words).label("2").style(ButtonStyle::Secondary),
             self.button_with_part(ViewPart::Main2, words).label("3").style(ButtonStyle::Secondary),
@@ -87,7 +93,7 @@ impl View {
         }
 
         if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-            create = create.attachment(CreateAttachment::bytes(image_data.as_ref(), format!("{}.webp", skin.image_key)));
+            create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
             embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
         }
 
@@ -95,18 +101,18 @@ impl View {
     }
 
     /// Creates a button that redirects to a different Base/EX state.
-    fn button_with_extra(&mut self, extra: bool) -> CreateButton {
+    fn button_with_extra<'a>(&mut self, extra: bool) -> CreateButton<'a> {
         self.new_button(utils::field_mut!(Self: extra), extra, bool::into)
     }
 
     /// Creates a button that redirects to a different viewed part.
-    fn button_with_part(&mut self, part: ViewPart, words: &ShipSkinWords) -> CreateButton {
+    fn button_with_part<'a>(&mut self, part: ViewPart, words: &ShipSkinWords) -> CreateButton<'a> {
         let disabled = self.part == part || !part.has_texts(words);
         self.new_button(utils::field_mut!(Self: part), part, |u| u as u16).disabled(disabled)
     }
 
     /// Creates a button that redirects to a different skin's lines.
-    fn select_with_skin_index(&mut self, skin: &ShipSkin, index: usize) -> CreateSelectMenuOption {
+    fn select_with_skin_index<'a>(&mut self, skin: &'a ShipSkin, index: usize) -> CreateSelectMenuOption<'a> {
         // Just as-cast the index to u8 since we'd have problems long before an overflow.
         #[allow(clippy::cast_possible_truncation)]
         self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
@@ -216,7 +222,7 @@ impl ViewPart {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply> {
+    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
         Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, skin))

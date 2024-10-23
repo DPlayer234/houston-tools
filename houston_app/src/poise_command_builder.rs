@@ -8,7 +8,7 @@ use poise::{Command, ContextMenuCommandAction};
 pub struct CustomCreateCommand {
     name: String,
     description: String,
-    options: Vec<CreateCommandOption>,
+    options: Vec<CreateCommandOption<'static>>,
     #[serde(rename = "type")]
     kind: CommandType,
     contexts: [u8; 3],
@@ -92,7 +92,7 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
     })
 }
 
-fn create_as_subcommand<E, U>(cmd: &Command<E, U>) -> Option<CreateCommandOption> {
+fn create_as_subcommand<E, U>(cmd: &Command<E, U>) -> Option<CreateCommandOption<'static>> {
     cmd.slash_action?;
 
     let kind = if cmd.subcommands.is_empty() {
@@ -101,7 +101,7 @@ fn create_as_subcommand<E, U>(cmd: &Command<E, U>) -> Option<CreateCommandOption
         CommandOptionType::SubCommandGroup
     };
 
-    let description = cmd.description.as_deref().unwrap_or("A slash command");
+    let description = cmd.description.as_deref().unwrap_or("A slash command").to_owned();
     let mut builder = CreateCommandOption::new(kind, cmd.name.clone(), description);
 
     if cmd.subcommands.is_empty() {

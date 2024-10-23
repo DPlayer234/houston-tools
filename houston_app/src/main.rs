@@ -14,7 +14,7 @@ mod poise_command_builder;
 
 use data::*;
 
-type HFramework = poise::framework::Framework<Arc<HBotData>, HError>;
+type HFramework = poise::framework::Framework<HBotData, HError>;
 
 const INTENTS: GatewayIntents = GatewayIntents::empty();
 
@@ -34,30 +34,25 @@ async fn main() -> anyhow::Result<()> {
         load_azur_lane(Arc::clone(&bot_data))
     );
 
+    let commands = slashies::get_commands(bot_data.config());
+
+    let event_handler = HEventHandler {
+        commands: std::sync::Mutex::new(Some(poise_command_builder::build_commands(&commands))),
+    };
+
     let framework = HFramework::builder()
         .options(poise::FrameworkOptions {
-            commands: slashies::get_commands(bot_data.config()),
+            commands,
             pre_command: |ctx| Box::pin(slashies::pre_command(ctx)),
             on_error: |err| Box::pin(slashies::error_handler(err)),
             ..Default::default()
         })
-        .setup({
-            let bot_data = Arc::clone(&bot_data);
-            move |ctx, ready, framework| Box::pin(async move {
-                create_commands(ctx, framework).await?;
-                bot_data.load_app_emojis(ctx.http()).await?;
-
-                let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
-                log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
-
-                Ok(bot_data)
-            })
-        })
         .build();
 
-    let mut client = Client::builder(config.discord.token, INTENTS)
+    let mut client = Client::builder(&config.discord.token, INTENTS)
+        .data(Arc::clone(&bot_data))
         .framework(framework)
-        .event_handler(buttons::ButtonEventHandler::new(bot_data))
+        .event_handler(event_handler)
         .await?;
 
     client.start().await?;
@@ -66,16 +61,59 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn create_commands(ctx: &Context, framework: &HFramework) -> HResult {
-    let cmds = poise_command_builder::build_commands(&framework.options().commands);
-    match ctx.http().create_global_commands(&cmds).await {
-        Ok(cmds) => {
-            log::trace!("Created {} global commands.", cmds.len());
-            Ok(())
+struct HEventHandler {
+    commands: std::sync::Mutex<Option<Vec<poise_command_builder::CustomCreateCommand>>>,
+}
+
+#[serenity::async_trait]
+impl EventHandler for HEventHandler {
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        let commands = self.commands.lock().unwrap().take();
+        if let Some(commands) = commands {
+            let data = ctx.data();
+            if let Err(why) = self.on_ready(ctx, ready, &data, &commands).await {
+                log::error!("Failure in ready: {why:?}");
+                *self.commands.lock().unwrap() = Some(commands);
+            }
         }
-        Err(err) => {
-            log::error!("{err:?}");
-            Err(err.into())
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        buttons::handler::interaction_create(ctx, interaction).await
+    }
+}
+
+impl HEventHandler {
+    async fn on_ready(
+        &self,
+        ctx: Context,
+        ready: Ready,
+        data: &HBotData,
+        commands: &[poise_command_builder::CustomCreateCommand],
+    ) -> anyhow::Result<()> {
+        self.create_commands(&ctx, commands).await?;
+        data.load_app_emojis(ctx.http()).await?;
+
+        let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
+        log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
+
+        Ok(())
+    }
+
+    async fn create_commands(
+        &self,
+        ctx: &Context,
+        commands: &[poise_command_builder::CustomCreateCommand],
+    ) -> HResult {
+        match ctx.http().create_global_commands(&commands).await {
+            Ok(commands) => {
+                log::trace!("Created {} global commands.", commands.len());
+                Ok(())
+            }
+            Err(err) => {
+                log::error!("{err:?}");
+                Err(err.into())
+            }
         }
     }
 }

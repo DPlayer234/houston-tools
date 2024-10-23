@@ -1,5 +1,6 @@
 //! Provides utilities for formatting Discord data.
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
@@ -8,10 +9,10 @@ use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 ///
 /// This will either be the pomelo username or include the discriminator.
 #[must_use]
-pub fn get_unique_username(user: &User) -> String {
+pub fn get_unique_username(user: &User) -> Cow<'_, str> {
     user.discriminator
-        .map(|d| format!("{}#{:04}", user.name, d))
-        .unwrap_or_else(|| user.name.clone())
+        .map(|d| format!("{}#{:04}", user.name, d).into())
+        .unwrap_or_else(|| user.name.as_str().into())
 }
 
 /// Escapes markdown sequences.
