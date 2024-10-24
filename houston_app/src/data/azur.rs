@@ -2,10 +2,13 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use dashmap::DashMap;
+use smallvec::{smallvec, SmallVec};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::fuzzy::Search;
+
+type IndexVec = SmallVec<[usize; 2]>;
 
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug, Default)]
@@ -20,7 +23,7 @@ pub struct HAzurLane {
     equip_simsearch: Search<()>,
     augment_id_to_index: HashMap<u32, usize>,
     augment_simsearch: Search<()>,
-    ship_id_to_augment_index: HashMap<u32, Vec<usize>>,
+    ship_id_to_augment_indices: HashMap<u32, IndexVec>,
 
     // holds static references (leaked boxes) so we can avoid copying
     // the data every time the sprite needs to be uploaded.
@@ -60,7 +63,7 @@ impl HAzurLane {
             }
         }
 
-        let mut data = match load_definitions(&data_path) {
+        let data = match load_definitions(&data_path) {
             Ok(data) => data,
             Err(err) => {
                 log::error!("No Azur Lane data: {err:?}");
@@ -68,15 +71,17 @@ impl HAzurLane {
             }
         };
 
-        let mut ship_id_to_index = HashMap::with_capacity(data.ships.len());
-        let mut ship_simsearch = Search::new();
-
-        let mut equip_id_to_index = HashMap::with_capacity(data.equips.len());
-        let mut equip_simsearch = Search::new();
-
-        let mut augment_id_to_index = HashMap::with_capacity(data.augments.len());
-        let mut augment_simsearch = Search::new();
-        let mut ship_id_to_augment_index = HashMap::<u32, Vec<usize>>::with_capacity(data.augments.len());
+        let mut this = Self {
+            data_path,
+            ship_id_to_index: HashMap::with_capacity(data.ships.len()),
+            equip_id_to_index: HashMap::with_capacity(data.equips.len()),
+            augment_id_to_index: HashMap::with_capacity(data.augments.len()),
+            ship_id_to_augment_indices: HashMap::with_capacity(data.augments.len()),
+            ships: data.ships,
+            equips: data.equips,
+            augments: data.augments,
+            ..Self::default()
+        };
 
         // we trim away "hull_disallowed" equip values that never matter in practice to give nicer outputs
         // otherwise we'd have outputs that state that dive bombers cannot be equipped to frigates. like, duh.
@@ -91,19 +96,19 @@ impl HAzurLane {
             }
         }
 
-        for (index, data) in data.ships.iter().enumerate() {
+        for (index, data) in this.ships.iter().enumerate() {
             verify_ship(data);
 
-            ship_id_to_index.insert(data.group_id, index);
-            ship_simsearch.insert(&data.name, ());
+            this.ship_id_to_index.insert(data.group_id, index);
+            this.ship_simsearch.insert(&data.name, ());
 
             // collect known "equip & hull" pairs
             insert_equip_exist(&mut actual_equip_exist, data);
         }
 
-        for (index, data) in data.equips.iter_mut().enumerate() {
-            equip_id_to_index.insert(data.equip_id, index);
-            equip_simsearch.insert(&format!(
+        for (index, data) in this.equips.iter_mut().enumerate() {
+            this.equip_id_to_index.insert(data.equip_id, index);
+            this.equip_simsearch.insert(&format!(
                 "{} {} {} {} {}",
                 data.name,
                 data.faction.name(), data.faction.prefix().unwrap_or("EX"),
@@ -115,35 +120,22 @@ impl HAzurLane {
             data.hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
         }
 
-        for (index, data) in data.augments.iter().enumerate() {
-            augment_id_to_index.insert(data.augment_id, index);
-            augment_simsearch.insert(&data.name, ());
+        for (index, data) in this.augments.iter().enumerate() {
+            this.augment_id_to_index.insert(data.augment_id, index);
+            this.augment_simsearch.insert(&data.name, ());
 
             if let Some(ship_id) = data.usability.unique_ship_id() {
-                ship_id_to_augment_index.entry(ship_id)
+                this.ship_id_to_augment_indices
+                    .entry(ship_id)
                     .and_modify(|v| v.push(index))
-                    .or_insert_with(|| vec![index]);
+                    .or_insert_with(|| smallvec![index]);
             }
         }
 
-        ship_simsearch.shrink_to_fit();
-        equip_simsearch.shrink_to_fit();
-        augment_simsearch.shrink_to_fit();
-
-        Self {
-            data_path,
-            ships: data.ships,
-            equips: data.equips,
-            augments: data.augments,
-            ship_id_to_index,
-            ship_simsearch,
-            equip_id_to_index,
-            equip_simsearch,
-            augment_id_to_index,
-            augment_simsearch,
-            ship_id_to_augment_index,
-            chibi_sprite_cache: DashMap::new()
-        }
+        this.ship_simsearch.shrink_to_fit();
+        this.equip_simsearch.shrink_to_fit();
+        this.augment_simsearch.shrink_to_fit();
+        this
     }
 
     /// Gets all known ships.
@@ -199,7 +191,7 @@ impl HAzurLane {
 
     /// Gets unique augments by their associated ship ID.
     pub fn augments_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Augment> {
-        self.ship_id_to_augment_index.get(&ship_id).into_iter().flatten().filter_map(|i| self.augments.get(*i))
+        self.ship_id_to_augment_indices.get(&ship_id).into_iter().flatten().filter_map(|i| self.augments.get(*i))
     }
 
     /// Gets a chibi's image data.

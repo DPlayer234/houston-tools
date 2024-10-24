@@ -69,7 +69,7 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 /// ```
 #[macro_export]
 macro_rules! titlecase {
-    ($input:expr) => {{
+    ($input:expr) => { const {
         // Ensure input is a `&'static str`
         const INPUT_STR: &str = $input;
 
@@ -77,7 +77,7 @@ macro_rules! titlecase {
         const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
         unsafe { ::std::str::from_utf8_unchecked(BYTES) }
     }};
-    (b: $input:expr) => {{
+    (b: $input:expr) => { const {
         // Ensure input is a `&'static [u8]`
         const INPUT: &[u8] = $input;
 

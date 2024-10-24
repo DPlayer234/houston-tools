@@ -28,11 +28,11 @@ pub use titlecase_impl::to_titlecase;
 /// ```
 #[macro_export]
 macro_rules! join {
-    ($str:expr) => {{
+    ($str:expr) => { const {
         const STR: &str = $str;
         STR
     }};
-    ($($str:expr),*) => {{
+    ($($str:expr),*) => { const {
         const STRS: &[&str] = &[$($str),*];
         const N: usize = $crate::text::__private::count_str_const(STRS);
         const JOIN: $crate::text::InlineStr<N> = $crate::text::__private::join_str_const(STRS);

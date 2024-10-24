@@ -4,8 +4,15 @@
 fn main() {
     println!("cargo::rerun-if-changed=Cargo.toml");
 
-    #[cfg(windows)]
-    windows_resources();
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+    if target_os == "windows" {
+        // compiling and linking windows resources doesn't seem to really work under linux
+        #[cfg(windows)]
+        windows_resources();
+
+        #[cfg(not(windows))]
+        println!("cargo::warning=skipping adding windows resources to exe, compile on windows");
+    }
 }
 
 #[cfg(windows)]
