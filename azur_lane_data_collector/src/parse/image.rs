@@ -4,16 +4,18 @@ use image::{imageops, ImageFormat};
 use unity_read::classes::{ClassID, Texture2D};
 use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 
+use crate::log::Action;
+
 // shipmodels: chibi sprites, 1:1
 // paintingface: alternative faces, 0/1:1
 // painting:
 // - tex: full sprite, background 1:1
 // - n_tex: full sprite, no background 0/1:1
 
-pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
+pub fn load_chibi_image(action: &Action, dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
     let name = name.to_ascii_lowercase();
     let Ok(mut file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
-        println!("Skin shipmodels file {name} not found.");
+        action.print_info(format_args!("Skin shipmodels file {name} not found."));
         return Ok(None)
     };
 
@@ -37,6 +39,6 @@ pub fn load_chibi_image(dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>
         }
     }
 
-    println!("Skin shipmodels image {name} not present.");
+    action.print_info(format_args!("Skin shipmodels image {name} not present."));
     Ok(None)
 }

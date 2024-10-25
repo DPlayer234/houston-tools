@@ -68,10 +68,13 @@ struct HEventHandler {
 #[serenity::async_trait]
 impl EventHandler for HEventHandler {
     async fn ready(&self, ctx: Context, ready: Ready) {
+        let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
+        log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
+
         let commands = self.commands.lock().unwrap().take();
         if let Some(commands) = commands {
             let data = ctx.data();
-            if let Err(why) = self.on_ready(ctx, ready, &data, &commands).await {
+            if let Err(why) = Self::setup(ctx, &data, &commands).await {
                 log::error!("Failure in ready: {why:?}");
                 *self.commands.lock().unwrap() = Some(commands);
             }
@@ -84,37 +87,16 @@ impl EventHandler for HEventHandler {
 }
 
 impl HEventHandler {
-    async fn on_ready(
-        &self,
+    async fn setup(
         ctx: Context,
-        ready: Ready,
         data: &HBotData,
         commands: &[poise_command_builder::CustomCreateCommand],
     ) -> anyhow::Result<()> {
-        self.create_commands(&ctx, commands).await?;
+        let commands = ctx.http().create_global_commands(&commands).await?;
+        log::trace!("Created {} global commands.", commands.len());
+
         data.load_app_emojis(ctx.http()).await?;
-
-        let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
-        log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
-
         Ok(())
-    }
-
-    async fn create_commands(
-        &self,
-        ctx: &Context,
-        commands: &[poise_command_builder::CustomCreateCommand],
-    ) -> HResult {
-        match ctx.http().create_global_commands(&commands).await {
-            Ok(commands) => {
-                log::trace!("Created {} global commands.", commands.len());
-                Ok(())
-            }
-            Err(err) => {
-                log::error!("{err:?}");
-                Err(err.into())
-            }
-        }
     }
 }
 
@@ -128,17 +110,11 @@ async fn load_azur_lane(bot_data: Arc<HBotData>) {
 }
 
 fn build_config() -> anyhow::Result<config::HConfig> {
-    use config_rs::{Config, File, FileFormat, Environment};
+    use config_rs::{Config, Environment, File, FileFormat};
 
     let config = Config::builder()
-        .add_source(
-            File::new("houston_app.toml", FileFormat::Toml)
-                .required(false)
-        )
-        .add_source(
-            Environment::default()
-                .separator("__")
-        )
+        .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
+        .add_source(Environment::default().separator("__"))
         .build()?
         .try_deserialize()?;
 
@@ -150,11 +126,14 @@ fn init_logging(config: config::HLogConfig) {
 
     let mut builder = env_logger::builder();
 
-    // if no default is specified, set it to warn for everything,
-    // but to trace for the main app crate
     match config.default {
-        None => builder.filter_level(LevelFilter::Warn).filter_module(std::module_path!(), LevelFilter::Trace),
         Some(value) => builder.filter_level(value),
+
+        // if no default is specified, set it to warn for everything,
+        // but to trace for the main app crate
+        None => builder
+            .filter_level(LevelFilter::Warn)
+            .filter_module(std::module_path!(), LevelFilter::Trace),
     };
 
     for (module, level) in config.modules {

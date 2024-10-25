@@ -187,11 +187,12 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "1.7.2"
+version = "1.7.3"
 dependencies = [
  "anyhow",
  "azur_lane",
  "clap",
+ "humantime",
  "image",
  "mlua",
  "once_cell",

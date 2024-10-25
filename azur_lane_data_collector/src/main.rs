@@ -11,6 +11,7 @@ use azur_lane::ship::*;
 
 mod convert_al;
 mod enhance;
+mod log;
 mod macros;
 mod model;
 mod parse;
@@ -40,16 +41,15 @@ struct Cli {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let start = std::time::Instant::now();
 
     let out_data = {
         // Expect at least 1 input
-        let mut out_data = load_definition(&cli.inputs[0], start)?;
+        let mut out_data = load_definition(&cli.inputs[0])?;
         for input in cli.inputs.iter().skip(1) {
-            println!("Loading more from '{}'...", input);
-            let next = load_definition(input, start)?;
+            log::println!("Loading more from '{}'...", input);
+            let next = load_definition(input)?;
             merge_out_data(&mut out_data, next);
-            println!("Merged data. ({:.2?})", start.elapsed());
+            log::println!("Merged data.");
         }
 
         out_data
@@ -57,33 +57,39 @@ fn main() -> anyhow::Result<()> {
 
     let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
     {
-        println!("Writing output...");
+        let action = log::action!("Writing output.").start();
 
         fs::create_dir_all(out_dir)?;
-        let f = fs::File::create(Path::new(out_dir).join("main.json"))?;
-        if cli.minimize {
-            serde_json::to_writer(&f, &out_data)?;
-        } else {
-            serde_json::to_writer_pretty(&f, &out_data)?;
-        }
+        let file = fs::File::create(Path::new(out_dir).join("main.json"))?;
 
-        println!("Written {} bytes. ({:.2?})", f.metadata()?.len(), start.elapsed());
+        action.run_busy(|| {
+            if cli.minimize {
+                serde_json::to_writer(&file, &out_data)?;
+            } else {
+                serde_json::to_writer_pretty(&file, &out_data)?;
+            }
+
+            anyhow::Ok(())
+        })?;
+
+        action.finish();
+        log::println!("Written {} bytes.", file.metadata()?.len());
     }
 
     if let Some(assets) = cli.assets.as_deref() {
         // Extract and save chibis for all skins.
         fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
 
-        println!("Extracting chibis...");
+        let total_count = out_data.ships.iter().map(|s| s.skins.len()).sum();
+        let mut action = log::action!("Extracting chibis.")
+            .bounded_total(total_count)
+            .start();
 
         let mut extract_count = 0usize;
-        let mut total_count = 0usize;
         let mut new_count = 0usize;
 
         for skin in out_data.ships.iter().flat_map(|s| s.skins.iter()) {
-            total_count += 1;
-
-            if let Some(image) = parse::image::load_chibi_image(assets, &skin.image_key)? {
+            if let Some(image) = parse::image::load_chibi_image(&action, assets, &skin.image_key)? {
                 extract_count += 1;
 
                 let path = utils::join_path![out_dir, "chibi", &skin.image_key; "webp"];
@@ -93,15 +99,18 @@ fn main() -> anyhow::Result<()> {
                     f.write_all(&image)?;
                 }
             }
+
+            action.update_amount(extract_count);
         }
 
-        println!("Extracted chibis ({extract_count}/{total_count}); {new_count} new. {:.2?}", start.elapsed());
+        action.finish();
+        log::println!("{new_count} new chibis.");
     }
 
     Ok(())
 }
 
-fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionData, anyhow::Error> {
+fn load_definition(input: &str) -> Result<DefinitionData, anyhow::Error> {
     let lua = Lua::new();
 
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
@@ -110,7 +119,7 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
         .set_mode(mlua::ChunkMode::Text)
         .exec()?;
 
-    println!("Init done. ({:.2?})", start.elapsed());
+    log::println!("Lua init done.");
 
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
@@ -141,6 +150,10 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
         let ship_skin_words: LuaTable = pg.get("ship_skin_words").context("global pg.ship_skin_words")?;
         let ship_skin_words_extra: LuaTable = pg.get("ship_skin_words_extra").context("global pg.ship_skin_words_extra")?;
 
+        let mut action = log::action!("Finding ship groups.")
+            .unbounded()
+            .start();
+
         let mut groups = HashMap::new();
         ship_data_template_all.for_each(|_: u32, id: u32| {
             if (900000..=900999).contains(&id) {
@@ -151,13 +164,17 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
             let group_id: u32 = template.get("group_type").with_context(context!("group_type of ship_data_template with id {id}"))?;
 
             groups.entry(group_id)
-                .or_insert_with(|| ShipGroup { id: group_id, members: Vec::new() })
+                .or_insert_with(|| {
+                    action.inc_amount();
+                    ShipGroup { id: group_id, members: Vec::new() }
+                })
                 .members.push(id);
 
             Ok(())
         })?;
 
-        println!("Ship groups: {} ({:.2?})", groups.len(), start.elapsed());
+        let total = action.amount();
+        action.finish();
 
         let make_ship_set = |id: u32| -> LuaResult<ShipSet> {
             let template: LuaTable = ship_data_template.get(id).with_context(context!("!ship_data_template with id {id}"))?;
@@ -188,6 +205,10 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
                 retrofit_data: retrofit
             })
         };
+
+        let mut action = log::action!("Building ship groups.")
+            .bounded_total(total)
+            .start();
 
         let config = &*CONFIG;
         let mut ships = groups.into_values().map(|group| {
@@ -237,10 +258,11 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
                 mlb.skins.push(parse::skin::load_skin(&raw_skin)?);
             }
 
+            action.inc_amount();
             Ok(mlb)
         }).collect::<anyhow::Result<Vec<_>>>()?;
 
-        println!("Built Ship data. ({:.2?})", start.elapsed());
+        action.finish();
 
         ships.sort_unstable_by_key(|t| t.group_id);
         ships
@@ -251,6 +273,10 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
         let equip_data_template_all: LuaTable = equip_data_template.get("all").context("global pg.equip_data_template.all")?;
         let equip_data_statistics: LuaTable = pg.get("equip_data_statistics").context("global pg.equip_data_statistics")?;
 
+        let mut action = log::action!("Finding equips.")
+            .unbounded()
+            .start();
+
         let mut equips = Vec::new();
         equip_data_template_all.for_each(|_: u32, id: u32| {
             let template: LuaTable = equip_data_template.get(id).with_context(context!("equip_data_template with id {id}"))?;
@@ -259,19 +285,27 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
             let next: u32 = template.get("next").with_context(context!("base of equip_data_template with id {id}"))?;
             let tech: u32 = statistics.get("tech").with_context(context!("tech of equip_data_statistics with id {id}"))?;
             if next == 0 && matches!(tech, 0 | 3..) {
+                action.inc_amount();
                 equips.push(id);
             }
 
             Ok(())
         })?;
 
-        println!("Equips: {} ({:.2?})", equips.len(), start.elapsed());
+        let total = action.amount();
+        action.finish();
+
+        let mut action = log::action!("Building equips.")
+            .bounded_total(total)
+            .start();
 
         let mut equips = equips.into_iter().map(|id| {
-            parse::skill::load_equip(&lua, id)
+            let equip = parse::skill::load_equip(&lua, id)?;
+            action.inc_amount();
+            Ok(equip)
         }).collect::<LuaResult<Vec<_>>>()?;
 
-        println!("Built Equip data. ({:.2?})", start.elapsed());
+        action.finish();
 
         equips.sort_unstable_by_key(|t| (t.faction, t.kind, t.equip_id));
         equips
@@ -280,6 +314,10 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
     let augments = {
         let spweapon_data_statistics: LuaTable = pg.get("spweapon_data_statistics").context("global pg.spweapon_data_statistics")?;
         let spweapon_data_statistics_all: LuaTable = spweapon_data_statistics.get("all").context("global pg.spweapon_data_statistics.all")?;
+
+        let mut action = log::action!("Finding augments.")
+            .unbounded()
+            .start();
 
         let mut groups: HashMap<u32, u32> = HashMap::new();
         spweapon_data_statistics_all.for_each(|_: u32, id: u32| {
@@ -290,20 +328,30 @@ fn load_definition(input: &str, start: std::time::Instant) -> Result<DefinitionD
 
             groups.entry(base_id)
                 .and_modify(|e| if *e < id { *e = id })
-                .or_insert(id);
+                .or_insert_with(|| {
+                    action.inc_amount();
+                    id
+                });
 
             Ok(())
         })?;
 
-        println!("Augments: {} ({:.2?})", groups.len(), start.elapsed());
+        let total = action.amount();
+        action.finish();
+
+        let mut action = log::action!("Building augments.")
+            .bounded_total(total)
+            .start();
 
         let mut augments = groups.into_values().map(|id| {
             let statistics: LuaTable = spweapon_data_statistics.get(id).with_context(context!("spweapon_data_statistics with id {id}"))?;
             let data = AugmentSet { id, statistics };
-            parse::augment::load_augment(&lua, &data)
+            let augment = parse::augment::load_augment(&lua, &data)?;
+            action.inc_amount();
+            Ok(augment)
         }).collect::<LuaResult<Vec<_>>>()?;
 
-        println!("Built Augment data. ({:.2?})", start.elapsed());
+        action.finish();
 
         augments.sort_unstable_by_key(|t| t.augment_id);
         augments

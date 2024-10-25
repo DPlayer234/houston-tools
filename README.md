@@ -90,9 +90,10 @@ If it is not specified, this step is skipped.
 
 ## Important
 
-The collector *runs* the game scripts. As should be common sense, do not run untrusted code.
+> [!WARNING]
+> The collector *runs* the game scripts. As should be common sense, do not run untrusted code.
 
-Currently it defaults to using Lua 5.4 for this rather than LuaJIT. This is in part due to unpacked `sharecfgdata` files commonly being a merged decompilation output that cannot be loaded by LuaJIT due to too many constants.
+Currently the collector defaults to using Lua 5.4 rather than LuaJIT. This is in part due to unpacked `sharecfgdata` files commonly being a merged decompilation output that cannot be loaded by LuaJIT due to too many constants.
 
 If you specify multiple input directories, the data is "merged". That is, ships, equipment, retrofits, and skins will added to earlier sets of data.
 The first set that contains a certain entry will take priority.
@@ -111,6 +112,9 @@ Alternatively, you can run the executables directly as:
 cargo run --bin houston_app
 cargo run --bin azur_lane_data_collector -- --inputs ...
 ```
+
+> [!NOTE]
+> When built under Windows for Windows, the executables will include the crate version in their metadata. This mechanism currently does not work under Linux (tested via WSL), so it is disabled there. It will still print a warning, but this warning can be ignored.
 
 ## Release Options
 
