@@ -1,42 +1,81 @@
 use std::fmt::Arguments;
 use std::io::{stdout, Write, Result as IoResult};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime};
 
+/// Creates an action builder with the given label.
 macro_rules! action {
     ($($t:tt)*) => {
         $crate::log::ActionBuilder::new(std::format!($($t)*))
     };
 }
 
+/// Prints an info message while no action is active.
 macro_rules! info {
     ($($t:tt)*) => {
-        $crate::log::__println(std::format_args!($($t)*));
+        $crate::log::__println(std::format_args!($($t)*))
     };
 }
 
 pub(crate) use action;
 pub(crate) use info;
 
-const CSI: &str = "\x1b[";
-const CSI_FG: &str = "\x1b[38;";
+/// When true, uses simplified output.
+static IS_CI: AtomicBool = AtomicBool::new(false);
+
+/// Sets the CI mode.
+pub fn set_ci(force: Option<bool>) {
+    fn is_set(var: &str) -> bool {
+        std::env::var_os(var).is_some_and(|s| !s.is_empty())
+    }
+
+    let v = force.unwrap_or_else(|| is_set("CI") || is_set("NO_COLOR"));
+    IS_CI.store(v, Ordering::Relaxed);
+}
+
+fn only_tty<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
+    if IS_CI.load(Ordering::Relaxed) {
+        Ok(())
+    } else {
+        f()
+    }
+}
+
+struct AnsiCsi(&'static str);
+
+const RESET: AnsiCsi = AnsiCsi("\x1b[0m");
+const TIME_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;8m");
+const DONE_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;10m");
+const PROGRESS_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;14m");
+
+impl std::fmt::Display for AnsiCsi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        only_tty(|| write!(f, "\x1b[{}", self.0))
+    }
+}
 
 #[doc(hidden)]
 pub fn __println(args: Arguments<'_>) {
-    writeln_args(stdout(), args);
+    ioerr(writeln_args(stdout(), args));
 }
 
-fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) {
-    _ = writeln!(
+fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
+    writeln!(
         writer,
-        "{CSI_FG}5;8m[{}]{CSI}0m {}",
+        "{TIME_STYLE}[{}]{RESET} {}",
         humantime::format_rfc3339_seconds(SystemTime::now()),
         args,
-    );
+    )
+}
+
+/// Panics if an [`Err`] variant is passed.
+fn ioerr<T>(result: IoResult<T>) -> T {
+    result.unwrap_or_else(#[cold] |err| panic!("failed writing to stdout: {err:?}"))
 }
 
 macro_rules! undoln {
     ($writer:expr) => {
-        write!($writer, "{CSI}1A{CSI}0K")
+        only_tty(|| write!($writer, "\x1b[1A\x1b[0K"))
     };
 }
 
@@ -45,11 +84,11 @@ pub struct Action(ActionInner);
 
 impl Action {
     pub fn update(&self) {
-        self.0.print_update();
+        ioerr(self.0.print_update());
     }
 
     pub fn print_info(&self, args: Arguments<'_>) {
-        self.0.print_info(args);
+        ioerr(self.0.print_info(args));
     }
 
     pub fn update_amount(&mut self, amount: usize) {
@@ -73,7 +112,7 @@ impl Action {
 
 impl Drop for Action {
     fn drop(&mut self) {
-        self.0.finish();
+        ioerr(self.0.finish());
     }
 }
 
@@ -105,7 +144,7 @@ impl ActionBuilder {
     }
 
     pub fn start(self) -> Action {
-        self.0.print_init();
+        ioerr(self.0.print_init());
         Action(self.0)
     }
 }
@@ -118,42 +157,48 @@ struct ActionInner {
 }
 
 impl ActionInner {
-    fn print_init(&self) {
+    fn print_init(&self) -> IoResult<()> {
         let mut stdout = stdout().lock();
-        self.write_state(&mut stdout);
-        _ = writeln!(stdout);
+        self.write_state(&mut stdout)?;
+        writeln!(stdout)
     }
 
-    fn print_update(&self) {
-        let mut stdout = stdout().lock();
-        _ = undoln!(stdout);
-        self.write_state(&mut stdout);
-        _ = writeln!(stdout);
+    fn print_update(&self) -> IoResult<()> {
+        only_tty(|| {
+            let mut stdout = stdout().lock();
+            undoln!(stdout)?;
+            self.write_state(&mut stdout)?;
+            writeln!(stdout)
+        })
     }
 
-    fn print_info(&self, args: Arguments<'_>) {
+    fn print_info(&self, args: Arguments<'_>) -> IoResult<()> {
         let mut stdout = stdout().lock();
-        _ = undoln!(stdout);
-        writeln_args(&mut stdout, args);
-        self.write_state(&mut stdout);
-        _ = writeln!(stdout);
+        if IS_CI.load(Ordering::Relaxed) {
+            writeln_args(&mut stdout, args)
+        } else {
+            undoln!(stdout)?;
+            writeln_args(&mut stdout, args)?;
+            self.write_state(&mut stdout)?;
+            writeln!(stdout)
+        }
     }
 
-    fn finish(&self) {
+    fn finish(&self) -> IoResult<()> {
         let mut stdout = stdout().lock();
-        _ = undoln!(stdout);
-        self.write_state(&mut stdout);
-        _ = writeln!(stdout, " {CSI_FG}5;10mDone!{CSI}0m");
+        undoln!(stdout)?;
+        self.write_state(&mut stdout)?;
+        writeln!(stdout, " {DONE_STYLE}Done!{RESET}")
     }
 
-    fn write_state<W: Write>(&self, mut writer: W) {
-        _ = write!(
+    fn write_state<W: Write>(&self, mut writer: W) -> IoResult<()> {
+        write!(
             writer,
             "{} {}{}",
             self.start,
             self.progress,
             self.name,
-        );
+        )
     }
 }
 
@@ -176,7 +221,7 @@ impl std::fmt::Display for Start {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{CSI_FG}5;8m[{}] [{:>7.1?}]{CSI}0m",
+            "{TIME_STYLE}[{}] [{:>7.1?}]{RESET}",
             humantime::format_rfc3339_seconds(self.local),
             self.instant.elapsed(),
         )
@@ -213,8 +258,8 @@ impl std::fmt::Display for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
             ProgressKind::NotApplicable => Ok(()),
-            ProgressKind::Unbounded => write!(f, "{CSI_FG}5;14m[{}{}]{CSI}0m ", self.current, self.suffix),
-            ProgressKind::Bounded { total } => write!(f, "{CSI_FG}5;14m[{}/{}{}]{CSI}0m ", self.current, total, self.suffix),
+            ProgressKind::Unbounded => write!(f, "{PROGRESS_STYLE}[{}{}]{RESET} ", self.current, self.suffix),
+            ProgressKind::Bounded { total } => write!(f, "{PROGRESS_STYLE}[{}/{}{}]{RESET} ", self.current, total, self.suffix),
         }
     }
 }

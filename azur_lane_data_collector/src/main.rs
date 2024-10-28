@@ -21,13 +21,25 @@ use model::*;
 #[derive(Debug, Parser)]
 struct Cli {
     /// The path that the game scripts live in.
+    ///
+    /// This is the directory that contains, among others, `config.lua`.
+    ///
+    /// If you get an error, that it couldn't find a Lua file, you chose the wrong directory.
     #[arg(short, long, num_args = 1.., required = true)]
     inputs: Vec<String>,
+
     /// The output directory.
+    ///
+    /// The directory is created if it's missing.
     #[arg(short, long)]
     out: Option<String>,
 
     /// The path that holds the game assets.
+    ///
+    /// This essentially points to the game's `AssetBundles` directory.
+    /// Currently, only chibis (`shipmodels`) are loaded.
+    ///
+    /// If not specified, no resources will be loaded.
     #[arg(long)]
     assets: Option<String>,
 
@@ -35,12 +47,19 @@ struct Cli {
     #[arg(short, long)]
     minimize: bool,
 
+    /// Override whether this program runs in CI mode.
+    ///
+    /// If true, output is simplified without colors.
+    /// If false, rich output is provided.
+    ///
+    /// If unset, uses `CI` and `NO_COLOR` env vars for detection: If either is set to a non-empty string, CI output is used.
     #[arg(long)]
-    test: bool
+    ci: Option<bool>,
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    log::set_ci(cli.ci);
 
     let out_data = {
         // Expect at least 1 input
