@@ -187,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "1.7.3"
+version = "1.7.4"
 dependencies = [
  "anyhow",
  "azur_lane",

@@ -46,10 +46,8 @@ fn main() -> anyhow::Result<()> {
         // Expect at least 1 input
         let mut out_data = load_definition(&cli.inputs[0])?;
         for input in cli.inputs.iter().skip(1) {
-            log::println!("Loading more from '{}'...", input);
             let next = load_definition(input)?;
             merge_out_data(&mut out_data, next);
-            log::println!("Merged data.");
         }
 
         out_data
@@ -57,23 +55,21 @@ fn main() -> anyhow::Result<()> {
 
     let out_dir = cli.out.as_deref().unwrap_or("azur_lane_data");
     {
-        let action = log::action!("Writing output.").start();
+        let action = log::action!("Writing `main.json`.")
+            .unbounded()
+            .suffix(" KB")
+            .start();
 
         fs::create_dir_all(out_dir)?;
         let file = fs::File::create(Path::new(out_dir).join("main.json"))?;
-
-        action.run_busy(|| {
-            if cli.minimize {
-                serde_json::to_writer(&file, &out_data)?;
-            } else {
-                serde_json::to_writer_pretty(&file, &out_data)?;
-            }
-
-            anyhow::Ok(())
-        })?;
+        let mut action = log::ActionWrite::new(action, file);
+        if cli.minimize {
+            serde_json::to_writer(&mut action, &out_data)?;
+        } else {
+            serde_json::to_writer_pretty(&mut action, &out_data)?;
+        }
 
         action.finish();
-        log::println!("Written {} bytes.", file.metadata()?.len());
     }
 
     if let Some(assets) = cli.assets.as_deref() {
@@ -104,22 +100,27 @@ fn main() -> anyhow::Result<()> {
         }
 
         action.finish();
-        log::println!("{new_count} new chibis.");
+        log::info!("{new_count} new chibis.");
     }
 
     Ok(())
 }
 
-fn load_definition(input: &str) -> Result<DefinitionData, anyhow::Error> {
-    let lua = Lua::new();
+fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
+    let lua = {
+        let action = log::action!("Initializing Lua for: `{input}`").start();
 
-    lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
-    lua.load(include_str!("../assets/lua_init.lua"))
-        .set_name("main")
-        .set_mode(mlua::ChunkMode::Text)
-        .exec()?;
+        let lua = Lua::new();
 
-    log::println!("Lua init done.");
+        lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
+        lua.load(include_str!("../assets/lua_init.lua"))
+            .set_name("main")
+            .set_mode(mlua::ChunkMode::Text)
+            .exec()?;
+
+        action.finish();
+        lua
+    };
 
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
@@ -152,6 +153,7 @@ fn load_definition(input: &str) -> Result<DefinitionData, anyhow::Error> {
 
         let mut action = log::action!("Finding ship groups.")
             .unbounded()
+            .suffix("..")
             .start();
 
         let mut groups = HashMap::new();
@@ -275,6 +277,7 @@ fn load_definition(input: &str) -> Result<DefinitionData, anyhow::Error> {
 
         let mut action = log::action!("Finding equips.")
             .unbounded()
+            .suffix("..")
             .start();
 
         let mut equips = Vec::new();
@@ -317,6 +320,7 @@ fn load_definition(input: &str) -> Result<DefinitionData, anyhow::Error> {
 
         let mut action = log::action!("Finding augments.")
             .unbounded()
+            .suffix("..")
             .start();
 
         let mut groups: HashMap<u32, u32> = HashMap::new();
@@ -384,6 +388,8 @@ fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> 
 }
 
 fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
+    let action = log::action!("Merging data.").start();
+
     for next_ship in next.ships {
         if let Some(main_ship) = main.ships.iter_mut().find(|s| s.group_id == next_ship.group_id) {
             add_missing(&mut main_ship.retrofits, next_ship.retrofits, |a, b| a.default_skin_id == b.default_skin_id);
@@ -395,6 +401,8 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
 
     add_missing(&mut main.augments, next.augments, |a, b| a.augment_id == b.augment_id);
     add_missing(&mut main.equips, next.equips, |a, b| a.equip_id == b.equip_id);
+
+    action.finish();
 }
 
 fn add_missing<T>(main: &mut Vec<T>, next: Vec<T>, matches: impl Fn(&T, &T) -> bool) {
