@@ -1,4 +1,5 @@
 //! Defines a data model that a subset of Azur Lane's game data can be represented as.
+#![allow(clippy::upper_case_acronyms)]
 
 use serde::{Serialize, Deserialize};
 
@@ -41,7 +42,7 @@ define_data_enum! {
         VichyaDominion("Vichya Dominion", Some("MNF")),
         IrisOrthodoxy("Iris Orthodoxy", Some("NF")),
         Tempesta("Tempesta", Some("MOT")),
-        META("META", Some("META")),
+        Meta("META", Some("META")),
         Siren("Siren", None),
         CollabNeptunia("Neptunia", None),
         CollabBilibili("Bilibili", None),

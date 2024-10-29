@@ -138,7 +138,7 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
     write_str!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits());
 
     write_flags(f, public_flags, &FLAGS);
-    f.push_str("\n");
+    f.push('\n');
 }
 
 fn write_permissions(f: &mut String, permissions: Permissions) {
@@ -211,7 +211,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         write_flags(f, permissions, &FLAGS);
     }
 
-    f.push_str("\n");
+    f.push('\n');
 }
 
 fn write_flags<T: Flags + Copy>(f: &mut String, flags: T, names: &[(T, &str)]) {

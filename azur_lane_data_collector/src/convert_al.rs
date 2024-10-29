@@ -23,7 +23,7 @@ pub fn to_faction(num: u32) -> Faction {
         9 => Faction::VichyaDominion,
         10 => Faction::IrisOrthodoxy,
         96 => Faction::Tempesta,
-        97 => Faction::META,
+        97 => Faction::Meta,
         99 => Faction::Siren,
         101 => Faction::CollabNeptunia,
         102 => Faction::CollabBilibili,

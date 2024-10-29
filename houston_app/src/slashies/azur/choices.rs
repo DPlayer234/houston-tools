@@ -7,6 +7,7 @@ use azur_lane::Faction;
 macro_rules! make_choice {
     ($NewType:ident for $OrigType:ident { $($(#[$attr:meta])* $name:ident),* $(,)? }) => {
         #[derive(ChoiceParameter)]
+        #[allow(clippy::upper_case_acronyms)]
         pub enum $NewType {
             $(
                 $(#[$attr])*
@@ -38,7 +39,7 @@ make_choice!(EFaction for Faction {
     #[name = "Vichya Dominion"] VichyaDominion,
     #[name = "Iris Orthodoxy"] IrisOrthodoxy,
     Tempesta,
-    META,
+    #[name = "META"] Meta,
     #[name = "Collab: Neptunia"] CollabNeptunia,
     #[name = "Collab: Bilibili"] CollabBilibili,
     #[name = "Collab: Utawarerumono"] CollabUtawarerumono,

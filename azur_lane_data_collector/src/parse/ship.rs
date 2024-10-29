@@ -158,9 +158,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
                 enhance::blueprint::add_blueprint_effect(lua, &mut ship, &read!(ex.effect_lookup, id))?;
             }
         }
-        Strengthen::META(ex) => {
+        Strengthen::Meta(ex) => {
             // ship_strengthen_meta
-            ship.enhance_kind = EnhanceKind::META;
+            ship.enhance_kind = EnhanceKind::Meta;
 
             for repair_part in ["repair_cannon", "repair_torpedo", "repair_air", "repair_reload"] {
                 let parts: Vec<u32> = read!(ex.data, repair_part);

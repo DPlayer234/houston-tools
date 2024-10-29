@@ -210,7 +210,7 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
 
             let strengthen = match (enhance, blueprint, meta) {
                 (_, Some(data), _) => Strengthen::Blueprint(BlueprintStrengthen { data, effect_lookup: &ship_strengthen_blueprint }),
-                (_, _, Some(data)) => Strengthen::META(MetaStrengthen { data, repair_lookup: &ship_meta_repair, repair_effect_lookup: &ship_meta_repair_effect }),
+                (_, _, Some(data)) => Strengthen::Meta(MetaStrengthen { data, repair_lookup: &ship_meta_repair, repair_effect_lookup: &ship_meta_repair_effect }),
                 (Some(data), _, _) => Strengthen::Normal(data),
                 _ => Err(LuaError::external(DataError::NoStrengthen))?
             };

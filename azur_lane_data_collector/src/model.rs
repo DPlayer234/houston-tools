@@ -68,7 +68,7 @@ pub enum Strengthen<'a> {
     /// Research.
     Blueprint(BlueprintStrengthen<'a>),
     // META.
-    META(MetaStrengthen<'a>),
+    Meta(MetaStrengthen<'a>),
 }
 
 /// Strengthen data for a research ship.

@@ -1,8 +1,8 @@
 [package]
 name = "houston_app"
-version = "2.0.0-beta.1"
-edition = "2021"
-rust-version = "1.82"
+version = "2.0.0-beta.2"
+edition.workspace = true
+rust-version.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,7 +13,7 @@ FileDescription = "Houston Tools Discord Bot"
 workspace = true
 
 [dependencies]
-anyhow = "1.0.89"
+anyhow = "1.0.91"
 base64 = "0.22.1"
 bitflags = "2.6.0"
 chrono = { version = "0.4.38", default-features = false }
@@ -22,12 +22,12 @@ env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["serde"] }
 once_cell = "1.20.2"
 rand = "0.8.5"
-serde = "1.0.210"
+serde = "1.0.214"
 serde_bare = "0.5.0"
 simd-json = { version = "0.13.11", features = ["serde"] }
 smallvec = { version = "1.13.2", features = ["const_generics", "const_new", "union", "serde", "write"] }
-thiserror = "1.0.64"
-tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
+thiserror = "1.0.65"
+tokio = { version = "1.41.0", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 
 azur_lane = { path = "../azur_lane" }
@@ -52,9 +52,9 @@ features = [
 
 [dependencies.config_rs]
 package = "config"
-version = "0.14.0"
+version = "0.14.1"
 default-features = false
 features = ["toml"]
 
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1.12"
+[build-dependencies]
+utils_build = { path = "../utils_build" }

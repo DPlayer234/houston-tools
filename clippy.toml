@@ -2,6 +2,7 @@
 # via section [workspace.lints.clippy]
 
 avoid-breaking-exported-api = false
+upper-case-acronyms-aggressive = true
 
 standard-macro-braces = [
     { name = "smallvec", brace = "[" },

@@ -4,6 +4,7 @@
 //! implemented for a small subset of the functionality required to work with Azur Lane's data.
 //!
 //! Inspired and made by referencing https://github.com/gameltb/io_unity and https://github.com/yuanyan3060/unity-rs for file formats.
+#![allow(clippy::upper_case_acronyms)]
 
 use std::fmt::Display;
 use std::io::{Read, Seek, SeekFrom};

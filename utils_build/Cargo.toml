@@ -1,0 +1,13 @@
+[package]
+name = "utils_build"
+version = "1.0.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winres = "0.1.12"

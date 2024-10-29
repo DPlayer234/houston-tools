@@ -5,8 +5,12 @@ members = [
     "houston_app",
     "unity_read",
     "utils"
-]
+, "utils_build"]
 resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.82"
 
 [profile.release]
 lto = true
@@ -101,5 +105,4 @@ use_self = "warn"
 useless_let_if_seq = "warn"
 
 # allows
-single_char_add_str = "allow"
-upper_case_acronyms = "allow"
+#upper_case_acronyms = "allow"

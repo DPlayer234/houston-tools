@@ -274,7 +274,7 @@ pub enum EnhanceKind {
     /// Research ships enhanced with blueprints.
     Research,
     /// META ships with their own nonsense.
-    META
+    Meta,
 }
 
 define_data_enum! {
