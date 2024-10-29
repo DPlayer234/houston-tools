@@ -17,6 +17,7 @@ pub trait WriteStr {
 impl WriteStr for String {
     fn write_str_fmt(&mut self, args: Arguments<'_>) {
         #[cold]
+        #[track_caller]
         fn fail() {
             panic!("write_fmt failed unexpectedly even though the buffer never returns an error");
         }

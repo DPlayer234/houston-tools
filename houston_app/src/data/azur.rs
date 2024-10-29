@@ -210,7 +210,7 @@ impl HAzurLane {
         // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
         // files outside of `data_path`. Currently, this doesn't take user-input, but this should
         // be considered for the future.
-        let path = utils::join_path![&self.data_path, "chibi", image_key; "webp"];
+        let path = utils::join_path!(&self.data_path, "chibi", image_key; "webp");
         match std::fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.

@@ -64,7 +64,6 @@ return_self_not_must_use = "warn"
 same_functions_in_if_condition = "warn"
 unnecessary_join = "warn"
 used_underscore_binding = "warn"
-used_underscore_items = "warn"
 
 # restriction
 assertions_on_result_states = "warn"
@@ -79,7 +78,7 @@ missing_asserts_for_indexing = "warn"
 pub_without_shorthand = "deny"
 rc_buffer = "warn"
 rc_mutex = "warn"
-ref_option = "warn"
+# ref_option = "warn" // rust 1.84
 ref_option_ref = "warn"
 ref_patterns = "warn"
 rest_pat_in_fully_bound_structs = "deny"

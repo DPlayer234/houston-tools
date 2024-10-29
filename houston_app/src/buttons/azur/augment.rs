@@ -52,7 +52,7 @@ impl View {
             AugmentUsability::HullTypes(hull_types) => {
                 let mut label = "For: ".to_owned();
                 crate::fmt::write_join(&mut label, hull_types.iter().map(|h| h.designation()), ", ")
-                    .expect("writing to string should not fail");
+                    .expect("writing to String cannot fail");
 
                 let label = utils::text::truncate(label, 25);
                 CreateButton::new("=dummy-usability").label(label).disabled(true)

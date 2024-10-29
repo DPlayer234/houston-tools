@@ -1,4 +1,4 @@
-use std::fmt::Arguments;
+use std::fmt::{Arguments, Display};
 use std::io::{stdout, Write, Result as IoResult};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime};
@@ -13,7 +13,7 @@ macro_rules! action {
 /// Prints an info message while no action is active.
 macro_rules! info {
     ($($t:tt)*) => {
-        $crate::log::__println(std::format_args!($($t)*))
+        $crate::log::__info(std::format_args!($($t)*))
     };
 }
 
@@ -41,22 +41,26 @@ fn only_tty<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
     }
 }
 
-struct AnsiCsi(&'static str);
+/// Escape sequence to be only printed when CI is false.
+#[derive(Debug)]
+#[repr(transparent)]
+struct Ansi(&'static str);
 
-const RESET: AnsiCsi = AnsiCsi("\x1b[0m");
-const TIME_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;8m");
-const DONE_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;10m");
-const PROGRESS_STYLE: AnsiCsi = AnsiCsi("\x1b[38;5;14m");
+const RESET: Ansi = Ansi("\x1b[0m");
+const TIME_STYLE: Ansi = Ansi("\x1b[38;5;8m");
+const DONE_STYLE: Ansi = Ansi("\x1b[38;5;10m");
+const PROGRESS_STYLE: Ansi = Ansi("\x1b[38;5;14m");
+const UNDO_LINE: Ansi = Ansi("\x1b[1A\x1b[0K");
 
-impl std::fmt::Display for AnsiCsi {
+impl Display for Ansi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        only_tty(|| write!(f, "\x1b[{}", self.0))
+        only_tty(|| f.write_str(self.0))
     }
 }
 
 #[doc(hidden)]
-pub fn __println(args: Arguments<'_>) {
-    ioerr(writeln_args(stdout(), args));
+pub fn __info(args: Arguments<'_>) {
+    ioerr(writeln_args(stdout().lock(), args));
 }
 
 fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
@@ -69,14 +73,15 @@ fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
 }
 
 /// Panics if an [`Err`] variant is passed.
+#[track_caller]
 fn ioerr<T>(result: IoResult<T>) -> T {
-    result.unwrap_or_else(#[cold] |err| panic!("failed writing to stdout: {err:?}"))
-}
+    #[cold]
+    #[track_caller]
+    fn fail<T>(err: std::io::Error) -> T {
+        panic!("failed writing to stdout: {err:?}");
+    }
 
-macro_rules! undoln {
-    ($writer:expr) => {
-        only_tty(|| write!($writer, "\x1b[1A\x1b[0K"))
-    };
+    result.unwrap_or_else(fail)
 }
 
 #[derive(Debug)]
@@ -159,16 +164,13 @@ struct ActionInner {
 impl ActionInner {
     fn print_init(&self) -> IoResult<()> {
         let mut stdout = stdout().lock();
-        self.write_state(&mut stdout)?;
-        writeln!(stdout)
+        writeln!(stdout, "{self}")
     }
 
     fn print_update(&self) -> IoResult<()> {
         only_tty(|| {
             let mut stdout = stdout().lock();
-            undoln!(stdout)?;
-            self.write_state(&mut stdout)?;
-            writeln!(stdout)
+            writeln!(stdout, "{UNDO_LINE}{self}")
         })
     }
 
@@ -177,28 +179,22 @@ impl ActionInner {
         if IS_CI.load(Ordering::Relaxed) {
             writeln_args(&mut stdout, args)
         } else {
-            undoln!(stdout)?;
+            write!(stdout, "{UNDO_LINE}")?;
             writeln_args(&mut stdout, args)?;
-            self.write_state(&mut stdout)?;
-            writeln!(stdout)
+            writeln!(stdout, "{self}")
         }
     }
 
     fn finish(&self) -> IoResult<()> {
         let mut stdout = stdout().lock();
-        undoln!(stdout)?;
-        self.write_state(&mut stdout)?;
-        writeln!(stdout, " {DONE_STYLE}Done!{RESET}")
+        writeln!(stdout, "{UNDO_LINE}{self} {DONE_STYLE}Done!{RESET}")
     }
+}
 
-    fn write_state<W: Write>(&self, mut writer: W) -> IoResult<()> {
-        write!(
-            writer,
-            "{} {}{}",
-            self.start,
-            self.progress,
-            self.name,
-        )
+impl Display for ActionInner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { start, progress, name } = self;
+        write!(f, "{start} {progress}{name}")
     }
 }
 
@@ -217,7 +213,7 @@ impl Start {
     }
 }
 
-impl std::fmt::Display for Start {
+impl Display for Start {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -254,7 +250,7 @@ impl Progress {
     }
 }
 
-impl std::fmt::Display for Progress {
+impl Display for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
             ProgressKind::NotApplicable => Ok(()),
@@ -264,6 +260,7 @@ impl std::fmt::Display for Progress {
     }
 }
 
+#[derive(Debug)]
 pub struct ActionWrite<W, const C: usize = 0x20000> {
     action: Action,
     writer: W,

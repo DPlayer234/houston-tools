@@ -1,0 +1,13 @@
+# lints are configured in Cargo.toml
+# via section [workspace.lints.clippy]
+
+avoid-breaking-exported-api = false
+
+standard-macro-braces = [
+    { name = "smallvec", brace = "[" },
+    { name = "smallvec::smallvec", brace = "[" },
+    { name = "smallvec_inline", brace = "[" },
+    { name = "smallvec::smallvec_inline", brace = "[" },
+    { name = "utils::join", brace = "(" },
+    { name = "utils::join_path", brace = "(" },
+]

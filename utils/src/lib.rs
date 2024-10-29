@@ -40,7 +40,7 @@ pub fn hash<T: std::hash::Hash + ?Sized, H: std::hash::Hasher>(value: &T, mut ha
 ///
 /// ```
 /// # use std::path::Path;
-/// let path = utils::join_path!["C:\\", "Windows", "System32", "notepad"; "exe"];
+/// let path = utils::join_path!("C:\\", "Windows", "System32", "notepad"; "exe");
 /// # #[cfg(windows)]
 /// assert_eq!(
 ///     &path,
@@ -49,7 +49,7 @@ pub fn hash<T: std::hash::Hash + ?Sized, H: std::hash::Hasher>(value: &T, mut ha
 /// ```
 #[macro_export]
 macro_rules! join_path {
-    [$root:expr, $($parts:expr),* $(; $ext:expr)?] => {{
+    ($root:expr, $($parts:expr),* $(; $ext:expr)?) => {{
         let mut path = ::std::path::PathBuf::from($root);
         $(
             path.push($parts);

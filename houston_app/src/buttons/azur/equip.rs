@@ -60,7 +60,7 @@ impl View {
             let designations = equip.hull_disallowed.iter().map(|h| h.designation());
 
             crate::fmt::write_join(&mut text, designations, ", ")
-                .expect("writing to string should not fail");
+                .expect("writing to String cannot fail");
 
             ("Cannot be equipped by:", text, false)
         })

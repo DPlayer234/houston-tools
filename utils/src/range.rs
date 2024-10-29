@@ -160,8 +160,9 @@ macro_rules! impl_range {
                 s.parse().map_err(|err| OutOfRange::parse(MIN, MAX, err))
             }
 
+            #[track_caller]
             const fn assert_valid() {
-                assert!(MIN <= MAX);
+                assert!(MIN <= MAX, "range type is invalid, MIN should be less than or equal to MAX");
             }
         }
 
