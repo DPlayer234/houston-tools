@@ -83,7 +83,7 @@ pub trait Truncate {
     fn truncate(this: Self, len: usize) -> Self::Output;
 }
 
-impl<'a> Truncate for Cow<'a, str> {
+impl Truncate for Cow<'_, str> {
     type Output = Self;
 
     fn truncate(mut this: Self, len: usize) -> Self::Output {
@@ -92,15 +92,15 @@ impl<'a> Truncate for Cow<'a, str> {
     }
 }
 
-impl<'a, 'b> Truncate for &'b Cow<'a, str> {
-    type Output = Cow<'b, str>;
+impl<'a> Truncate for &'a Cow<'_, str> {
+    type Output = Cow<'a, str>;
 
     fn truncate(this: Self, len: usize) -> Self::Output {
         <&str as Truncate>::truncate(this.borrow(), len)
     }
 }
 
-impl<'a, 'b> Truncate for &'b mut Cow<'a, str> {
+impl Truncate for &mut Cow<'_, str> {
     type Output = ();
 
     fn truncate(this: Self, len: usize) -> Self::Output {
@@ -137,7 +137,7 @@ impl<'a> Truncate for &'a String {
     }
 }
 
-impl<'a> Truncate for &'a mut String {
+impl Truncate for &mut String {
     type Output = ();
 
     fn truncate(this: Self, len: usize) -> Self::Output {

@@ -260,8 +260,8 @@ pub struct Match<'st, T> {
     pub data: &'st T,
 }
 
-impl<'st, T> Copy for Match<'st, T> {}
-impl<'st, T> Clone for Match<'st, T> {
+impl<T> Copy for Match<'_, T> {}
+impl<T> Clone for Match<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
@@ -394,7 +394,7 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
     }
 }
 
-impl<'st, T> DoubleEndedIterator for MatchIter<'st, T> {
+impl<T> DoubleEndedIterator for MatchIter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner.next_back().map(|m| unsafe { self.state.make_match(m) })
     }
@@ -404,7 +404,7 @@ impl<'st, T> DoubleEndedIterator for MatchIter<'st, T> {
     }
 }
 
-impl<'st, T> ExactSizeIterator for MatchIter<'st, T> {
+impl<T> ExactSizeIterator for MatchIter<'_, T> {
     fn len(&self) -> usize {
         self.inner.len()
     }

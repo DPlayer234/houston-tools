@@ -18,8 +18,8 @@ pub(crate) struct RawRef<'a, T: ?Sized> {
 unsafe impl<'a, T: ?Sized> Send for RawRef<'a, T> where &'a T: Send {}
 unsafe impl<'a, T: ?Sized> Sync for RawRef<'a, T> where &'a T: Sync {}
 
-impl<'a, T: ?Sized> Copy for RawRef<'a, T> {}
-impl<'a, T: ?Sized> Clone for RawRef<'a, T> {
+impl<T: ?Sized> Copy for RawRef<'_, T> {}
+impl<T: ?Sized> Clone for RawRef<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
@@ -38,7 +38,7 @@ impl<'a, T: ?Sized> RawRef<'a, T> {
     }
 }
 
-impl<'a, T: Sized> RawRef<'a, T> {
+impl<T: Sized> RawRef<'_, T> {
     /// See documentation for [`NonNull::add`].
     ///
     /// Retains the lifetime.
@@ -47,7 +47,7 @@ impl<'a, T: Sized> RawRef<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> From<NonNull<T>> for RawRef<'a, T> {
+impl<T: ?Sized> From<NonNull<T>> for RawRef<'_, T> {
     fn from(value: NonNull<T>) -> Self {
         Self {
             ptr: value,
@@ -62,13 +62,13 @@ impl<'a, T: ?Sized> From<&'a T> for RawRef<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> std::fmt::Debug for RawRef<'a, T> {
+impl<T: ?Sized> std::fmt::Debug for RawRef<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(&self.ptr, f)
     }
 }
 
-impl<'a, T: ?Sized> std::fmt::Pointer for RawRef<'a, T> {
+impl<T: ?Sized> std::fmt::Pointer for RawRef<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Pointer::fmt(&self.ptr, f)
     }

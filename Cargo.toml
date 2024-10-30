@@ -22,6 +22,10 @@ unsafe_op_in_unsafe_fn = "deny"
 unused_crate_dependencies = "warn"
 unused_macro_rules = "warn"
 
+# edition 2024 compatability
+impl_trait_overcaptures = "warn"
+# rust_2024_incompatible_pat = "warn"
+
 [workspace.lints.clippy]
 # pedantic
 assigning_clones = "warn"

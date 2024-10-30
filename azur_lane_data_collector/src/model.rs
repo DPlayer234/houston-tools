@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
+use std::sync::LazyLock;
 
 use mlua::prelude::*;
-use once_cell::sync::Lazy;
 
 use azur_lane::skill::*;
 
@@ -19,7 +19,7 @@ pub struct Config {
 }
 
 /// The app config. Statically embed as JSON.
-pub static CONFIG: Lazy<Config> = Lazy::new(|| {
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../assets/config.json")).unwrap()
 });
 
@@ -130,8 +130,10 @@ impl Display for DataError {
 
 #[cfg(test)]
 mod test {
+    use std::sync::LazyLock;
+
     #[test]
     fn static_config() {
-        once_cell::sync::Lazy::force(&super::CONFIG);
+        LazyLock::force(&super::CONFIG);
     }
 }

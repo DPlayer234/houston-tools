@@ -1,6 +1,6 @@
 [package]
 name = "utils"
-version = "5.0.2"
+version = "5.0.3"
 edition.workspace = true
 rust-version.workspace = true
 

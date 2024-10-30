@@ -40,7 +40,7 @@ impl<'a, P, F> EscapeByChar<'a, P, F> {
     }
 }
 
-impl<'a, P, F, I> Display for EscapeByChar<'a, P, F>
+impl<P, F, I> Display for EscapeByChar<'_, P, F>
 where
     P: Fn(char) -> bool,
     F: Fn(char) -> I,
@@ -96,7 +96,7 @@ pub struct EscapeByCharIter<'a, P, F, I> {
     iter: Option<I>,
 }
 
-impl<'a, P, F, I> EscapeByCharIter<'a, P, F, I::IntoIter>
+impl<P, F, I> EscapeByCharIter<'_, P, F, I::IntoIter>
 where
     P: Fn(char) -> bool,
     F: Fn(char) -> I,
@@ -107,7 +107,7 @@ where
     }
 }
 
-impl<'a, P, F, I> Iterator for EscapeByCharIter<'a, P, F, I::IntoIter>
+impl<P, F, I> Iterator for EscapeByCharIter<'_, P, F, I::IntoIter>
 where
     P: Fn(char) -> bool,
     F: Fn(char) -> I,

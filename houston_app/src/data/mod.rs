@@ -1,5 +1,6 @@
+use std::sync::{LazyLock, OnceLock};
+
 use dashmap::DashMap;
-use once_cell::sync::{Lazy, OnceCell};
 use poise::reply::CreateReply;
 use serenity::all::{Color, Http, UserId};
 
@@ -29,11 +30,11 @@ pub struct HBotData {
     /// The bot configuration.
     config: HBotConfig,
     /// The loaded application emojis.
-    app_emojis: OnceCell<app_emojis::HAppEmojiStore>,
+    app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
     /// A concurrent hash map to user data.
     user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
-    azur_lane: Lazy<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
+    azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
 }
 
 /// User-specific data.
@@ -63,9 +64,9 @@ impl HBotData {
         let data_path = config.azur_lane_data.clone();
         Self {
             config,
-            app_emojis: OnceCell::new(),
+            app_emojis: OnceLock::new(),
             user_data: DashMap::new(),
-            azur_lane: Lazy::new(match data_path {
+            azur_lane: LazyLock::new(match data_path {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
             })

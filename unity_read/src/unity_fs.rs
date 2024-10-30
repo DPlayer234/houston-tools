@@ -123,6 +123,8 @@ struct Node {
 
     /// Stores the uncompressed bytes for this node.
     /// This is initialized lazily when [`UnityFsNode::read_raw`] is called.
+    // CMBK: replace with `std::cell::OnceCell` when its `get_or_try_init`
+    // is stabilized which is probably in approximately Never™️.
     #[br(ignore)]
     uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
 }

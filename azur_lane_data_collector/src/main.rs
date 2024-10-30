@@ -108,7 +108,7 @@ fn main() -> anyhow::Result<()> {
                 extract_count += 1;
 
                 let path = utils::join_path!(out_dir, "chibi", &skin.image_key; "webp");
-                if let Ok(mut f) = fs::OpenOptions::new().create_new(true).write(true).open(path) {
+                if let Ok(mut f) = fs::File::create_new(path) {
                     new_count += 1;
 
                     f.write_all(&image)?;

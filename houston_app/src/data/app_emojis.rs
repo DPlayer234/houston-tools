@@ -1,4 +1,5 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 use serenity::all::{Emoji, Http, ReactionType};
 
 use azur_lane::ship::HullType;
@@ -87,7 +88,7 @@ generate!({
     hull_ixm  = "Hull_IXm"  if azur;
 });
 
-static FALLBACK_EMOJI: Lazy<ReactionType> = Lazy::new(|| ReactionType::from('❔'));
+static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| ReactionType::from('❔'));
 
 async fn load_emojis(ctx: &Http) -> anyhow::Result<Vec<Emoji>> {
     Ok(ctx.get_application_emojis().await?)
