@@ -129,9 +129,6 @@ cargo run --bin houston_app
 cargo run --bin azur_lane_data_collector -- --inputs ...
 ```
 
-> [!NOTE]
-> When built under Windows for Windows, the executables will include the crate version in their metadata. This mechanism currently does not work under Linux (tested via WSL), so it is disabled there. It will still print a warning, but this warning can be ignored.
-
 ## Release Options
 
 As present in this repository, the release builds specify some additional options:
