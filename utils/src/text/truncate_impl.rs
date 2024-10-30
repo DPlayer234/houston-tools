@@ -1,18 +1,22 @@
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 
 const ELLIPSIS: char = '\u{2026}';
 
 /// Truncates a string to the given `len` (in terms of [`char`], not [`u8`]).
 /// If a truncation happens, appends an ellipsis.
 ///
-/// This function is supported for [`str`], [`String`], and [`Cow<str>`].
-/// `&mut str` is not directly supported. Pass it as `&str` instead.
+/// The following types are accepted for `str`, with slightly varying behavior:
 ///
-/// Given a _value_, it reuses its buffer and returns the modified value with the same type.
+/// | Input                                           | Return                                                                                  |
+/// |:----------------------------------------------- |:--------------------------------------------------------------------------------------- |
+/// | `&T` where `T`: [`AsRef<str>`]                  | [`Cow<str>`], either borrowing the source [`str`] or owning a truncated clone.          |
+/// | [`String`], [`Cow<str>`]                        | The input type, either the input value or truncated, attempting to use the same buffer. |
+/// | [`&mut String`](String), [`&mut Cow<str>`](Cow) | No return value. The value is truncated in-place, attempting to use the same buffer.    |
 ///
-/// Given an _immutable reference_, it will return a [`Cow<str>`], either referencing the original or storing a modified copy.
+/// For the `&T` case: Do note that various types implement [`AsRef<str>`], notably including [`str`] itself, [`String`], and [`Cow<str>`].
+/// If you require an owned [`String`] after the truncation, call [`into_owned`](Cow::into_owned) on the return value.
 ///
-/// Given a _mutable reference_, it will modify the value in place.
+/// If you're working with an owned [`String`] or [`Cow<str>`], prefer passing it by value or `&mut` to avoid redundant clones.
 ///
 /// # Panics
 ///
@@ -20,29 +24,32 @@ const ELLIPSIS: char = '\u{2026}';
 ///
 /// # Examples
 ///
-/// By value:
-/// ```
-/// # use std::borrow::Cow;
-/// # use utils::text::truncate;
-/// let text = String::from("hello world");
-/// let long = truncate(text, 11);
-/// assert!(long == "hello world");
-/// let short = truncate(long, 6);
-/// assert!(short == "hello…");
-/// ```
+/// Type annotations in the examples are optional and provided only for clarity.
 ///
-/// By immutable reference:
+/// `&T` where `T`: [`AsRef<str>`], i.e. by immutable reference, here with [`&str`](str):
 /// ```
+/// // by-ref may clone the value if needed and returns a `Cow<str>`
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
 /// let text = "hello world";
-/// let long = truncate(text, 11);
-/// let short = truncate(text, 6);
+/// let long: Cow<str> = truncate(text, 11);
+/// let short: Cow<str> = truncate(text, 6);
 /// assert!(matches!(long, Cow::Borrowed(text)));
 /// assert!(short == "hello…");
 /// ```
 ///
-/// By mutable reference:
+/// By value, here with [`String`]:
+/// ```
+/// # use std::borrow::Cow;
+/// # use utils::text::truncate;
+/// let text = String::from("hello world");
+/// let long: String = truncate(text, 11);
+/// assert!(long == "hello world");
+/// let short: String = truncate(long, 6);
+/// assert!(short == "hello…");
+/// ```
+///
+/// By mutable reference, here with [`&mut String`](String):
 /// ```
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
@@ -83,40 +90,21 @@ pub trait Truncate {
     fn truncate(this: Self, len: usize) -> Self::Output;
 }
 
+impl<'a, S: AsRef<str> + ?Sized> Truncate for &'a S {
+    type Output = Cow<'a, str>;
+
+    fn truncate(this: Self, len: usize) -> Self::Output {
+        let this: &str = this.as_ref();
+        Truncate::truncate(Cow::Borrowed(this), len)
+    }
+}
+
 impl Truncate for Cow<'_, str> {
     type Output = Self;
 
     fn truncate(mut this: Self, len: usize) -> Self::Output {
         Truncate::truncate(&mut this, len);
         this
-    }
-}
-
-impl<'a> Truncate for &'a Cow<'_, str> {
-    type Output = Cow<'a, str>;
-
-    fn truncate(this: Self, len: usize) -> Self::Output {
-        <&str as Truncate>::truncate(this.borrow(), len)
-    }
-}
-
-impl Truncate for &mut Cow<'_, str> {
-    type Output = ();
-
-    fn truncate(this: Self, len: usize) -> Self::Output {
-        if let Some(end_at) = find_truncate_at(this, len) {
-            let str = this.to_mut();
-            str.truncate(end_at);
-            str.push(ELLIPSIS);
-        }
-    }
-}
-
-impl<'a> Truncate for &'a str {
-    type Output = Cow<'a, str>;
-
-    fn truncate(this: Self, len: usize) -> Self::Output {
-        Truncate::truncate(Cow::Borrowed(this), len)
     }
 }
 
@@ -129,11 +117,15 @@ impl Truncate for String {
     }
 }
 
-impl<'a> Truncate for &'a String {
-    type Output = Cow<'a, str>;
+impl Truncate for &mut Cow<'_, str> {
+    type Output = ();
 
     fn truncate(this: Self, len: usize) -> Self::Output {
-        Truncate::truncate(Cow::Borrowed(this.as_str()), len)
+        if let Some(end_at) = find_truncate_at(this, len) {
+            let str = this.to_mut();
+            str.truncate(end_at);
+            str.push(ELLIPSIS);
+        }
     }
 }
 
