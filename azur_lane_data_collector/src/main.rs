@@ -47,19 +47,16 @@ struct Cli {
     #[arg(short, long)]
     minimize: bool,
 
-    /// Override whether this program runs in CI mode.
+    /// Override whether this program outputs color.
     ///
-    /// If true, output is simplified without colors.
-    /// If false, rich output is provided.
-    ///
-    /// If unset, uses `CI` and `NO_COLOR` env vars for detection: If either is set to a non-empty string, CI output is used.
+    /// Auto-detection is performed, but in case it is wrong, you may use this to override the default.
     #[arg(long)]
-    ci: Option<bool>,
+    color: Option<bool>,
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    log::set_ci(cli.ci);
+    log::use_color(cli.color);
 
     let out_data = {
         // Expect at least 1 input

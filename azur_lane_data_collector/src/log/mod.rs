@@ -1,7 +1,9 @@
 use std::fmt::{Arguments, Display};
-use std::io::{stdout, Write, Result as IoResult};
+use std::io::{Write, Result as IoResult};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime};
+
+mod buf;
 
 /// Creates an action builder with the given label.
 macro_rules! action {
@@ -20,24 +22,24 @@ macro_rules! info {
 pub(crate) use action;
 pub(crate) use info;
 
-/// When true, uses simplified output.
-static IS_CI: AtomicBool = AtomicBool::new(false);
+/// When false, uses simplified output.
+static USE_ANSI: AtomicBool = AtomicBool::new(false);
 
-/// Sets the CI mode.
-pub fn set_ci(force: Option<bool>) {
-    fn is_set(var: &str) -> bool {
-        std::env::var_os(var).is_some_and(|s| !s.is_empty())
-    }
-
-    let v = force.unwrap_or_else(|| is_set("CI") || is_set("NO_COLOR"));
-    IS_CI.store(v, Ordering::Relaxed);
+/// Sets whether colors are printed.
+pub fn use_color(force: Option<bool>) {
+    let value = force.unwrap_or_else(|| utils::term::supports_ansi_escapes(&std::io::stderr()));
+    USE_ANSI.store(value, Ordering::Relaxed);
 }
 
-fn only_tty<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
-    if IS_CI.load(Ordering::Relaxed) {
-        Ok(())
-    } else {
+fn lock_output() -> impl Write {
+    buf::buf_stderr()
+}
+
+fn only_ansi<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
+    if USE_ANSI.load(Ordering::Relaxed) {
         f()
+    } else {
+        Ok(())
     }
 }
 
@@ -46,21 +48,21 @@ fn only_tty<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
 #[repr(transparent)]
 struct Ansi(&'static str);
 
-const RESET: Ansi = Ansi("\x1b[0m");
-const TIME_STYLE: Ansi = Ansi("\x1b[38;5;8m");
-const DONE_STYLE: Ansi = Ansi("\x1b[38;5;10m");
-const PROGRESS_STYLE: Ansi = Ansi("\x1b[38;5;14m");
+const RESET: Ansi = Ansi(utils::term::style::RESET);
+const TIME_STYLE: Ansi = Ansi(utils::term::style::GRAY);
+const DONE_STYLE: Ansi = Ansi(utils::term::style::BRIGHT_GREEN);
+const PROGRESS_STYLE: Ansi = Ansi(utils::term::style::BRIGHT_CYAN);
 const UNDO_LINE: Ansi = Ansi("\x1b[1A\x1b[0K");
 
 impl Display for Ansi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        only_tty(|| f.write_str(self.0))
+        only_ansi(|| f.write_str(self.0))
     }
 }
 
 #[doc(hidden)]
 pub fn __info(args: Arguments<'_>) {
-    ioerr(writeln_args(stdout().lock(), args));
+    ioerr(writeln_args(lock_output(), args));
 }
 
 fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
@@ -78,7 +80,7 @@ fn ioerr<T>(result: IoResult<T>) -> T {
     #[cold]
     #[track_caller]
     fn fail<T>(err: std::io::Error) -> T {
-        panic!("failed writing to stdout: {err:?}");
+        panic!("failed writing to stderr: {err:?}");
     }
 
     result.unwrap_or_else(fail)
@@ -163,31 +165,31 @@ struct ActionInner {
 
 impl ActionInner {
     fn print_init(&self) -> IoResult<()> {
-        let mut stdout = stdout().lock();
-        writeln!(stdout, "{self}")
+        let mut out = lock_output();
+        writeln!(out, "{self}")
     }
 
     fn print_update(&self) -> IoResult<()> {
-        only_tty(|| {
-            let mut stdout = stdout().lock();
-            writeln!(stdout, "{UNDO_LINE}{self}")
+        only_ansi(|| {
+            let mut out = lock_output();
+            writeln!(out, "{UNDO_LINE}{self}")
         })
     }
 
     fn print_info(&self, args: Arguments<'_>) -> IoResult<()> {
-        let mut stdout = stdout().lock();
-        if IS_CI.load(Ordering::Relaxed) {
-            writeln_args(&mut stdout, args)
+        let mut out = lock_output();
+        if USE_ANSI.load(Ordering::Relaxed) {
+            write!(out, "{UNDO_LINE}")?;
+            writeln_args(&mut out, args)?;
+            writeln!(out, "{self}")
         } else {
-            write!(stdout, "{UNDO_LINE}")?;
-            writeln_args(&mut stdout, args)?;
-            writeln!(stdout, "{self}")
+            writeln_args(&mut out, args)
         }
     }
 
     fn finish(&self) -> IoResult<()> {
-        let mut stdout = stdout().lock();
-        writeln!(stdout, "{UNDO_LINE}{self} {DONE_STYLE}Done!{RESET}")
+        let mut out = lock_output();
+        writeln!(out, "{UNDO_LINE}{self} {DONE_STYLE}Done!{RESET}")
     }
 }
 

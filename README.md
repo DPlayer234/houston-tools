@@ -25,6 +25,20 @@ token = "..."
 # relative or absolute path to the data produced by the Azur Lane Data Collector.
 # optional. when not present, disables the Azur Lane module.
 azur_lane_data = "azur_lane_data"
+
+# optional section to configure the terminal output.
+# the logger writes to `stderr`.
+[log]
+# sets whether the logger should use colors.
+# optional. attempts to auto-detect whether the output supports colors.
+color = true
+
+# sets the default minimum log level.
+# optional. defaults to "warn", with "trace" for just the app itself.
+default = "warn"
+
+# may specify additional keys matching module names to filter their messages.
+# log levels may be "trace", "debug", "info", "warn", or "error".
 ```
 
 ## Commands
@@ -79,7 +93,7 @@ This is a command line tool that loads Azur Lane game scripts and outputs data t
   -o, --out <OUT>           The output directory
       --assets <ASSETS>     The path that holds the game assets
   -m, --minimize            Minimize the output JSON file
-      --ci <CI>             Override whether this program runs in CI mode [possible values: true, false]
+      --color <COLOR>       Override whether this program outputs color [possible values: true, false]
   -h, --help                Print help
 ```
 
@@ -103,16 +117,14 @@ If you want to switch to a different Lua edition, edit the enabled features of t
 If you specify multiple input directories, the data is "merged". That is, ships, equipment, retrofits, and skins will added to earlier sets of data.
 The first set that contains a certain entry will take priority.
 
-## CI Mode
+## Terminal Output
 
-By default, the collector will have rich colored output via ANSI-escape sequences. However, if this is not wanted or supported in your environment, for example in CI, when piping the output to a file, it can be disabled.
+The program will print its terminal output to _stderr_, attempting to use ANSI escapes to improve the output.
+There is no _stdout_ output.
 
-If either the environment variable `CI` or `NO_COLOR` is set to a non-empty string, CI output is used. In this mode, colors are suppressed and messages won't update. Instead, there will be a line when an operation starts and when it ends.
+By default, the program will _try_ to detect whether the output supports colors. Notably, non-terminal outputs and environment that specify `NO_COLOR` will not have color.
 
-The `--ci` parameter can be used to override the detection.
-
-> [!NOTE]
-> There is no auto-detection done for whether the terminal/STDOUT supports ANSI-escape sequences. When CI mode is not enabled, it is _assumed_ that they are supported.
+In case the detection ends up being wrong, you may pass `--color=true` or `--color=false` to override the detection.
 
 # Build
 

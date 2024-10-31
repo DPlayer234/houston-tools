@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 edition.workspace = true
 rust-version.workspace = true
 
@@ -17,8 +17,9 @@ anyhow = "1.0.91"
 base64 = "0.22.1"
 bitflags = "2.6.0"
 chrono = { version = "0.4.38", default-features = false }
-dashmap = "5.5.3"
-env_logger = "0.11.5"
+dashmap = "6.1.0"
+env_logger = { version = "0.11.5", features = ["humantime", "regex"], default-features = false }
+humantime = "2.1.0"
 log = { version = "0.4.22", features = ["serde"] }
 rand = "0.8.5"
 serde = "1.0.214"

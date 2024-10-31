@@ -4,6 +4,7 @@ use smallvec::SmallVec;
 
 pub mod azur;
 pub mod discord;
+pub mod log;
 
 pub fn write_join<W, I>(mut f: W, mut iter: I, join: &str) -> std::fmt::Result
 where

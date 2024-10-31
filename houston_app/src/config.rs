@@ -25,6 +25,7 @@ pub struct HBotConfig {
 
 #[derive(Debug, Deserialize, Default)]
 pub struct HLogConfig {
+    pub color: Option<bool>,
     pub default: Option<log::LevelFilter>,
     #[serde(flatten)]
     pub modules: HashMap<String, log::LevelFilter>,

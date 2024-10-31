@@ -126,6 +126,19 @@ fn init_logging(config: config::HLogConfig) {
 
     let mut builder = env_logger::builder();
 
+    // doing the detection and format ourselves removes the
+    // anstream dependency and some other related crates
+
+    // env_logger defaults to using stderr
+    let has_color = config.color
+        .unwrap_or_else(|| utils::term::supports_ansi_escapes(&std::io::stderr()));
+
+    if has_color {
+        builder.format(fmt::log::format_styled);
+    } else {
+        builder.format(fmt::log::format_unstyled);
+    }
+
     match config.default {
         Some(value) => builder.filter_level(value),
 
