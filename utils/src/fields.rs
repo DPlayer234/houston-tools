@@ -2,7 +2,7 @@
 
 /// Represents access to a field of a struct.
 ///
-/// Use the [`field`] macro to obtain instances.
+/// Use the [`field`](crate::field) macro to obtain instances.
 pub trait Field<S: ?Sized, F: ?Sized> {
     /// Gets a reference to the field.
     #[must_use]
@@ -11,7 +11,7 @@ pub trait Field<S: ?Sized, F: ?Sized> {
 
 /// Represents mutable access to a field of a struct.
 ///
-/// Use the [`field_mut`] macro to obtain instances.
+/// Use the [`field_mut`](crate::field_mut) macro to obtain instances.
 pub trait FieldMut<S: ?Sized, F: ?Sized>: Field<S, F> {
     /// Gets a mutable reference to the field.
     #[must_use]

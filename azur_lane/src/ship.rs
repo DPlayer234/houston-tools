@@ -104,7 +104,7 @@ pub struct EquipWeaponMount {
     pub mounts: u8,
     /// The amount of parallel loads.
     ///
-    /// F.e. Gascogne's main gun and Unzen's torpedo has a value 2.
+    /// F.e. Gascogne's main gun and Unzen's torpedo have a value of 2.
     pub parallel: u8,
     /// How many preloads this slot has.
     ///

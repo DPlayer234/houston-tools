@@ -1,3 +1,5 @@
+//! Main access into Unity FS archives.
+
 // binrw emits code that doesn't get used and we hit this. ugh.
 #![allow(dead_code)]
 

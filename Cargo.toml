@@ -4,8 +4,9 @@ members = [
     "azur_lane_data_collector",
     "houston_app",
     "unity_read",
-    "utils"
-, "utils_build"]
+    "utils",
+    "utils_build",
+]
 resolver = "2"
 
 [workspace.package]

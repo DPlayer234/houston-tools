@@ -342,6 +342,10 @@ define_data_enum! {
 }
 
 define_data_enum! {
+    /// The kind a weapon is classified as.
+    ///
+    /// The values here can be reasonable to entirely unintuitive.
+    /// You might be looking for [`EquipKind`] instead.
     pub enum WeaponKind for WeaponKindData {
         /// A friendly name for the weapon kind.
         pub name: &'static str;

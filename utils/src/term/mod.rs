@@ -1,3 +1,5 @@
+//! Provides utilities for dealing with terminals.
+
 pub mod style;
 
 /// Performs automatic detection of whether ANSI escape codes are supported.

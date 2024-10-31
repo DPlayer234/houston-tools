@@ -78,7 +78,7 @@ pub trait RangeNum {
 
 macro_rules! impl_range {
     ($Type:ident, $Num:ty) => {
-        /// An inclusive range type with static restrictions on the allowed values.
+        #[doc = concat!("An inclusive range type using `", stringify!($Num), "` with static restrictions on the allowed values")]
         ///
         /// This type is particularly useful when dealing with user input.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -107,7 +107,7 @@ macro_rules! impl_range {
             ///
             /// ```no_run
             /// # use utils::range::RangeU8;
-            /// let range = <RangeU8<1, 10>>::new(4, 6);
+            #[doc = concat!("let range = <", stringify!($Type), "<1, 10>>::new(4, 6);")]
             /// assert_eq!(range.unwrap().tuple(), (4, 6));
             /// ```
             pub const fn new(low: $Num, high: $Num) -> Result<Self, OutOfRange<$Num>> {
