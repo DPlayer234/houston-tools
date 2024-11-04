@@ -106,7 +106,7 @@ macro_rules! impl_range {
             /// # Example
             ///
             /// ```no_run
-            /// # use utils::range::RangeU8;
+            /// # use utils::range::*;
             #[doc = concat!("let range = <", stringify!($Type), "<1, 10>>::new(4, 6);")]
             /// assert_eq!(range.unwrap().tuple(), (4, 6));
             /// ```

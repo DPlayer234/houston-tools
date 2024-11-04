@@ -21,6 +21,8 @@ pub type HError = anyhow::Error;
 pub type HContext<'a> = poise::Context<'a, HBotData, HError>;
 /// The poise command result type.
 pub type HResult = Result<(), HError>;
+/// The poise framework type.
+pub type HFramework = poise::framework::Framework<HBotData, HError>;
 
 pub use azur::HAzurLane;
 pub use app_emojis::HAppEmojis;
@@ -151,11 +153,11 @@ pub trait HContextExtensions {
 
     /// Creates a reply matching the user data.
     #[must_use]
-    fn create_reply<'a>(&self) -> CreateReply<'a>;
+    fn create_reply<'new>(&self) -> CreateReply<'new>;
 
     /// Always creates an ephemeral reply.
     #[must_use]
-    fn create_ephemeral_reply<'a>(&self) -> CreateReply<'a>;
+    fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new>;
 }
 
 impl HContextExtensions for HContext<'_> {
@@ -167,11 +169,11 @@ impl HContextExtensions for HContext<'_> {
         self.data().set_user_data(self.author().id, data)
     }
 
-    fn create_reply<'a>(&self) -> CreateReply<'a> {
+    fn create_reply<'new>(&self) -> CreateReply<'new> {
         self.get_user_data().create_reply()
     }
 
-    fn create_ephemeral_reply<'a>(&self) -> CreateReply<'a> {
+    fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new> {
         CreateReply::default().ephemeral(true)
     }
 }
