@@ -1,7 +1,7 @@
 use poise::ChoiceParameter;
 
 use azur_lane::ship::{HullType, ShipRarity};
-use azur_lane::equip::{EquipKind, EquipRarity, AugmentRarity};
+use azur_lane::equip::{AugmentRarity, EquipKind, EquipRarity};
 use azur_lane::Faction;
 
 macro_rules! make_choice {

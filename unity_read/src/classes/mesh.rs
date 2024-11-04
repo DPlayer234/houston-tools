@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read, Seek};
+use std::mem::swap;
 
-use binrw::{BinRead, BinResult, Endian};
+use binrw::{Endian, BinRead, BinResult};
 use half::f16;
 
 use crate::{define_unity_class, FromInt};
@@ -183,7 +184,7 @@ impl MeshVertexData<'_> {
                 );
 
                 if sub_mesh.topology != 0 && (topology_offset & 1) != 0 {
-                    std::mem::swap(&mut triangle.0, &mut triangle.2);
+                    swap(&mut triangle.0, &mut triangle.2);
                 }
 
                 topology_offset += 1;

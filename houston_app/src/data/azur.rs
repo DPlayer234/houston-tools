@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::{Component, Path, PathBuf};
 
 use dashmap::DashMap;
 use smallvec::{smallvec, SmallVec};
@@ -41,8 +42,8 @@ impl HAzurLane {
         // loads the actual definition file from disk
         // the error is just a short description of the error
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
-            use anyhow::Context;
-            let f = std::fs::File::open(data_path.join("main.json")).context("Failed to read Azur Lane data.")?;
+            use anyhow::Context as _;
+            let f = fs::File::open(data_path.join("main.json")).context("Failed to read Azur Lane data.")?;
             let data = simd_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
             Ok(data)
         }
@@ -51,7 +52,7 @@ impl HAzurLane {
         // or ones that refer to parent directories to detect potential path traversal attacks
         // when loading untrusted data. note: we only log this, we don't abort.
         fn is_path_sus(path: &Path) -> bool {
-            path.components().any(|p| !matches!(p, std::path::Component::Normal(_))) ||
+            path.components().any(|p| !matches!(p, Component::Normal(_))) ||
             path.components().next().is_none()
         }
 
@@ -211,20 +212,23 @@ impl HAzurLane {
         // files outside of `data_path`. Currently, this doesn't take user-input, but this should
         // be considered for the future.
         let path = utils::join_path!(&self.data_path, "chibi", image_key; "webp");
-        match std::fs::read(path) {
+        match fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.
                 use dashmap::mapref::entry::Entry;
+
                 match self.chibi_sprite_cache.entry(image_key.to_owned()) {
                     // data race: loaded concurrently, someone else was faster. drop the current data.
                     Entry::Occupied(entry) => *entry.get(),
                     // still empty: leak the current data via Box and store the ref.
+                    // we only leak this once per `image_key`, so the memory increase is capped.
                     Entry::Vacant(entry) => *entry.insert(Some(Box::leak(data.into_boxed_slice()))),
                 }
             },
             Err(err) => {
                 // Reading failed. Check the error kind.
                 use std::io::ErrorKind::*;
+
                 match err.kind() {
                     // Most errors aren't interesting and may be transient issues.
                     // However, these ones imply permanent problems. Store None to prevent repeated attempts.

@@ -1,3 +1,6 @@
+use std::fmt;
+use std::io;
+
 use super::Error;
 
 /// Converts the bytes to "base 256".
@@ -21,7 +24,7 @@ pub fn to_b256(bytes: &[u8]) -> String {
 /// See [`to_b256`] for more information.
 ///
 /// This can only return an [`Err`] if the `writer` does so.
-pub fn encode_b256<W: std::fmt::Write>(mut writer: W, bytes: &[u8]) -> std::fmt::Result {
+pub fn encode_b256<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     writer.write_char('#')?;
     for b in bytes {
         writer.write_char(char::from(*b))?;
@@ -44,7 +47,7 @@ pub fn from_b256(input: &str) -> Result<Vec<u8>, Error> {
 /// Reverses the operation done by [`to_b256`], writing to a given buffer.
 ///
 /// If the data is invalid or lacks the required markers, returns an error.
-pub fn decode_b256<W: std::io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
+pub fn decode_b256<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let input = try_strip_b256_input(input)?;
 
     for c in input.chars() {

@@ -1,8 +1,8 @@
 use std::num::NonZero;
 use std::str::FromStr;
 
-use rand::{thread_rng, Rng};
 use rand::distributions::Uniform;
+use rand::prelude::*;
 use smallvec::SmallVec;
 
 use utils::text::write_str::*;

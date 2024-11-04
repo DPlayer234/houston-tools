@@ -1,3 +1,6 @@
+use std::fmt;
+use std::io;
+
 use super::Error;
 
 /// Converts the bytes to "base 65535".
@@ -25,7 +28,7 @@ pub fn to_b65536(bytes: &[u8]) -> String {
 /// See [`to_b65536`] for more information.
 ///
 /// This can only return an [`Err`] if the `writer` does so.
-pub fn encode_b65536<W: std::fmt::Write>(mut writer: W, bytes: &[u8]) -> std::fmt::Result {
+pub fn encode_b65536<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     let skip_last = bytes.len() % 2 != 0;
     writer.write_char(match skip_last {
         false => '&',
@@ -64,7 +67,7 @@ pub fn from_b65536(input: &str) -> Result<Vec<u8>, Error> {
 /// Reverses the operation done by [`to_b65536`], writing to a given buffer.
 ///
 /// If the data is invalid or lacks the required markers, returns an error.
-pub fn decode_b65536<W: std::io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
+pub fn decode_b65536<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let (skip_last, input) = try_strip_b65536_input(input)?;
 
     let mut chars = input.chars();

@@ -1,8 +1,9 @@
 //! Data structures relating directly to ships.
 
-use std::fmt::Display;
+use std::fmt;
+use std::ops::{Add, AddAssign};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::define_data_enum;
 use super::equip::*;
@@ -356,8 +357,8 @@ define_data_enum! {
     }
 }
 
-impl Display for ShipArmor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ShipArmor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.name())
     }
 }
@@ -451,9 +452,9 @@ impl Default for ShipStat {
     }
 }
 
-utils::impl_op_via_assign!(copy ShipStat, [std::ops::AddAssign]::add_assign, [std::ops::Add]::add);
+utils::impl_op_via_assign!(copy ShipStat, [AddAssign]::add_assign, [Add]::add);
 
-impl std::ops::AddAssign<&Self> for ShipStat {
+impl AddAssign<&Self> for ShipStat {
     fn add_assign(&mut self, rhs: &Self) {
         self.0 += rhs.0;
         self.1 += rhs.1;

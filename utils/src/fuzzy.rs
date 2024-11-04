@@ -39,7 +39,8 @@
 //! - `(hELLO)(wORLD)`
 
 use std::collections::HashMap;
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
+use std::vec::IntoIter as BoxIter;
 
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
@@ -280,7 +281,7 @@ struct MatchInfo {
 pub struct MatchIter<'st, T> {
     // Safety invariant: Every index within here must be a valid index into
     // the memory pointed to by `state.search_values`.
-    inner: std::vec::IntoIter<MatchInfo>,
+    inner: BoxIter<MatchInfo>,
     state: MatchIterState<'st, T>,
 }
 
@@ -357,7 +358,7 @@ impl<T> Default for MatchIter<'_, T> {
     /// Creates an empty iterator with no matches.
     fn default() -> Self {
         Self {
-            inner: std::vec::IntoIter::default(),
+            inner: BoxIter::default(),
             state: MatchIterState {
                 total: 0.0,
                 // no sound code would be able to index this anyways
@@ -421,7 +422,7 @@ unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
     );
 
     // SAFETY: Caller passes segments with size N or less.
-    unsafe { std::ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len()); }
+    unsafe { ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len()); }
     res
 }
 

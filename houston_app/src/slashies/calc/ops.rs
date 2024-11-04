@@ -1,5 +1,5 @@
-use super::{MathError, Result};
 use super::parse::Token;
+use super::{MathError, Result};
 
 /// Helper macro to deduplicate code between different and within operator kinds.
 macro_rules! define_op_kind {

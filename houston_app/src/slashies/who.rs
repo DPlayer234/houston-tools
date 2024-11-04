@@ -1,8 +1,8 @@
 use bitflags::Flags;
 
-use utils::titlecase;
-use utils::time::*;
 use utils::text::write_str::*;
+use utils::time::*;
+use utils::titlecase;
 
 use crate::fmt::discord::get_unique_username;
 use crate::prelude::*;

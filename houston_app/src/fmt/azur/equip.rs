@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Display, Formatter, Result};
 
 use azur_lane::equip::*;
 use azur_lane::ship::StatKind;
@@ -24,18 +24,18 @@ impl<'a> AugmentStats<'a> {
 }
 
 impl Display for EquipStats<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write_stats(&self.0.stat_bonuses, |i| (i.stat_kind, i.amount), f)
     }
 }
 
 impl Display for AugmentStats<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write_stats(&self.0.stat_bonuses, |i| (i.stat_kind, i.amount + i.random), f)
     }
 }
 
-fn write_stats<I, F>(iter: &[I], map: F, f: &mut Formatter<'_>) -> FmtResult
+fn write_stats<I, F>(iter: &[I], map: F, f: &mut Formatter<'_>) -> Result
 where
     F: Fn(&I) -> (StatKind, f64),
 {

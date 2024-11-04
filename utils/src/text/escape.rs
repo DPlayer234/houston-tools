@@ -1,4 +1,4 @@
-use std::fmt::{Display, Write};
+use std::fmt::{self, Display, Write as _};
 use std::str::Chars;
 
 /// Returns a type implementing [`Display`] that escapes a specified
@@ -46,7 +46,7 @@ where
     F: Fn(char) -> I,
     I: IntoIterator<Item = char>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for part in self.source.split_inclusive(&self.pat) {
             let mut part_iter = part.chars();
             match part_iter.next_back() {

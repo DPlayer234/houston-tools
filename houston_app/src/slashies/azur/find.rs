@@ -1,7 +1,7 @@
+use azur_lane::equip::{Augment, Equip};
 use azur_lane::ship::ShipData;
-use azur_lane::equip::{Equip, Augment};
 
-use crate::data::{HBotData, HArgError};
+use crate::data::{HArgError, HBotData};
 
 fn parse_id_input(input: &str) -> Option<u32> {
     input.strip_prefix("/id:")?.parse().ok()

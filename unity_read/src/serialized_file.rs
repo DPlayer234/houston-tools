@@ -4,7 +4,7 @@ use std::io::{Cursor, Read};
 
 use binrw::{binread, BinRead, NullString};
 
-use crate::{SeekRead, BinReadEndian, FromInt};
+use crate::{BinReadEndian, FromInt, SeekRead};
 use crate::error::Error;
 use crate::object::{ObjectInfo, ObjectRef};
 

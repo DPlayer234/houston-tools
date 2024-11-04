@@ -1,6 +1,6 @@
 //! Provides a subset of data for ship/equipment skills.
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::define_data_enum;
 use crate::equip::Weapon;

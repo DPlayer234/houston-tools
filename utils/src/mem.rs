@@ -2,6 +2,8 @@
 //!
 //! For example, this allows const-time conversion of slices into arrays via [`as_sized`].
 
+use std::slice;
+
 /// Converts a slice to an array reference of size `N`.
 /// This is a const-friendly alternative to `<&[T; N]>::try_from`.
 ///
@@ -112,7 +114,7 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
             _ => (byte_len as usize) / dst_size,
         };
 
-        std::slice::from_raw_parts(ptr.start.cast(), dst_len)
+        slice::from_raw_parts(ptr.start.cast(), dst_len)
     }
 }
 

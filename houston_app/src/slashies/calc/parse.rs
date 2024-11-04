@@ -1,7 +1,10 @@
+use std::fmt;
+use std::iter;
+use std::slice;
 use std::str::FromStr;
 
-use super::{MathError, Result};
 use super::ops::*;
+use super::{MathError, Result};
 
 /// A singular equation token, as returned by the tokenizer.
 #[derive(Debug, Clone, Copy)]
@@ -33,14 +36,14 @@ pub struct TokenErrorFmt<'a> {
     token: Token<'a>,
 }
 
-impl std::fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.text)
     }
 }
 
-impl std::fmt::Display for TokenErrorFmt<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for TokenErrorFmt<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "\n-# Position: {}", self.token.token_index + 1)
     }
 }
@@ -102,8 +105,8 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
         .split(|c| c.is_ascii_whitespace())
         .flat_map(|s| s.split_inclusive(|c| is_special_char(*c)))
         .flat_map(|s| match s {
-            [rest @ .., last] if is_special_char(*last) => std::iter::once(rest).chain(Some(std::slice::from_ref(last))),
-            _ => std::iter::once(s).chain(None),
+            [rest @ .., last] if is_special_char(*last) => iter::once(rest).chain(Some(slice::from_ref(last))),
+            _ => iter::once(s).chain(None),
         })
         .filter(|s| !s.is_empty())
         .enumerate()
@@ -214,15 +217,17 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
         return Err(tokens.expr_expected());
     };
 
+    use std::f64::consts::{E, PI, TAU};
+
     // this match *returns* for non-Expr branches
     let expr = match token.text.as_bytes() {
         // start of parenthesis around child-expression
         b"(" => read_expr_with_terminator(tokens, |t| matches_token!(t, ")"))?.value,
 
         // constants
-        b"pi" => std::f64::consts::PI,
-        b"e" => std::f64::consts::E,
-        b"tau" => std::f64::consts::TAU,
+        b"pi" => PI,
+        b"e" => E,
+        b"tau" => TAU,
 
         // anything starting with a digit is assumed to be a number
         [b'0'..=b'9', ..] => f64::from_str(token.text).map_err(|_| MathError::InvalidNumber(token))?,

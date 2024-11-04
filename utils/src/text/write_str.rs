@@ -1,6 +1,6 @@
 //! Module to allow writing to [`String`]s without having to handle the unreachable error case.
 
-use std::fmt::{Write, Arguments};
+use std::fmt::{Arguments, Write};
 
 // re-export these macros so they are usable with a wildcard import
 pub use crate::{write_str, writeln_str};

@@ -2,7 +2,7 @@
 
 use std::io::{Cursor, Seek, SeekFrom};
 
-use crate::{SeekRead, BinReadEndian};
+use crate::{BinReadEndian, SeekRead};
 use crate::error::Error;
 use crate::object::ObjectRef;
 use crate::serialized_file::TypeTreeNode;

@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use crate::{define_unity_class, FromInt};
 use crate::error::Error;
 use crate::serialized_file::TypeTreeNode;
@@ -17,7 +19,7 @@ define_unity_class! {
 pub struct Offset(pub u64);
 
 impl UnityClass for Offset {
-    fn parse_tree(r: &mut std::io::Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
+    fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, tree: &[TypeTreeNode]) -> crate::Result<Self> {
         u32::parse_tree(r, is_big_endian, root, tree).map(u64::from)
             .or_else(|_| u64::parse_tree(r, is_big_endian, root, tree))
             .map(Offset)

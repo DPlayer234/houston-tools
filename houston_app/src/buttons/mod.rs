@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::mem::swap;
+use std::ptr;
 
 use serenity::prelude::*;
 use smallvec::SmallVec;
@@ -144,7 +146,7 @@ pub mod handler {
         args.reply(ButtonContext {
             interaction,
             http: ctx.http(),
-            data: &ctx.data(),
+            data: &ctx.data::<HFrameworkData>(),
         }).await
     }
 
@@ -192,10 +194,11 @@ pub trait ToCustomData {
         if disabled {
             // This value is intended to be unique for a given object.
             // It isn't used in any way other than as a discriminator.
-            let sentinel_key = std::ptr::from_ref(field.get(self)) as u16;
+            let sentinel_key = ptr::from_ref(field.get(self)) as u16;
 
             let sentinel = common::None::new(sentinel_key, sentinel(value));
-            CreateButton::new(ButtonArgs::None(sentinel).to_custom_id()).disabled(true)
+            let custom_id = sentinel.to_custom_id();
+            CreateButton::new(custom_id).disabled(true)
         } else {
             let custom_id = self.to_custom_id_with(field, value);
             CreateButton::new(custom_id)
@@ -215,7 +218,7 @@ pub trait ToCustomData {
     #[must_use]
     fn to_custom_id_with<T>(&mut self, field: impl FieldMut<Self, T>, mut value: T) -> String {
         // Swap new value into the field
-        std::mem::swap(field.get_mut(self), &mut value);
+        swap(field.get_mut(self), &mut value);
         // Create the custom ID
         let custom_id = self.to_custom_id();
         // Move original value back into field, dropping the new value.

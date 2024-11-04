@@ -1,7 +1,7 @@
 //! Provides utilities for formatting Discord data.
 
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Display, Formatter, Result};
 
 use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
 
@@ -37,7 +37,7 @@ pub enum DisplayResolvedArgs<'a> {
 }
 
 impl Display for DisplayResolvedArgs<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             DisplayResolvedArgs::Options(o) => fmt_resolved_options(o, f),
             DisplayResolvedArgs::Target(t) => fmt_resolved_target(t, f),
@@ -46,7 +46,7 @@ impl Display for DisplayResolvedArgs<'_> {
     }
 }
 
-fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -> FmtResult {
+fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -> Result {
     for o in options {
         f.write_str(o.name)?;
         f.write_str(": ")?;
@@ -57,7 +57,7 @@ fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -
     Ok(())
 }
 
-fn fmt_resolved_option(option: &ResolvedOption<'_>, f: &mut Formatter<'_>) -> FmtResult {
+fn fmt_resolved_option(option: &ResolvedOption<'_>, f: &mut Formatter<'_>) -> Result {
     match option.value {
         ResolvedValue::Boolean(v) => v.fmt(f),
         ResolvedValue::Integer(v) => v.fmt(f),
@@ -71,7 +71,7 @@ fn fmt_resolved_option(option: &ResolvedOption<'_>, f: &mut Formatter<'_>) -> Fm
     }
 }
 
-fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> FmtResult {
+fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> Result {
     match target {
         ResolvedTarget::User(v, _) => f.write_str(&v.name),
         ResolvedTarget::Message(v) => v.id.fmt(f),

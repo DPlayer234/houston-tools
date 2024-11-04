@@ -3,8 +3,7 @@
 //!
 //! The primary intent is to allow easy parsing of user range inputs.
 
-use std::fmt::Debug;
-use std::ops::{RangeBounds, Bound};
+use std::ops::{Bound, RangeBounds};
 use std::error::Error as StdError;
 
 /// An error that can occur when constructing bounded ranges.

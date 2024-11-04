@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use crate::buttons;
+use crate::prelude::*;
 
 mod autocomplete;
 mod choices;

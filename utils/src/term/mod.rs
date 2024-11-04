@@ -1,9 +1,11 @@
 //! Provides utilities for dealing with terminals.
 
+use std::io;
+
 pub mod style;
 
 /// Performs automatic detection of whether ANSI escape codes are supported.
-pub fn supports_ansi_escapes<T: std::io::IsTerminal>(stream: &T) -> bool {
+pub fn supports_ansi_escapes<T: io::IsTerminal>(stream: &T) -> bool {
     use anstyle_query::*;
 
     let clicolor = clicolor();

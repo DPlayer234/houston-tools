@@ -1,9 +1,10 @@
-use std::fmt::{Arguments, Display};
-use std::io::{Write, Result as IoResult};
+use std::fmt;
+use std::io::{self, Write as _};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime};
 
 mod buf;
+mod write;
 
 /// Creates an action builder with the given label.
 macro_rules! action {
@@ -21,17 +22,18 @@ macro_rules! info {
 
 pub(crate) use action;
 pub(crate) use info;
+pub(crate) use write::ActionWrite;
 
 /// When false, uses simplified output.
 static USE_ANSI: AtomicBool = AtomicBool::new(false);
 
 /// Sets whether colors are printed.
 pub fn use_color(force: Option<bool>) {
-    let value = force.unwrap_or_else(|| utils::term::supports_ansi_escapes(&std::io::stderr()));
+    let value = force.unwrap_or_else(|| utils::term::supports_ansi_escapes(&io::stderr()));
     USE_ANSI.store(value, Ordering::Relaxed);
 }
 
-fn lock_output() -> impl Write {
+fn lock_output() -> impl io::Write {
     buf::buf_stderr()
 }
 
@@ -54,18 +56,18 @@ const DONE_STYLE: Ansi = Ansi(utils::term::style::BRIGHT_GREEN);
 const PROGRESS_STYLE: Ansi = Ansi(utils::term::style::BRIGHT_CYAN);
 const UNDO_LINE: Ansi = Ansi("\x1b[1A\x1b[0K");
 
-impl Display for Ansi {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Ansi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         only_ansi(|| f.write_str(self.0))
     }
 }
 
 #[doc(hidden)]
-pub fn __info(args: Arguments<'_>) {
+pub fn __info(args: fmt::Arguments<'_>) {
     ioerr(writeln_args(lock_output(), args));
 }
 
-fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
+fn writeln_args<W: io::Write>(mut writer: W, args: fmt::Arguments<'_>) -> io::Result<()> {
     writeln!(
         writer,
         "{TIME_STYLE}[{}]{RESET} {}",
@@ -76,10 +78,10 @@ fn writeln_args<W: Write>(mut writer: W, args: Arguments<'_>) -> IoResult<()> {
 
 /// Panics if an [`Err`] variant is passed.
 #[track_caller]
-fn ioerr<T>(result: IoResult<T>) -> T {
+fn ioerr<T>(result: io::Result<T>) -> T {
     #[cold]
     #[track_caller]
-    fn fail<T>(err: std::io::Error) -> T {
+    fn fail<T>(err: io::Error) -> T {
         panic!("failed writing to stderr: {err:?}");
     }
 
@@ -94,7 +96,7 @@ impl Action {
         ioerr(self.0.print_update());
     }
 
-    pub fn print_info(&self, args: Arguments<'_>) {
+    pub fn print_info(&self, args: fmt::Arguments<'_>) {
         ioerr(self.0.print_info(args));
     }
 
@@ -164,19 +166,19 @@ struct ActionInner {
 }
 
 impl ActionInner {
-    fn print_init(&self) -> IoResult<()> {
+    fn print_init(&self) -> io::Result<()> {
         let mut out = lock_output();
         writeln!(out, "{self}")
     }
 
-    fn print_update(&self) -> IoResult<()> {
+    fn print_update(&self) -> io::Result<()> {
         only_ansi(|| {
             let mut out = lock_output();
             writeln!(out, "{UNDO_LINE}{self}")
         })
     }
 
-    fn print_info(&self, args: Arguments<'_>) -> IoResult<()> {
+    fn print_info(&self, args: fmt::Arguments<'_>) -> io::Result<()> {
         let mut out = lock_output();
         if USE_ANSI.load(Ordering::Relaxed) {
             write!(out, "{UNDO_LINE}")?;
@@ -187,14 +189,14 @@ impl ActionInner {
         }
     }
 
-    fn finish(&self) -> IoResult<()> {
+    fn finish(&self) -> io::Result<()> {
         let mut out = lock_output();
         writeln!(out, "{UNDO_LINE}{self} {DONE_STYLE}Done!{RESET}")
     }
 }
 
-impl Display for ActionInner {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ActionInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Self { start, progress, name } = self;
         write!(f, "{start} {progress}{name}")
     }
@@ -215,8 +217,8 @@ impl Start {
     }
 }
 
-impl Display for Start {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Start {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{TIME_STYLE}[{}] [{:>7.1?}]{RESET}",
@@ -252,81 +254,12 @@ impl Progress {
     }
 }
 
-impl Display for Progress {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Progress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             ProgressKind::NotApplicable => Ok(()),
             ProgressKind::Unbounded => write!(f, "{PROGRESS_STYLE}[{}{}]{RESET} ", self.current, self.suffix),
             ProgressKind::Bounded { total } => write!(f, "{PROGRESS_STYLE}[{}/{}{}]{RESET} ", self.current, total, self.suffix),
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct ActionWrite<W, const C: usize = 0x20000> {
-    action: Action,
-    writer: W,
-    total: usize,
-    flush: usize,
-}
-
-impl<W: Write> ActionWrite<W> {
-    pub fn new(action: Action, writer: W) -> Self {
-        Self::with_chunk(action, writer)
-    }
-
-    pub fn with_chunk<const CHUNK: usize>(action: Action, writer: W) -> ActionWrite<W, CHUNK> {
-        ActionWrite {
-            action,
-            writer,
-            total: 0,
-            flush: 0,
-        }
-    }
-}
-
-impl<W: Write, const CHUNK: usize> ActionWrite<W, CHUNK> {
-    pub fn finish(mut self) {
-        self.action.0.progress.current = self.total_kb();
-        self.action.finish();
-    }
-
-    fn total_kb(&self) -> usize {
-        self.total / 1024
-    }
-
-    fn update_count(&mut self, len: usize) {
-        self.total += len;
-        self.flush += len;
-        if self.flush > CHUNK {
-            self.flush = 0;
-            self.action.update_amount(self.total_kb());
-        }
-    }
-}
-
-impl<W: Write, const CHUNK: usize> Write for ActionWrite<W, CHUNK> {
-    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        let len = self.writer.write(buf)?;
-        self.update_count(len);
-        Ok(len)
-    }
-
-    fn flush(&mut self) -> IoResult<()> {
-        self.flush = 0;
-        self.action.update_amount(self.total_kb());
-        self.writer.flush()
-    }
-
-    fn write_vectored(&mut self, bufs: &[std::io::IoSlice<'_>]) -> IoResult<usize> {
-        let len = self.writer.write_vectored(bufs)?;
-        self.update_count(len);
-        Ok(len)
-    }
-
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.writer.write_all(buf)?;
-        self.update_count(buf.len());
-        Ok(())
     }
 }

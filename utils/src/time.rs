@@ -1,5 +1,7 @@
 //! Convenience module for dealing with times and timestamps.
 
+use std::fmt;
+
 use chrono::prelude::*;
 
 use crate::private::cell::SyncUnsafeCell;
@@ -82,8 +84,8 @@ pub struct TimeMention {
     format: &'static str,
 }
 
-impl std::fmt::Display for TimeMention {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for TimeMention {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<t:{}:{}>", self.timestamp, self.format)
     }
 }

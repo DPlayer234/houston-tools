@@ -2,13 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use mlua::prelude::*;
 
+use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
-use azur_lane::equip::*;
 
 use crate::context;
-use crate::CONFIG;
 use crate::convert_al;
+use crate::CONFIG;
 
 /// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {

@@ -6,8 +6,9 @@
 //! Inspired and made by referencing <https://github.com/gameltb/io_unity> and <https://github.com/yuanyan3060/unity-rs> for file formats.
 #![allow(clippy::upper_case_acronyms)]
 
-use std::fmt::Display;
-use std::io::{Read, Seek, SeekFrom};
+use std::any::type_name;
+use std::fmt;
+use std::io::{self, Read, Seek};
 
 pub mod classes;
 pub mod error;
@@ -24,14 +25,14 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 /// Blanket-implemented for any type that implements both [`Read`] and [`Seek`].
 pub trait SeekRead: Read + Seek {
     #[inline]
-    fn align_to(&mut self, align: u16) -> std::io::Result<()> {
+    fn align_to(&mut self, align: u16) -> io::Result<()> {
         let pos = self.stream_position()?;
         let offset = pos % u64::from(align);
 
         if offset != 0 {
             // offset is within (0..=u16::MAX) and thus cannot wrap
             #[allow(clippy::cast_possible_wrap)]
-            self.seek(SeekFrom::Current(i64::from(align) - offset as i64))?;
+            self.seek(io::SeekFrom::Current(i64::from(align) - offset as i64))?;
         }
 
         Ok(())
@@ -67,14 +68,14 @@ trait FromInt<T>: Sized {
 
 impl<T, U> FromInt<T> for U
 where
-    T: Copy + Display,
+    T: Copy + fmt::Display,
     U: TryFrom<T, Error = std::num::TryFromIntError>,
 {
     /// Casts from `T` to `U`. This cast is not expected to fail.
     fn from_int(value: T) -> Result<Self> {
         U::try_from(value).map_err(|_| error::Error::Unsupported(format!(
             "cast from value {} of type {} to {} failed",
-            value, std::any::type_name::<T>(), std::any::type_name::<U>(),
+            value, type_name::<T>(), type_name::<U>(),
         )))
     }
 }

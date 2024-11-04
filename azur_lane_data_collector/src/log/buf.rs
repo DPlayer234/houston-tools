@@ -5,7 +5,8 @@
 //!
 //! And while stdout is buffered by default, stderr seems like the more correct option.
 
-use std::io::{LineWriter, Stderr, Result, Write, stderr};
+use std::fmt;
+use std::io::{stderr, IoSlice, LineWriter, Result, Stderr, Write};
 use std::sync::{Mutex, MutexGuard};
 
 /// Provides a line-buffered wrapper around [`stderr`].
@@ -44,7 +45,7 @@ impl Write for BufStderr {
         self.inner().write_all(buf)
     }
 
-    fn write_vectored(&mut self, bufs: &[std::io::IoSlice<'_>]) -> Result<usize> {
+    fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> Result<usize> {
         self.inner().write_vectored(bufs)
     }
 
@@ -52,7 +53,7 @@ impl Write for BufStderr {
         self.inner().flush()
     }
 
-    fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> Result<()> {
+    fn write_fmt(&mut self, fmt: fmt::Arguments<'_>) -> Result<()> {
         self.inner().write_fmt(fmt)
     }
 }

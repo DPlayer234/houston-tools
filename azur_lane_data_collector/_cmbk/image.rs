@@ -8,6 +8,7 @@
 //
 // For this reason, and because it's beyond the scope of what I need, I will not bother for now.
 
+use std::fs;
 use std::io::Cursor;
 use std::path::Path;
 
@@ -24,7 +25,7 @@ use unity_read::UnityError;
 
 #[must_use]
 pub fn extract_stitched_image(path: &Path) -> anyhow::Result<Option<Vec<u8>>> {
-    let Ok(file) = std::fs::read(path) else {
+    let Ok(file) = fs::read(path) else {
         return Ok(None)
     };
 

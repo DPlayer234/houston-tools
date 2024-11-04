@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Display, Formatter, Result};
 
 use azur_lane::equip::*;
 
@@ -41,7 +41,7 @@ impl<'a> Details<'a> {
 }
 
 impl Display for Details<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let weapon = self.weapon;
 
         if !self.flags.contains(DetailFlags::NO_KIND) {
@@ -60,7 +60,7 @@ impl Display for Details<'_> {
     }
 }
 
-fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> FmtResult {
+fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> Result {
     let salvo_time = match &weapon.data {
         WeaponData::Bullets(b) => b.salvo_time,
         _ => 0.0
@@ -75,7 +75,7 @@ fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> FmtResult {
     )
 }
 
-fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> FmtResult {
+fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Result {
     if barrage.bullets.is_empty() {
         return Ok(());
     }
@@ -129,7 +129,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fmt
     Ok(())
 }
 
-fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> FmtResult {
+fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Result {
     // damage
     // ammo type & mods
     // range | angle
@@ -142,7 +142,7 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Fm
     )
 }
 
-fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> FmtResult {
+fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
     const PAD: &str = "> ";
 
     writeln!(

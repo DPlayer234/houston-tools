@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use rand::prelude::*;
 
 use crate::prelude::*;
 

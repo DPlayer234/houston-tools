@@ -6,8 +6,8 @@ use std::path::Path;
 use clap::Parser;
 use mlua::prelude::*;
 
-use azur_lane::*;
 use azur_lane::ship::*;
+use azur_lane::DefinitionData;
 
 mod convert_al;
 mod enhance;
@@ -376,13 +376,6 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
         augments.sort_unstable_by_key(|t| t.augment_id);
         augments
     };
-
-    // i have no idea why this deadlocks, but i don't care.
-    // when the program exits, the memory will be cleaned up.
-    if cfg!(debug_assertions) {
-        drop(pg);
-        std::mem::forget(lua);
-    }
 
     Ok(DefinitionData {
         ships,

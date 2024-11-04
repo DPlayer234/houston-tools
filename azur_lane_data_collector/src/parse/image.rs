@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::Cursor;
 
 use image::{imageops, ImageFormat};
@@ -14,7 +15,7 @@ use crate::log::Action;
 
 pub fn load_chibi_image(action: &Action, dir: &str, name: &str) -> anyhow::Result<Option<Vec<u8>>> {
     let name = name.to_ascii_lowercase();
-    let Ok(mut file) = std::fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
+    let Ok(mut file) = fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
         action.print_info(format_args!("Skin shipmodels file {name} not found."));
         return Ok(None)
     };

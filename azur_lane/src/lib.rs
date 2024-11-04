@@ -1,7 +1,7 @@
 //! Defines a data model that a subset of Azur Lane's game data can be represented as.
 #![allow(clippy::upper_case_acronyms)]
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 mod data_def;
 pub mod equip;

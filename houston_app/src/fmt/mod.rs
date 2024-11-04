@@ -1,4 +1,4 @@
-use std::fmt::{Write, Display};
+use std::fmt::{Display, Formatter, Result, Write};
 
 use smallvec::SmallVec;
 
@@ -6,7 +6,7 @@ pub mod azur;
 pub mod discord;
 pub mod log;
 
-pub fn write_join<W, I>(mut f: W, mut iter: I, join: &str) -> std::fmt::Result
+pub fn write_join<W, I>(mut f: W, mut iter: I, join: &str) -> Result
 where
     W: Write,
     I: Iterator,
@@ -67,8 +67,8 @@ impl<'a> JoinNatural<'a> {
     }
 }
 
-impl std::fmt::Display for JoinNatural<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for JoinNatural<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.data.as_slice() {
             [] => Ok(()),
             [one] => f.write_str(one),

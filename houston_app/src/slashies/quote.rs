@@ -1,7 +1,9 @@
+use std::fmt;
+
 use utils::time::*;
 
-use crate::prelude::*;
 use crate::fmt::discord::get_unique_username;
+use crate::prelude::*;
 
 /// Creates a copyable, quotable version of the message.
 #[poise::command(context_menu_command = "Get as Quote")]
@@ -36,8 +38,8 @@ impl<'a> QuoteTarget<'a> {
     }
 }
 
-impl std::fmt::LowerHex for QuoteTarget<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::LowerHex for QuoteTarget<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let channel_id = self.message.channel_id;
         let message_id = self.message.id;
 
@@ -49,8 +51,8 @@ impl std::fmt::LowerHex for QuoteTarget<'_> {
     }
 }
 
-impl std::fmt::Display for QuoteTarget<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for QuoteTarget<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for line in self.message.content.lines() {
             f.write_str("> ")?;
             f.write_str(line)?;

@@ -1,5 +1,5 @@
-use num_enum::FromPrimitive;
 use image::RgbaImage;
+use num_enum::FromPrimitive;
 
 use crate::{define_unity_class, FromInt};
 use crate::error::Error;

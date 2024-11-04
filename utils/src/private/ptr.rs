@@ -1,5 +1,6 @@
-use std::ptr::NonNull;
+use std::fmt;
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 
 /// Helper type to treat a [`NonNull`] as a `&T` in terms of variance,
 /// auto-traits, and retaining a lifetime.
@@ -62,14 +63,14 @@ impl<'a, T: ?Sized> From<&'a T> for RawRef<'a, T> {
     }
 }
 
-impl<T: ?Sized> std::fmt::Debug for RawRef<'_, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.ptr, f)
+impl<T: ?Sized> fmt::Debug for RawRef<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.ptr, f)
     }
 }
 
-impl<T: ?Sized> std::fmt::Pointer for RawRef<'_, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Pointer::fmt(&self.ptr, f)
+impl<T: ?Sized> fmt::Pointer for RawRef<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&self.ptr, f)
     }
 }

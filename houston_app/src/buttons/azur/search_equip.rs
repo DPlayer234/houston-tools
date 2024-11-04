@@ -1,5 +1,5 @@
-use azur_lane::Faction;
 use azur_lane::equip::*;
+use azur_lane::Faction;
 use utils::text::write_str::*;
 
 use crate::buttons::*;

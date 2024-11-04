@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{Debug, Display};
+use std::fmt;
 use std::sync::LazyLock;
 
 use mlua::prelude::*;
@@ -33,6 +33,8 @@ pub struct ShipGroup {
 }
 
 /// A set of data from which [`ShipData`] can be constructed.
+///
+/// [`ShipData`]: azur_lane::ship::ShipData
 #[derive(Debug)]
 pub struct ShipSet<'a> {
     /// The ship ID. Not the group's.
@@ -48,6 +50,8 @@ pub struct ShipSet<'a> {
 }
 
 /// A set of data from which [`ShipSkin`] can be constructed.
+///
+/// [`ShipSkin`]: azur_lane::ship::ShipSkin
 #[derive(Debug)]
 pub struct SkinSet<'a> {
     /// The skin ID.
@@ -101,6 +105,8 @@ pub struct Retrofit<'a> {
 }
 
 /// A set of data from which [`Augment`] can be constructed.
+///
+/// [`Augment`]: azur_lane::equip::Augment
 #[derive(Debug)]
 pub struct AugmentSet<'a> {
     /// The augment's ID.
@@ -119,8 +125,8 @@ pub enum DataError {
 }
 
 impl Error for DataError {}
-impl Display for DataError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DataError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoMlb => f.write_str("no mlb state found"),
             Self::NoStrengthen => f.write_str("no strengthen info found"),

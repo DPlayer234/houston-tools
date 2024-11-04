@@ -9,7 +9,7 @@ mod prelude;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
 
     use serenity::model::prelude::*;
     use serenity::prelude::*;
@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
     let commands = slashies::get_commands(bot_data.config());
 
     let event_handler = HEventHandler {
-        commands: std::sync::Mutex::new(Some(helper::poise_command_builder::build_commands(&commands))),
+        commands: Mutex::new(Some(helper::poise_command_builder::build_commands(&commands))),
     };
 
     let framework = HFramework::builder()
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
 
     /// Type to handle various Discord events.
     struct HEventHandler {
-        commands: std::sync::Mutex<Option<Vec<CustomCreateCommand>>>,
+        commands: Mutex<Option<Vec<CustomCreateCommand>>>,
     }
 
     #[serenity::async_trait]
@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
 
             let commands = self.commands.lock().unwrap().take();
             if let Some(commands) = commands {
-                let data = ctx.data();
+                let data = ctx.data::<HFrameworkData>();
                 if let Err(why) = Self::setup(ctx, &data, &commands).await {
                     log::error!("Failure in ready: {why:?}");
                     *self.commands.lock().unwrap() = Some(commands);

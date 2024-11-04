@@ -1,3 +1,5 @@
+use std::iter;
+
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::join;
@@ -138,7 +140,7 @@ impl View {
                     .label("Retrofit")
             ])),
             _ => rows.push(CreateActionRow::buttons(
-                std::iter::once(base_button)
+                iter::once(base_button)
                     .chain(self.multi_retro_buttons(base_ship))
                     .collect::<Vec<_>>()
             )),

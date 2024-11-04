@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt;
 
 use crate::prelude::*;
 
@@ -42,8 +42,8 @@ pub async fn upload(
 
 struct StorageSize(u32);
 
-impl Display for StorageSize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for StorageSize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const FACTOR: u32 = 1024;
         const KB: u32 = FACTOR;
         const MB: u32 = KB * FACTOR;

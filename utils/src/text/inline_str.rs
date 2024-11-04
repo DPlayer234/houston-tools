@@ -1,3 +1,9 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::mem::transmute;
+use std::ops::{Deref, DerefMut};
+
 /// Represents a [`str`] with a fixed length and ownership semantics.
 /// Essentially, it is to [`&str`](str) what `[T; LEN]` is to `&[T]`.
 ///
@@ -54,7 +60,7 @@ impl<const LEN: usize> InlineStr<LEN> {
         match crate::mem::try_as_sized(str.as_bytes()) {
             Some(slice) => Ok(unsafe {
                 // SAFETY: InlineStr<LEN> is a transparent wrapper around [u8; LEN].
-                std::mem::transmute::<&[u8; LEN], &Self>(slice)
+                transmute::<&[u8; LEN], &Self>(slice)
             }),
             None => Err(FromStrError(())),
         }
@@ -122,7 +128,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     }
 }
 
-impl<const LEN: usize> std::ops::Deref for InlineStr<LEN> {
+impl<const LEN: usize> Deref for InlineStr<LEN> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -130,19 +136,19 @@ impl<const LEN: usize> std::ops::Deref for InlineStr<LEN> {
     }
 }
 
-impl<const LEN: usize> std::ops::DerefMut for InlineStr<LEN> {
+impl<const LEN: usize> DerefMut for InlineStr<LEN> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<const LEN: usize> std::borrow::Borrow<str> for InlineStr<LEN> {
+impl<const LEN: usize> Borrow<str> for InlineStr<LEN> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
 
-impl<const LEN: usize> std::borrow::BorrowMut<str> for InlineStr<LEN> {
+impl<const LEN: usize> BorrowMut<str> for InlineStr<LEN> {
     fn borrow_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
@@ -160,21 +166,21 @@ impl<const LEN: usize> AsMut<str> for InlineStr<LEN> {
     }
 }
 
-impl<const LEN: usize> std::fmt::Display for InlineStr<LEN> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(self.as_str(), f)
+impl<const LEN: usize> fmt::Display for InlineStr<LEN> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.as_str(), f)
     }
 }
 
-impl<const LEN: usize> std::fmt::Debug for InlineStr<LEN> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self.as_str(), f)
+impl<const LEN: usize> fmt::Debug for InlineStr<LEN> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.as_str(), f)
     }
 }
 
-impl<const LEN: usize> std::hash::Hash for InlineStr<LEN> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::hash::Hash::hash(self.as_str(), state)
+impl<const LEN: usize> Hash for InlineStr<LEN> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Hash::hash(self.as_str(), state)
     }
 }
 

@@ -1,13 +1,14 @@
+use std::fmt;
 use std::sync::{LazyLock, OnceLock};
 
 use dashmap::DashMap;
 use poise::reply::CreateReply;
 use serenity::all::{Color, Http, UserId};
 
+use crate::config::HBotConfig;
+
 mod app_emojis;
 mod azur;
-
-use crate::config::HBotConfig;
 
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
@@ -18,11 +19,13 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 /// The error type used for the poise context.
 pub type HError = anyhow::Error;
 /// The full poise context type.
-pub type HContext<'a> = poise::Context<'a, HBotData, HError>;
+pub type HContext<'a> = poise::Context<'a, HFrameworkData, HError>;
 /// The poise command result type.
 pub type HResult = Result<(), HError>;
 /// The poise framework type.
-pub type HFramework = poise::framework::Framework<HBotData, HError>;
+pub type HFramework = poise::framework::Framework<HFrameworkData, HError>;
+/// Actual data type provided to serenity's user data.
+pub type HFrameworkData = HBotData;
 
 pub use azur::HAzurLane;
 pub use app_emojis::HAppEmojis;
@@ -53,8 +56,8 @@ pub struct HArgError(
     pub &'static str
 );
 
-impl std::fmt::Debug for HBotData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for HBotData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(stringify!(HBotData)).finish()
     }
 }

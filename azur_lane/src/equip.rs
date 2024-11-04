@@ -1,6 +1,6 @@
 //! Provides data structures for ship equipment.
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::define_data_enum;
 use crate::ship::*;

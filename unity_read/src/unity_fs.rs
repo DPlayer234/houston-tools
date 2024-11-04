@@ -5,6 +5,7 @@
 
 use std::borrow::Cow;
 use std::cell::Cell;
+use std::fmt;
 use std::io::{Cursor, SeekFrom};
 use std::ops::Deref;
 
@@ -346,15 +347,15 @@ impl<T> Deref for DebugIgnore<T> {
     }
 }
 
-impl<T> std::fmt::Debug for DebugIgnore<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T> fmt::Debug for DebugIgnore<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("<hidden>")
     }
 }
 
-impl<T: std::fmt::Display> std::fmt::Display for DebugIgnore<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
+impl<T: fmt::Display> fmt::Display for DebugIgnore<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
     }
 }
 

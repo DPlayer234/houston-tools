@@ -1,4 +1,6 @@
+use std::fmt;
 use std::hint::black_box;
+
 use super::*;
 
 static DATA: &[u8] = {
@@ -76,7 +78,7 @@ fn invalid_char_b65536_fails() {
     from_b256(encoded).expect_err("U+256 is out of range");
 }
 
-fn round_trip_core<E: std::fmt::Debug>(bytes: &[u8], encode: impl FnOnce(&[u8]) -> String, decode: impl FnOnce(&str) -> Result<Vec<u8>, E>) {
+fn round_trip_core<E: fmt::Debug>(bytes: &[u8], encode: impl FnOnce(&[u8]) -> String, decode: impl FnOnce(&str) -> Result<Vec<u8>, E>) {
     let encoded = black_box(encode(bytes));
     println!("encoded[{}]", encoded.chars().count());
 

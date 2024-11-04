@@ -1,5 +1,5 @@
 mod equip;
 mod weapon;
 
-pub use equip::{EquipStats, AugmentStats};
+pub use equip::{AugmentStats, EquipStats};
 pub use weapon::Details;

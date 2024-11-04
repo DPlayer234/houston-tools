@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::prelude::*;
 use chrono::TimeDelta;
 
-use utils::time::{parse_date_time, get_creation_time};
+use utils::time::{get_creation_time, parse_date_time};
 
 use crate::prelude::*;
 

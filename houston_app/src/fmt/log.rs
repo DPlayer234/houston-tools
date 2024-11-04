@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Result, Write};
 
 use env_logger::fmt::Formatter;
 use log::{Level, Record};
@@ -21,7 +21,7 @@ macro_rules! format_record {
     };
 }
 
-pub fn format_styled(buf: &mut Formatter, record: &Record<'_>) -> std::io::Result<()> {
+pub fn format_styled(buf: &mut Formatter, record: &Record<'_>) -> Result<()> {
     let subdued = utils::join!(RESET, GRAY);
     let level_style = match record.level() {
         Level::Error => utils::join!(RED, BOLD),
@@ -34,6 +34,6 @@ pub fn format_styled(buf: &mut Formatter, record: &Record<'_>) -> std::io::Resul
     format_record!(buf, record => subdued, level_style, RESET)
 }
 
-pub fn format_unstyled(buf: &mut Formatter, record: &Record<'_>) -> std::io::Result<()> {
+pub fn format_unstyled(buf: &mut Formatter, record: &Record<'_>) -> Result<()> {
     format_record!(buf, record => "", "", "")
 }
