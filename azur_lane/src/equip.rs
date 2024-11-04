@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::define_data_enum;
 use crate::ship::*;
 use crate::skill::*;
-use super::Faction;
+use crate::Faction;
 
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]

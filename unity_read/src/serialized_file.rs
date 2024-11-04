@@ -4,9 +4,9 @@ use std::io::{Cursor, Read};
 
 use binrw::{binread, BinRead, NullString};
 
-use crate::{BinReadEndian, FromInt, SeekRead};
 use crate::error::Error;
 use crate::object::{ObjectInfo, ObjectRef};
+use crate::{BinReadEndian, FromInt, SeekRead};
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]

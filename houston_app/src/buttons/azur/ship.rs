@@ -5,8 +5,8 @@ use azur_lane::ship::*;
 use utils::join;
 use utils::text::write_str::*;
 
-use crate::buttons::*;
 use super::AzurParseError;
+use crate::buttons::*;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

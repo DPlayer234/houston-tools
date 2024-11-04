@@ -38,6 +38,7 @@ pub mod azur_lane {
     /// URLs to wiki equip pages.
     pub mod equip {
         use utils::join;
+
         use super::*;
 
         pub const DD_GUN_LIST_URL: &str = join!(WIKI_BASE_URL, "List_of_Destroyer_Guns");

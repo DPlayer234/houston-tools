@@ -1,13 +1,13 @@
 use std::io::{Cursor, Read, Seek};
 use std::mem::swap;
 
-use binrw::{Endian, BinRead, BinResult};
+use binrw::{BinRead, BinResult, Endian};
 use half::f16;
 
-use crate::{define_unity_class, FromInt};
+use super::StreamingInfo;
 use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
-use super::StreamingInfo;
+use crate::{define_unity_class, FromInt};
 
 define_unity_class! {
     pub class Mesh = "Mesh" {

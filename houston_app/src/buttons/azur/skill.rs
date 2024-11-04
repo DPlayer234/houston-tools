@@ -2,8 +2,8 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 
-use crate::buttons::*;
 use super::AzurParseError;
+use crate::buttons::*;
 
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

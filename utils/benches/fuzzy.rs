@@ -1,7 +1,7 @@
 #![allow(unused_crate_dependencies)]
 use std::hint::black_box;
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use utils::fuzzy::Search;
 

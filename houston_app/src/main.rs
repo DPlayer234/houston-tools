@@ -1,10 +1,10 @@
 mod buttons;
-mod slashies;
 mod config;
 mod data;
 mod fmt;
 mod helper;
 mod prelude;
+mod slashies;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

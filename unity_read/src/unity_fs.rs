@@ -10,13 +10,13 @@ use std::io::{Cursor, SeekFrom};
 use std::ops::Deref;
 
 use binrw::{binread, BinRead, NullString};
-use num_enum::TryFromPrimitive;
-use modular_bitfield::{bitfield, BitfieldSpecifier};
 use modular_bitfield::specifiers::*;
+use modular_bitfield::{bitfield, BitfieldSpecifier};
+use num_enum::TryFromPrimitive;
 
-use crate::{SeekRead, FromInt};
 use crate::error::Error;
 use crate::serialized_file::SerializedFile;
+use crate::{FromInt, SeekRead};
 
 // Since UnityFsFile stores a `dyn SeekRead`, it cannot be `Send` and `Sync`.
 // While that would be nice, short of requiring it for *every* reader there is no nice way around it.

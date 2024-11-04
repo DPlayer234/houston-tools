@@ -2,9 +2,9 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
-use crate::buttons::*;
-use super::AzurParseError;
 use super::ship::View as ShipView;
+use super::AzurParseError;
+use crate::buttons::*;
 
 /// View a ship's shadow equip.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

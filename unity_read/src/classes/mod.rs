@@ -2,17 +2,17 @@
 
 use std::io::{Cursor, Seek, SeekFrom};
 
-use crate::{BinReadEndian, SeekRead};
 use crate::error::Error;
 use crate::object::ObjectRef;
 use crate::serialized_file::TypeTreeNode;
+use crate::{BinReadEndian, SeekRead};
 
 mod asset_bundle;
 mod class_id;
 mod mesh;
 mod streaming_info;
-mod texture2d;
 mod text_asset;
+mod texture2d;
 
 pub use asset_bundle::*;
 pub use class_id::*;

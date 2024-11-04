@@ -1,10 +1,10 @@
 use image::RgbaImage;
 use num_enum::FromPrimitive;
 
-use crate::{define_unity_class, FromInt};
+use super::StreamingInfo;
 use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
-use super::StreamingInfo;
+use crate::{define_unity_class, FromInt};
 
 define_unity_class! {
     /// Data for Unity's Texture2D class.

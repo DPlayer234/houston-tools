@@ -6,9 +6,9 @@ use std::ops::{Add, AddAssign};
 use serde::{Deserialize, Serialize};
 
 use crate::define_data_enum;
-use super::equip::*;
-use super::skill::*;
-use super::Faction;
+use crate::equip::*;
+use crate::skill::*;
+use crate::Faction;
 
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]

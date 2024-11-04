@@ -1,10 +1,10 @@
 use std::io::Cursor;
 
-use crate::{define_unity_class, FromInt};
+use super::UnityClass;
 use crate::error::Error;
 use crate::serialized_file::TypeTreeNode;
 use crate::unity_fs::UnityFsFile;
-use super::UnityClass;
+use crate::{define_unity_class, FromInt};
 
 define_unity_class! {
     /// Streaming information for resources.

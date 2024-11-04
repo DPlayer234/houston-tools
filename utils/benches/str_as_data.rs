@@ -1,7 +1,7 @@
 #![allow(unused_crate_dependencies)]
 use std::hint::black_box;
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use smallvec::SmallVec;
 
 use utils::str_as_data::{decode_b65536, to_b65536};

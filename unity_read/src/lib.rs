@@ -14,8 +14,8 @@ pub mod classes;
 pub mod error;
 pub mod object;
 pub mod serialized_file;
-mod unity_fs_common_str;
 pub mod unity_fs;
+mod unity_fs_common_str;
 
 /// Result type with [`Error`](error::Error) error variant.
 pub type Result<T> = std::result::Result<T, error::Error>;

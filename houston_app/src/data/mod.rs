@@ -27,8 +27,8 @@ pub type HFramework = poise::framework::Framework<HFrameworkData, HError>;
 /// Actual data type provided to serenity's user data.
 pub type HFrameworkData = HBotData;
 
-pub use azur::HAzurLane;
 pub use app_emojis::HAppEmojis;
+pub use azur::HAzurLane;
 
 /// The global bot data. Only one instance exists per bot.
 pub struct HBotData {
