@@ -237,40 +237,76 @@ impl ButtonMessage for View {
 
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
+    use utils::text::write_str::*;
     use utils::text::InlineStr;
 
-    return join("\n\n", skill.barrages.iter().filter_map(get_skill_barrage_summary)).unwrap_or_else(String::new);
+    let mut buf = String::new();
+    write_join_map(&mut buf, "\n\n", &skill.barrages, write_skill_barrage_summary);
 
-    macro_rules! idk {
-        ($opt:expr, $($arg:tt)*) => {
-            match $opt {
-                None => None,
-                Some(v) => Some(format!($($arg)*, sum = v))
+    if buf.is_empty() {
+        // this happens if the barrage were to be entirely
+        // aircraft without surface damage barrages.
+        buf.push_str("<recon only>");
+    }
+
+    return buf;
+
+    fn write_join_map<I, F>(buf: &mut String, join: &str, iter: I, mut f: F) -> bool
+    where
+        I: IntoIterator,
+        F: FnMut(&mut String, I::Item) -> bool,
+    {
+        let mut any = false;
+        let mut last = false;
+
+        for item in iter {
+            if last {
+                buf.push_str(join);
             }
-        };
+
+            last = f(buf, item);
+            any |= last;
+        }
+
+        any
     }
 
-    fn get_skill_barrage_summary(barrage: &SkillBarrage) -> Option<String> {
-        idk!(
-            join("\n", barrage.attacks.iter().filter_map(get_skill_attack_summary)),
-            "__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n{sum}"
-            // `Fix.  | 12 x  58.0 | Nor.: 120/ 80/ 80 | 100% AVI | ---`
-        )
+    fn try_write_or_undo<F>(buf: &mut String, f: F) -> bool
+    where
+        F: FnOnce(&mut String) -> bool,
+    {
+        let start = buf.len();
+        let any = f(buf);
+        if !any {
+            buf.truncate(start);
+        }
+
+        any
     }
 
-    fn get_skill_attack_summary(attack: &SkillAttack) -> Option<String> {
+    fn write_skill_barrage_summary(buf: &mut String, barrage: &SkillBarrage) -> bool {
+        try_write_or_undo(buf, |buf| {
+            buf.push_str("__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n");
+            write_join_map(buf, "\n", &barrage.attacks, write_skill_attack_summary)
+        })
+    }
+
+    fn write_skill_attack_summary(buf: &mut String, attack: &SkillAttack) -> bool {
         match &attack.weapon.data {
-            WeaponData::Bullets(bullets) => get_barrage_summary(bullets, Some(attack.target)),
-            WeaponData::Aircraft(aircraft) => idk!(
-                get_aircraft_summary(aircraft),
-                "`{: >5} |{: >3} x Aircraft                             |    `\n{sum}",
-                attack.target.short_name(), aircraft.amount
-            ),
-            _ => None
+            WeaponData::Bullets(bullets) => write_barrage_summary(buf, bullets, Some(attack.target)),
+            WeaponData::Aircraft(aircraft) => try_write_or_undo(buf, |buf| {
+                writeln_str!(
+                    buf,
+                    "`{: >5} |{: >3} x Aircraft                             |    `",
+                    attack.target.short_name(), aircraft.amount
+                );
+                write_aircraft_summary(buf, aircraft)
+            }),
+            _ => false
         }
     }
 
-    fn get_barrage_summary(barrage: &Barrage, target: Option<SkillAttackTarget>) -> Option<String> {
+    fn write_barrage_summary(buf: &mut String, barrage: &Barrage, target: Option<SkillAttackTarget>) -> bool {
         struct Value<'a> { amount: u32, bullet: &'a Bullet }
 
         fn match_key(a: &Bullet, b: &Bullet) -> bool {
@@ -288,10 +324,11 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             }
         }
 
-        join("\n", sets.into_iter().map(|Value { amount, bullet }| {
+        write_join_map(buf, "\n", sets, |buf, Value { amount, bullet }| {
             let ArmorModifiers(l, m, h) = bullet.modifiers;
-            let sprapnel_mark = if bullet.kind == BulletKind::Shrapnel { "*" } else { " " };
-            format!(
+            let shrapnel_mark = if bullet.kind == BulletKind::Shrapnel { "*" } else { " " };
+            write_str!(
+                buf,
                 // damage with coeff |
                 // ammo type & mods |
                 // % of scaling stat |
@@ -303,12 +340,20 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 {: >4.0}% {: <3} | \
                 {}`",
                 target.map_or("", |t| t.short_name()),
-                amount, barrage.damage * barrage.coefficient, sprapnel_mark,
+                amount, barrage.damage * barrage.coefficient, shrapnel_mark,
                 bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
                 barrage.scaling * 100f64, barrage.scaling_stat.name(),
                 get_bullet_flags(bullet),
-            )
-        }))
+            );
+            true
+        })
+    }
+
+    fn write_aircraft_summary(buf: &mut String, aircraft: &Aircraft) -> bool {
+        write_join_map(buf, "\n", &aircraft.weapons, |buf, weapon| match &weapon.data {
+            WeaponData::Bullets(barrage) => write_barrage_summary(buf, barrage, None),
+            _ => false,
+        })
     }
 
     fn get_bullet_flags(bullet: &Bullet) -> InlineStr<3> {
@@ -319,21 +364,5 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
 
         // SAFETY: Always ASCII here.
         unsafe { InlineStr::from_utf8_unchecked(res) }
-    }
-
-    fn get_aircraft_summary(aircraft: &Aircraft) -> Option<String> {
-        join("\n", aircraft.weapons.iter().filter_map(|weapon| match &weapon.data {
-            WeaponData::Bullets(barrage) => get_barrage_summary(barrage, None),
-            _ => None
-        }))
-    }
-
-    fn join(separator: &str, mut items: impl Iterator<Item = String>) -> Option<String> {
-        let mut result = items.next()?;
-        for item in items {
-            result.push_str(separator);
-            result.push_str(&item);
-        }
-        Some(result)
     }
 }
