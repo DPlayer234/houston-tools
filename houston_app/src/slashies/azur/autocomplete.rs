@@ -1,19 +1,30 @@
-use serenity::all::AutocompleteChoice;
+//use std::borrow::Cow;
+
+use serenity::all::{AutocompleteChoice, CreateAutocompleteResponse};
 
 use crate::data::HContext;
+//use crate::data::{HContext, HBotData};
 
-// when poise removes the "magic" here and switches to `CreateAutocompleteResponse`,
-// just collect the iter and wrap it in that struct. ensure the `take(25)` stays.
-// also revisit whether we can borrow the `e.name` at that point.
+// the commented out code here is for when `data_ref` becomes available
+// there is currently a PR for it active and it's necessary to return
+// borrows from the user data
 
 macro_rules! make_autocomplete {
     ($fn_name:ident, $by_prefix:ident, $id:ident) => {
-        pub async fn $fn_name<'a>(ctx: HContext<'a>, partial: &'a str) -> Vec<AutocompleteChoice<'static>> {
-            ctx.data().azur_lane()
+        pub async fn $fn_name<'a>(ctx: HContext<'a>, partial: &'a str) -> CreateAutocompleteResponse<'a> {
+            let choices: Vec<_> = ctx
+                .data()
+                //.serenity_context()
+                //.data_ref::<HBotData>()
+                .azur_lane()
                 .$by_prefix(partial)
                 .take(25)
                 .map(|e| AutocompleteChoice::new(e.name.clone(), format!("/id:{}", e.$id)))
-                .collect()
+                //.map(|e| AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.$id))))
+                .collect();
+
+            CreateAutocompleteResponse::new()
+                .set_choices(choices)
         }
     };
 }
