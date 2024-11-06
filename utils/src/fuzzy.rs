@@ -38,6 +38,7 @@
 //! - `hello-world`
 //! - `(hELLO)(wORLD)`
 
+use std::cmp;
 use std::collections::HashMap;
 use std::ptr::{self, NonNull};
 use std::vec::IntoIter as BoxIter;
@@ -224,7 +225,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let match_count = total * self.min_match_score;
 
         results.retain(|r| f64::from(r.count) >= match_count);
-        results.sort_unstable_by(|a, b| a.cmp(b).reverse());
+        results.sort_unstable();
 
         // box the results so we don't copy the data around too much.
         // this isn't _massive_ (only about 260 bytes), but since every
@@ -255,6 +256,8 @@ pub struct Match<'st, T> {
     pub score: f64,
 
     /// The search entry's index.
+    ///
+    /// This index is returned by [`Search::insert`] and represents the insert position.
     pub index: usize,
 
     /// The associated data.
@@ -268,11 +271,25 @@ impl<T> Clone for Match<'_, T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MatchInfo {
-    // for Ord: `count` first so it orders by it first
     count: MatchIndex,
     index: MatchIndex,
+}
+
+impl Ord for MatchInfo {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // sort by count desc
+        // then by index asc
+        self.count.cmp(&other.count).reverse()
+            .then_with(|| self.index.cmp(&other.index))
+    }
+}
+
+impl PartialOrd for MatchInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// An iterator over [`Matches`](Match) returned by [`Search::search`].

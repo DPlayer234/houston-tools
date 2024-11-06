@@ -1,26 +1,18 @@
-//use std::borrow::Cow;
+use std::borrow::Cow;
 
 use serenity::all::{AutocompleteChoice, CreateAutocompleteResponse};
 
-use crate::data::HContext;
-//use crate::data::{HContext, HBotData};
-
-// the commented out code here is for when `data_ref` becomes available
-// there is currently a PR for it active and it's necessary to return
-// borrows from the user data
+use crate::data::{HContext, HContextExtensions};
 
 macro_rules! make_autocomplete {
     ($fn_name:ident, $by_prefix:ident, $id:ident) => {
         pub async fn $fn_name<'a>(ctx: HContext<'a>, partial: &'a str) -> CreateAutocompleteResponse<'a> {
             let choices: Vec<_> = ctx
-                .data()
-                //.serenity_context()
-                //.data_ref::<HBotData>()
+                .data_ref()
                 .azur_lane()
                 .$by_prefix(partial)
                 .take(25)
-                .map(|e| AutocompleteChoice::new(e.name.clone(), format!("/id:{}", e.$id)))
-                //.map(|e| AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.$id))))
+                .map(|e| AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.$id))))
                 .collect();
 
             CreateAutocompleteResponse::new()

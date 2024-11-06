@@ -146,7 +146,7 @@ impl HUserData {
 }
 
 /// Extension trait for the poise context.
-pub trait HContextExtensions {
+pub trait HContextExtensions<'a> {
     /// Gets a copy of the user data for the current user.
     #[must_use]
     fn get_user_data(&self) -> HUserData;
@@ -161,15 +161,18 @@ pub trait HContextExtensions {
     /// Always creates an ephemeral reply.
     #[must_use]
     fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new>;
+
+    #[must_use]
+    fn data_ref(&self) -> &'a HBotData;
 }
 
-impl HContextExtensions for HContext<'_> {
+impl<'a> HContextExtensions<'a> for HContext<'a> {
     fn get_user_data(&self) -> HUserData {
-        self.data().get_user_data(self.author().id)
+        self.data_ref().get_user_data(self.author().id)
     }
 
     fn set_user_data(&self, data: HUserData) {
-        self.data().set_user_data(self.author().id, data)
+        self.data_ref().set_user_data(self.author().id, data)
     }
 
     fn create_reply<'new>(&self) -> CreateReply<'new> {
@@ -178,5 +181,9 @@ impl HContextExtensions for HContext<'_> {
 
     fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new> {
         CreateReply::default().ephemeral(true)
+    }
+
+    fn data_ref(&self) -> &'a HBotData {
+        self.serenity_context().data_ref()
     }
 }
