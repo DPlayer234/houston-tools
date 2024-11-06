@@ -74,7 +74,7 @@ impl HBotData {
             azur_lane: LazyLock::new(match data_path {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
-            })
+            }),
         }
     }
 

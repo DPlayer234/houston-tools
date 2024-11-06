@@ -202,7 +202,7 @@ impl HAzurLane {
         // It may also have a None entry if the image was requested but not found.
         match self.chibi_sprite_cache.get(image_key) {
             Some(entry) => *entry,
-            _ => self.load_and_cache_chibi_image(image_key),
+            None => self.load_and_cache_chibi_image(image_key),
         }
     }
 
@@ -218,7 +218,7 @@ impl HAzurLane {
                 use dashmap::mapref::entry::Entry;
 
                 match self.chibi_sprite_cache.entry(image_key.to_owned()) {
-                    // data race: loaded concurrently, someone else was faster. drop the current data.
+                    // data race: loaded concurrently, someone else was faster. drop the newly read data.
                     Entry::Occupied(entry) => *entry.get(),
                     // still empty: leak the current data via Box and store the ref.
                     // we only leak this once per `image_key`, so the memory increase is capped.

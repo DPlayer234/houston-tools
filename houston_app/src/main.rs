@@ -71,8 +71,7 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
-            let commands = self.commands.lock().unwrap().take();
-            if let Some(commands) = commands {
+            if let Some(commands) = self.take_commands() {
                 let data = ctx.data::<HFrameworkData>();
                 if let Err(why) = Self::setup(ctx, &data, &commands).await {
                     log::error!("Failure in ready: {why:?}");
@@ -87,6 +86,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     impl HEventHandler {
+        fn take_commands(&self) -> Option<Vec<CustomCreateCommand>> {
+            self.commands.lock().unwrap().take()
+        }
+
         async fn setup(
             ctx: Context,
             data: &HBotData,
