@@ -80,16 +80,15 @@ impl View {
         ]));
 
         if ship.skins.len() > 1 {
-            let options = CreateSelectMenuKind::String {
-                options: ship.skins.iter().take(25).enumerate()
-                    .map(|(index, skin)| self.select_with_skin_index(skin, index))
-                    .collect()
-            };
+            let options: Vec<_> = ship.skins.iter().take(25).enumerate()
+                .map(|(index, skin)| self.select_with_skin_index(skin, index))
+                .collect();
 
-            let select = CreateSelectMenu::new(self.to_custom_id(), options)
-                .placeholder(&skin.name);
-
-            components.push(CreateActionRow::SelectMenu(select));
+            components.push(super::create_string_select_menu_row(
+                self.to_custom_id(),
+                options,
+                &skin.name,
+            ));
         }
 
         if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {

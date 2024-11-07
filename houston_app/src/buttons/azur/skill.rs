@@ -89,7 +89,9 @@ impl View {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
-        let mut embed = CreateEmbed::new().color(ship.rarity.color_rgb()).author(super::get_ship_wiki_url(base_ship));
+        let mut embed = CreateEmbed::new()
+            .color(ship.rarity.color_rgb())
+            .author(super::get_ship_wiki_url(base_ship));
 
         let mut components = Vec::new();
         if let Some(back) = &self.back {
@@ -138,8 +140,12 @@ impl View {
 
     /// Modifies the create-reply with preresolved augment data.
     fn modify_with_augment<'a>(self, create: CreateReply<'a>, augment: &'a Augment) -> CreateReply<'a> {
-        let embed = CreateEmbed::new().color(ShipRarity::SR.color_rgb()).author(CreateEmbedAuthor::new(&augment.name));
-        let skills = augment.effect.iter().chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
+        let embed = CreateEmbed::new()
+            .color(augment.rarity.color_rgb())
+            .author(CreateEmbedAuthor::new(&augment.name));
+
+        let skills = augment.effect.iter()
+            .chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
 
         let nav_row = self.back.as_ref().map(|back| CreateActionRow::buttons(vec![
             CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back")

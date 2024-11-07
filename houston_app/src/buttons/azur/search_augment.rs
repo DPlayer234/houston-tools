@@ -69,8 +69,11 @@ impl View {
             rows.push(pagination);
         }
 
-        let options = CreateSelectMenuKind::String { options: options.into() };
-        rows.push(CreateActionRow::SelectMenu(CreateSelectMenu::new(self.to_custom_id(), options).placeholder("View augment module...")));
+        rows.push(super::create_string_select_menu_row(
+            self.to_custom_id(),
+            options,
+            "View augment module...",
+        ));
 
         create.embed(embed).components(rows)
     }

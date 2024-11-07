@@ -146,7 +146,7 @@ pub mod handler {
         args.reply(ButtonContext {
             interaction,
             http: ctx.http(),
-            data: &ctx.data::<HFrameworkData>(),
+            data: ctx.data_ref::<HFrameworkData>(),
         }).await
     }
 

@@ -73,8 +73,11 @@ impl View {
             rows.push(pagination);
         }
 
-        let options = CreateSelectMenuKind::String { options: options.into() };
-        rows.push(CreateActionRow::SelectMenu(CreateSelectMenu::new(self.to_custom_id(), options).placeholder("View ship...")));
+        rows.push(super::create_string_select_menu_row(
+            self.to_custom_id(),
+            options,
+            "View ship...",
+        ));
 
         create.embed(embed).components(rows)
     }
