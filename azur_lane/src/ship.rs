@@ -83,7 +83,7 @@ pub struct ShipStatBlock {
 }
 
 /// Represents a single ship stat. Its value can be calculated on demand.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct ShipStat(f64, f64, f64);
 
 /// A singular normal equipment slot of a ship.
@@ -443,12 +443,6 @@ impl ShipStat {
     #[must_use]
     pub fn calc(&self, level: u32, affinity: f64) -> f64 {
         (self.base() + self.growth() * f64::from(level - 1) * 0.001) * affinity + self.fixed()
-    }
-}
-
-impl Default for ShipStat {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

@@ -1,4 +1,3 @@
-use std::fmt;
 use std::sync::{LazyLock, OnceLock};
 
 use dashmap::DashMap;
@@ -32,7 +31,16 @@ pub type HFrameworkData = HBotData;
 pub use app_emojis::HAppEmojis;
 pub use azur::HAzurLane;
 
+/// A simple error that can return any error message.
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{0}")]
+pub struct HArgError(
+    /// The error message
+    pub &'static str
+);
+
 /// The global bot data. Only one instance exists per bot.
+#[derive(Debug)]
 pub struct HBotData {
     /// The bot configuration.
     config: HBotConfig,
@@ -42,26 +50,6 @@ pub struct HBotData {
     user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
-}
-
-/// User-specific data.
-#[derive(Debug, Clone)]
-pub struct HUserData {
-    pub ephemeral: bool
-}
-
-/// A simple error that can return any error message.
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("{0}")]
-pub struct HArgError(
-    /// The error message
-    pub &'static str
-);
-
-impl fmt::Debug for HBotData {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct(stringify!(HBotData)).finish()
-    }
 }
 
 impl HBotData {
@@ -128,6 +116,12 @@ impl HBotData {
     pub fn azur_lane(&self) -> &HAzurLane {
         &self.azur_lane
     }
+}
+
+/// User-specific data.
+#[derive(Debug, Clone)]
+pub struct HUserData {
+    pub ephemeral: bool
 }
 
 impl Default for HUserData {
