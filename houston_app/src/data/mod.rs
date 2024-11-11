@@ -11,6 +11,9 @@ use crate::config::HBotConfig;
 mod app_emojis;
 mod azur;
 
+#[cfg(feature = "db")]
+pub mod db;
+
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 
@@ -50,6 +53,9 @@ pub struct HBotData {
     user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
+    /// Database connection.
+    #[cfg(feature = "db")]
+    database: OnceLock<db::Database>,
 }
 
 impl HBotData {
@@ -65,6 +71,8 @@ impl HBotData {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
             }),
+            #[cfg(feature = "db")]
+            database: OnceLock::new(),
         }
     }
 
@@ -115,6 +123,25 @@ impl HBotData {
     #[must_use]
     pub fn azur_lane(&self) -> &HAzurLane {
         &self.azur_lane
+    }
+
+    pub async fn connect(&self) -> HResult {
+        #[cfg(feature = "db")]
+        if let Some(uri) = &self.config.mongodb_uri {
+            self.database
+                .set(db::Database::connect(uri).await?)
+                .expect("do not call connect more than once");
+
+            log::info!("Connected to MongoDB.");
+        }
+
+        Ok(())
+    }
+
+    #[cfg(feature = "db")]
+    pub fn database(&self) -> anyhow::Result<&db::Database> {
+        use anyhow::Context;
+        self.database.get().context("database is not yet connected")
     }
 }
 

@@ -1,6 +1,7 @@
 mod buttons;
 mod config;
 mod data;
+mod events;
 mod fmt;
 mod helper;
 mod prelude;
@@ -17,19 +18,25 @@ async fn main() -> anyhow::Result<()> {
     use data::*;
     use helper::poise_command_builder::CustomCreateCommand;
 
-    /// Intents used by this app.
-    const INTENTS: GatewayIntents = GatewayIntents::empty();
-
     // SAFETY: No other code running that accesses this yet.
     unsafe { utils::time::mark_startup_time(); }
 
-    let config = build_config()?;
+    // Intents used by this app.
+    let mut intents = GatewayIntents::empty();
+
+    let config = build_config()?.validate()?;
     init_logging(config.log);
 
     log::info!("Starting...");
 
+    // configure intents for optional features
+    if !config.bot.starboard.is_empty() {
+        intents |= events::starboard::INTENTS;
+    }
+
     let bot_data = Arc::new(HBotData::new(config.bot));
 
+    bot_data.connect().await?;
     let loader = tokio::task::spawn(
         load_azur_lane(Arc::clone(&bot_data))
     );
@@ -49,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
         })
         .build();
 
-    let mut client = Client::builder(&config.discord.token, INTENTS)
+    let mut client = Client::builder(&config.discord.token, intents)
         .data(Arc::clone(&bot_data))
         .framework(framework)
         .event_handler(event_handler)
@@ -81,7 +88,11 @@ async fn main() -> anyhow::Result<()> {
         }
 
         async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-            buttons::handler::interaction_create(ctx, interaction).await
+            buttons::handler::interaction_create(ctx, interaction).await;
+        }
+
+        async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
+            events::starboard::handle_reaction(ctx, reaction).await;
         }
     }
 
