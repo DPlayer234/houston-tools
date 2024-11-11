@@ -50,8 +50,12 @@ impl View {
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
+        let author = CreateEmbedAuthor::new("Equipments")
+            .url(config::azur_lane::EQUIPMENT_LIST_URL);
+
         if options.is_empty() {
             let embed = CreateEmbed::new()
+                .author(author)
                 .color(ERROR_EMBED_COLOR)
                 .description("No results for that filter.");
 
@@ -59,7 +63,7 @@ impl View {
         }
 
         let embed = CreateEmbed::new()
-            .title("Equipments")
+            .author(author)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
             .color(DEFAULT_EMBED_COLOR);

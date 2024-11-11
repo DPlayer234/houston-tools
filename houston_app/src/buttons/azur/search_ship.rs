@@ -54,8 +54,12 @@ impl View {
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
         }
 
+        let author = CreateEmbedAuthor::new("Ships")
+            .url(config::azur_lane::SHIP_LIST_URL);
+
         if options.is_empty() {
             let embed = CreateEmbed::new()
+                .author(author)
                 .color(ERROR_EMBED_COLOR)
                 .description("No results for that filter.");
 
@@ -63,7 +67,7 @@ impl View {
         }
 
         let embed = CreateEmbed::new()
-            .title("Ships")
+            .author(author)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
             .color(DEFAULT_EMBED_COLOR);

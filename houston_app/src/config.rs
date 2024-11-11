@@ -32,13 +32,16 @@ pub struct HLogConfig {
 }
 
 pub mod azur_lane {
+    use utils::join;
+
     /// The base URL to the Azur Lane wiki.
     pub const WIKI_BASE_URL: &str = "https://azurlane.koumakan.jp/wiki/";
 
+    pub const SHIP_LIST_URL: &str = join!(WIKI_BASE_URL, "List_of_Ships");
+    pub const EQUIPMENT_LIST_URL: &str = join!(WIKI_BASE_URL, "Equipment_List");
+
     /// URLs to wiki equip pages.
     pub mod equip {
-        use utils::join;
-
         use super::*;
 
         pub const DD_GUN_LIST_URL: &str = join!(WIKI_BASE_URL, "List_of_Destroyer_Guns");

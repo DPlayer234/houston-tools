@@ -136,6 +136,7 @@ async fn search_augment(
     #[description = "A name to search for."]
     name: Option<String>,
     #[description = "The allowed hull type."]
+    #[rename = "hull-type"]
     hull_type: Option<EHullType>,
     #[description = "The rarity to select."]
     rarity: Option<EAugmentRarity>,

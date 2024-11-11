@@ -50,8 +50,12 @@ impl View {
             options.push(CreateSelectMenuOption::new(&augment.name, view.to_custom_id()));
         }
 
+        let author = CreateEmbedAuthor::new("Augment Modules")
+            .url(config::azur_lane::equip::AUGMENT_LIST_URL);
+
         if options.is_empty() {
             let embed = CreateEmbed::new()
+                .author(author)
                 .color(ERROR_EMBED_COLOR)
                 .description("No results for that filter.");
 
@@ -59,7 +63,7 @@ impl View {
         }
 
         let embed = CreateEmbed::new()
-            .title("Augment Modules")
+            .author(author)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
             .color(DEFAULT_EMBED_COLOR);
@@ -109,7 +113,10 @@ impl Filter {
     {
         fn next_hull_type<'a>(f: &Filter, data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a> {
             match f.hull_type {
-                Some(filter) => next_rarity(f, data, iter.filter(move |s| s.usability.hull_types().is_some_and(|h| h.contains(&filter)))),
+                Some(filter) => next_rarity(f, data, iter.filter(move |s| match &s.usability {
+                    AugmentUsability::HullTypes(h) => h.contains(&filter),
+                    AugmentUsability::UniqueShipId(id) => data.ship_by_id(*id).is_some_and(|s| s.hull_type == filter),
+                })),
                 None => next_rarity(f, data, iter),
             }
         }
