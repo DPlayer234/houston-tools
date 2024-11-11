@@ -1,6 +1,7 @@
 use poise::{Command, ContextMenuCommandAction};
 use serde::Serialize;
-use serenity::all::{CommandOptionType, CommandType, CreateCommandOption};
+use serenity::builder::CreateCommandOption;
+use serenity::model::application::{CommandOptionType, CommandType};
 
 // Custom Create Command payload type to include new data
 #[derive(Clone, Debug, Serialize)]

@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 /// Note that this _does not_ imply that it's safe to dereference.
 /// It is just a helper for non-null pointers to immutable data.
 #[repr(transparent)]
-pub(crate) struct RawRef<'a, T: ?Sized> {
+pub struct RawRef<'a, T: ?Sized> {
     pub ptr: NonNull<T>,
     _lifetime: PhantomData<&'a T>,
 }

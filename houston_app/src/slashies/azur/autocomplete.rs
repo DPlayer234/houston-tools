@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use serenity::all::{AutocompleteChoice, CreateAutocompleteResponse};
+use serenity::builder::{AutocompleteChoice, CreateAutocompleteResponse};
 
 use crate::data::{HContext, HContextExtensions};
 

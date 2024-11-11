@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use crate::private::str::Indices;
+
 const ELLIPSIS: char = '\u{2026}';
 
 /// Truncates a string to the given `len` (in terms of [`char`], not [`u8`]).
@@ -75,9 +77,10 @@ fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
 
     if s.len() <= len { return None; }
 
-    let mut indices = s.char_indices();
-    let (end_at, _) = indices.nth(len - 1)?;
-    indices.next().and(Some(end_at))
+    let mut indices = Indices::new(s);
+    let end_at = indices.nth(len - 1)?;
+    indices.next()?;
+    Some(end_at)
 }
 
 /// Exists to support the [`truncate`] function.
@@ -158,10 +161,10 @@ mod test {
         truncate(&mut to_exact, 5);
         truncate(&mut too_much, 10);
 
-        assert!(to_single == "…" && to_single.chars().count() == 1);
-        assert!(to_one_down == "hel…" && to_one_down.chars().count() == 4);
-        assert!(to_exact == "hello" && to_exact.chars().count() == 5);
-        assert!(too_much == "hello" && too_much.chars().count() == 5);
+        assert!(to_single == "…" && to_single.chars().count() == 1, "\"{to_single}\" == \"…\"");
+        assert!(to_one_down == "hel…" && to_one_down.chars().count() == 4, "\"{to_one_down}\" == \"hel…\"");
+        assert!(to_exact == "hello" && to_exact.chars().count() == 5, "\"{to_exact}\" == \"hello\"");
+        assert!(too_much == "hello" && too_much.chars().count() == 5, "\"{too_much}\" == \"hello\"");
     }
 
     #[test]

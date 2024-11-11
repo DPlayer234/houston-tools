@@ -3,7 +3,8 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result};
 
-use serenity::all::{ResolvedOption, ResolvedTarget, ResolvedValue, User};
+use serenity::model::application::{ResolvedOption, ResolvedTarget, ResolvedValue};
+use serenity::model::user::User;
 
 /// Gets a unique username for this user.
 ///

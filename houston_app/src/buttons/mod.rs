@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use utils::fields::FieldMut;
 
-pub use crate::prelude::*;
+use crate::prelude::*;
 
 pub mod azur;
 pub mod common;
@@ -243,7 +243,7 @@ pub struct ButtonContext<'a> {
     /// The source interaction.
     pub interaction: &'a ComponentInteraction,
     /// The HTTP API that may be used.
-    pub http: &'a serenity::all::Http,
+    pub http: &'a serenity::http::Http,
     /// The bot data.
     pub data: &'a HBotData,
 }

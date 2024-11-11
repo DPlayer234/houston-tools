@@ -3,7 +3,9 @@ use std::sync::{LazyLock, OnceLock};
 
 use dashmap::DashMap;
 use poise::reply::CreateReply;
-use serenity::all::{Color, Http, UserId};
+use serenity::http::Http;
+use serenity::model::id::UserId;
+use serenity::model::Color;
 
 use crate::config::HBotConfig;
 

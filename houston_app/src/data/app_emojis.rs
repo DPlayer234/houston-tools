@@ -1,6 +1,8 @@
 use std::sync::LazyLock;
 
-use serenity::all::{Emoji, Http, ReactionType};
+use serenity::http::Http;
+use serenity::model::channel::ReactionType;
+use serenity::model::guild::Emoji;
 
 use azur_lane::ship::HullType;
 
