@@ -1,3 +1,4 @@
+use rand::prelude::*;
 use serenity::prelude::*;
 
 use crate::prelude::*;
@@ -44,6 +45,8 @@ pub struct StarboardEntry {
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,
     pub reacts: u8,
+    #[serde(default = "Vec::new")]
+    pub notices: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -127,6 +130,17 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
     let data = ctx.data_ref::<HBotData>();
+
+    // ignore messages in board channels
+    let is_board = data.config()
+        .starboard
+        .iter()
+        .any(|b| b.channel == reaction.channel_id);
+
+    if is_board {
+        return Ok(());
+    }
+
     let board = data.config()
         .starboard
         .iter()
@@ -136,14 +150,10 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         return Ok(());
     };
 
-    // we can be in any channel except the board channel
-    if board.channel == reaction.channel_id {
-        return Ok(());
-    }
-
     let message = reaction.message(&ctx).await?;
 
     // cannot starboard yourself
+    // there are further checks down to ignore the user's reaction later on
     if message.author.id == reaction.user_id.context("user always set in react")? {
         return Ok(());
     }
@@ -230,8 +240,16 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
 
             // pin the message if the update just now changed the value
             if !record.pinned {
+                let notice = board.notices
+                    .choose(&mut thread_rng())
+                    .map(String::as_str)
+                    .unwrap_or("{user}, your post made it! Wow!");
+
+                let notice = CreateMessage::new()
+                    .content(notice.replace("{user}", &format!("<@{}>", message.author.id)));
+
                 // CMBK: replace with proper builder when forwarding is supported
-                let payload = simd_json::json!({
+                let forward = simd_json::json!({
                     "message_reference": {
                         "type": 1, // forward
                         "message_id": message.id,
@@ -239,7 +257,8 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
                     }
                 });
 
-                ctx.http.send_message(board.channel, Vec::new(), &payload).await?;
+                board.channel.send_message(&ctx.http, notice).await?;
+                ctx.http.send_message(board.channel, Vec::new(), &forward).await?;
                 log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
             }
         }
