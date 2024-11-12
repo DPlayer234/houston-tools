@@ -1,5 +1,6 @@
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
+use mongodb::options::IndexOptions;
 use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, GuildId, MessageId, UserId};
@@ -8,6 +9,7 @@ use serenity::model::id::{ChannelId, GuildId, MessageId, UserId};
 pub struct Message {
     pub _id: ObjectId,
     pub board: ChannelId,
+    pub channel: ChannelId,
     pub message: MessageId,
     pub user: UserId,
     #[serde(default)]
@@ -25,6 +27,12 @@ pub struct Score {
     pub score: i64,
 }
 
+fn name(name: &str) -> IndexOptions {
+    IndexOptions::builder()
+        .name(name.to_owned())
+        .build()
+}
+
 impl Message {
     pub fn collection(db: &Database) -> Collection<Self> {
         db.collection("starboard.messages")
@@ -33,8 +41,17 @@ impl Message {
     pub fn indices() -> impl IntoIterator<Item = IndexModel> {
         [
             IndexModel::builder()
+                .options(name("board-message"))
                 .keys(doc! {
                     "board": 1,
+                    "message": 1,
+                })
+                .build(),
+            IndexModel::builder()
+                .options(name("top-posts-sort"))
+                .keys(doc! {
+                    "board": 1,
+                    "score": 1,
                     "message": 1,
                 })
                 .build(),
@@ -50,6 +67,7 @@ impl Score {
     pub fn indices() -> impl IntoIterator<Item = IndexModel> {
         [
             IndexModel::builder()
+                .options(name("board-user"))
                 .keys(doc! {
                     "guild": 1,
                     "board": 1,
@@ -57,6 +75,7 @@ impl Score {
                 })
                 .build(),
             IndexModel::builder()
+                .options(name("top-sort"))
                 .keys(doc! {
                     "guild": 1,
                     "board": 1,

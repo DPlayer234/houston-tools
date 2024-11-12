@@ -78,6 +78,51 @@ Additionally, when Azur Lane data is loaded, the azur command becomes available.
 | azur search-augment | Searches for augment modules. |
 | azur reload-time    | Calculates the actual reload time for a weapon. |
 
+## Features requiring a database
+
+The following features are optional and require a MongoDB database. Configure its URI in the config, f.e.:
+
+```toml
+[bot]
+mongodb_uri = "mongodb://localhost/houston-tools"
+```
+
+### Starboard
+
+Starboard will forward messages with a certain amount of reactions to another channel.
+Furthermore, for each board, it will track a leaderboard score.
+
+Starboard must be configured:
+
+```toml
+[[bot.starboard]]
+guild = 1293210831923974204
+channel = 1305620816272166962
+emoji = "⭐"
+reacts = 3
+notices = [
+    "An amazing post, {user}!",
+    "{user}, the stars aligned.",
+]
+
+[[bot.starboard]]
+guild = 1293210831923974204
+channel = 1305620834450407606
+emoji = "💀"
+reacts = 3
+notices = [
+    "What a stinker, {user}!",
+    "{user}, please stop.",
+]
+```
+
+The following commands will be enabled:
+
+| Command             | Description |
+|:------------------- |:----------- |
+| starboard top       | Shows a board's top users. |
+| starboard top-posts | Shows the most-reacted posts in a board. |
+
 # Azur Lane Data Collector
 
 > [!WARNING]

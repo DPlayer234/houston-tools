@@ -5,13 +5,14 @@ use crate::buttons::prelude::*;
 pub struct View {
     pub board: ChannelId,
     pub page: u16,
-    pub ephemeral: bool,
 }
 
-#[cfg(not(feature = "db"))]
-impl ButtonArgsReply for View {
-    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
-        anyhow::bail!("starboard not supported with db");
+impl View {
+    pub fn new(board: ChannelId) -> Self {
+        Self {
+            board,
+            page: 0,
+        }
     }
 }
 
@@ -70,6 +71,10 @@ impl View {
             );
         }
 
+        if description.is_empty() {
+            "<None>".clone_into(&mut description);
+        }
+
         let embed = CreateEmbed::new()
             .title(format!("<#{}> Leaderboards", board.channel))
             .color(DEFAULT_EMBED_COLOR)
@@ -85,6 +90,13 @@ impl View {
             .components(components);
 
         Ok(reply)
+    }
+}
+
+#[cfg(not(feature = "db"))]
+impl ButtonArgsReply for View {
+    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
+        anyhow::bail!("starboard not supported with db");
     }
 }
 

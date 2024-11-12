@@ -102,8 +102,10 @@ define_button_args! {
     ViewSearchEquip(azur::buttons::search_equip::View),
     /// Open the augment search.
     ViewSearchAugment(azur::buttons::search_augment::View),
-
-    StarboardLeaderboard(starboard::buttons::leaderboard::View),
+    /// Open the starboard top view.
+    StarboardTop(starboard::buttons::top::View),
+    /// Open the starboard top posts view.
+    StarboardTopPosts(starboard::buttons::top_posts::View),
 }
 
 impl ButtonArgs {

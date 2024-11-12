@@ -199,6 +199,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         let update = doc! {
             "$setOnInsert": {
                 "board": bson_id!(board.channel),
+                "channel": bson_id!(message.channel_id),
                 "message": bson_id!(message.id),
                 "user": bson_id!(message.author.id),
                 "pinned": false,
