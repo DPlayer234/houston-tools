@@ -33,10 +33,7 @@ impl View {
             action: Action::Nothing,
         }
     }
-}
 
-#[cfg(feature = "db")]
-impl View {
     pub async fn create_reply<'new>(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'new>> {
         let data = ctx.data_ref::<HBotData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
@@ -140,14 +137,6 @@ impl View {
     }
 }
 
-#[cfg(not(feature = "db"))]
-impl ButtonArgsReply for View {
-    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
-        anyhow::bail!("perks not supported without db");
-    }
-}
-
-#[cfg(feature = "db")]
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
         let guild_id = ctx.interaction.guild_id.context("requires guild")?;

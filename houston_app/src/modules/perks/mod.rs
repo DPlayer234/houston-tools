@@ -1,15 +1,19 @@
+use anyhow::Context as _;
+use bson::{doc, Bson};
 use chrono::prelude::*;
+use chrono::TimeDelta;
+use serenity::futures::TryStreamExt;
 use serenity::prelude::*;
 use tokio::sync::RwLock;
 
+use super::Module as _;
 use crate::prelude::*;
 
+const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(5);
+
 pub mod buttons;
-#[cfg(feature = "db")]
 pub mod model;
-#[cfg(feature = "db")]
 mod effects;
-#[cfg(feature = "db")]
 mod slashies;
 
 pub struct Module;
@@ -25,14 +29,11 @@ impl super::Module for Module {
 
     fn commands(&self) -> impl IntoIterator<Item = HCommand> {
         [
-            #[cfg(feature = "db")]
             slashies::perk_admin::perk_admin(),
-            #[cfg(feature = "db")]
             slashies::perk_store::perk_store(),
         ]
     }
 
-    #[cfg(feature = "db")]
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
         Box::pin(async move {
             model::Wallet::collection(db).create_indexes(model::Wallet::indices()).await?;
@@ -87,25 +88,13 @@ pub struct PerkState {
     last_check: RwLock<DateTime<Utc>>,
 }
 
-#[cfg_attr(not(feature = "db"), expect(unused_variables))]
 pub async fn check_perks(ctx: Context) {
-    #[cfg(feature = "db")]
     if let Err(why) = check_perks_core(ctx).await {
         log::error!("Perk check failed: {why:?}");
     }
 }
 
-#[cfg(feature = "db")]
 async fn check_perks_core(ctx: Context) -> HResult {
-    const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(5);
-
-    use anyhow::Context;
-    use bson::{doc, Bson};
-    use chrono::TimeDelta;
-    use serenity::futures::TryStreamExt;
-
-    use crate::modules::Module;
-
     let data = ctx.data_ref::<HBotData>();
     if !Module.enabled(data.config()) {
         return Ok(());

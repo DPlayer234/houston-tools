@@ -1,3 +1,12 @@
+use anyhow::Context as _;
+use bson::doc;
+use serenity::futures::TryStreamExt;
+
+use utils::text::write_str::*;
+
+use crate::helper::bson_id;
+use crate::helper::discord::get_pagination_buttons;
+use crate::modules::starboard::model;
 use crate::buttons::prelude::*;
 
 // View the leaderboards.
@@ -14,21 +23,8 @@ impl View {
             page: 0,
         }
     }
-}
 
-#[cfg(feature = "db")]
-impl View {
     pub async fn create_reply<'new>(mut self, data: &HBotData) -> anyhow::Result<CreateReply<'new>> {
-        use anyhow::Context;
-        use bson::doc;
-        use serenity::futures::TryStreamExt;
-
-        use utils::text::write_str::*;
-
-        use crate::helper::bson_id;
-        use crate::helper::discord::get_pagination_buttons;
-        use crate::modules::starboard::model;
-
         const PAGE_SIZE: u32 = 15;
 
         let db = data.database()?;
@@ -92,14 +88,6 @@ impl View {
     }
 }
 
-#[cfg(not(feature = "db"))]
-impl ButtonArgsReply for View {
-    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
-        anyhow::bail!("starboard not supported with db");
-    }
-}
-
-#[cfg(feature = "db")]
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
         ctx.reply(CreateInteractionResponse::Acknowledge).await?;

@@ -36,16 +36,6 @@ pub struct HLogConfig {
     pub modules: HashMap<String, log::LevelFilter>,
 }
 
-impl HConfig {
-    pub fn validate(self) -> anyhow::Result<Self> {
-        if !cfg!(feature = "db") && self.bot.mongodb_uri.is_some() {
-            anyhow::bail!("mongodb_uri requires compiling the db feature");
-        }
-
-        Ok(self)
-    }
-}
-
 pub mod azur_lane {
     use utils::join;
 

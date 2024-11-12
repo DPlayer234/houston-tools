@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     // SAFETY: No other code running that accesses this yet.
     unsafe { utils::time::mark_startup_time(); }
 
-    let config = build_config()?.validate()?;
+    let config = build_config()?;
     init_logging(config.log);
 
     log::info!("Starting...");

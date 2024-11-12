@@ -50,7 +50,6 @@ pub struct HBotData {
     /// State of the perk module.
     perk_state: PerkState,
     /// Database connection.
-    #[cfg(feature = "db")]
     database: OnceLock<mongodb::Database>,
 }
 
@@ -67,7 +66,6 @@ impl HBotData {
                 None => Box::new(HAzurLane::default),
             }),
             perk_state: PerkState::default(),
-            #[cfg(feature = "db")]
             database: OnceLock::new(),
         }
     }
@@ -113,7 +111,6 @@ impl HBotData {
     }
 
     pub async fn connect(&self, init: &crate::modules::Info) -> HResult {
-        #[cfg(feature = "db")]
         if let Some(uri) = &self.config.mongodb_uri {
             use anyhow::Context;
 
@@ -134,7 +131,6 @@ impl HBotData {
         Ok(())
     }
 
-    #[cfg(feature = "db")]
     pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
         use anyhow::Context;
         self.database.get().context("database is not yet connected")

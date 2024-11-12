@@ -1,12 +1,15 @@
+use anyhow::Context as _;
+use bson::doc;
+use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use serenity::prelude::*;
 
+use crate::helper::bson_id;
+use crate::modules::Module as _;
 use crate::prelude::*;
 
 pub mod buttons;
-#[cfg(feature = "db")]
 pub mod model;
-#[cfg(feature = "db")]
 mod slashies;
 
 pub struct Module;
@@ -22,12 +25,10 @@ impl super::Module for Module {
 
     fn commands(&self) -> impl IntoIterator<Item = HCommand> {
         [
-            #[cfg(feature = "db")]
             slashies::starboard()
         ]
     }
 
-    #[cfg(feature = "db")]
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
         Box::pin(async move {
             model::Message::collection(db).create_indexes(model::Message::indices()).await?;
@@ -49,7 +50,6 @@ impl super::Module for Module {
 pub type Config = Vec<StarboardEntry>;
 
 #[derive(Debug, serde::Deserialize)]
-#[cfg_attr(not(feature = "db"), expect(dead_code))]
 pub struct StarboardEntry {
     pub name: String,
     pub guild: GuildId,
@@ -65,7 +65,6 @@ pub struct StarboardEntry {
 #[derive(Debug)]
 pub struct StarboardEmoji(ReactionType);
 
-#[cfg_attr(not(feature = "db"), expect(dead_code))]
 impl StarboardEmoji {
     pub fn as_emoji(&self) -> &ReactionType {
         &self.0
@@ -125,23 +124,13 @@ impl<'de> serde::Deserialize<'de> for StarboardEmoji {
     }
 }
 
-#[cfg_attr(not(feature = "db"), expect(unused_variables))]
 pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
-    #[cfg(feature = "db")]
     if let Err(why) = handle_core(ctx, reaction).await {
         log::error!("Reaction handling failed: {why:?}");
     }
 }
 
-#[cfg(feature = "db")]
 async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
-    use anyhow::Context;
-    use bson::doc;
-    use mongodb::options::ReturnDocument;
-
-    use crate::helper::bson_id;
-    use crate::modules::Module;
-
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
     let data = ctx.data_ref::<HBotData>();

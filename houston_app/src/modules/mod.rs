@@ -7,7 +7,6 @@ pub mod core;
 pub mod perks;
 pub mod starboard;
 
-#[cfg(feature = "db")]
 type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, HResult>;
 
 /// Initialization data.
@@ -17,7 +16,6 @@ pub struct Info {
     /// Commands to register.
     pub commands: Vec<HCommand>,
     /// DB initializer functions.
-    #[cfg(feature = "db")]
     pub db_init: Vec<DbInitFn>,
 }
 
@@ -26,7 +24,6 @@ impl Info {
         Self {
             intents: GatewayIntents::empty(),
             commands: Vec::new(),
-            #[cfg(feature = "db")]
             db_init: Vec::new(),
         }
     }
@@ -60,7 +57,6 @@ pub trait Module {
         Ok(())
     }
 
-    #[cfg(feature = "db")]
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
         _ = db;
         Box::pin(async { Ok(()) })
@@ -73,7 +69,6 @@ pub trait Module {
             init.intents |= self.intents();
             init.commands.extend(self.commands());
 
-            #[cfg(feature = "db")]
             if config.mongodb_uri.is_some() {
                 init.db_init.push(Self::db_init);
             }
