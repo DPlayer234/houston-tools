@@ -39,7 +39,6 @@ impl View {
             .context("starboard not found")?;
 
         let filter = doc! {
-            "guild": bson_id!(board.guild),
             "board": bson_id!(board.channel),
         };
 

@@ -153,7 +153,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     let message = reaction.message(&ctx).await?;
 
     // cannot starboard yourself
-    // there are further checks down to ignore the user's reaction later on
+    // there are checks further down to ignore the user's reaction later on
     if message.author.id == reaction.user_id.context("user always set in react")? {
         return Ok(());
     }
@@ -272,14 +272,12 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     if score_increase > 0 {
         // update the user's score if it has increased
         let filter = doc! {
-            "guild": bson_id!(board.guild),
             "board": bson_id!(board.channel),
             "user": bson_id!(message.author.id),
         };
 
         let update = doc! {
             "$setOnInsert": {
-                "guild": bson_id!(board.guild),
                 "board": bson_id!(board.channel),
                 "user": bson_id!(message.author.id),
             },

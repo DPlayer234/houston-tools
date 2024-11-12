@@ -43,7 +43,7 @@ impl View {
         };
 
         let sort = doc! {
-            "score": -1,
+            "max_reacts": -1,
             "message": -1,
         };
 

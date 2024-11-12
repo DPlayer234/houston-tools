@@ -3,7 +3,7 @@ use mongodb::bson::oid::ObjectId;
 use mongodb::options::IndexOptions;
 use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
-use serenity::model::id::{ChannelId, GuildId, MessageId, UserId};
+use serenity::model::id::{ChannelId, MessageId, UserId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
@@ -21,7 +21,6 @@ pub struct Message {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Score {
     pub _id: ObjectId,
-    pub guild: GuildId,
     pub board: ChannelId,
     pub user: UserId,
     pub score: i64,
@@ -51,7 +50,7 @@ impl Message {
                 .options(name("top-posts-sort"))
                 .keys(doc! {
                     "board": 1,
-                    "score": 1,
+                    "max_reacts": 1,
                     "message": 1,
                 })
                 .build(),
@@ -69,7 +68,6 @@ impl Score {
             IndexModel::builder()
                 .options(name("board-user"))
                 .keys(doc! {
-                    "guild": 1,
                     "board": 1,
                     "user": 1,
                 })
@@ -77,7 +75,6 @@ impl Score {
             IndexModel::builder()
                 .options(name("top-sort"))
                 .keys(doc! {
-                    "guild": 1,
                     "board": 1,
                     "score": 1,
                 })
