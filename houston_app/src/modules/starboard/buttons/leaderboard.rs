@@ -66,7 +66,7 @@ impl View {
             writeln_str!(
                 description,
                 "{}. <@{}>: {} {}",
-                offset + index, item.user, item.score, board.emoji,
+                offset + index, item.user, item.score, board.emoji.as_emoji(),
             );
         }
 

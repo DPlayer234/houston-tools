@@ -28,7 +28,7 @@ async fn leaderboard(
         .config()
         .starboard
         .iter()
-        .find(|b| b.emoji == board && b.guild == guild_id)
+        .find(|b| b.emoji.name() == board && b.guild == guild_id)
         .ok_or(HArgError("Unknown Starboard."))?;
 
     let view = View {
@@ -53,7 +53,7 @@ async fn autocomplete_board<'a>(
         .starboard
         .iter()
         .filter(|b| Some(b.guild) == ctx.guild_id())
-        .map(|b| AutocompleteChoice::from(b.emoji.as_str()))
+        .map(|b| AutocompleteChoice::from(b.emoji.name()))
         .collect();
 
     CreateAutocompleteResponse::new()

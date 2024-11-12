@@ -42,8 +42,64 @@ pub type Config = Vec<StarboardEntry>;
 pub struct StarboardEntry {
     pub guild: GuildId,
     pub channel: ChannelId,
-    pub emoji: String,
+    pub emoji: StarboardEmoji,
     pub reacts: u8,
+}
+
+#[derive(Debug)]
+#[cfg_attr(not(feature = "db"), expect(dead_code))]
+pub struct StarboardEmoji(ReactionType);
+
+#[cfg_attr(not(feature = "db"), expect(dead_code))]
+impl StarboardEmoji {
+    pub fn as_emoji(&self) -> &ReactionType {
+        &self.0
+    }
+
+    pub fn name(&self) -> &str {
+        match &self.0 {
+            ReactionType::Custom { name, .. } => name.as_ref().expect("always set").as_str(),
+            ReactionType::Unicode(unicode) => unicode.as_str(),
+            _ => panic!("never set to invalid"),
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for StarboardEmoji {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use std::fmt;
+
+        use serenity::small_fixed_array::FixedString;
+
+        struct Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = StarboardEmoji;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("expected string for emoji")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let emoji = if let Some((id, name)) = v.split_once(':') {
+                    let id = id.parse::<EmojiId>().map_err(|_| E::custom("invalid emoji id"))?;
+                    ReactionType::Custom { animated: false, id, name: Some(FixedString::from_str_trunc(name)) }
+                } else {
+                    ReactionType::Unicode(FixedString::from_str_trunc(v))
+                };
+
+                Ok(StarboardEmoji(emoji))
+            }
+        }
+
+        deserializer.deserialize_str(Visitor)
+    }
 }
 
 #[cfg_attr(not(feature = "db"), expect(unused_variables))]
@@ -69,18 +125,13 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
 
     use crate::helper::bson_id;
 
-    let reacted_emoji = match &reaction.emoji {
-        ReactionType::Unicode(unicode) => unicode.as_str(),
-        // only support unicode emojis for now
-        _ => return Ok(()),
-    };
-
     // look up the board associated with the emoji
+    // note: the emoji name is part of the reaction data
     let data = ctx.data_ref::<HBotData>();
     let board = data.config()
         .starboard
         .iter()
-        .find(|b| b.emoji == reacted_emoji && Some(b.guild) == reaction.guild_id);
+        .find(|b| *b.emoji.as_emoji() == reaction.emoji && Some(b.guild) == reaction.guild_id);
 
     let Some(board) = board else {
         return Ok(());
@@ -190,7 +241,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
                 });
 
                 ctx.http.send_message(board.channel, Vec::new(), &payload).await?;
-                log::info!("Pinned message {} to {}.", message.id, board.emoji);
+                log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
             }
         }
 
@@ -223,7 +274,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             .upsert(true)
             .await?;
 
-        log::trace!("{} gained {} {}.", message.author.name, score_increase, board.emoji);
+        log::trace!("{} gained {} {}.", message.author.name, score_increase, board.emoji.name());
     }
 
     Ok(())
