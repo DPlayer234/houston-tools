@@ -7,6 +7,7 @@ use serenity::model::guild::Emoji;
 use azur_lane::ship::HullType;
 
 use super::HBotConfig;
+use crate::modules::Module;
 
 macro_rules! generate {
     ({ $($key:ident = $name:literal $(if $condition:expr)?;)* }) => {
@@ -65,7 +66,7 @@ macro_rules! generate {
 }
 
 fn azur(config: &HBotConfig) -> bool {
-    config.azur_lane_data.is_some()
+    crate::modules::azur::Module.enabled(config)
 }
 
 generate!({

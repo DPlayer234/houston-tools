@@ -2,7 +2,7 @@ use azur_lane::ship::*;
 use utils::text::write_str::*;
 
 use super::AzurParseError;
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
 
 /// Views ship lines.

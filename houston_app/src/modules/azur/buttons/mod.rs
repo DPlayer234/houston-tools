@@ -1,4 +1,4 @@
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 
 pub mod augment;
 pub mod equip;

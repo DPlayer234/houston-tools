@@ -6,7 +6,7 @@ use utils::join;
 use utils::text::write_str::*;
 
 use super::AzurParseError;
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

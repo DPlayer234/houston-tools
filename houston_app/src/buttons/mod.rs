@@ -8,9 +8,7 @@ use smallvec::SmallVec;
 use utils::fields::FieldMut;
 
 use crate::prelude::*;
-
-pub mod azur;
-pub mod common;
+use crate::modules::{azur, core as core_mod, starboard};
 
 #[cfg(test)]
 mod test;
@@ -85,27 +83,27 @@ macro_rules! define_button_args {
 
 define_button_args! {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-    None(common::None),
+    None(core_mod::buttons::None),
     /// Open the ship detail view.
-    ViewShip(azur::ship::View),
+    ViewShip(azur::buttons::ship::View),
     /// Open the augment detail view.
-    ViewAugment(azur::augment::View),
+    ViewAugment(azur::buttons::augment::View),
     /// Open the skill detail view.
-    ViewSkill(azur::skill::View),
+    ViewSkill(azur::buttons::skill::View),
     /// Open the ship lines detail view.
-    ViewLines(azur::lines::View),
+    ViewLines(azur::buttons::lines::View),
     /// Open the ship filter list view.
-    ViewSearchShip(azur::search_ship::View),
+    ViewSearchShip(azur::buttons::search_ship::View),
     /// Open the ship shadow equip details.
-    ViewShadowEquip(azur::shadow_equip::View),
+    ViewShadowEquip(azur::buttons::shadow_equip::View),
     /// Open the equipment details.
-    ViewEquip(azur::equip::View),
+    ViewEquip(azur::buttons::equip::View),
     /// Open the equipment search.
-    ViewSearchEquip(azur::search_equip::View),
+    ViewSearchEquip(azur::buttons::search_equip::View),
     /// Open the augment search.
-    ViewSearchAugment(azur::search_augment::View),
+    ViewSearchAugment(azur::buttons::search_augment::View),
 
-    StarboardLeaderboard(crate::modules::starboard::buttons::leaderboard::View),
+    StarboardLeaderboard(starboard::buttons::leaderboard::View),
 }
 
 impl ButtonArgs {
@@ -204,7 +202,7 @@ pub trait ToCustomData {
             // It isn't used in any way other than as a discriminator.
             let sentinel_key = ptr::from_ref(field.get(self)) as u16;
 
-            let sentinel = common::None::new(sentinel_key, sentinel(value));
+            let sentinel = core_mod::buttons::None::new(sentinel_key, sentinel(value));
             let custom_id = sentinel.to_custom_id();
             CreateButton::new(custom_id).disabled(true)
         } else {

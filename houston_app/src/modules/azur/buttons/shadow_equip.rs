@@ -4,7 +4,7 @@ use utils::text::write_str::*;
 
 use super::ship::View as ShipView;
 use super::AzurParseError;
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 
 /// View a ship's shadow equip.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

@@ -9,7 +9,6 @@ use serenity::model::Color;
 use crate::config::HBotConfig;
 
 mod app_emojis;
-mod azur;
 
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
@@ -31,7 +30,7 @@ pub type HFrameworkData = HBotData;
 pub type HCommand = poise::Command<HFrameworkData, HError>;
 
 pub use app_emojis::HAppEmojis;
-pub use azur::HAzurLane;
+use crate::modules::azur::data::HAzurLane;
 
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]

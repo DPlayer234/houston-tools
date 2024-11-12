@@ -1,4 +1,4 @@
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 
 /// A sentinel value that can be used to create unique non-overlapping custom IDs.
 ///

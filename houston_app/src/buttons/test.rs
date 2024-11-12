@@ -14,9 +14,9 @@ macro_rules! round_trip_test {
     };
 }
 
-round_trip_test!(round_trip_args_none, None => common::None::new(12345, 6789));
-round_trip_test!(round_trip_args_ship, ViewShip => azur::ship::View::new(9999));
-round_trip_test!(round_trip_args_augment, ViewAugment => azur::augment::View::new(9999));
-round_trip_test!(round_trip_args_skill, ViewSkill => { use azur::skill::*; View::with_back(ViewSource::Augment(1), CustomData::EMPTY) });
-round_trip_test!(round_trip_args_lines, ViewLines => azur::lines::View::new(9999));
-round_trip_test!(round_trip_args_equip, ViewEquip => azur::equip::View::new(9999));
+round_trip_test!(round_trip_args_none, None => core_mod::buttons::None::new(12345, 6789));
+round_trip_test!(round_trip_args_ship, ViewShip => azur::buttons::ship::View::new(9999));
+round_trip_test!(round_trip_args_augment, ViewAugment => azur::buttons::augment::View::new(9999));
+round_trip_test!(round_trip_args_skill, ViewSkill => { use azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), CustomData::EMPTY) });
+round_trip_test!(round_trip_args_lines, ViewLines => azur::buttons::lines::View::new(9999));
+round_trip_test!(round_trip_args_equip, ViewEquip => azur::buttons::equip::View::new(9999));

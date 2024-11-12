@@ -1,36 +1,6 @@
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
-mod azur;
-mod calc;
-mod coin;
-mod config;
-mod dice;
-mod quote;
-mod timestamp;
-mod upload;
-mod who;
-
-/// Gets all poise commands.
-pub fn get_commands(config: &crate::config::HBotConfig) -> Vec<poise::Command<HFrameworkData, HError>> {
-    let mut result = vec![
-        coin::coin(),
-        config::config(),
-        dice::dice(),
-        calc::calc(),
-        quote::quote(),
-        timestamp::timestamp(),
-        who::who(),
-        upload::upload(),
-    ];
-
-    if config.azur_lane_data.is_some() {
-        result.push(azur::azur());
-    }
-
-    result
-}
-
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
     log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {

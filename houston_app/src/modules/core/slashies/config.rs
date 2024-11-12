@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-super::command_group!(
+crate::slashies::command_group!(
     /// Provides (temporary) configuration for this app.
     pub config,
     "config_hide",

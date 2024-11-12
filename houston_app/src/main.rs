@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
 
     use data::*;
     use helper::poise_command_builder::CustomCreateCommand;
-    use modules::{Init, Module};
+    use modules::Info;
 
     // SAFETY: No other code running that accesses this yet.
     unsafe { utils::time::mark_startup_time(); }
@@ -27,13 +27,8 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting...");
 
-    // configure intents for optional features
-    let mut init = Init::new();
-
-    // CMBK:
-    init.commands = slashies::get_commands(&config.bot);
-
-    modules::starboard::Module.apply(&mut init, &config.bot)?;
+    let mut init = Info::new();
+    init.load(&config.bot)?;
 
     let bot_data = Arc::new(HBotData::new(config.bot));
 

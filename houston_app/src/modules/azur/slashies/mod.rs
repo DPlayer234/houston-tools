@@ -1,4 +1,4 @@
-use crate::buttons;
+use super::buttons;
 use crate::prelude::*;
 
 mod autocomplete;
@@ -7,7 +7,7 @@ mod find;
 
 use choices::*;
 
-super::command_group!(
+crate::slashies::command_group!(
     /// Information about mobile game Azur Lane.
     pub azur,
     "ship", "search_ship",
@@ -27,7 +27,7 @@ async fn ship(
     let data = ctx.data_ref();
     let ship = find::ship(data, &name)?;
 
-    let view = buttons::azur::ship::View::new(ship.group_id);
+    let view = buttons::ship::View::new(ship.group_id);
     ctx.send(view.modify_with_ship(data, ctx.create_reply(), ship, None)).await?;
     Ok(())
 }
@@ -49,7 +49,7 @@ async fn search_ship(
     #[rename = "has-augment"]
     has_augment: Option<bool>
 ) -> HResult {
-    use crate::buttons::azur::search_ship::*;
+    use buttons::search_ship::*;
 
     let data = ctx.data_ref();
 
@@ -78,7 +78,7 @@ async fn equip(
     let data = ctx.data_ref();
     let equip = find::equip(data, &name)?;
 
-    let view = buttons::azur::equip::View::new(equip.equip_id);
+    let view = buttons::equip::View::new(equip.equip_id);
     ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
     Ok(())
 }
@@ -96,7 +96,7 @@ async fn search_equip(
     #[description = "The rarity to select."]
     rarity: Option<EEquipRarity>
 ) -> HResult {
-    use crate::buttons::azur::search_equip::*;
+    use buttons::search_equip::*;
 
     let data = ctx.data_ref();
 
@@ -124,7 +124,7 @@ async fn augment(
     let data = ctx.data_ref();
     let augment = find::augment(data, &name)?;
 
-    let view = buttons::azur::augment::View::new(augment.augment_id);
+    let view = buttons::augment::View::new(augment.augment_id);
     ctx.send(view.modify_with_augment(data, ctx.create_reply(), augment)).await?;
     Ok(())
 }
@@ -145,7 +145,7 @@ async fn search_augment(
     #[rename = "for-ship"]
     for_ship: Option<String>,
 ) -> HResult {
-    use crate::buttons::azur::search_augment::*;
+    use buttons::search_augment::*;
 
     let data = ctx.data_ref();
 

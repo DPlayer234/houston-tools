@@ -1,7 +1,7 @@
 use azur_lane::equip::*;
 
 use super::AzurParseError;
-use crate::buttons::*;
+use crate::buttons::prelude::*;
 
 /// Views an augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

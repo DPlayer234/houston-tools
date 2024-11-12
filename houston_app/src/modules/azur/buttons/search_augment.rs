@@ -2,7 +2,8 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
-use crate::buttons::*;
+use crate::buttons::prelude::*;
+use crate::modules::azur::data::HAzurLane;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {

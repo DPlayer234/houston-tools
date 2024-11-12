@@ -11,7 +11,7 @@ const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
 const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
 const SNOWFLAKE_INVALID: HArgError = HArgError("The Discord snowflake is invalid.");
 
-super::command_group!(
+crate::slashies::command_group!(
     /// Provides methods for localized timestamps.
     pub timestamp,
     "timestamp_in", "timestamp_at", "timestamp_of"
