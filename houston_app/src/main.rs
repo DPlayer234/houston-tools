@@ -1,7 +1,7 @@
 mod buttons;
 mod config;
 mod data;
-mod events;
+mod modules;
 mod fmt;
 mod helper;
 mod prelude;
@@ -17,12 +17,10 @@ async fn main() -> anyhow::Result<()> {
 
     use data::*;
     use helper::poise_command_builder::CustomCreateCommand;
+    use modules::{Init, Module};
 
     // SAFETY: No other code running that accesses this yet.
     unsafe { utils::time::mark_startup_time(); }
-
-    // Intents used by this app.
-    let mut intents = GatewayIntents::empty();
 
     let config = build_config()?.validate()?;
     init_logging(config.log);
@@ -30,9 +28,12 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Starting...");
 
     // configure intents for optional features
-    if !config.bot.starboard.is_empty() {
-        intents |= events::starboard::INTENTS;
-    }
+    let mut init = Init::new();
+
+    // CMBK:
+    init.commands = slashies::get_commands(&config.bot);
+
+    modules::starboard::Module.apply(&mut init, &config.bot)?;
 
     let bot_data = Arc::new(HBotData::new(config.bot));
 
@@ -41,22 +42,20 @@ async fn main() -> anyhow::Result<()> {
         load_azur_lane(Arc::clone(&bot_data))
     );
 
-    let commands = slashies::get_commands(bot_data.config());
-
     let event_handler = HEventHandler {
-        commands: Mutex::new(Some(helper::poise_command_builder::build_commands(&commands))),
+        commands: Mutex::new(Some(helper::poise_command_builder::build_commands(&init.commands))),
     };
 
     let framework = HFramework::builder()
         .options(poise::FrameworkOptions {
-            commands,
+            commands: init.commands,
             pre_command: |ctx| Box::pin(slashies::pre_command(ctx)),
             on_error: |err| Box::pin(slashies::error_handler(err)),
             ..Default::default()
         })
         .build();
 
-    let mut client = Client::builder(&config.discord.token, intents)
+    let mut client = Client::builder(&config.discord.token, init.intents)
         .data(Arc::clone(&bot_data))
         .framework(framework)
         .event_handler(event_handler)
@@ -92,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-            events::starboard::handle_reaction(ctx, reaction).await;
+            modules::starboard::handle_reaction(ctx, reaction).await;
         }
     }
 

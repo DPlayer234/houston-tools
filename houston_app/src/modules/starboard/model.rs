@@ -1,6 +1,6 @@
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
-use mongodb::IndexModel;
+use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, GuildId, MessageId, UserId};
 
@@ -26,6 +26,10 @@ pub struct Score {
 }
 
 impl Message {
+    pub fn collection(db: &Database) -> Collection<Self> {
+        db.collection("starboard.messages")
+    }
+
     pub fn indices() -> impl IntoIterator<Item = IndexModel> {
         [
             IndexModel::builder()
@@ -39,6 +43,10 @@ impl Message {
 }
 
 impl Score {
+    pub fn collection(db: &Database) -> Collection<Self> {
+        db.collection("starboard.scores")
+    }
+
     pub fn indices() -> impl IntoIterator<Item = IndexModel> {
         [
             IndexModel::builder()
@@ -48,6 +56,13 @@ impl Score {
                     "user": 1,
                 })
                 .build(),
+            IndexModel::builder()
+                .keys(doc! {
+                    "guild": 1,
+                    "board": 1,
+                    "score": 1,
+                })
+                .build()
         ]
     }
 }

@@ -2,8 +2,51 @@ use serenity::prelude::*;
 
 use crate::prelude::*;
 
-pub const INTENTS: GatewayIntents = GatewayIntents::GUILD_MESSAGE_REACTIONS;
+pub mod buttons;
+#[cfg(feature = "db")]
+pub mod model;
+#[cfg(feature = "db")]
+mod slashies;
 
+pub struct Module;
+
+impl super::Module for Module {
+    fn enabled(&self, config: &config::HBotConfig) -> bool {
+        !config.starboard.is_empty()
+    }
+
+    fn intents(&self) -> GatewayIntents {
+        GatewayIntents::GUILD_MESSAGE_REACTIONS
+    }
+
+    fn commands(&self) -> impl IntoIterator<Item = HCommand> {
+        [
+            #[cfg(feature = "db")]
+            slashies::starboard()
+        ]
+    }
+
+    fn validate(&self, config: &config::HBotConfig) -> HResult {
+        if config.mongodb_uri.is_none() {
+            anyhow::bail!("starboard requires a mongodb_uri");
+        }
+
+        Ok(())
+    }
+}
+
+pub type Config = Vec<StarboardEntry>;
+
+#[derive(Debug, serde::Deserialize)]
+#[cfg_attr(not(feature = "db"), expect(dead_code))]
+pub struct StarboardEntry {
+    pub guild: GuildId,
+    pub channel: ChannelId,
+    pub emoji: String,
+    pub reacts: u8,
+}
+
+#[cfg_attr(not(feature = "db"), expect(unused_variables))]
 pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
     #[cfg(feature = "db")]
     if let Err(why) = handle_core(ctx, reaction).await {
@@ -12,10 +55,19 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
 }
 
 #[cfg(feature = "db")]
-pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
+pub async fn init_db(db: &mongodb::Database) -> HResult {
+    model::Message::collection(db).create_indexes(model::Message::indices()).await?;
+    model::Score::collection(db).create_indexes(model::Score::indices()).await?;
+    Ok(())
+}
+
+#[cfg(feature = "db")]
+async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     use anyhow::Context;
     use mongodb::bson::doc;
     use mongodb::options::ReturnDocument;
+
+    use crate::helper::bson_id;
 
     let reacted_emoji = match &reaction.emoji {
         ReactionType::Unicode(unicode) => unicode.as_str(),
@@ -28,14 +80,14 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     let board = data.config()
         .starboard
         .iter()
-        .find(|b| b.emoji == reacted_emoji);
+        .find(|b| b.emoji == reacted_emoji && Some(b.guild) == reaction.guild_id);
 
     let Some(board) = board else {
         return Ok(());
     };
 
     // we can be in any channel except the board channel
-    if board.channel == reaction.channel_id && Some(board.guild) == reaction.guild_id {
+    if board.channel == reaction.channel_id {
         return Ok(());
     }
 
@@ -51,18 +103,14 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         .find(|r| r.reaction_type == reaction.emoji)
         .context("could not find reaction data")?;
 
-    macro_rules! bson_id {
-        ($expr:expr) => {{
-            #[allow(clippy::cast_possible_wrap)]
-            let value = $expr.get() as i64;
-            value
-        }};
-    }
-
-    let database = data.database()?;
+    let db = data.database()?;
     let score_increase = {
-        // update the message document
+        // update the message document, if we have enough reacts
+        let required_reacts = i64::from(board.reacts);
         let mut now_reacts = i64::try_from(reaction.count)?;
+        if now_reacts < required_reacts {
+            return Ok(());
+        }
 
         // we grab a single user after the reacting user's id
         // if this is the reacting user, we subtract 1 from the count
@@ -76,6 +124,11 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
 
         if reacted_users.iter().any(|u| u.id == message.author.id) {
             now_reacts -= 1;
+        }
+
+        // we may now have less reacts than needed
+        if now_reacts < required_reacts {
+            return Ok(());
         }
 
         let filter = doc! {
@@ -95,7 +148,7 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             },
         };
 
-        let record = database.starboard_messages
+        let record = model::Message::collection(db)
             .find_one_and_update(filter, update)
             .upsert(true)
             .return_document(ReturnDocument::Before)
@@ -105,8 +158,7 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             .map(|r| (r.pinned, r.max_reacts))
             .unwrap_or_default();
 
-        // check if we went above the required reactions and weren't already
-        let required_reacts = i64::from(board.reacts);
+        // we already checked that we have the required reacts, but for sanity, keep it here
         if now_reacts >= required_reacts && !pinned {
             // update the record to pinned
             let filter = doc! {
@@ -120,7 +172,7 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
                 },
             };
 
-            let record = database.starboard_messages
+            let record = model::Message::collection(db)
                 .find_one_and_update(filter, update)
                 .return_document(ReturnDocument::Before)
                 .await?
@@ -166,7 +218,7 @@ pub async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             },
         };
 
-        database.starboard_scores
+        model::Score::collection(db)
             .update_one(filter, update)
             .upsert(true)
             .await?;

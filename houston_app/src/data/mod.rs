@@ -11,9 +11,6 @@ use crate::config::HBotConfig;
 mod app_emojis;
 mod azur;
 
-#[cfg(feature = "db")]
-pub mod db;
-
 /// A general color that can be used for various embeds.
 pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
 
@@ -30,6 +27,8 @@ pub type HResult = Result<(), HError>;
 pub type HFramework = poise::framework::Framework<HFrameworkData, HError>;
 /// Actual data type provided to serenity's user data.
 pub type HFrameworkData = HBotData;
+
+pub type HCommand = poise::Command<HFrameworkData, HError>;
 
 pub use app_emojis::HAppEmojis;
 pub use azur::HAzurLane;
@@ -55,7 +54,7 @@ pub struct HBotData {
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
     /// Database connection.
     #[cfg(feature = "db")]
-    database: OnceLock<db::Database>,
+    database: OnceLock<mongodb::Database>,
 }
 
 impl HBotData {
@@ -128,8 +127,15 @@ impl HBotData {
     pub async fn connect(&self) -> HResult {
         #[cfg(feature = "db")]
         if let Some(uri) = &self.config.mongodb_uri {
+            use anyhow::Context;
+
+            let client = mongodb::Client::with_uri_str(uri).await?;
+            let db = client.default_database().context("no default database specified")?;
+
+            crate::modules::starboard::init_db(&db).await?;
+
             self.database
-                .set(db::Database::connect(uri).await?)
+                .set(db)
                 .expect("do not call connect more than once");
 
             log::info!("Connected to MongoDB.");
@@ -139,7 +145,7 @@ impl HBotData {
     }
 
     #[cfg(feature = "db")]
-    pub fn database(&self) -> anyhow::Result<&db::Database> {
+    pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
         use anyhow::Context;
         self.database.get().context("database is not yet connected")
     }
@@ -185,6 +191,8 @@ pub trait HContextExtensions<'a> {
     #[must_use]
     fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new>;
 
+    async fn defer_as(&self, ephemeral: bool) -> HResult;
+
     #[must_use]
     fn data_ref(&self) -> &'a HBotData;
 }
@@ -204,6 +212,14 @@ impl<'a> HContextExtensions<'a> for HContext<'a> {
 
     fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new> {
         CreateReply::default().ephemeral(true)
+    }
+
+    async fn defer_as(&self, ephemeral: bool) -> HResult {
+        if let Self::Application(ctx) = self {
+            ctx.defer_response(ephemeral).await?;
+        }
+
+        Ok(())
     }
 
     fn data_ref(&self) -> &'a HBotData {

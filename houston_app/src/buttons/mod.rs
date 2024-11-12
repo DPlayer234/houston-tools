@@ -15,6 +15,12 @@ pub mod common;
 #[cfg(test)]
 mod test;
 
+pub mod prelude {
+    pub use crate::prelude::*;
+    #[allow(unused_imports)]
+    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, ButtonMessageMode, CustomData, ToCustomData};
+}
+
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
 macro_rules! define_button_args {
     ($($(#[$attr:meta])* $name:ident($Ty:ty)),* $(,)?) => {
@@ -98,6 +104,8 @@ define_button_args! {
     ViewSearchEquip(azur::search_equip::View),
     /// Open the augment search.
     ViewSearchAugment(azur::search_augment::View),
+
+    StarboardLeaderboard(crate::modules::starboard::buttons::leaderboard::View),
 }
 
 impl ButtonArgs {
@@ -252,6 +260,12 @@ impl ButtonContext<'_> {
     /// Replies to the interaction.
     pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> HResult {
         Ok(self.interaction.create_response(self.http, create).await?)
+    }
+
+    /// Edits a previous reply to the interaction.
+    pub async fn edit_reply(&self, create: EditInteractionResponse<'_>) -> HResult {
+        self.interaction.edit_response(self.http, create).await?;
+        Ok(())
     }
 
     /// Creates a fitting base reply.

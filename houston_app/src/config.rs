@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
-use serenity::model::id::{ChannelId, GuildId};
 
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
@@ -25,15 +24,7 @@ pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
     pub mongodb_uri: Option<String>,
     #[serde(default)]
-    pub starboard: Vec<HStarboardConfig>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct HStarboardConfig {
-    pub guild: GuildId,
-    pub channel: ChannelId,
-    pub emoji: String,
-    pub reacts: u8,
+    pub starboard: crate::modules::starboard::Config,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -48,10 +39,6 @@ impl HConfig {
     pub fn validate(self) -> anyhow::Result<Self> {
         if !cfg!(feature = "db") && self.bot.mongodb_uri.is_some() {
             anyhow::bail!("mongodb_uri requires compiling the db feature");
-        }
-
-        if self.bot.mongodb_uri.is_none() && !self.bot.starboard.is_empty() {
-            anyhow::bail!("starboard requires a mongodb_uri");
         }
 
         Ok(self)

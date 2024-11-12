@@ -11,8 +11,8 @@ pub struct CustomCreateCommand {
     options: Vec<CreateCommandOption<'static>>,
     #[serde(rename = "type")]
     kind: CommandType,
-    contexts: [u8; 3],
-    integration_types: [u8; 2],
+    contexts: Vec<u8>,
+    integration_types: Vec<u8>,
     nsfw: bool,
 }
 
@@ -43,6 +43,28 @@ pub fn build_commands<E, U>(commands: &[Command<E, U>]) -> Vec<CustomCreateComma
     commands_builder
 }
 
+fn contexts<E, U>(cmd: &Command<E, U>) -> Vec<u8> {
+    // 0 = GUILD, 1 = BOT_DM, 2 = PRIVATE_CHANNEL
+
+    if cmd.guild_only {
+        vec![0]
+    } else if cmd.dm_only {
+        vec![1, 2]
+    } else {
+        vec![0, 1, 2]
+    }
+}
+
+fn integration_types<E, U>(cmd: &Command<E, U>) -> Vec<u8> {
+    // 0 = GUILD_INSTALL, 1 = USER_INSTALL
+
+    if cmd.guild_only {
+        vec![0]
+    } else {
+        vec![0, 1]
+    }
+}
+
 fn create_as_slash_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCreateCommand> {
     cmd.slash_action?;
 
@@ -66,8 +88,8 @@ fn create_as_slash_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCreateComm
         description: cmd.description.clone().unwrap_or_else(|| "---".to_owned()),
         options,
         kind: CommandType::ChatInput,
-        contexts: [0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
-        integration_types: [0, 1], // GUILD_INSTALL, USER_INSTALL
+        contexts: contexts(cmd),
+        integration_types: integration_types(cmd),
         nsfw: cmd.nsfw_only
     })
 }
@@ -86,8 +108,8 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
         description: String::new(),
         options: Vec::new(),
         kind,
-        contexts: [0, 1, 2], // GUILD, BOT_DM, PRIVATE_CHANNEL
-        integration_types: [0, 1], // GUILD_INSTALL, USER_INSTALL
+        contexts: contexts(cmd),
+        integration_types: integration_types(cmd),
         nsfw: cmd.nsfw_only
     })
 }

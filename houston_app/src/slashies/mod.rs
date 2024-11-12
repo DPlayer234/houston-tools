@@ -85,12 +85,13 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
 }
 
 macro_rules! command_group {
-    ($(#[$meta:meta])* $vis:vis $name:ident, $($sub_command:literal),* $(,)?) => {
+    ($(#[$meta:meta])* $vis:vis $name:ident $(($($poise_tt:tt)*))? , $($sub_command:literal),* $(,)?) => {
         $(#[$meta])*
         #[::poise::command(
             slash_command,
             subcommands($($sub_command),*),
-            subcommand_required
+            subcommand_required,
+            $($($poise_tt)*)?
         )]
         $vis async fn $name(_: $crate::data::HContext<'_>) -> $crate::data::HResult {
             $crate::data::HResult::Err($crate::data::HArgError(concat!(stringify!($name), " cannot be invoked directly")).into())
@@ -98,4 +99,4 @@ macro_rules! command_group {
     };
 }
 
-use command_group;
+pub(crate) use command_group;
