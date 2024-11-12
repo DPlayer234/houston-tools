@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::Context;
 
 use crate::prelude::*;
@@ -14,7 +16,7 @@ crate::slashies::command_group!(
 #[poise::command(slash_command)]
 async fn top(
     ctx: HContext<'_>,
-    #[description = "Which board to look for, identified by emoji."]
+    #[description = "What board to look for."]
     #[autocomplete = "autocomplete_board"]
     board: String,
     #[description = "Whether to show the response only to yourself."]
@@ -35,7 +37,7 @@ async fn top(
 #[poise::command(slash_command, rename = "top-posts")]
 async fn top_posts(
     ctx: HContext<'_>,
-    #[description = "Which board to look for, identified by emoji."]
+    #[description = "What board to look for."]
     #[autocomplete = "autocomplete_board"]
     board: String,
     #[description = "Whether to show the response only to yourself."]
@@ -56,11 +58,14 @@ fn find_board<'a>(ctx: &HContext<'a>, board: &str) -> anyhow::Result<&'a Starboa
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 
+    let channel_id = board.parse::<ChannelId>().ok()
+        .ok_or(HArgError("Invalid board."))?;
+
     let board = ctx.data_ref()
         .config()
         .starboard
         .iter()
-        .find(|b| b.emoji.name() == board && b.guild == guild_id)
+        .find(|b| b.channel == channel_id && b.guild == guild_id)
         .ok_or(HArgError("Unknown Starboard."))?;
 
     Ok(board)
@@ -76,7 +81,10 @@ async fn autocomplete_board<'a>(
         .starboard
         .iter()
         .filter(|b| Some(b.guild) == ctx.guild_id())
-        .map(|b| AutocompleteChoice::from(b.emoji.name()))
+        .map(|b| AutocompleteChoice::new(
+            b.name.as_str(),
+            Cow::Owned(b.channel.to_string()),
+        ))
         .collect();
 
     CreateAutocompleteResponse::new()

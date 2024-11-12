@@ -96,6 +96,7 @@ Starboard must be configured:
 
 ```toml
 [[bot.starboard]]
+name = "starboard"
 guild = 1293210831923974204
 channel = 1305620816272166962
 emoji = "⭐"
@@ -106,6 +107,7 @@ notices = [
 ]
 
 [[bot.starboard]]
+name = "ripboard"
 guild = 1293210831923974204
 channel = 1305620834450407606
 emoji = "💀"
@@ -115,6 +117,12 @@ notices = [
     "{user}, please stop.",
 ]
 ```
+
+The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". Board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID.
+
+The guild identifies where reactions are monitored and what boards commands will show. The channel _can_ be in another server, but this isn't recommended. The channel must be unique across all boards (not just per guild) and the bot must be able to post there.
+
+The name is purely cosmetic and may be displayed in places where a channel name may be expected but channel mentions aren't valid.
 
 The following commands will be enabled:
 

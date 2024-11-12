@@ -41,6 +41,7 @@ pub type Config = Vec<StarboardEntry>;
 #[derive(Debug, serde::Deserialize)]
 #[cfg_attr(not(feature = "db"), expect(dead_code))]
 pub struct StarboardEntry {
+    pub name: String,
     pub guild: GuildId,
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,
@@ -59,10 +60,18 @@ impl StarboardEmoji {
     }
 
     pub fn name(&self) -> &str {
-        match &self.0 {
+        match self.as_emoji() {
             ReactionType::Custom { name, .. } => name.as_ref().expect("always set").as_str(),
             ReactionType::Unicode(unicode) => unicode.as_str(),
             _ => panic!("never set to invalid"),
+        }
+    }
+
+    pub fn equivalent_to(&self, reaction: &ReactionType) -> bool {
+        match (self.as_emoji(), reaction) {
+            (ReactionType::Custom { id: self_id, .. }, ReactionType::Custom { id: other_id, .. }) => self_id == other_id,
+            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => self_name == other_name,
+            _ => false,
         }
     }
 }
@@ -144,7 +153,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     let board = data.config()
         .starboard
         .iter()
-        .find(|b| *b.emoji.as_emoji() == reaction.emoji && Some(b.guild) == reaction.guild_id);
+        .find(|b| b.emoji.equivalent_to(&reaction.emoji) && Some(b.guild) == reaction.guild_id);
 
     let Some(board) = board else {
         return Ok(());
