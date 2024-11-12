@@ -1,3 +1,4 @@
+use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
@@ -47,11 +48,16 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
             .description(feedback)
             .color(ERROR_EMBED_COLOR);
 
-        let reply = ctx.create_ephemeral_reply().embed(embed);
+        let reply = create_reply(Ephemeral).embed(embed);
         if let Err(err) = ctx.send(reply).await {
             log::error!("Error in error handler: {err:?}")
         };
     }
+}
+
+pub fn create_reply<'new>(ephemeral: impl IntoEphemeral) -> CreateReply<'new> {
+    CreateReply::new()
+        .ephemeral(ephemeral.into_ephemeral())
 }
 
 macro_rules! command_group {

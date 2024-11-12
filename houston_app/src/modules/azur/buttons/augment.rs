@@ -27,7 +27,6 @@ impl View {
     pub fn modify_with_augment<'a>(
         mut self,
         data: &'a HBotData,
-        create: CreateReply<'a>,
         augment: &'a Augment,
     ) -> CreateReply<'a> {
         self.mode = ButtonMessageMode::Edit;
@@ -66,7 +65,7 @@ impl View {
             },
         });
 
-        create.embed(embed).components(vec![CreateActionRow::buttons(components)])
+        CreateReply::new().embed(embed).components(vec![CreateActionRow::buttons(components)])
     }
 
     /// Creates the field for a skill summary.
@@ -80,7 +79,7 @@ impl View {
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AzurParseError::Augment)?;
-        Ok(self.modify_with_augment(ctx.data, ctx.create_reply(), augment))
+        Ok(self.modify_with_augment(ctx.data, augment))
     }
 
     fn message_mode(&self) -> ButtonMessageMode {

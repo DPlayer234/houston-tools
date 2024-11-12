@@ -1,9 +1,6 @@
 use std::sync::{LazyLock, OnceLock};
 
-use dashmap::DashMap;
-use poise::reply::CreateReply;
 use serenity::http::Http;
-use serenity::model::id::UserId;
 use serenity::model::Color;
 
 use crate::config::HBotConfig;
@@ -47,8 +44,6 @@ pub struct HBotData {
     config: HBotConfig,
     /// The loaded application emojis.
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
-    /// A concurrent hash map to user data.
-    user_data: DashMap<UserId, HUserData>,
     /// Lazily initialized Azur Lane data.
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
     /// Database connection.
@@ -64,7 +59,6 @@ impl HBotData {
         Self {
             config,
             app_emojis: OnceLock::new(),
-            user_data: DashMap::new(),
             azur_lane: LazyLock::new(match data_path {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
@@ -103,20 +97,6 @@ impl HBotData {
         Ok(())
     }
 
-    /// Gets a copy of the user data for the specified user.
-    #[must_use]
-    pub fn get_user_data(&self, user_id: UserId) -> HUserData {
-        match self.user_data.get(&user_id) {
-            None => HUserData::default(),
-            Some(guard) => guard.clone()
-        }
-    }
-
-    /// Replaces the user data for the specified user.
-    pub fn set_user_data(&self, user_id: UserId, data: HUserData) {
-        self.user_data.insert(user_id, data);
-    }
-
     /// Gets the Azur Lane game data.
     #[must_use]
     pub fn azur_lane(&self) -> &HAzurLane {
@@ -150,72 +130,18 @@ impl HBotData {
     }
 }
 
-/// User-specific data.
-#[derive(Debug, Clone)]
-pub struct HUserData {
-    pub ephemeral: bool
-}
-
-impl Default for HUserData {
-    fn default() -> Self {
-        Self {
-            ephemeral: true
-        }
-    }
-}
-
-impl HUserData {
-    /// Creates a reply matching the user data.
-    #[must_use]
-    pub fn create_reply<'a>(&self) -> CreateReply<'a> {
-        CreateReply::default()
-            .ephemeral(self.ephemeral)
-    }
-}
-
 /// Extension trait for the poise context.
 pub trait HContextExtensions<'a> {
-    /// Gets a copy of the user data for the current user.
-    #[must_use]
-    fn get_user_data(&self) -> HUserData;
-
-    /// Replaces the user data for the current user.
-    fn set_user_data(&self, data: HUserData);
-
-    /// Creates a reply matching the user data.
-    #[must_use]
-    fn create_reply<'new>(&self) -> CreateReply<'new>;
-
-    /// Always creates an ephemeral reply.
-    #[must_use]
-    fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new>;
-
-    async fn defer_as(&self, ephemeral: bool) -> HResult;
+    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> HResult;
 
     #[must_use]
     fn data_ref(&self) -> &'a HBotData;
 }
 
 impl<'a> HContextExtensions<'a> for HContext<'a> {
-    fn get_user_data(&self) -> HUserData {
-        self.data_ref().get_user_data(self.author().id)
-    }
-
-    fn set_user_data(&self, data: HUserData) {
-        self.data_ref().set_user_data(self.author().id, data)
-    }
-
-    fn create_reply<'new>(&self) -> CreateReply<'new> {
-        self.get_user_data().create_reply()
-    }
-
-    fn create_ephemeral_reply<'new>(&self) -> CreateReply<'new> {
-        CreateReply::default().ephemeral(true)
-    }
-
-    async fn defer_as(&self, ephemeral: bool) -> HResult {
+    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> HResult {
         if let Self::Application(ctx) = self {
-            ctx.defer_response(ephemeral).await?;
+            ctx.defer_response(ephemeral.into_ephemeral()).await?;
         }
 
         Ok(())
@@ -223,5 +149,29 @@ impl<'a> HContextExtensions<'a> for HContext<'a> {
 
     fn data_ref(&self) -> &'a HBotData {
         self.serenity_context().data_ref()
+    }
+}
+
+pub struct Ephemeral;
+
+pub trait IntoEphemeral {
+    fn into_ephemeral(self) -> bool;
+}
+
+impl IntoEphemeral for Ephemeral {
+    fn into_ephemeral(self) -> bool {
+        true
+    }
+}
+
+impl IntoEphemeral for bool {
+    fn into_ephemeral(self) -> bool {
+        self
+    }
+}
+
+impl IntoEphemeral for Option<bool> {
+    fn into_ephemeral(self) -> bool {
+        self.unwrap_or(true)
     }
 }

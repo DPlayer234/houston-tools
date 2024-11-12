@@ -23,11 +23,10 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved equipment.
-    pub fn modify_with_equip<'a>(
+    pub fn modify_with_equip(
         mut self,
-        create: CreateReply<'a>,
-        equip: &'a Equip,
-    ) -> CreateReply<'a> {
+        equip: &Equip,
+    ) -> CreateReply<'_> {
         self.mode = ButtonMessageMode::Edit;
         let description = format!(
             "**{}**\n{}",
@@ -51,7 +50,7 @@ impl View {
             )))
             .fields(self.get_disallowed_field(equip));
 
-        create.embed(embed).components(vec![])
+        CreateReply::new().embed(embed).components(vec![])
     }
 
     fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<SimpleEmbedFieldCreate<'a>> {
@@ -70,7 +69,7 @@ impl View {
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(AzurParseError::Equip)?;
-        Ok(self.modify_with_equip(ctx.create_reply(), equip))
+        Ok(self.modify_with_equip(equip))
     }
 
     fn message_mode(&self) -> ButtonMessageMode {

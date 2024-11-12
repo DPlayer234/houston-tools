@@ -265,11 +265,6 @@ impl ButtonContext<'_> {
         self.interaction.edit_response(self.http, create).await?;
         Ok(())
     }
-
-    /// Creates a fitting base reply.
-    pub fn create_reply<'a>(&self) -> CreateReply<'a> {
-        self.data.get_user_data(self.interaction.user.id).create_reply()
-    }
 }
 
 /// Provides a way for button arguments to reply to the interaction.

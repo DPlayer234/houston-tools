@@ -11,12 +11,12 @@ impl super::Module for Module {
     fn commands(&self) -> impl IntoIterator<Item = super::HCommand> {
         [
             slashies::coin::coin(),
-            slashies::config::config(),
             slashies::dice::dice(),
             slashies::calc::calc(),
             slashies::quote::quote(),
             slashies::timestamp::timestamp(),
             slashies::who::who(),
+            slashies::who::who_context(),
             slashies::upload::upload(),
         ]
     }

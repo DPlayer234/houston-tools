@@ -4,6 +4,7 @@ use utils::time::*;
 
 use crate::fmt::discord::get_unique_username;
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 /// Creates a copyable, quotable version of the message.
 #[poise::command(context_menu_command = "Get as Quote")]
@@ -24,7 +25,7 @@ pub async fn quote(
         .description(content)
         .color(DEFAULT_EMBED_COLOR);
 
-    ctx.send(ctx.create_ephemeral_reply().embed(embed)).await?;
+    ctx.send(create_reply(Ephemeral).embed(embed)).await?;
     Ok(())
 }
 

@@ -1,6 +1,7 @@
 use parse::Token;
 
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 mod ops;
 mod parse;
@@ -9,7 +10,10 @@ mod parse;
 #[poise::command(slash_command)]
 pub async fn calc(
     ctx: HContext<'_>,
+    #[description = "The expression to evaluate."]
     mut expression: String,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     expression.make_ascii_lowercase();
 
@@ -54,7 +58,7 @@ pub async fn calc(
             => error_embed!("`{function}` is a function and requires `(...)` after it.{}", function.error_fmt()),
     };
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())
 }
 

@@ -41,7 +41,6 @@ impl View {
     pub fn modify_with_ship<'a>(
         mut self,
         data: &'a HBotData,
-        mut create: CreateReply<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> CreateReply<'a> {
@@ -90,6 +89,8 @@ impl View {
                 &skin.name,
             ));
         }
+
+        let mut create = CreateReply::new();
 
         if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
             create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
@@ -224,7 +225,7 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
-        Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, skin))
+        Ok(self.modify_with_ship(ctx.data, ship, skin))
     }
 }
 

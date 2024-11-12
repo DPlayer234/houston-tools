@@ -1,11 +1,14 @@
 use rand::prelude::*;
 
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 /// Flips a coin.
 #[poise::command(slash_command)]
 pub async fn coin(
-    ctx: HContext<'_>
+    ctx: HContext<'_>,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     const EDGE_TOSS_CHANCE: f64 = 1f64 / 6000f64;
     let content = {
@@ -23,6 +26,6 @@ pub async fn coin(
         .description(content)
         .color(DEFAULT_EMBED_COLOR);
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())
 }

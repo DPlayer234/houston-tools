@@ -28,7 +28,6 @@ impl View {
 
     pub fn modify_with_iter<'a>(
         mut self,
-        create: CreateReply<'a>,
         iter: impl Iterator<Item = &'a Augment>,
     ) -> CreateReply<'a> {
         let mut desc = String::new();
@@ -60,7 +59,7 @@ impl View {
                 .color(ERROR_EMBED_COLOR)
                 .description("No results for that filter.");
 
-            return create.embed(embed);
+            return CreateReply::new().embed(embed);
         }
 
         let embed = CreateEmbed::new()
@@ -80,21 +79,21 @@ impl View {
             "View augment module...",
         ));
 
-        create.embed(embed).components(rows)
+        CreateReply::new().embed(embed).components(rows)
     }
 
-    pub fn modify<'a>(self, data: &'a HBotData, create: CreateReply<'a>) -> CreateReply<'a> {
+    pub fn modify(self, data: &HBotData) -> CreateReply<'_> {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.modify_with_iter(create, filtered)
+        self.modify_with_iter(filtered)
     }
 }
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        Ok(self.modify(ctx.data, ctx.create_reply()))
+        Ok(self.modify(ctx.data))
     }
 }
 

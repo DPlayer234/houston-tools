@@ -39,7 +39,12 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship<'a>(mut self, data: &'a HBotData, mut create: CreateReply<'a>, ship: &'a ShipData, base_ship: Option<&'a ShipData>) -> CreateReply<'a> {
+    pub fn modify_with_ship<'a>(
+        mut self,
+        data: &'a HBotData,
+        ship: &'a ShipData,
+        base_ship: Option<&'a ShipData>,
+    ) -> CreateReply<'a> {
         self.mode = ButtonMessageMode::Edit;
         let base_ship = base_ship.unwrap_or(ship);
 
@@ -62,6 +67,8 @@ impl View {
         self.add_upgrade_row(&mut rows);
         self.add_retro_state_row(base_ship, &mut rows);
         self.add_nav_row(ship, &mut rows);
+
+        let mut create = CreateReply::new();
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
@@ -285,8 +292,8 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(ctx.data, ctx.create_reply(), ship, None),
-            Some(retrofit) => self.modify_with_ship(ctx.data, ctx.create_reply(), retrofit, Some(ship))
+            None => self.modify_with_ship(ctx.data, ship, None),
+            Some(retrofit) => self.modify_with_ship(ctx.data, retrofit, Some(ship))
         })
     }
 

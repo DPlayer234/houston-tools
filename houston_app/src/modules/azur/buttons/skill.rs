@@ -85,7 +85,6 @@ impl View {
     fn modify_with_ship<'a>(
         mut self,
         data: &'a HBotData,
-        create: CreateReply<'a>,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
@@ -138,11 +137,11 @@ impl View {
         }
 
         let (embed, row) = self.modify_with_skills(skills.into_iter(), embed);
-        create.embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
+        CreateReply::new().embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
-    fn modify_with_augment<'a>(self, create: CreateReply<'a>, augment: &'a Augment) -> CreateReply<'a> {
+    fn modify_with_augment(self, augment: &Augment) -> CreateReply<'_> {
         let embed = CreateEmbed::new()
             .color(augment.rarity.color_rgb())
             .author(CreateEmbedAuthor::new(&augment.name));
@@ -155,7 +154,7 @@ impl View {
         ]));
 
         let (embed, row) = self.modify_with_skills(skills, embed);
-        create.embed(embed).components(rows_without_empty([nav_row, Some(row)]))
+        CreateReply::new().embed(embed).components(rows_without_empty([nav_row, Some(row)]))
     }
 
     /// Creates a button that redirects to a skill index.
@@ -234,11 +233,11 @@ impl ButtonMessage for View {
             ViewSource::Ship(source) => {
                 let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;
                 let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                Ok(self.modify_with_ship(ctx.data, ctx.create_reply(), ship, Some(base_ship)))
+                Ok(self.modify_with_ship(ctx.data, ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
                 let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AzurParseError::Augment)?;
-                Ok(self.modify_with_augment(ctx.create_reply(), augment))
+                Ok(self.modify_with_augment(augment))
             }
         }
     }

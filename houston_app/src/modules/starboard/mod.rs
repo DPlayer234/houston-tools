@@ -47,7 +47,6 @@ pub struct StarboardEntry {
 }
 
 #[derive(Debug)]
-#[cfg_attr(not(feature = "db"), expect(dead_code))]
 pub struct StarboardEmoji(ReactionType);
 
 #[cfg_attr(not(feature = "db"), expect(dead_code))]

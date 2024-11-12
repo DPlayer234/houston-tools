@@ -1,13 +1,14 @@
 use std::fmt;
 
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged into multiple devices.
 #[poise::command(slash_command)]
 pub async fn upload(
     ctx: HContext<'_>,
     #[description = "The file to upload."]
-    attachment: Attachment
+    attachment: Attachment,
 ) -> HResult {
     let description = format!(
         "**{}**\n> {}",
@@ -32,7 +33,7 @@ pub async fn upload(
         CreateActionRow::buttons(&buttons)
     ];
 
-    let reply = ctx.create_ephemeral_reply()
+    let reply = create_reply(Ephemeral)
         .embed(embed)
         .components(&components);
 

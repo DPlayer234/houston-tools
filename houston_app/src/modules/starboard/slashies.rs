@@ -15,7 +15,7 @@ async fn leaderboard(
     #[description = "Which board to look for, identified by emoji."]
     #[autocomplete = "autocomplete_board"]
     board: String,
-    #[description = "Whether to show as ephemeral."]
+    #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> HResult {
     use super::buttons::leaderboard::View;

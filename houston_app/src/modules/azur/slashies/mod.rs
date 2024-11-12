@@ -1,5 +1,6 @@
 use super::buttons;
 use crate::prelude::*;
+use crate::slashies::{command_group, create_reply};
 
 mod autocomplete;
 mod choices;
@@ -7,7 +8,7 @@ mod find;
 
 use choices::*;
 
-crate::slashies::command_group!(
+command_group!(
     /// Information about mobile game Azur Lane.
     pub azur,
     "ship", "search_ship",
@@ -22,13 +23,15 @@ async fn ship(
     ctx: HContext<'_>,
     #[description = "The ship's name. This supports auto completion."]
     #[autocomplete = "autocomplete::ship_name"]
-    name: String
+    name: String,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     let data = ctx.data_ref();
     let ship = find::ship(data, &name)?;
 
     let view = buttons::ship::View::new(ship.group_id);
-    ctx.send(view.modify_with_ship(data, ctx.create_reply(), ship, None)).await?;
+    ctx.send(view.modify_with_ship(data, ship, None).ephemeral(ephemeral.into_ephemeral())).await?;
     Ok(())
 }
 
@@ -47,7 +50,9 @@ async fn search_ship(
     rarity: Option<EShipRarity>,
     #[description = "Whether the ships have a unique augment."]
     #[rename = "has-augment"]
-    has_augment: Option<bool>
+    has_augment: Option<bool>,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     use buttons::search_ship::*;
 
@@ -62,7 +67,7 @@ async fn search_ship(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(data, ctx.create_reply())).await?;
+    ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
     Ok(())
 }
@@ -73,13 +78,15 @@ async fn equip(
     ctx: HContext<'_>,
     #[description = "The equipment name. This supports auto completion."]
     #[autocomplete = "autocomplete::equip_name"]
-    name: String
+    name: String,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     let data = ctx.data_ref();
     let equip = find::equip(data, &name)?;
 
     let view = buttons::equip::View::new(equip.equip_id);
-    ctx.send(view.modify_with_equip(ctx.create_reply(), equip)).await?;
+    ctx.send(view.modify_with_equip(equip).ephemeral(ephemeral.into_ephemeral())).await?;
     Ok(())
 }
 
@@ -94,7 +101,9 @@ async fn search_equip(
     #[description = "The kind to select."]
     kind: Option<EEquipKind>,
     #[description = "The rarity to select."]
-    rarity: Option<EEquipRarity>
+    rarity: Option<EEquipRarity>,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     use buttons::search_equip::*;
 
@@ -108,7 +117,7 @@ async fn search_equip(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(data, ctx.create_reply())).await?;
+    ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
     Ok(())
 }
@@ -119,13 +128,15 @@ async fn augment(
     ctx: HContext<'_>,
     #[description = "The equipment name. This supports auto completion."]
     #[autocomplete = "autocomplete::augment_name"]
-    name: String
+    name: String,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     let data = ctx.data_ref();
     let augment = find::augment(data, &name)?;
 
     let view = buttons::augment::View::new(augment.augment_id);
-    ctx.send(view.modify_with_augment(data, ctx.create_reply(), augment)).await?;
+    ctx.send(view.modify_with_augment(data, augment).ephemeral(ephemeral.into_ephemeral())).await?;
     Ok(())
 }
 
@@ -144,6 +155,8 @@ async fn search_augment(
     #[autocomplete = "autocomplete::ship_name"]
     #[rename = "for-ship"]
     for_ship: Option<String>,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     use buttons::search_augment::*;
 
@@ -162,7 +175,7 @@ async fn search_augment(
     };
 
     let view = View::new(filter);
-    ctx.send(view.modify(data, ctx.create_reply())).await?;
+    ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
     Ok(())
 }
@@ -178,6 +191,8 @@ async fn reload_time(
     #[min = 0.0] #[max = 60.0]
     #[rename = "weapon-fr"]
     weapon_reload: f64,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     let reload_time = (200.0 / (100.0 + rld)).sqrt() * weapon_reload;
 
@@ -190,6 +205,6 @@ async fn reload_time(
         .color(DEFAULT_EMBED_COLOR)
         .description(description);
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())
 }

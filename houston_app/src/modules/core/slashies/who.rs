@@ -6,13 +6,34 @@ use utils::titlecase;
 
 use crate::fmt::discord::get_unique_username;
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 /// Returns basic information about the provided user.
-#[poise::command(slash_command, context_menu_command = "User Info")]
+#[poise::command(context_menu_command = "User Info")]
+pub async fn who_context(
+    ctx: HContext<'_>,
+    #[description = "The user to get info about."]
+    user: User,
+) -> HResult {
+    who_core(ctx, user, None).await
+}
+
+/// Returns basic information about the provided user.
+#[poise::command(slash_command)]
 pub async fn who(
     ctx: HContext<'_>,
     #[description = "The user to get info about."]
-    user: User
+    user: User,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
+) -> HResult {
+    who_core(ctx, user, ephemeral).await
+}
+
+async fn who_core(
+    ctx: HContext<'_>,
+    user: User,
+    ephemeral: Option<bool>,
 ) -> HResult {
     let mut embed = who_user_embed(&user);
 
@@ -26,7 +47,7 @@ pub async fn who(
         }
     }
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())
 }
 

@@ -6,6 +6,7 @@ use chrono::TimeDelta;
 use utils::time::{get_creation_time, parse_date_time};
 
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 const DATE_TIME_INVALID: HArgError = HArgError("The time format is invalid.");
 const TIME_OUT_OF_RANGE: HArgError = HArgError("The values are outside the allowed range.");
@@ -26,7 +27,7 @@ async fn timestamp_in(
     #[description = "Hours in the future."]
     hours: Option<i64>,
     #[description = "Minutes in the future."]
-    minutes: Option<i64>
+    minutes: Option<i64>,
 ) -> HResult {
     let mut delta = TimeDelta::zero();
 
@@ -55,7 +56,7 @@ async fn timestamp_in(
 async fn timestamp_at(
     ctx: HContext<'_>,
     #[description = "Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'"]
-    date_time: String
+    date_time: String,
 ) -> HResult {
     let timestamp = parse_date_time(&date_time, Utc)
         .ok_or(DATE_TIME_INVALID)?;
@@ -68,7 +69,7 @@ async fn timestamp_at(
 async fn timestamp_of(
     ctx: HContext<'_>,
     #[description = "The Discord snowflake."]
-    snowflake: String
+    snowflake: String,
 ) -> HResult {
     let timestamp = u64::from_str(&snowflake).ok()
         .and_then(get_creation_time)
@@ -89,6 +90,6 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
         .field("Relative", format_time(timestamp, 'R'), true)
         .color(DEFAULT_EMBED_COLOR);
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(Ephemeral).embed(embed)).await?;
     Ok(())
 }

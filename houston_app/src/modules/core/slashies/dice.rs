@@ -8,6 +8,7 @@ use smallvec::SmallVec;
 use utils::text::write_str::*;
 
 use crate::prelude::*;
+use crate::slashies::create_reply;
 
 /// Rolls some dice.
 #[poise::command(slash_command)]
@@ -15,6 +16,8 @@ pub async fn dice(
     ctx: HContext<'_>,
     #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]
     sets: DiceSetVec,
+    #[description = "Whether to show the response only to yourself."]
+    ephemeral: Option<bool>,
 ) -> HResult {
     let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
@@ -28,7 +31,7 @@ pub async fn dice(
         .description(content)
         .color(DEFAULT_EMBED_COLOR);
 
-    ctx.send(ctx.create_reply().embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())
 }
 
