@@ -1,5 +1,5 @@
-use mongodb::bson::doc;
-use mongodb::bson::oid::ObjectId;
+use bson::doc;
+use bson::oid::ObjectId;
 use mongodb::options::IndexOptions;
 use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};

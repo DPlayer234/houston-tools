@@ -27,11 +27,21 @@ impl super::Module for Module {
         ]
     }
 
+    #[cfg(feature = "db")]
+    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
+        Box::pin(async move {
+            model::Message::collection(db).create_indexes(model::Message::indices()).await?;
+            model::Score::collection(db).create_indexes(model::Score::indices()).await?;
+            Ok(())
+        })
+    }
+
     fn validate(&self, config: &config::HBotConfig) -> HResult {
         if config.mongodb_uri.is_none() {
             anyhow::bail!("starboard requires a mongodb_uri");
         }
 
+        log::info!("Starboard is enabled: {} board(s)", config.starboard.len());
         Ok(())
     }
 }
@@ -48,6 +58,8 @@ pub struct StarboardEntry {
     pub reacts: u8,
     #[serde(default = "Vec::new")]
     pub notices: Vec<String>,
+    #[serde(default)]
+    pub cash_gain: i8,
 }
 
 #[derive(Debug)]
@@ -122,19 +134,13 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
 }
 
 #[cfg(feature = "db")]
-pub async fn init_db(db: &mongodb::Database) -> HResult {
-    model::Message::collection(db).create_indexes(model::Message::indices()).await?;
-    model::Score::collection(db).create_indexes(model::Score::indices()).await?;
-    Ok(())
-}
-
-#[cfg(feature = "db")]
 async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     use anyhow::Context;
-    use mongodb::bson::doc;
+    use bson::doc;
     use mongodb::options::ReturnDocument;
 
     use crate::helper::bson_id;
+    use crate::modules::Module;
 
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
@@ -301,6 +307,18 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             .await?;
 
         log::trace!("{} gained {} {}.", message.author.name, score_increase, board.emoji.name());
+
+        if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {
+            use super::perks::model::{Wallet, WalletExt};
+
+            let amount = i64::from(board.cash_gain).saturating_mul(score_increase);
+
+            Wallet::collection(db)
+                .add_cash(board.guild, message.author.id, amount)
+                .await?;
+
+            log::trace!("{} gained {} cash.", message.author.name, amount);
+        }
     }
 
     Ok(())

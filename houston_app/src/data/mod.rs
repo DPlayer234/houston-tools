@@ -28,6 +28,7 @@ pub type HCommand = poise::Command<HFrameworkData, HError>;
 
 pub use app_emojis::HAppEmojis;
 use crate::modules::azur::data::HAzurLane;
+use crate::modules::perks::PerkState;
 
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]
@@ -46,6 +47,8 @@ pub struct HBotData {
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
     /// Lazily initialized Azur Lane data.
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
+    /// State of the perk module.
+    perk_state: PerkState,
     /// Database connection.
     #[cfg(feature = "db")]
     database: OnceLock<mongodb::Database>,
@@ -63,6 +66,7 @@ impl HBotData {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
             }),
+            perk_state: PerkState::default(),
             #[cfg(feature = "db")]
             database: OnceLock::new(),
         }
@@ -103,7 +107,12 @@ impl HBotData {
         &self.azur_lane
     }
 
-    pub async fn connect(&self) -> HResult {
+    #[must_use]
+    pub fn perk_state(&self) -> &PerkState {
+        &self.perk_state
+    }
+
+    pub async fn connect(&self, init: &crate::modules::Info) -> HResult {
         #[cfg(feature = "db")]
         if let Some(uri) = &self.config.mongodb_uri {
             use anyhow::Context;
@@ -111,7 +120,9 @@ impl HBotData {
             let client = mongodb::Client::with_uri_str(uri).await?;
             let db = client.default_database().context("no default database specified")?;
 
-            crate::modules::starboard::init_db(&db).await?;
+            for init in &init.db_init {
+                init(&db).await?;
+            }
 
             self.database
                 .set(db)

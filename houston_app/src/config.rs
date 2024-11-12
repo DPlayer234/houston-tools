@@ -25,6 +25,7 @@ pub struct HBotConfig {
     pub mongodb_uri: Option<String>,
     #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
+    pub perks: Option<crate::modules::perks::Config>,
 }
 
 #[derive(Debug, Deserialize, Default)]

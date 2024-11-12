@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
 
     let bot_data = Arc::new(HBotData::new(config.bot));
 
-    bot_data.connect().await?;
+    bot_data.connect(&init).await?;
     let loader = tokio::task::spawn(
         load_azur_lane(Arc::clone(&bot_data))
     );
@@ -83,6 +83,10 @@ async fn main() -> anyhow::Result<()> {
 
         async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
             buttons::handler::interaction_create(ctx, interaction).await;
+        }
+
+        async fn message(&self, ctx: Context, _new_message: Message) {
+            modules::perks::check_perks(ctx).await;
         }
 
         async fn reaction_add(&self, ctx: Context, reaction: Reaction) {

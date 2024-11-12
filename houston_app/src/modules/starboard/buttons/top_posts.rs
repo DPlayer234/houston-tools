@@ -20,7 +20,7 @@ impl View {
 impl View {
     pub async fn create_reply<'new>(mut self, data: &HBotData) -> anyhow::Result<CreateReply<'new>> {
         use anyhow::Context;
-        use mongodb::bson::doc;
+        use bson::doc;
         use serenity::futures::TryStreamExt;
 
         use utils::text::write_str::*;

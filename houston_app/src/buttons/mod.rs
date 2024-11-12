@@ -8,7 +8,7 @@ use smallvec::SmallVec;
 use utils::fields::FieldMut;
 
 use crate::prelude::*;
-use crate::modules::{azur, core as core_mod, starboard};
+use crate::modules::{azur, core as core_mod, perks, starboard};
 
 #[cfg(test)]
 mod test;
@@ -102,6 +102,8 @@ define_button_args! {
     ViewSearchEquip(azur::buttons::search_equip::View),
     /// Open the augment search.
     ViewSearchAugment(azur::buttons::search_augment::View),
+    /// Open the perk store.
+    PerksStore(perks::buttons::perk_store::View),
     /// Open the starboard top view.
     StarboardTop(starboard::buttons::top::View),
     /// Open the starboard top posts view.
@@ -152,6 +154,7 @@ pub mod handler {
         log::trace!("{}: {:?}", interaction.user.name, args);
 
         args.reply(ButtonContext {
+            serenity: ctx,
             interaction,
             http: ctx.http(),
             data: ctx.data_ref::<HFrameworkData>(),
@@ -248,6 +251,8 @@ where
 /// Execution context for [`ButtonArgsReply`].
 #[derive(Debug, Clone)]
 pub struct ButtonContext<'a> {
+    /// The serenity context.
+    pub serenity: &'a Context,
     /// The source interaction.
     pub interaction: &'a ComponentInteraction,
     /// The HTTP API that may be used.
