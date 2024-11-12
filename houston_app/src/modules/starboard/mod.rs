@@ -244,7 +244,8 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
                 .context("expected to find record that was just created")?;
 
             // pin the message if the update just now changed the value
-            if !record.pinned {
+            // we also need to ignore nsfw channels
+            if !record.pinned && !(is_in_nsfw(&ctx, &message).await?) {
                 let notice = board.notices
                     .choose(&mut thread_rng())
                     .map(String::as_str)
@@ -311,4 +312,14 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     }
 
     Ok(())
+}
+
+async fn is_in_nsfw(ctx: &Context, message: &Message) -> anyhow::Result<bool> {
+    let nsfw = message
+        .channel_id
+        .to_channel(ctx, message.guild_id).await?
+        .guild()
+        .is_some_and(|g| g.nsfw);
+
+    Ok(nsfw)
 }
