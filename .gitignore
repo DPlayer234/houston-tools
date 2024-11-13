@@ -6,3 +6,4 @@
 
 # App config
 /houston_app.toml
+/houston_app.*.toml

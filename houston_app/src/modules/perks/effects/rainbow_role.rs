@@ -25,14 +25,15 @@ impl Shape for RainbowRole {
     }
 
     async fn disable(&self, args: Args<'_>) -> HResult {
-        let role = find_rainbow_role(&args)?;
+        if let Ok(role) = find_rainbow_role(&args) {
+            args.ctx.http.remove_member_role(
+                args.guild_id,
+                args.user_id,
+                role.role,
+                Some("disabled rainbow role perk"),
+            ).await?;
+        }
 
-        args.ctx.http.remove_member_role(
-            args.guild_id,
-            args.user_id,
-            role.role,
-            Some("disabled rainbow role perk"),
-        ).await?;
         Ok(())
     }
 
@@ -46,7 +47,8 @@ impl Shape for RainbowRole {
         let loop_sec = Utc::now()
             .time()
             .signed_duration_since(NaiveTime::MIN)
-            .num_seconds() % LOOP_TIME;
+            .num_seconds()
+            .rem_euclid(LOOP_TIME);
 
         let loop_rel = loop_sec as f32 / LOOP_TIME as f32;
 

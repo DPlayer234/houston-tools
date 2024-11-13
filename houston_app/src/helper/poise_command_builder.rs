@@ -2,6 +2,7 @@ use poise::{Command, ContextMenuCommandAction};
 use serde::Serialize;
 use serenity::builder::CreateCommandOption;
 use serenity::model::application::{CommandOptionType, CommandType};
+use serenity::model::permissions::Permissions;
 
 // Custom Create Command payload type to include new data
 #[derive(Clone, Debug, Serialize)]
@@ -9,6 +10,8 @@ pub struct CustomCreateCommand {
     name: String,
     description: String,
     options: Vec<CreateCommandOption<'static>>,
+    #[serde(skip_serializing_if = "Permissions::is_empty")]
+    default_member_permissions: Permissions,
     #[serde(rename = "type")]
     kind: CommandType,
     contexts: Vec<u8>,
@@ -87,6 +90,7 @@ fn create_as_slash_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCreateComm
         name: cmd.name.clone(),
         description: cmd.description.clone().unwrap_or_else(|| "---".to_owned()),
         options,
+        default_member_permissions: cmd.default_member_permissions,
         kind: CommandType::ChatInput,
         contexts: contexts(cmd),
         integration_types: integration_types(cmd),
@@ -107,6 +111,7 @@ fn create_as_context_menu_command<E, U>(cmd: &Command<E, U>) -> Option<CustomCre
         name: cmd.context_menu_name.clone().unwrap_or_else(|| cmd.name.clone()),
         description: String::new(),
         options: Vec::new(),
+        default_member_permissions: cmd.default_member_permissions,
         kind,
         contexts: contexts(cmd),
         integration_types: integration_types(cmd),
