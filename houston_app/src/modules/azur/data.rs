@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+use bytes::Bytes;
 use dashmap::DashMap;
 use smallvec::{smallvec, SmallVec};
 
@@ -26,13 +27,8 @@ pub struct HAzurLane {
     augment_simsearch: Search<()>,
     ship_id_to_augment_indices: HashMap<u32, IndexVec>,
 
-    // holds static references (leaked boxes) so we can avoid copying
-    // the data every time the sprite needs to be uploaded.
-    //
-    // important: avoid simple `insert` calls since those could
-    // _unintentionally_ leak memory. dropping the cache (or this struct
-    // as a whole) would leak it too, but that's not a concern for now.
-    chibi_sprite_cache: DashMap<String, Option<&'static [u8]>>,
+    // use Bytes to avoid copying the data redundantly
+    chibi_sprite_cache: DashMap<String, Option<Bytes>>,
 }
 
 impl HAzurLane {
@@ -197,17 +193,17 @@ impl HAzurLane {
 
     /// Gets a chibi's image data.
     #[must_use]
-    pub fn get_chibi_image(&self, image_key: &str) -> Option<&'static [u8]> {
+    pub fn get_chibi_image(&self, image_key: &str) -> Option<Bytes> {
         // Consult the cache first. If the image has been seen already, it will be stored here.
         // It may also have a None entry if the image was requested but not found.
         match self.chibi_sprite_cache.get(image_key) {
-            Some(entry) => *entry,
+            Some(entry) => entry.clone(),
             None => self.load_and_cache_chibi_image(image_key),
         }
     }
 
     #[cold]
-    fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<&'static [u8]> {
+    fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<Bytes> {
         // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
         // files outside of `data_path`. Currently, this doesn't take user-input, but this should
         // be considered for the future.
@@ -219,10 +215,9 @@ impl HAzurLane {
 
                 match self.chibi_sprite_cache.entry(image_key.to_owned()) {
                     // data race: loaded concurrently, someone else was faster. drop the newly read data.
-                    Entry::Occupied(entry) => *entry.get(),
-                    // still empty: leak the current data via Box and store the ref.
-                    // we only leak this once per `image_key`, so the memory increase is capped.
-                    Entry::Vacant(entry) => *entry.insert(Some(Box::leak(data.into_boxed_slice()))),
+                    Entry::Occupied(entry) => entry.get().clone(),
+                    // still empty: wrap the current data and return it
+                    Entry::Vacant(entry) => (*entry.insert(Some(Bytes::from(data)))).clone(),
                 }
             },
             Err(err) => {

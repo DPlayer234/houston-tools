@@ -1075,6 +1075,7 @@ dependencies = [
  "base64 0.22.1",
  "bitflags 2.6.0",
  "bson",
+ "bytes",
  "chrono",
  "config",
  "dashmap",
