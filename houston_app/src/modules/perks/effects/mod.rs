@@ -1,3 +1,4 @@
+use bson::Bson;
 use serenity::gateway::client::Context;
 
 use super::config::{Config, EffectPrice};
@@ -24,8 +25,9 @@ trait Shape {
         Ok(true)
     }
 
-    async fn enable(&self, args: Args<'_>) -> HResult {
+    async fn enable(&self, args: Args<'_>, state: Option<Bson>) -> HResult {
         _ = args;
+        _ = state;
         Ok(())
     }
 
@@ -55,10 +57,10 @@ pub struct EffectInfo<'a> {
 }
 
 macro_rules! impl_kind_fn {
-    ($name:ident ( $args:ident: $args_ty:ty ) -> $ret:ty) => {
-        pub async fn $name(self, $args: $args_ty) -> $ret {
+    ($name:ident ( $($args:ident: $args_ty:ty),* ) -> $ret:ty) => {
+        pub async fn $name(self, $($args: $args_ty),*) -> $ret {
             match self {
-                Self::RainbowRole => rainbow_role::RainbowRole.$name($args).await,
+                Self::RainbowRole => rainbow_role::RainbowRole.$name($($args),*).await,
             }
         }
     };
@@ -66,7 +68,7 @@ macro_rules! impl_kind_fn {
 
 impl Effect {
     impl_kind_fn!(supported(args: Args<'_>) -> anyhow::Result<bool>);
-    impl_kind_fn!(enable(args: Args<'_>) -> HResult);
+    impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> HResult);
     impl_kind_fn!(disable(args: Args<'_>) -> HResult);
     impl_kind_fn!(update(args: &Context) -> HResult);
 

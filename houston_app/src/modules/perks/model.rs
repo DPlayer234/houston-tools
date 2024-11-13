@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use mongodb::options::{IndexOptions, ReturnDocument};
 use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
-use serenity::model::id::{GuildId, UserId};
+use serenity::model::id::{GuildId, RoleId, UserId};
 
 use super::effects::Effect;
 use super::items::Item;
@@ -23,6 +23,8 @@ pub struct Wallet {
     #[serde(default)]
     pub pushpin: i64,
     #[serde(default)]
+    pub role_edit: i64,
+    #[serde(default)]
     pub crab: i64,
 }
 
@@ -34,6 +36,15 @@ pub struct ActivePerk {
     pub effect: Effect,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
     pub until: DateTime<Utc>,
+    pub state: Option<Bson>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UniqueRole {
+    pub _id: ObjectId,
+    pub guild: GuildId,
+    pub user: UserId,
+    pub role: RoleId,
 }
 
 fn name(name: &str) -> IndexOptions {
@@ -85,6 +96,24 @@ impl ActivePerk {
     }
 }
 
+impl UniqueRole {
+    pub fn collection(db: &Database) -> Collection<Self> {
+        db.collection("perks.unique_role")
+    }
+
+    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
+        [
+            IndexModel::builder()
+                .options(name("guild-user"))
+                .keys(doc! {
+                    "guild": 1,
+                    "user": 1,
+                })
+                .build(),
+        ]
+    }
+}
+
 pub trait WalletExt {
     async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
     async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
@@ -111,6 +140,7 @@ macro_rules! make_item_accessors {
 make_item_accessors!(
     Cash => cash,
     Pushpin => pushpin,
+    RoleEdit => role_edit,
     Collectible => crab,
 );
 

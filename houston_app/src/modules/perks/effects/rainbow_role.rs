@@ -12,7 +12,7 @@ impl Shape for RainbowRole {
         Ok(find_rainbow_role(&args).is_ok())
     }
 
-    async fn enable(&self, args: Args<'_>) -> HResult {
+    async fn enable(&self, args: Args<'_>, _state: Option<Bson>) -> HResult {
         let role = find_rainbow_role(&args)?;
 
         args.ctx.http.add_member_role(

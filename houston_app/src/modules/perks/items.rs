@@ -7,6 +7,7 @@ use super::config::{Config, ItemPrice};
 pub enum Item {
     Cash,
     Pushpin,
+    RoleEdit,
     Collectible,
 }
 
@@ -21,6 +22,7 @@ impl Item {
         &[
             Self::Cash,
             Self::Pushpin,
+            Self::RoleEdit,
             Self::Collectible,
         ]
     }
@@ -37,6 +39,7 @@ impl Item {
         match self {
             Self::Cash => ItemInfo { name: &perks.cash_name, description: "Illegal tender." },
             Self::Pushpin => extract_or!(perks.pushpin, "Pushpin"),
+            Self::RoleEdit => extract_or!(perks.role_edit, "Role Edit"),
             Self::Collectible => extract_or!(perks.collectible, "Collectible"),
         }
     }
@@ -51,6 +54,7 @@ impl Item {
         match self {
             Self::Cash => None,
             Self::Pushpin => extract!(perks.pushpin),
+            Self::RoleEdit => extract!(perks.role_edit),
             Self::Collectible => extract!(perks.collectible),
         }
     }

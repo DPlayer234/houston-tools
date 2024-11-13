@@ -312,7 +312,7 @@ impl View {
             .set_enabled(guild_id, user_id, effect, until)
             .await?;
 
-        effect.enable(args).await?;
+        effect.enable(args, None).await?;
 
         self.action = Action::ViewEffect(effect);
         self.view_effect(ctx, guild_id, user_id, effect).await

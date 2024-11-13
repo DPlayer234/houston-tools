@@ -50,6 +50,10 @@ impl super::Module for Module {
             ]);
         }
 
+        if perks.role_edit.is_some() {
+            c.push(slashies::role_edit::role_edit());
+        }
+
         c
     }
 
@@ -57,6 +61,7 @@ impl super::Module for Module {
         Box::pin(async move {
             model::Wallet::collection(db).create_indexes(model::Wallet::indices()).await?;
             model::ActivePerk::collection(db).create_indexes(model::ActivePerk::indices()).await?;
+            model::UniqueRole::collection(db).create_indexes(model::UniqueRole::indices()).await?;
             Ok(())
         })
     }

@@ -20,7 +20,7 @@ command_group!(
         default_member_permissions = "MANAGE_GUILD",
         guild_only,
     ),
-    "enable", "disable", "list", "give",
+    "enable", "disable", "list", "give", "unique_role",
 );
 
 /// Enables a perk for a member.
@@ -47,7 +47,7 @@ async fn enable(
         .context("duration lasts beyond the end of time")?;
 
     ctx.defer_ephemeral().await?;
-    perk.enable(args).await?;
+    perk.enable(args, None).await?;
 
     ActivePerk::collection(db)
         .set_enabled(member.guild_id, member.user.id, perk, until)
@@ -173,6 +173,63 @@ async fn give(
         "Set **{}** to {} for {}.",
         item.info(perks).name, wallet.item(item), member.mention(),
     );
+
+    let embed = CreateEmbed::new()
+        .color(data.config().embed_color)
+        .description(description);
+
+    ctx.send(CreateReply::new().embed(embed)).await?;
+    Ok(())
+}
+
+/// Sets a user's unique role. Can be omitted to delete the association.
+#[poise::command(slash_command, rename = "unique-role", guild_only)]
+async fn unique_role(
+    ctx: HContext<'_>,
+    #[description = "The member to give items to."]
+    member: Member,
+    #[description = "The role to set as being unique to them."]
+    role: Option<Role>,
+) -> HResult {
+    let data = ctx.data_ref();
+    let db = data.database()?;
+    ctx.defer_ephemeral().await?;
+
+    let filter = doc! {
+        "guild": bson_id!(member.guild_id),
+        "user": bson_id!(member.user.id),
+    };
+
+    let description = if let Some(role) = role {
+        let update = doc! {
+            "$setOnInsert": {
+                "guild": bson_id!(member.guild_id),
+                "user": bson_id!(member.user.id),
+            },
+            "$set": {
+                "role": bson_id!(role.id),
+            },
+        };
+
+        UniqueRole::collection(db)
+            .update_one(filter, update)
+            .upsert(true)
+            .await?;
+
+        format!(
+            "Set {}'s unique role to be {}.",
+            member.mention(), role.mention(),
+        )
+    } else {
+        UniqueRole::collection(db)
+            .delete_one(filter)
+            .await?;
+
+        format!(
+            "Unset {}'s unique role.",
+            member.mention(),
+        )
+    };
 
     let embed = CreateEmbed::new()
         .color(data.config().embed_color)
