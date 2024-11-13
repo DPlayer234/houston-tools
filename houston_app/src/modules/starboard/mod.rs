@@ -4,8 +4,8 @@ use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use serenity::prelude::*;
 
+use super::Module as _;
 use crate::helper::bson_id;
-use crate::modules::Module as _;
 use crate::prelude::*;
 
 pub mod buttons;
@@ -300,11 +300,12 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
 
         if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {
             use super::perks::model::{Wallet, WalletExt};
+            use super::perks::Item;
 
             let amount = i64::from(board.cash_gain).saturating_mul(score_increase);
 
             Wallet::collection(db)
-                .add_cash(board.guild, message.author.id, amount)
+                .add_items(board.guild, message.author.id, Item::Cash, amount)
                 .await?;
 
             log::trace!("{} gained {} cash.", message.author.name, amount);

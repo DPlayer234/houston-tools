@@ -2,11 +2,11 @@ use anyhow::Context as _;
 use chrono::prelude::*;
 
 use super::*;
-use crate::modules::perks::RainbowRoleEntry;
+use crate::modules::perks::config::RainbowRoleEntry;
 
 pub struct RainbowRole;
 
-impl Effect for RainbowRole {
+impl Shape for RainbowRole {
     async fn enable(&self, args: Args<'_>) -> HResult {
         let role = find_rainbow_role(&args)?;
 

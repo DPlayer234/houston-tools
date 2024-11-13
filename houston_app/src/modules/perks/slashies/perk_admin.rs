@@ -6,8 +6,9 @@ use serenity::futures::TryStreamExt;
 use utils::text::write_str::*;
 use utils::time::TimeMentionable;
 
-use super::super::effects::{Args, Kind};
 use crate::helper::bson_id;
+use crate::modules::perks::effects::{Args, Effect};
+use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
 use crate::slashies::command_group;
@@ -19,7 +20,7 @@ command_group!(
         default_member_permissions = "MANAGE_GUILD",
         guild_only,
     ),
-    "enable", "disable", "list"
+    "enable", "disable", "list", "give",
 );
 
 /// Enables a perk for a member.
@@ -29,7 +30,7 @@ async fn enable(
     #[description = "The member to enable the perk for."]
     member: Member,
     #[description = "The perk to enable."]
-    perk: Kind,
+    perk: Effect,
     #[description = "How long to enable it for, in hours."]
     duration: u32,
 ) -> HResult {
@@ -74,7 +75,7 @@ async fn disable(
     #[description = "The member to disable the perk for."]
     member: Member,
     #[description = "The perk to disable."]
-    perk: Kind,
+    perk: Effect,
 ) -> HResult {
     let db = ctx.data_ref().database()?;
     let args = Args {
@@ -143,6 +144,39 @@ async fn list(
 
     let embed = CreateEmbed::new()
         .title(title)
+        .color(DEFAULT_EMBED_COLOR)
+        .description(description);
+
+    ctx.send(CreateReply::new().embed(embed)).await?;
+    Ok(())
+}
+
+/// Gives a user items.
+#[poise::command(slash_command, guild_only)]
+async fn give(
+    ctx: HContext<'_>,
+    #[description = "The member to give items to."]
+    member: Member,
+    #[description = "The item to hand out."]
+    item: Item,
+    #[description = "How many items to give. Negative to remove."]
+    amount: i32,
+) -> HResult {
+    let data = ctx.data_ref();
+    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let db = data.database()?;
+    ctx.defer_ephemeral().await?;
+
+    let wallet = Wallet::collection(db)
+        .add_items(member.guild_id, member.user.id, item, amount.into())
+        .await?;
+
+    let description = format!(
+        "Set **{}** to {} for {}.",
+        item.name(perks), wallet.item(item), member.mention(),
+    );
+
+    let embed = CreateEmbed::new()
         .color(DEFAULT_EMBED_COLOR)
         .description(description);
 

@@ -87,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+            modules::perks::dispatch_check_perks(&ctx);
             buttons::handler::interaction_create(ctx, interaction).await;
         }
 
@@ -95,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
+            modules::perks::dispatch_check_perks(&ctx);
             modules::starboard::handle_reaction(ctx, reaction).await;
         }
     }

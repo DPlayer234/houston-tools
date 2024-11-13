@@ -8,14 +8,19 @@ use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{GuildId, UserId};
 
+use super::items::Item;
+use crate::data::HArgError;
 use crate::helper::bson_id;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Wallet {
     pub _id: ObjectId,
     pub guild: GuildId,
     pub user: UserId,
+    #[serde(default)]
     pub cash: i64,
+    #[serde(default)]
+    pub crab: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +28,7 @@ pub struct ActivePerk {
     pub _id: ObjectId,
     pub guild: GuildId,
     pub user: UserId,
-    pub effect: super::effects::Kind,
+    pub effect: super::effects::Effect,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
     pub until: DateTime<Utc>,
 }
@@ -78,12 +83,37 @@ impl ActivePerk {
 }
 
 pub trait WalletExt {
-    async fn add_cash(&self, guild_id: GuildId, user_id: UserId, amount: i64) -> anyhow::Result<i64>;
-    async fn try_take_cash(&self, guild_id: GuildId, user_id: UserId, amount: i64) -> anyhow::Result<bool>;
+    async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
+    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
 }
 
+macro_rules! make_item_accessors {
+    ($($item:ident => $field:ident,)*) => {
+        fn item_to_name(item: Item) -> &'static str {
+            match item {
+                $( Item::$item => stringify!($field), )*
+            }
+        }
+
+        impl Wallet {
+            pub fn item(&self, item: Item) -> i64 {
+                match item {
+                    $( Item::$item => self.$field, )*
+                }
+            }
+        }
+    };
+}
+
+make_item_accessors!(
+    Cash => cash,
+    Collectible => crab,
+);
+
 impl WalletExt for Collection<Wallet> {
-    async fn add_cash(&self, guild_id: GuildId, user_id: UserId, amount: i64) -> anyhow::Result<i64> {
+    async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet> {
+        let key = item_to_name(item);
+
         let filter = doc! {
             "guild": bson_id!(guild_id),
             "user": bson_id!(user_id),
@@ -95,7 +125,7 @@ impl WalletExt for Collection<Wallet> {
                 "user": bson_id!(user_id),
             },
             "$inc": {
-                "cash": amount,
+                key: amount,
             },
         };
 
@@ -106,39 +136,42 @@ impl WalletExt for Collection<Wallet> {
             .await?
             .context("cannot return none after upsert")?;
 
-        Ok(doc.cash)
+        Ok(doc)
     }
 
-    async fn try_take_cash(&self, guild_id: GuildId, user_id: UserId, amount: i64) -> anyhow::Result<bool> {
+    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet> {
+        let key = item_to_name(item);
+
         let filter = doc! {
             "guild": bson_id!(guild_id),
             "user": bson_id!(user_id),
-            "cash": {
+            key: {
                 "$gt": amount,
             }
         };
 
         let update = doc! {
             "$inc": {
-                "cash": -amount,
+                key: -amount,
             },
         };
 
         let doc = self
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::Before)
-            .await?;
+            .await?
+            .ok_or(HArgError("You can't afford this right now."))?;
 
-        Ok(doc.is_some())
+        Ok(doc)
     }
 }
 
 pub trait ActivePerkExt {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Kind, until: DateTime<Utc>) -> anyhow::Result<()>;
-    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Kind) -> anyhow::Result<()>;
+    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect, until: DateTime<Utc>) -> anyhow::Result<()>;
+    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<()>;
 }
 
-fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: super::effects::Kind) -> anyhow::Result<Document> {
+fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<Document> {
     Ok(doc! {
         "guild": bson_id!(guild_id),
         "user": bson_id!(user_id),
@@ -147,7 +180,7 @@ fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: super::effects
 }
 
 impl ActivePerkExt for Collection<ActivePerk> {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Kind, until: DateTime<Utc>) -> anyhow::Result<()> {
+    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect, until: DateTime<Utc>) -> anyhow::Result<()> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
         let update = doc! {
             "$setOnInsert": filter.clone(),
@@ -163,7 +196,7 @@ impl ActivePerkExt for Collection<ActivePerk> {
         Ok(())
     }
 
-    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Kind) -> anyhow::Result<()> {
+    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<()> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         self.delete_one(filter)

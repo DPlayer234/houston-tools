@@ -12,9 +12,14 @@ use crate::prelude::*;
 const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(5);
 
 pub mod buttons;
-pub mod model;
+pub mod config;
 mod effects;
+mod items;
+pub mod model;
 mod slashies;
+
+pub use config::Config;
+pub use items::Item;
 
 pub struct Module;
 
@@ -42,7 +47,7 @@ impl super::Module for Module {
         })
     }
 
-    fn validate(&self, config: &config::HBotConfig) -> HResult {
+    fn validate(&self, config: &crate::config::HBotConfig) -> HResult {
         if config.mongodb_uri.is_none() {
             anyhow::bail!("perks requires a mongodb_uri");
         }
@@ -58,37 +63,26 @@ impl super::Module for Module {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Config {
-    _enable: Option<bool>,
-    pub rainbow: Option<RainbowConfig>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct StoreConfig {
-    pub cost: u32,
-    pub duration: u32,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct RainbowConfig {
-    #[serde(flatten)]
-    pub store: StoreConfig,
-    pub role: Vec<RainbowRoleEntry>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct RainbowRoleEntry {
-    pub guild: GuildId,
-    pub role: RoleId,
-}
-
 #[derive(Debug, Default)]
 pub struct PerkState {
     last_check: RwLock<DateTime<Utc>>,
 }
 
+pub fn dispatch_check_perks(ctx: &Context) {
+    let data = ctx.data_ref::<HBotData>();
+    if Module.enabled(data.config()) {
+        tokio::task::spawn(check_perks_impl(ctx.clone()));
+    }
+}
+
 pub async fn check_perks(ctx: Context) {
+    let data = ctx.data_ref::<HBotData>();
+    if Module.enabled(data.config()) {
+        check_perks_impl(ctx).await;
+    }
+}
+
+async fn check_perks_impl(ctx: Context) {
     if let Err(why) = check_perks_core(ctx).await {
         log::error!("Perk check failed: {why:?}");
     }
@@ -96,10 +90,6 @@ pub async fn check_perks(ctx: Context) {
 
 async fn check_perks_core(ctx: Context) -> HResult {
     let data = ctx.data_ref::<HBotData>();
-    if !Module.enabled(data.config()) {
-        return Ok(());
-    }
-
     let state = data.perk_state();
     let last = *state.last_check.read().await;
     let next = last
@@ -121,7 +111,7 @@ async fn check_perks_core(ctx: Context) -> HResult {
     tokio::spawn({
         let ctx = ctx.clone();
         async move {
-            for kind in effects::Kind::all() {
+            for kind in effects::Effect::all() {
                 if let Err(why) = kind.update(&ctx).await {
                     log::error!("Failed update for perk effect {kind:?}: {why:?}");
                 }
@@ -132,35 +122,33 @@ async fn check_perks_core(ctx: Context) -> HResult {
     let db = data.database()?;
 
     // search for expiring perks
-    {
-        let filter = doc! {
-            "until": {
-                "$lt": Bson::DateTime(now.into()),
-            },
+    let filter = doc! {
+        "until": {
+            "$lt": Bson::DateTime(now.into()),
+        },
+    };
+
+    let mut query = model::ActivePerk::collection(db)
+        .find(filter)
+        .await?;
+
+    while let Some(perk) = query.try_next().await? {
+        let args = effects::Args {
+            ctx: &ctx,
+            guild_id: perk.guild,
+            user_id: perk.user,
         };
 
-        let mut query = model::ActivePerk::collection(db)
-            .find(filter)
+        perk.effect.disable(args).await?;
+
+        #[allow(clippy::used_underscore_binding)]
+        let filter = doc! {
+            "_id": perk._id,
+        };
+
+        model::ActivePerk::collection(db)
+            .delete_one(filter)
             .await?;
-
-        while let Some(perk) = query.try_next().await? {
-            let args = effects::Args {
-                ctx: &ctx,
-                guild_id: perk.guild,
-                user_id: perk.user,
-            };
-
-            perk.effect.disable(args).await?;
-
-            #[allow(clippy::used_underscore_binding)]
-            let filter = doc! {
-                "_id": perk._id,
-            };
-
-            model::ActivePerk::collection(db)
-                .delete_one(filter)
-                .await?;
-        }
     }
 
     Ok(())

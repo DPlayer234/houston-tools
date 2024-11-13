@@ -172,11 +172,17 @@ pub mod handler {
         log::warn!("Component error: {err:?}");
 
         let err_text = format!("Button error: ```{err}```");
-        let reply = CreateReply::default().ephemeral(true)
-            .embed(CreateEmbed::new().description(err_text).color(ERROR_EMBED_COLOR));
-        let response = reply.to_slash_initial_response(Default::default());
+        let embed = CreateEmbed::new()
+            .description(err_text)
+            .color(ERROR_EMBED_COLOR);
 
-        let res = interaction.create_response(ctx.http(), CreateInteractionResponse::Message(response)).await;
+        let reply = CreateReply::new()
+            .ephemeral(true)
+            .embed(embed);
+
+        let response = reply.to_slash_followup_response(Default::default());
+
+        let res = interaction.create_followup(ctx.http(), response).await;
         if let Err(res) = res {
             log::warn!("Error sending component error: {res}");
         }

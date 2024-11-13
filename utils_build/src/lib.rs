@@ -16,6 +16,21 @@ pub fn embed_windows_resources() {
     }
 }
 
+/// Includes the git commit hash for the directory.
+///
+/// This sets the `GIT_HASH` environment variable for the compilation of the crate itself.
+/// If this fails, it prints a warning.
+///
+/// Access it via [`option_env!`]:
+///
+/// ```no_run
+/// match option_env!("GIT_HASH") {
+///     Some(git_hash) => println!("git commit is {git_hash}"),
+///     None => println!("unknown git commit"),
+/// }
+/// ```
+///
+/// If you're _really_ sure that this can't fail, you may also use [`env!`].
 pub fn include_git_commit_hash() {
     // Based on <https://stackoverflow.com/a/44407625>
     println!("cargo::rerun-if-changed=.git/HEAD");

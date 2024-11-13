@@ -10,10 +10,11 @@ use utils::time::TimeMentionable;
 
 use crate::buttons::prelude::*;
 use crate::helper::bson_id;
+use crate::modules::perks::config::{EffectPrice, ItemPrice};
 use crate::modules::perks::effects::Args;
-use crate::modules::perks::effects::Kind;
+use crate::modules::perks::effects::Effect;
+use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
-use crate::modules::perks::StoreConfig;
 
 // View the store.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -24,7 +25,8 @@ pub struct View {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 enum Action {
     Nothing,
-    Buy(Kind, StoreConfig),
+    BuyEffect(Effect),
+    BuyItem(Item),
 }
 
 impl View {
@@ -34,24 +36,39 @@ impl View {
         }
     }
 
-    pub async fn create_reply<'new>(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'new>> {
+    pub async fn create_reply(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HBotData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
-        if let Action::Buy(effect, conf) = self.action {
-            let success = Wallet::collection(db)
-                .try_take_cash(guild_id, user_id, conf.cost.into())
-                .await?;
+        // used for wallet and active perks
+        let filter = doc! {
+            "guild": bson_id!(guild_id),
+            "user": bson_id!(user_id),
+        };
 
-            if success {
+        let wallet = match self.action {
+            Action::Nothing => {
+                Wallet::collection(db)
+                    .find_one(filter.clone())
+                    .await?
+                    .unwrap_or_default()
+            }
+            Action::BuyEffect(effect) => {
+                let st = effect.price(perks)
+                    .context("effect cannot be bought")?;
+
+                let wallet = Wallet::collection(db)
+                    .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+                    .await?;
+
                 let args = Args {
                     ctx,
                     guild_id,
                     user_id,
                 };
 
-                let duration = TimeDelta::try_hours(conf.duration.into())
+                let duration = TimeDelta::try_hours(st.duration.into())
                     .context("invalid time configuration")?;
 
                 let until = Utc::now()
@@ -63,66 +80,99 @@ impl View {
                     .await?;
 
                 effect.enable(args).await?;
+                wallet
             }
-        }
+            Action::BuyItem(item) => {
+                let st = item.price(perks)
+                    .context("effect cannot be bought")?;
 
-        self.action = Action::Nothing;
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(user_id),
+                Wallet::collection(db)
+                    .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+                    .await?;
+
+                Wallet::collection(db)
+                    .add_items(guild_id, user_id, item, st.amount.into())
+                    .await?
+            }
         };
 
+        self.action = Action::Nothing;
+
         let active = ActivePerk::collection(db)
-            .find(filter.clone())
+            .find(filter)
             .await?
             .try_collect::<Vec<_>>()
             .await?;
 
-        let wallet = Wallet::collection(db)
-            .find_one(filter)
-            .await?
-            .map(|w| w.cash)
-            .unwrap_or_default();
-
-        fn find(active: &[ActivePerk], effect: Kind) -> Option<&ActivePerk> {
+        fn find(active: &[ActivePerk], effect: Effect) -> Option<&ActivePerk> {
             active.iter().find(|p| p.effect == effect)
         }
 
         let mut description = String::new();
         let mut buttons = Vec::new();
 
-        let mut emit_item = |config: StoreConfig, effect: Kind| {
+        let mut add_effect = |st: EffectPrice, effect: Effect| {
             if let Some(active) = find(&active, effect) {
                 writeln_str!(
                     description,
-                    "- **{}:** ~~${}~~ ✅ until {}",
-                    effect.name(), config.cost, active.until.short_date_time(),
+                    "- **{}:** ~~{}{}~~ ✅ until {}",
+                    effect.name(), perks.cash_name, st.cost, active.until.short_date_time(),
                 );
             } else {
-                let custom_id = self.to_custom_id_with(utils::field_mut!(Self: action), Action::Buy(effect, config));
+                let custom_id = self.to_custom_id_with(utils::field_mut!(Self: action), Action::BuyEffect(effect));
                 let button = CreateButton::new(custom_id)
-                    .label(format!("{}: ${}", effect.name(), config.cost))
-                    .disabled(wallet < i64::from(config.cost));
+                    .label(utils::text::truncate(effect.name(), 25))
+                    .disabled(wallet.cash < i64::from(st.cost));
 
                 buttons.push(button);
 
                 writeln_str!(
                     description,
-                    "- **{}:** ${} for {}h",
-                    effect.name(), config.cost, config.duration,
+                    "- **{}:** {}{} for {}h",
+                    effect.name(), perks.cash_name, st.cost, st.duration,
                 );
             }
         };
 
         if let Some(rainbow) = &perks.rainbow {
-            emit_item(rainbow.store, Kind::RainbowRole);
+            add_effect(rainbow.price, Effect::RainbowRole);
+        }
+
+        let mut add_item = |st: ItemPrice, item: Item| {
+            let custom_id = self.to_custom_id_with(utils::field_mut!(Self: action), Action::BuyItem(item));
+            let button = CreateButton::new(custom_id)
+                .label(utils::text::truncate(item.name(perks), 25))
+                .disabled(wallet.cash < i64::from(st.cost));
+
+            buttons.push(button);
+
+            write_str!(
+                description,
+                "- **{}:** {}{}",
+                item.name(perks), perks.cash_name, st.cost,
+            );
+
+            if st.amount != 1 {
+                write_str!(description, " for {}", st.amount);
+            }
+
+            let owned = wallet.item(item);
+            if owned != 0 {
+                write_str!(description, " [Held: {owned}]");
+            }
+
+            description.push('\n');
+        };
+
+        if let Some(collectible) = &perks.collectible {
+            add_item(collectible.price, Item::Collectible);
         }
 
         let embed = CreateEmbed::new()
             .title("Perk Store")
             .color(DEFAULT_EMBED_COLOR)
             .description(description)
-            .footer(CreateEmbedFooter::new(format!("Wallet: ${wallet}")));
+            .footer(CreateEmbedFooter::new(format!("Wallet: {}{}", perks.cash_name, wallet.cash)));
 
         let components: Vec<_> = buttons
             .chunks(5)
