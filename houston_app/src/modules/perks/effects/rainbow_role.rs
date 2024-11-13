@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use chrono::prelude::*;
 
 use super::*;
-use crate::modules::perks::config::RainbowRoleEntry;
+use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
 
 pub struct RainbowRole;
 
@@ -39,6 +39,10 @@ impl Shape for RainbowRole {
     async fn update(&self, ctx: &Context) -> HResult {
         const LOOP_TIME: i64 = 7200;
 
+        let Ok(rainbow) = get_config(ctx) else {
+            return Ok(())
+        };
+
         let loop_sec = Utc::now()
             .time()
             .signed_duration_since(NaiveTime::MIN)
@@ -57,11 +61,11 @@ impl Shape for RainbowRole {
 
         let color = hsv_to_color(h, s, v);
 
-        for entry in rainbow_roles(ctx) {
+        for (guild, entry) in &rainbow.guilds {
             let edit = EditRole::new()
                 .colour(color);
 
-            let role = entry.guild.edit_role(&ctx.http, entry.role, edit).await?;
+            let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
             log::trace!("Updated rainbow role {} to color #{:06X}", role.name, color.0);
         }
 
@@ -69,20 +73,22 @@ impl Shape for RainbowRole {
     }
 }
 
-fn rainbow_roles(ctx: &Context) -> &[RainbowRoleEntry] {
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("rainbow role not configured")]
+struct NoRainbowRole;
+
+fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
     ctx.data_ref::<HBotData>()
         .config()
         .perks.as_ref()
-        .expect("must have perks enabled")
+        .ok_or(NoRainbowRole)?
         .rainbow.as_ref()
-        .map(|r| r.role.as_slice())
-        .unwrap_or_default()
+        .ok_or(NoRainbowRole)
 }
 
 fn find_rainbow_role<'a>(args: &Args<'a>) -> anyhow::Result<&'a RainbowRoleEntry> {
-    rainbow_roles(args.ctx)
-        .iter()
-        .find(|r| r.guild == args.guild_id)
+    get_config(args.ctx)?
+        .guilds.get(&args.guild_id)
         .context("rainbow role not configured for guild")
 }
 

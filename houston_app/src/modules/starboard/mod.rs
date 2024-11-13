@@ -7,15 +7,19 @@ use serenity::prelude::*;
 use super::Module as _;
 use crate::helper::bson_id;
 use crate::prelude::*;
+use crate::config::HBotConfig;
 
 pub mod buttons;
+pub mod config;
 pub mod model;
 mod slashies;
+
+pub use config::Config;
 
 pub struct Module;
 
 impl super::Module for Module {
-    fn enabled(&self, config: &config::HBotConfig) -> bool {
+    fn enabled(&self, config: &HBotConfig) -> bool {
         !config.starboard.is_empty()
     }
 
@@ -37,91 +41,24 @@ impl super::Module for Module {
         })
     }
 
-    fn validate(&self, config: &config::HBotConfig) -> HResult {
+    fn validate(&self, config: &HBotConfig) -> HResult {
         if config.mongodb_uri.is_none() {
             anyhow::bail!("starboard requires a mongodb_uri");
         }
 
-        log::info!("Starboard is enabled: {} board(s)", config.starboard.len());
+        log::info!("Starboard is enabled: {} guild(s)", config.starboard.len());
         Ok(())
     }
 }
 
-pub type Config = Vec<StarboardEntry>;
-
-#[derive(Debug, serde::Deserialize)]
-pub struct StarboardEntry {
-    pub name: String,
-    pub guild: GuildId,
-    pub channel: ChannelId,
-    pub emoji: StarboardEmoji,
-    pub reacts: u8,
-    #[serde(default = "Vec::new")]
-    pub notices: Vec<String>,
-    #[serde(default)]
-    pub cash_gain: i8,
-}
-
-#[derive(Debug)]
-pub struct StarboardEmoji(ReactionType);
-
-impl StarboardEmoji {
-    pub fn as_emoji(&self) -> &ReactionType {
-        &self.0
-    }
-
-    pub fn name(&self) -> &str {
-        match self.as_emoji() {
-            ReactionType::Custom { name, .. } => name.as_ref().expect("always set").as_str(),
-            ReactionType::Unicode(unicode) => unicode.as_str(),
-            _ => panic!("never set to invalid"),
-        }
-    }
-
-    pub fn equivalent_to(&self, reaction: &ReactionType) -> bool {
-        match (self.as_emoji(), reaction) {
-            (ReactionType::Custom { id: self_id, .. }, ReactionType::Custom { id: other_id, .. }) => self_id == other_id,
-            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => self_name == other_name,
-            _ => false,
-        }
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for StarboardEmoji {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use std::fmt;
-
-        use serenity::small_fixed_array::FixedString;
-
-        struct Visitor;
-
-        impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = StarboardEmoji;
-
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("expected string for emoji")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let emoji = if let Some((id, name)) = v.split_once(':') {
-                    let id = id.parse::<EmojiId>().map_err(|_| E::custom("invalid emoji id"))?;
-                    ReactionType::Custom { animated: false, id, name: Some(FixedString::from_str_trunc(name)) }
-                } else {
-                    ReactionType::Unicode(FixedString::from_str_trunc(v))
-                };
-
-                Ok(StarboardEmoji(emoji))
-            }
-        }
-
-        deserializer.deserialize_str(Visitor)
-    }
+fn get_board(config: &HBotConfig, guild: GuildId, board: ChannelId) -> anyhow::Result<&config::StarboardEntry> {
+    config.starboard
+        .get(&guild)
+        .context("starboard not configured for this guild")?
+        .boards
+        .iter()
+        .find(|b| b.channel == board)
+        .context("starboard not found")
 }
 
 pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
@@ -131,13 +68,27 @@ pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
 }
 
 async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
+    // only in guilds
+    let Some(guild_id) = reaction.guild_id else {
+        return Ok(());
+    };
+
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
     let data = ctx.data_ref::<HBotData>();
 
-    // ignore messages in board channels
-    let is_board = data.config()
+    // grab the config for the current guild
+    let guild_config = data.config()
         .starboard
+        .get(&guild_id);
+
+    let Some(guild_config) = guild_config else {
+        return Ok(());
+    };
+
+    // ignore messages in board channels
+    let is_board = guild_config
+        .boards
         .iter()
         .any(|b| b.channel == reaction.channel_id);
 
@@ -145,10 +96,10 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         return Ok(());
     }
 
-    let board = data.config()
-        .starboard
+    let board = guild_config
+        .boards
         .iter()
-        .find(|b| b.emoji.equivalent_to(&reaction.emoji) && Some(b.guild) == reaction.guild_id);
+        .find(|b| b.emoji.equivalent_to(&reaction.emoji));
 
     let Some(board) = board else {
         return Ok(());
@@ -305,7 +256,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
             let amount = i64::from(board.cash_gain).saturating_mul(score_increase);
 
             Wallet::collection(db)
-                .add_items(board.guild, message.author.id, Item::Cash, amount)
+                .add_items(guild_id, message.author.id, Item::Cash, amount)
                 .await?;
 
             log::trace!("{} gained {} cash.", message.author.name, amount);

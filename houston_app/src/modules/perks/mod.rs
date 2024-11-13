@@ -58,7 +58,7 @@ impl super::Module for Module {
         log::info!("Perks are enabled.");
 
         if let Some(r) = &perks.rainbow {
-            log::trace!("Rainbow Role is enabled: {} role(s)", r.role.len());
+            log::trace!("Rainbow Role is enabled: {} guild(s)", r.guilds.len());
         }
 
         Ok(())

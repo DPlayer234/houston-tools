@@ -95,9 +95,9 @@ Furthermore, for each board, it will track a leaderboard score.
 Starboard must be configured:
 
 ```toml
-[[bot.starboard]]
+# the numeric key is the guild id
+[[bot.starboard.1293210831923974204.boards]]
 name = "starboard"
-guild = 1293210831923974204
 channel = 1305620816272166962
 emoji = "⭐"
 reacts = 3
@@ -106,9 +106,8 @@ notices = [
     "{user}, the stars aligned.",
 ]
 
-[[bot.starboard]]
+[[bot.starboard.1293210831923974204.boards]]
 name = "ripboard"
-guild = 1293210831923974204
 channel = 1305620834450407606
 emoji = "💀"
 reacts = 3
@@ -118,9 +117,7 @@ notices = [
 ]
 ```
 
-The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". Board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID.
-
-The guild identifies where reactions are monitored and what boards commands will show. The channel _can_ be in another server, but this isn't recommended. The channel must be unique across all boards (not just per guild) and the bot must be able to post there.
+The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". Board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
 
 The name is purely cosmetic and may be displayed in places where a channel name may be expected but channel mentions aren't valid.
 
@@ -130,6 +127,53 @@ The following commands will be enabled:
 |:------------------- |:----------- |
 | starboard top       | Shows a board's top users. |
 | starboard top-posts | Shows the most-reacted posts in a board. |
+
+### Perks
+
+Perks enables a currency system and a store to buy perks with.
+
+This comes with the following configuration:
+
+```toml
+[bot.perks]
+# sets the display name of the currency
+cash_name = "$"
+
+[[bot.starboard.1293210831923974204.boards]]
+...
+# in addition to the other options, you can also specify this on starboards.
+# users will get as much currency per vote as specified here.
+cash_gain = 2
+
+# collectible enables an item with no purpose.
+# it can be repeatedly bought in the perk store.
+[bot.perks.collectible]
+name = "Crab Plushy 🦀"
+description = "Necessary for every rustacean."
+cost = 4
+
+# rainbow enables rainbow roles.
+# the color will only cycle when an event is received, at most once every 5 minutes.
+# duration is specified in hours (only integers).
+[bot.perks.rainbow]
+cost = 20
+duration = 24
+
+# configures a role for a server.
+# the bot must have "Manage Roles" and have its role placed above it for this to work correctly.
+# the perk will only be purchasable in servers configured here.
+1293210831923974204.role = 1305905884807041124
+```
+
+The following commands will be enabled:
+
+| Command             | Description |
+|:------------------- |:----------- |
+| perk-admin enable   | Enables a perk for a member. |
+| perk-admin disable  | Disables a perk for a member. |
+| perk-admin list     | List active perks of a member. |
+| perk-admin give     | Gives a user items. |
+| perk-store          | Obtain and check perks. |
 
 # Azur Lane Data Collector
 

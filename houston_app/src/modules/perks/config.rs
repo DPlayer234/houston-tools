@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::prelude::*;
 
 fn default_cash_name() -> String {
@@ -31,12 +33,12 @@ pub struct ItemPrice {
 pub struct RainbowConfig {
     #[serde(flatten)]
     pub price: EffectPrice,
-    pub role: Vec<RainbowRoleEntry>,
+    #[serde(flatten)]
+    pub guilds: HashMap<GuildId, RainbowRoleEntry>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct RainbowRoleEntry {
-    pub guild: GuildId,
     pub role: RoleId,
 }
 

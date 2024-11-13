@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use bson::doc;
 use serenity::futures::TryStreamExt;
 
@@ -6,19 +5,22 @@ use utils::text::write_str::*;
 
 use crate::helper::bson_id;
 use crate::helper::discord::get_pagination_buttons;
+use crate::modules::starboard::get_board;
 use crate::modules::starboard::model;
 use crate::buttons::prelude::*;
 
 // View the post leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
+    pub guild: GuildId,
     pub board: ChannelId,
     pub page: u16,
 }
 
 impl View {
-    pub fn new(board: ChannelId) -> Self {
+    pub fn new(guild: GuildId, board: ChannelId) -> Self {
         Self {
+            guild,
             board,
             page: 0,
         }
@@ -28,14 +30,10 @@ impl View {
         const PAGE_SIZE: u32 = 15;
 
         let db = data.database()?;
-        let board = data.config()
-            .starboard
-            .iter()
-            .find(|b| b.channel == self.board)
-            .context("starboard not found")?;
+        let board = get_board(data.config(), self.guild, self.board)?;
 
         let filter = doc! {
-            "board": bson_id!(board.channel),
+            "board": bson_id!(self.board),
         };
 
         let sort = doc! {
@@ -63,7 +61,7 @@ impl View {
             writeln_str!(
                 description,
                 "{}. https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
-                offset + index, board.guild, item.channel, item.message, item.user, item.max_reacts, board.emoji.as_emoji(),
+                offset + index, self.guild, item.channel, item.message, item.user, item.max_reacts, board.emoji.as_emoji(),
             );
         }
 
@@ -72,7 +70,7 @@ impl View {
         }
 
         let embed = CreateEmbed::new()
-            .title(format!("<#{}> Top Posts", board.channel))
+            .title(format!("<#{}> Top Posts", self.board))
             .color(DEFAULT_EMBED_COLOR)
             .description(description)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)));
