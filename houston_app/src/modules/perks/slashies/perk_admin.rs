@@ -35,11 +35,7 @@ async fn enable(
     duration: u32,
 ) -> HResult {
     let db = ctx.data_ref().database()?;
-    let args = Args {
-        ctx: ctx.serenity_context(),
-        guild_id: member.guild_id,
-        user_id: member.user.id,
-    };
+    let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
     let duration = TimeDelta::try_hours(i64::from(duration))
         .context("too many hours")?;
@@ -78,11 +74,7 @@ async fn disable(
     perk: Effect,
 ) -> HResult {
     let db = ctx.data_ref().database()?;
-    let args = Args {
-        ctx: ctx.serenity_context(),
-        guild_id: member.guild_id,
-        user_id: member.user.id,
-    };
+    let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
     ctx.defer_ephemeral().await?;
     perk.disable(args).await?;

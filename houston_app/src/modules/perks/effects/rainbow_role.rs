@@ -7,6 +7,11 @@ use crate::modules::perks::config::RainbowRoleEntry;
 pub struct RainbowRole;
 
 impl Shape for RainbowRole {
+    async fn supported(&self, args: Args<'_>) -> anyhow::Result<bool> {
+        // this only errors if there is no role
+        Ok(find_rainbow_role(&args).is_ok())
+    }
+
     async fn enable(&self, args: Args<'_>) -> HResult {
         let role = find_rainbow_role(&args)?;
 

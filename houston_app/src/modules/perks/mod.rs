@@ -9,7 +9,9 @@ use tokio::sync::RwLock;
 use super::Module as _;
 use crate::prelude::*;
 
-const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(5);
+// 2 minutes is about the minimum safe interval for constant role updates
+// we go a little higher since we use this interval for other stuff too
+const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(3);
 
 pub mod buttons;
 pub mod config;
@@ -133,12 +135,7 @@ async fn check_perks_core(ctx: Context) -> HResult {
         .await?;
 
     while let Some(perk) = query.try_next().await? {
-        let args = effects::Args {
-            ctx: &ctx,
-            guild_id: perk.guild,
-            user_id: perk.user,
-        };
-
+        let args = effects::Args::new(&ctx, perk.guild, perk.user);
         perk.effect.disable(args).await?;
 
         #[allow(clippy::used_underscore_binding)]

@@ -10,7 +10,7 @@ use utils::time::TimeMentionable;
 
 use crate::buttons::prelude::*;
 use crate::helper::bson_id;
-use crate::modules::perks::config::{Config, EffectPrice, ItemPrice};
+use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::Args;
 use crate::modules::perks::effects::Effect;
 use crate::modules::perks::items::Item;
@@ -85,7 +85,17 @@ impl View {
         let mut description = String::new();
         let mut buttons = Vec::new();
 
-        let mut add_effect = |st: EffectPrice, effect: Effect| {
+        // add all effects first
+        for &effect in Effect::all() {
+            let Some(st) = effect.price(perks) else {
+                continue;
+            };
+
+            let args = Args::new(ctx, guild_id, user_id);
+            if !(effect.supported(args).await?) {
+                continue;
+            }
+
             let info = effect.info();
 
             let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
@@ -107,12 +117,9 @@ impl View {
                     info.name, perks.cash_name, st.cost, st.duration,
                 );
             }
-        };
-
-        if let Some(rainbow) = &perks.rainbow {
-            add_effect(rainbow.price, Effect::RainbowRole);
         }
 
+        // add the items individually later.
         let mut add_item = |st: ItemPrice, item: Item| {
             let info = item.info(perks);
 
@@ -280,18 +287,17 @@ impl View {
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
+        let args = Args::new(ctx, guild_id, user_id);
+        if !(effect.supported(args).await?) {
+            anyhow::bail!("effect is not supported in this server");
+        }
+
         let st = effect.price(perks)
             .context("effect cannot be bought")?;
 
         Wallet::collection(db)
             .take_items(guild_id, user_id, Item::Cash, st.cost.into())
             .await?;
-
-        let args = Args {
-            ctx,
-            guild_id,
-            user_id,
-        };
 
         let duration = TimeDelta::try_hours(st.duration.into())
             .context("invalid time configuration")?;
