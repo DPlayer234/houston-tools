@@ -43,6 +43,7 @@ pub struct RainbowRoleEntry {
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleConfig {
     pub name: String,
+    pub description: String,
     #[serde(flatten)]
     pub price: ItemPrice,
 }

@@ -57,7 +57,7 @@ async fn enable(
 
     let description = format!(
         "Enabled **{}** for {} until {}.",
-        perk.name(), member.mention(), until.short_date_time(),
+        perk.info().name, member.mention(), until.short_date_time(),
     );
 
     let embed = CreateEmbed::new()
@@ -93,7 +93,7 @@ async fn disable(
 
     let description = format!(
         "Disabled **{}** for {}.",
-        perk.name(), member.mention(),
+        perk.info().name, member.mention(),
     );
 
     let embed = CreateEmbed::new()
@@ -129,7 +129,7 @@ async fn list(
         writeln_str!(
             description,
             "- **{}:** Ends {}",
-            perk.effect.name(), perk.until.short_date_time(),
+            perk.effect.info().name, perk.until.short_date_time(),
         );
     }
 
@@ -173,7 +173,7 @@ async fn give(
 
     let description = format!(
         "Set **{}** to {} for {}.",
-        item.name(perks), wallet.item(item), member.mention(),
+        item.info(perks).name, wallet.item(item), member.mention(),
     );
 
     let embed = CreateEmbed::new()

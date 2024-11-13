@@ -8,6 +8,7 @@ use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{GuildId, UserId};
 
+use super::effects::Effect;
 use super::items::Item;
 use crate::data::HArgError;
 use crate::helper::bson_id;
@@ -28,7 +29,7 @@ pub struct ActivePerk {
     pub _id: ObjectId,
     pub guild: GuildId,
     pub user: UserId,
-    pub effect: super::effects::Effect,
+    pub effect: Effect,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
     pub until: DateTime<Utc>,
 }
@@ -167,11 +168,12 @@ impl WalletExt for Collection<Wallet> {
 }
 
 pub trait ActivePerkExt {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect, until: DateTime<Utc>) -> anyhow::Result<()>;
-    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<()>;
+    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect, until: DateTime<Utc>) -> anyhow::Result<()>;
+    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<()>;
+    async fn find_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<Option<ActivePerk>>;
 }
 
-fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<Document> {
+fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<Document> {
     Ok(doc! {
         "guild": bson_id!(guild_id),
         "user": bson_id!(user_id),
@@ -180,7 +182,7 @@ fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: super::effects
 }
 
 impl ActivePerkExt for Collection<ActivePerk> {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect, until: DateTime<Utc>) -> anyhow::Result<()> {
+    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect, until: DateTime<Utc>) -> anyhow::Result<()> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
         let update = doc! {
             "$setOnInsert": filter.clone(),
@@ -196,11 +198,18 @@ impl ActivePerkExt for Collection<ActivePerk> {
         Ok(())
     }
 
-    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: super::effects::Effect) -> anyhow::Result<()> {
+    async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<()> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         self.delete_one(filter)
             .await?;
         Ok(())
+    }
+
+    async fn find_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<Option<ActivePerk>> {
+        let filter = active_perk_filter(guild_id, user_id, effect)?;
+
+        let doc = self.find_one(filter).await?;
+        Ok(doc)
     }
 }

@@ -1,8 +1,8 @@
 use anyhow::Context as _;
 use bson::doc;
 
-use chrono::TimeDelta;
-use chrono::Utc;
+use bson::Document;
+use chrono::{Utc, TimeDelta};
 use serenity::futures::TryStreamExt;
 use serenity::gateway::client::Context;
 use utils::text::write_str::*;
@@ -10,7 +10,7 @@ use utils::time::TimeMentionable;
 
 use crate::buttons::prelude::*;
 use crate::helper::bson_id;
-use crate::modules::perks::config::{EffectPrice, ItemPrice};
+use crate::modules::perks::config::{Config, EffectPrice, ItemPrice};
 use crate::modules::perks::effects::Args;
 use crate::modules::perks::effects::Effect;
 use crate::modules::perks::items::Item;
@@ -24,82 +24,56 @@ pub struct View {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 enum Action {
-    Nothing,
+    Main,
+    ViewEffect(Effect),
+    ViewItem(Item),
     BuyEffect(Effect),
     BuyItem(Item),
 }
 
+// 25 EM dashes.
+const BREAK: &str = "\
+    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
+    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
+    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
+    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
+    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}";
+
+// used for wallet and active perks
+fn filter(guild_id: GuildId, user_id: UserId) -> Document {
+    doc! {
+        "guild": bson_id!(guild_id),
+        "user": bson_id!(user_id),
+    }
+}
+
+fn base_shop_embed<'new>(perks: &Config, wallet: &Wallet) -> CreateEmbed<'new> {
+    CreateEmbed::new()
+        .color(DEFAULT_EMBED_COLOR)
+        .footer(CreateEmbedFooter::new(format!("Wallet: {}{}", perks.cash_name, wallet.cash)))
+}
+
 impl View {
     pub fn new() -> Self {
-        Self {
-            action: Action::Nothing,
-        }
+        Self::with_action(Action::Main)
     }
 
-    pub async fn create_reply(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
+    fn with_action(action: Action) -> Self {
+        Self { action }
+    }
+
+    async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HBotData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
-        // used for wallet and active perks
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(user_id),
-        };
-
-        let wallet = match self.action {
-            Action::Nothing => {
-                Wallet::collection(db)
-                    .find_one(filter.clone())
-                    .await?
-                    .unwrap_or_default()
-            }
-            Action::BuyEffect(effect) => {
-                let st = effect.price(perks)
-                    .context("effect cannot be bought")?;
-
-                let wallet = Wallet::collection(db)
-                    .take_items(guild_id, user_id, Item::Cash, st.cost.into())
-                    .await?;
-
-                let args = Args {
-                    ctx,
-                    guild_id,
-                    user_id,
-                };
-
-                let duration = TimeDelta::try_hours(st.duration.into())
-                    .context("invalid time configuration")?;
-
-                let until = Utc::now()
-                    .checked_add_signed(duration)
-                    .context("duration beyond the end of time")?;
-
-                ActivePerk::collection(db)
-                    .set_enabled(guild_id, user_id, effect, until)
-                    .await?;
-
-                effect.enable(args).await?;
-                wallet
-            }
-            Action::BuyItem(item) => {
-                let st = item.price(perks)
-                    .context("effect cannot be bought")?;
-
-                Wallet::collection(db)
-                    .take_items(guild_id, user_id, Item::Cash, st.cost.into())
-                    .await?;
-
-                Wallet::collection(db)
-                    .add_items(guild_id, user_id, item, st.amount.into())
-                    .await?
-            }
-        };
-
-        self.action = Action::Nothing;
+        let wallet = Wallet::collection(db)
+            .find_one(filter(guild_id, user_id))
+            .await?
+            .unwrap_or_default();
 
         let active = ActivePerk::collection(db)
-            .find(filter)
+            .find(filter(guild_id, user_id))
             .await?
             .try_collect::<Vec<_>>()
             .await?;
@@ -112,24 +86,25 @@ impl View {
         let mut buttons = Vec::new();
 
         let mut add_effect = |st: EffectPrice, effect: Effect| {
+            let info = effect.info();
+
+            let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
+            let button = CreateButton::new(custom_id)
+                .label(utils::text::truncate(info.name, 25));
+
+            buttons.push(button);
+
             if let Some(active) = find(&active, effect) {
                 writeln_str!(
                     description,
-                    "- **{}:** ~~{}{}~~ ✅ until {}",
-                    effect.name(), perks.cash_name, st.cost, active.until.short_date_time(),
+                    "- **{}:** ✅ until {}",
+                    info.name, active.until.short_date_time(),
                 );
             } else {
-                let custom_id = self.to_custom_id_with(utils::field_mut!(Self: action), Action::BuyEffect(effect));
-                let button = CreateButton::new(custom_id)
-                    .label(utils::text::truncate(effect.name(), 25))
-                    .disabled(wallet.cash < i64::from(st.cost));
-
-                buttons.push(button);
-
                 writeln_str!(
                     description,
                     "- **{}:** {}{} for {}h",
-                    effect.name(), perks.cash_name, st.cost, st.duration,
+                    info.name, perks.cash_name, st.cost, st.duration,
                 );
             }
         };
@@ -139,21 +114,22 @@ impl View {
         }
 
         let mut add_item = |st: ItemPrice, item: Item| {
-            let custom_id = self.to_custom_id_with(utils::field_mut!(Self: action), Action::BuyItem(item));
+            let info = item.info(perks);
+
+            let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
             let button = CreateButton::new(custom_id)
-                .label(utils::text::truncate(item.name(perks), 25))
-                .disabled(wallet.cash < i64::from(st.cost));
+                .label(utils::text::truncate(info.name, 25));
 
             buttons.push(button);
 
             write_str!(
                 description,
                 "- **{}:** {}{}",
-                item.name(perks), perks.cash_name, st.cost,
+                info.name, perks.cash_name, st.cost,
             );
 
             if st.amount != 1 {
-                write_str!(description, " for {}", st.amount);
+                write_str!(description, " for x{}", st.amount);
             }
 
             let owned = wallet.item(item);
@@ -168,11 +144,9 @@ impl View {
             add_item(collectible.price, Item::Collectible);
         }
 
-        let embed = CreateEmbed::new()
+        let embed = base_shop_embed(perks, &wallet)
             .title("Perk Store")
-            .color(DEFAULT_EMBED_COLOR)
-            .description(description)
-            .footer(CreateEmbedFooter::new(format!("Wallet: {}{}", perks.cash_name, wallet.cash)));
+            .description(description);
 
         let components: Vec<_> = buttons
             .chunks(5)
@@ -184,6 +158,186 @@ impl View {
             .components(components);
 
         Ok(reply)
+    }
+
+    async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
+        let data = ctx.data_ref::<HBotData>();
+        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let db = data.database()?;
+
+        let st = effect.price(perks)
+            .context("effect cannot be bought")?;
+
+        let info = effect.info();
+
+        let wallet = Wallet::collection(db)
+            .find_one(filter(guild_id, user_id))
+            .await?
+            .unwrap_or_default();
+
+        let active = ActivePerk::collection(db)
+            .find_enabled(guild_id, user_id, effect)
+            .await?;
+
+        let mut description = format!(
+            "> {}\n-# {BREAK}\n",
+            info.description,
+        );
+
+        if let Some(active) = &active {
+            write_str!(
+                description,
+                "~~Cost: {}{} for {}h~~\n✅ until {}",
+                perks.cash_name, st.cost, st.duration, active.until.short_date_time(),
+            );
+        } else {
+            write_str!(
+                description,
+                "Cost: {}{} for {}h",
+                perks.cash_name, st.cost, st.duration,
+            );
+        }
+
+        let embed = base_shop_embed(perks, &wallet)
+            .title(utils::text::truncate(info.name, 100))
+            .description(description);
+
+        let back = Self::new().to_custom_id();
+        let back = CreateButton::new(back).emoji('⏪').label("Back");
+
+        let buy = Self::with_action(Action::BuyEffect(effect)).to_custom_id();
+        let buy = CreateButton::new(buy)
+            .label("Buy")
+            .style(ButtonStyle::Success)
+            .disabled(wallet.cash < st.cost.into() || active.is_some());
+
+        let components = vec![
+            CreateActionRow::buttons(vec![back, buy]),
+        ];
+
+        let reply = CreateReply::new()
+            .embed(embed)
+            .components(components);
+
+        Ok(reply)
+    }
+
+    async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
+        let data = ctx.data_ref::<HBotData>();
+        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let db = data.database()?;
+
+        let st = item.price(perks)
+            .context("effect cannot be bought")?;
+
+        let info = item.info(perks);
+
+        let wallet = Wallet::collection(db)
+            .find_one(filter(guild_id, user_id))
+            .await?
+            .unwrap_or_default();
+
+        let mut description = format!(
+            "> {}\n-# {BREAK}\nCost: {}{}",
+            info.description, perks.cash_name, st.cost,
+        );
+
+        if st.amount != 1 {
+            write_str!(description, " for x{}", st.amount);
+        }
+
+        let owned = wallet.item(item);
+        if owned != 0 {
+            write_str!(description, "\nHeld: {owned}");
+        }
+
+        let embed = base_shop_embed(perks, &wallet)
+            .title(utils::text::truncate(info.name, 100))
+            .description(description);
+
+        let back = Self::new().to_custom_id();
+        let back = CreateButton::new(back).emoji('⏪').label("Back");
+
+        let buy = Self::with_action(Action::BuyItem(item)).to_custom_id();
+        let buy = CreateButton::new(buy)
+            .label("Buy")
+            .style(ButtonStyle::Success)
+            .disabled(wallet.cash < st.cost.into());
+
+        let components = vec![
+            CreateActionRow::buttons(vec![back, buy]),
+        ];
+
+        let reply = CreateReply::new()
+            .embed(embed)
+            .components(components);
+
+        Ok(reply)
+    }
+
+    async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
+        let data = ctx.data_ref::<HBotData>();
+        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let db = data.database()?;
+
+        let st = effect.price(perks)
+            .context("effect cannot be bought")?;
+
+        Wallet::collection(db)
+            .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+            .await?;
+
+        let args = Args {
+            ctx,
+            guild_id,
+            user_id,
+        };
+
+        let duration = TimeDelta::try_hours(st.duration.into())
+            .context("invalid time configuration")?;
+
+        let until = Utc::now()
+            .checked_add_signed(duration)
+            .context("duration beyond the end of time")?;
+
+        ActivePerk::collection(db)
+            .set_enabled(guild_id, user_id, effect, until)
+            .await?;
+
+        effect.enable(args).await?;
+
+        self.action = Action::ViewEffect(effect);
+        self.view_effect(ctx, guild_id, user_id, effect).await
+    }
+
+    async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
+        let data = ctx.data_ref::<HBotData>();
+        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let db = data.database()?;
+
+        let st = item.price(perks)
+            .context("effect cannot be bought")?;
+
+        Wallet::collection(db)
+            .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+            .await?;
+
+        Wallet::collection(db)
+            .add_items(guild_id, user_id, item, st.amount.into())
+            .await?;
+
+        self.action = Action::ViewItem(item);
+        self.view_item(ctx, guild_id, user_id, item).await
+    }
+
+    pub async fn create_reply(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
+        match self.action {
+            Action::Main => self.view_main(ctx, guild_id, user_id).await,
+            Action::ViewEffect(effect) => self.view_effect(ctx, guild_id, user_id, effect).await,
+            Action::ViewItem(item) => self.view_item(ctx, guild_id, user_id, item).await,
+            Action::BuyEffect(effect) => self.buy_effect(ctx, guild_id, user_id, effect).await,
+            Action::BuyItem(item) => self.buy_item(ctx, guild_id, user_id, item).await,
+        }
     }
 }
 
