@@ -29,8 +29,20 @@ pub struct ItemPrice {
     pub amount: u32,
 }
 
+fn default_rainbow_name() -> String {
+    "Rainbow Role".to_owned()
+}
+
+fn default_rainbow_description() -> String {
+    "A role with regularly changing color.".to_owned()
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct RainbowConfig {
+    #[serde(default = "default_rainbow_name")]
+    pub name: String,
+    #[serde(default = "default_rainbow_description")]
+    pub description: String,
     #[serde(flatten)]
     pub price: EffectPrice,
     #[serde(flatten)]

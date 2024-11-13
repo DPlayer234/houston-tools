@@ -49,9 +49,9 @@ pub enum Effect {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct EffectInfo {
-    pub name: &'static str,
-    pub description: &'static str,
+pub struct EffectInfo<'a> {
+    pub name: &'a str,
+    pub description: &'a str,
 }
 
 macro_rules! impl_kind_fn {
@@ -76,9 +76,11 @@ impl Effect {
         ]
     }
 
-    pub fn info(self) -> EffectInfo {
+    pub fn info(self, perks: &Config) -> EffectInfo<'_> {
         match self {
-            Self::RainbowRole => EffectInfo { name: "Rainbow Role", description: "A role with regularly changing color." },
+            Self::RainbowRole => perks.rainbow.as_ref()
+                .map(|r| EffectInfo { name: &r.name, description: &r.description })
+                .unwrap_or(const { EffectInfo { name: "Rainbow Role", description: "A role with regularly changing color." } }),
         }
     }
 

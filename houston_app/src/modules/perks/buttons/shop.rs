@@ -95,7 +95,7 @@ impl View {
                 continue;
             }
 
-            let info = effect.info();
+            let info = effect.info(perks);
 
             let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
             let button = CreateButton::new(custom_id)
@@ -175,7 +175,7 @@ impl View {
         let st = effect.price(perks)
             .context("effect cannot be bought")?;
 
-        let info = effect.info();
+        let info = effect.info(perks);
 
         let wallet = Wallet::collection(db)
             .find_one(filter(guild_id, user_id))

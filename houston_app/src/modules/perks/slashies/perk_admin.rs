@@ -34,7 +34,9 @@ async fn enable(
     #[description = "How long to enable it for, in hours."]
     duration: u32,
 ) -> HResult {
-    let db = ctx.data_ref().database()?;
+    let data = ctx.data_ref();
+    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let db = data.database()?;
     let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
     let duration = TimeDelta::try_hours(i64::from(duration))
@@ -53,7 +55,7 @@ async fn enable(
 
     let description = format!(
         "Enabled **{}** for {} until {}.",
-        perk.info().name, member.mention(), until.short_date_time(),
+        perk.info(perks).name, member.mention(), until.short_date_time(),
     );
 
     let embed = CreateEmbed::new()
@@ -73,7 +75,9 @@ async fn disable(
     #[description = "The perk to disable."]
     perk: Effect,
 ) -> HResult {
-    let db = ctx.data_ref().database()?;
+    let data = ctx.data_ref();
+    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let db = data.database()?;
     let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
     ctx.defer_ephemeral().await?;
@@ -85,7 +89,7 @@ async fn disable(
 
     let description = format!(
         "Disabled **{}** for {}.",
-        perk.info().name, member.mention(),
+        perk.info(perks).name, member.mention(),
     );
 
     let embed = CreateEmbed::new()
@@ -103,7 +107,9 @@ async fn list(
     #[description = "The member to check."]
     member: Member,
 ) -> HResult {
-    let db = ctx.data_ref().database()?;
+    let data = ctx.data_ref();
+    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
     let filter = doc! {
@@ -121,7 +127,7 @@ async fn list(
         writeln_str!(
             description,
             "- **{}:** Ends {}",
-            perk.effect.info().name, perk.until.short_date_time(),
+            perk.effect.info(perks).name, perk.until.short_date_time(),
         );
     }
 
