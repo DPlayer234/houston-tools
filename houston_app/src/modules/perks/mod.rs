@@ -7,6 +7,7 @@ use serenity::prelude::*;
 use tokio::sync::RwLock;
 
 use super::Module as _;
+use crate::config::HBotConfig;
 use crate::prelude::*;
 
 // 2 minutes is about the minimum safe interval for constant role updates
@@ -26,20 +27,30 @@ pub use items::Item;
 pub struct Module;
 
 impl super::Module for Module {
-    fn enabled(&self, config: &super::config::HBotConfig) -> bool {
+    fn enabled(&self, config: &HBotConfig) -> bool {
         config.perks.is_some()
     }
 
-    fn intents(&self) -> GatewayIntents {
+    fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
         GatewayIntents::GUILD_MESSAGES
     }
 
-    fn commands(&self) -> impl IntoIterator<Item = HCommand> {
-        [
+    fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
+        let perks = config.perks.as_ref().expect("must be enabled");
+        let mut c = vec![
             slashies::perk_admin::perk_admin(),
             slashies::shop::shop(),
             slashies::wallet::wallet(),
-        ]
+        ];
+
+        if perks.pushpin.is_some() {
+            c.extend([
+                slashies::pushpin::pushpin_pin(),
+                slashies::pushpin::pushpin_unpin(),
+            ]);
+        }
+
+        c
     }
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
@@ -50,7 +61,7 @@ impl super::Module for Module {
         })
     }
 
-    fn validate(&self, config: &crate::config::HBotConfig) -> HResult {
+    fn validate(&self, config: &HBotConfig) -> HResult {
         if config.mongodb_uri.is_none() {
             anyhow::bail!("perks requires a mongodb_uri");
         }

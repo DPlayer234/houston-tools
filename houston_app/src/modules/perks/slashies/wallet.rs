@@ -48,7 +48,7 @@ pub async fn wallet(
 
     let embed = CreateEmbed::new()
         .title(format!("{}: Wallet", get_display_name(&ctx)))
-        .color(ctx.data_ref().config().embed_color)
+        .color(data.config().embed_color)
         .description(description);
 
     ctx.send(CreateReply::new().embed(embed)).await?;

@@ -11,7 +11,7 @@ impl super::Module for Module {
         config.azur_lane_data.is_some()
     }
 
-    fn commands(&self) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, _config: &config::HBotConfig) -> impl IntoIterator<Item = HCommand> {
         [slashies::azur()]
     }
 }

@@ -21,6 +21,8 @@ pub struct Wallet {
     #[serde(default)]
     pub cash: i64,
     #[serde(default)]
+    pub pushpin: i64,
+    #[serde(default)]
     pub crab: i64,
 }
 
@@ -108,6 +110,7 @@ macro_rules! make_item_accessors {
 
 make_item_accessors!(
     Cash => cash,
+    Pushpin => pushpin,
     Collectible => crab,
 );
 
@@ -147,7 +150,7 @@ impl WalletExt for Collection<Wallet> {
             "guild": bson_id!(guild_id),
             "user": bson_id!(user_id),
             key: {
-                "$gt": amount,
+                "$gte": amount,
             }
         };
 

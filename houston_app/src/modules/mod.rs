@@ -42,12 +42,14 @@ pub trait Module {
     fn enabled(&self, config: &config::HBotConfig) -> bool;
 
     /// The intents needed.
-    fn intents(&self) -> GatewayIntents {
+    fn intents(&self, config: &config::HBotConfig) -> GatewayIntents {
+        _ = config;
         GatewayIntents::empty()
     }
 
     /// Commands for this module.
-    fn commands(&self) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, config: &config::HBotConfig) -> impl IntoIterator<Item = HCommand> {
+        _ = config;
         []
     }
 
@@ -66,8 +68,8 @@ pub trait Module {
     fn apply(&self, init: &mut Info, config: &config::HBotConfig) -> HResult {
         if self.enabled(config) {
             self.validate(config)?;
-            init.intents |= self.intents();
-            init.commands.extend(self.commands());
+            init.intents |= self.intents(config);
+            init.commands.extend(self.commands(config));
 
             if config.mongodb_uri.is_some() {
                 init.db_init.push(Self::db_init);

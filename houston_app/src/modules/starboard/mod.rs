@@ -23,11 +23,11 @@ impl super::Module for Module {
         !config.starboard.is_empty()
     }
 
-    fn intents(&self) -> GatewayIntents {
+    fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
         GatewayIntents::GUILD_MESSAGE_REACTIONS
     }
 
-    fn commands(&self) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
         [
             slashies::starboard()
         ]

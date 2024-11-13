@@ -11,6 +11,7 @@ pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: String,
     pub rainbow: Option<RainbowConfig>,
+    pub pushpin: Option<PushpinConfig>,
     pub collectible: Option<CollectibleConfig>,
 }
 
@@ -52,6 +53,24 @@ pub struct RainbowConfig {
 #[derive(Debug, serde::Deserialize)]
 pub struct RainbowRoleEntry {
     pub role: RoleId,
+}
+
+fn default_pushpin_name() -> String {
+    "Pushpin".to_owned()
+}
+
+fn default_pushpin_description() -> String {
+    "Let's you pin or unpin any message.".to_owned()
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct PushpinConfig {
+    #[serde(default = "default_pushpin_name")]
+    pub name: String,
+    #[serde(default = "default_pushpin_description")]
+    pub description: String,
+    #[serde(flatten)]
+    pub price: ItemPrice,
 }
 
 #[derive(Debug, serde::Deserialize)]

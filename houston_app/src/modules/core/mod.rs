@@ -1,14 +1,16 @@
+use crate::config::HBotConfig;
+
 pub mod buttons;
 mod slashies;
 
 pub struct Module;
 
 impl super::Module for Module {
-    fn enabled(&self, _config: &super::config::HBotConfig) -> bool {
+    fn enabled(&self, _config: &HBotConfig) -> bool {
         true
     }
 
-    fn commands(&self) -> impl IntoIterator<Item = super::HCommand> {
+    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = super::HCommand> {
         [
             slashies::coin::coin(),
             slashies::dice::dice(),
