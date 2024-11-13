@@ -2,12 +2,12 @@ use anyhow::Context;
 
 use crate::prelude::*;
 
-/// Obtain and check perks.
-#[poise::command(slash_command, rename = "perk-store", guild_only)]
-pub async fn perk_store(
+/// View the server shop.
+#[poise::command(slash_command, guild_only)]
+pub async fn shop(
     ctx: HContext<'_>,
 ) -> HResult {
-    use crate::modules::perks::buttons::perk_store::View;
+    use crate::modules::perks::buttons::shop::View;
 
     let guild_id = ctx.guild_id().context("must be used in guild")?;
 

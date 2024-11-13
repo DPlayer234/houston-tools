@@ -10,7 +10,7 @@ use utils::time::TimeMentionable;
 
 use crate::buttons::prelude::*;
 use crate::helper::bson_id;
-use crate::modules::perks::config::{Config, ItemPrice};
+use crate::modules::perks::config::Config;
 use crate::modules::perks::effects::Args;
 use crate::modules::perks::effects::Effect;
 use crate::modules::perks::items::Item;
@@ -119,8 +119,12 @@ impl View {
             }
         }
 
-        // add the items individually later.
-        let mut add_item = |st: ItemPrice, item: Item| {
+        // add the items individually after
+        for &item in Item::all() {
+            let Some(st) = item.price(perks) else {
+                continue;
+            };
+
             let info = item.info(perks);
 
             let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
@@ -145,14 +149,10 @@ impl View {
             }
 
             description.push('\n');
-        };
-
-        if let Some(collectible) = &perks.collectible {
-            add_item(collectible.price, Item::Collectible);
         }
 
         let embed = base_shop_embed(perks, &wallet)
-            .title("Perk Store")
+            .title("Server Shop")
             .description(description);
 
         let components: Vec<_> = buttons

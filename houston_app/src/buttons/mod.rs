@@ -103,7 +103,7 @@ define_button_args! {
     /// Open the augment search.
     ViewSearchAugment(azur::buttons::search_augment::View),
     /// Open the perk store.
-    PerksStore(perks::buttons::perk_store::View),
+    PerksStore(perks::buttons::shop::View),
     /// Open the starboard top view.
     StarboardTop(starboard::buttons::top::View),
     /// Open the starboard top posts view.

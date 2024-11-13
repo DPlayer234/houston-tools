@@ -37,7 +37,8 @@ impl super::Module for Module {
     fn commands(&self) -> impl IntoIterator<Item = HCommand> {
         [
             slashies::perk_admin::perk_admin(),
-            slashies::perk_store::perk_store(),
+            slashies::shop::shop(),
+            slashies::wallet::wallet(),
         ]
     }
 

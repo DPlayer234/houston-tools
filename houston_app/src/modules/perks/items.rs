@@ -17,6 +17,13 @@ pub struct ItemInfo<'a> {
 }
 
 impl Item {
+    pub fn all() -> &'static [Self] {
+        &[
+            Self::Cash,
+            Self::Collectible,
+        ]
+    }
+
     pub fn info(self, perks: &Config) -> ItemInfo<'_> {
         match self {
             Self::Cash => ItemInfo { name: &perks.cash_name, description: "Illegal tender." },

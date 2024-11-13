@@ -1,2 +1,3 @@
 pub mod perk_admin;
-pub mod perk_store;
+pub mod shop;
+pub mod wallet;

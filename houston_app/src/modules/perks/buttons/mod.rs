@@ -1,1 +1,1 @@
-pub mod perk_store;
+pub mod shop;

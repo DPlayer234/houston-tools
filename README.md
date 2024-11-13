@@ -173,7 +173,7 @@ The following commands will be enabled:
 | perk-admin disable  | Disables a perk for a member. |
 | perk-admin list     | List active perks of a member. |
 | perk-admin give     | Gives a user items. |
-| perk-store          | Obtain and check perks. |
+| shop                | View the server shop. |
 
 # Azur Lane Data Collector
 
