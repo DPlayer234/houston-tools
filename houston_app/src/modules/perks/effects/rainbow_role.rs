@@ -37,7 +37,7 @@ impl Shape for RainbowRole {
     }
 
     async fn update(&self, ctx: &Context) -> HResult {
-        const LOOP_TIME: i64 = 7200;
+        const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {
             return Ok(())
@@ -48,7 +48,7 @@ impl Shape for RainbowRole {
             .signed_duration_since(NaiveTime::MIN)
             .num_seconds() % LOOP_TIME;
 
-        let loop_rel = loop_sec as f64 / LOOP_TIME as f64;
+        let loop_rel = loop_sec as f32 / LOOP_TIME as f32;
 
         let h = loop_rel * 360.0;
         let s = match h {
@@ -94,7 +94,7 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> anyhow::Result<&'a RainbowRoleEntry
 
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
-fn rgb(r: f64, g: f64, b: f64) -> Color {
+fn rgb(r: f32, g: f32, b: f32) -> Color {
     Color::from_rgb(
         (r * 255.0).clamp(0.0, 255.0) as u8,
         (g * 255.0).clamp(0.0, 255.0) as u8,
@@ -102,11 +102,11 @@ fn rgb(r: f64, g: f64, b: f64) -> Color {
     )
 }
 
-fn hsv_to_color(mut h: f64, s: f64, v: f64) -> Color {
-	h = ((h % 360.0) + 360.0) % 360.0;
+fn hsv_to_color(mut h: f32, s: f32, v: f32) -> Color {
+    h = h.rem_euclid(360.0);
 
 	let mut c = v * s;
-	let mut x = c * (1.0 - f64::abs((h / 60.0) % 2.0 - 1.0));
+	let mut x = c * (1.0 - f32::abs((h / 60.0) % 2.0 - 1.0));
 	let m = v - c;
 
 	c += m;

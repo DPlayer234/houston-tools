@@ -202,7 +202,7 @@ async fn reload_time(
     );
 
     let embed = CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;

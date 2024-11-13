@@ -25,6 +25,10 @@ token = "..."
 # optional. when not present, disables the Azur Lane module.
 azur_lane_data = "azur_lane_data"
 
+# sets the color used for most embeds.
+# optional. defaults to 0xDDA0DD
+embed_color = 0xDDA0DD
+
 # optional section to configure the terminal output.
 # the logger writes to `stderr`.
 [log]

@@ -17,7 +17,7 @@ pub async fn upload(
     );
 
     let mut embed = CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     if attachment.dimensions().is_some() {

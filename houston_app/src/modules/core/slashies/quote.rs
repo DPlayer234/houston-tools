@@ -23,7 +23,7 @@ pub async fn quote(
 
     let embed = CreateEmbed::new()
         .description(content)
-        .color(DEFAULT_EMBED_COLOR);
+        .color(ctx.data_ref().config().embed_color);
 
     ctx.send(create_reply(Ephemeral).embed(embed)).await?;
     Ok(())

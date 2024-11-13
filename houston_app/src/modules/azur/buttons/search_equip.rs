@@ -28,6 +28,7 @@ impl View {
 
     pub fn modify_with_iter<'a>(
         mut self,
+        data: &'a HBotData,
         iter: impl Iterator<Item = &'a Equip>,
     ) -> CreateReply<'a> {
         let mut desc = String::new();
@@ -66,7 +67,7 @@ impl View {
             .author(author)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
-            .color(DEFAULT_EMBED_COLOR);
+            .color(data.config().embed_color);
 
         let mut rows = Vec::new();
         if let Some(pagination) = super::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {
@@ -87,7 +88,7 @@ impl View {
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.modify_with_iter(filtered)
+        self.modify_with_iter(data, filtered)
     }
 }
 

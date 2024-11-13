@@ -70,7 +70,7 @@ impl View {
 
         let embed = CreateEmbed::new()
             .title(format!("<#{}> Leaderboards", self.board))
-            .color(DEFAULT_EMBED_COLOR)
+            .color(data.config().embed_color)
             .description(description)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)));
 

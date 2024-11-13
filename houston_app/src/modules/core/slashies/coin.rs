@@ -24,7 +24,7 @@ pub async fn coin(
 
     let embed = CreateEmbed::new()
         .description(content)
-        .color(DEFAULT_EMBED_COLOR);
+        .color(ctx.data_ref().config().embed_color);
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())

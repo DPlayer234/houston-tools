@@ -35,7 +35,8 @@ async fn who_core(
     user: User,
     ephemeral: Option<bool>,
 ) -> HResult {
-    let mut embed = who_user_embed(&user);
+    let mut embed = who_user_embed(&user)
+        .color(ctx.data_ref().config().embed_color);
 
     // while the resolved params would have the member, that's not available
     // in context menu commands. in the interest of still supporting that,
@@ -58,7 +59,6 @@ fn who_user_embed(user: &User) -> CreateEmbed<'_> {
         .author(CreateEmbedAuthor::new(get_unique_username(user)))
         .thumbnail(user.face())
         .description(who_user_info(user))
-        .color(DEFAULT_EMBED_COLOR)
 }
 
 fn who_user_info(user: &User) -> String {

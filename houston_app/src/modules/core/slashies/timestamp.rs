@@ -88,7 +88,7 @@ async fn show_timestamp<Tz: TimeZone>(ctx: &HContext<'_>, timestamp: DateTime<Tz
         .field("Date & Time", format_time(timestamp, 'f'), true)
         .field("Time Only", format_time(timestamp, 't'), true)
         .field("Relative", format_time(timestamp, 'R'), true)
-        .color(DEFAULT_EMBED_COLOR);
+        .color(ctx.data_ref().config().embed_color);
 
     ctx.send(create_reply(Ephemeral).embed(embed)).await?;
     Ok(())

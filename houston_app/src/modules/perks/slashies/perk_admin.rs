@@ -57,7 +57,7 @@ async fn enable(
     );
 
     let embed = CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     ctx.send(CreateReply::new().embed(embed)).await?;
@@ -89,7 +89,7 @@ async fn disable(
     );
 
     let embed = CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     ctx.send(CreateReply::new().embed(embed)).await?;
@@ -136,7 +136,7 @@ async fn list(
 
     let embed = CreateEmbed::new()
         .title(title)
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     ctx.send(CreateReply::new().embed(embed)).await?;
@@ -169,7 +169,7 @@ async fn give(
     );
 
     let embed = CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
+        .color(ctx.data_ref().config().embed_color)
         .description(description);
 
     ctx.send(CreateReply::new().embed(embed)).await?;

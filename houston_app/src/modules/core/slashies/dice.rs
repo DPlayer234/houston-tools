@@ -29,7 +29,7 @@ pub async fn dice(
     let embed = CreateEmbed::new()
         .title(format!("Total \u{2211}{}", total_sum))
         .description(content)
-        .color(DEFAULT_EMBED_COLOR);
+        .color(ctx.data_ref().config().embed_color);
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;
     Ok(())

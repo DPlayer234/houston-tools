@@ -7,9 +7,6 @@ use crate::config::HBotConfig;
 
 mod app_emojis;
 
-/// A general color that can be used for various embeds.
-pub const DEFAULT_EMBED_COLOR: Color = Color::new(0xDD_A0_DD);
-
 /// A general color that can be used for embeds indicating errors.
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 

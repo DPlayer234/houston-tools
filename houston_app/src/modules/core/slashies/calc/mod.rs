@@ -28,7 +28,7 @@ pub async fn calc(
     let embed = match eval_text(&expression) {
         Ok(result) => CreateEmbed::new()
             .description(format!("{expression} = **{result}**"))
-            .color(DEFAULT_EMBED_COLOR),
+            .color(ctx.data_ref().config().embed_color),
 
         Err(MathError::ExprExpected(Some(at)))
             => error_embed!("Expected expression at `{at}`.{}", at.error_fmt()),

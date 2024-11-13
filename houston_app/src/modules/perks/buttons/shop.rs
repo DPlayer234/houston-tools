@@ -49,7 +49,6 @@ fn filter(guild_id: GuildId, user_id: UserId) -> Document {
 
 fn base_shop_embed<'new>(perks: &Config, wallet: &Wallet) -> CreateEmbed<'new> {
     CreateEmbed::new()
-        .color(DEFAULT_EMBED_COLOR)
         .footer(CreateEmbedFooter::new(format!("Wallet: {}{}", perks.cash_name, wallet.cash)))
 }
 
@@ -153,7 +152,8 @@ impl View {
 
         let embed = base_shop_embed(perks, &wallet)
             .title("Server Shop")
-            .description(description);
+            .description(description)
+            .color(data.config().embed_color);
 
         let components: Vec<_> = buttons
             .chunks(5)
@@ -207,7 +207,8 @@ impl View {
 
         let embed = base_shop_embed(perks, &wallet)
             .title(utils::text::truncate(info.name, 100))
-            .description(description);
+            .description(description)
+            .color(data.config().embed_color);
 
         let back = Self::new().to_custom_id();
         let back = CreateButton::new(back).emoji('⏪').label("Back");
@@ -260,7 +261,8 @@ impl View {
 
         let embed = base_shop_embed(perks, &wallet)
             .title(utils::text::truncate(info.name, 100))
-            .description(description);
+            .description(description)
+            .color(data.config().embed_color);
 
         let back = Self::new().to_custom_id();
         let back = CreateButton::new(back).emoji('⏪').label("Back");

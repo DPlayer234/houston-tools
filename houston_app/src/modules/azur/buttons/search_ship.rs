@@ -70,7 +70,7 @@ impl View {
             .author(author)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
-            .color(DEFAULT_EMBED_COLOR);
+            .color(data.config().embed_color);
 
         let mut rows = Vec::new();
         if let Some(pagination) = super::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {

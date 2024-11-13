@@ -3,24 +3,29 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use serenity::model::Color;
 
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
-    #[serde(default)]
     pub discord: HDiscordConfig,
-    #[serde(default)]
     pub bot: HBotConfig,
     #[serde(default)]
     pub log: HLogConfig,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 pub struct HDiscordConfig {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize, Default)]
+const fn default_embed_color() -> Color {
+    Color::new(0xDD_A0_DD)
+}
+
+#[derive(Debug, Deserialize)]
 pub struct HBotConfig {
+    #[serde(default = "default_embed_color")]
+    pub embed_color: Color,
     pub azur_lane_data: Option<PathBuf>,
     pub mongodb_uri: Option<String>,
     #[serde(default)]
