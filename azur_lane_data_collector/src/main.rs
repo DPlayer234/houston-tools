@@ -58,6 +58,11 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     log::use_color(cli.color);
 
+    match option_env!("GIT_HASH") {
+        Some(git_hash) => log::info!("Azur Lane Data Collector [Commit: {git_hash}]"),
+        None => log::info!("Azur Lane Data Collector [Unknown Commit]"),
+    };
+
     let out_data = {
         // Expect at least 1 input
         let mut out_data = load_definition(&cli.inputs[0])?;

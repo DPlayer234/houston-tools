@@ -25,6 +25,11 @@ async fn main() -> anyhow::Result<()> {
     let config = build_config()?;
     init_logging(config.log);
 
+    match option_env!("GIT_HASH") {
+        Some(git_hash) => log::info!("Houston Tools [Commit: {git_hash}]"),
+        None => log::info!("Houston Tools [Unknown Commit]"),
+    };
+
     log::info!("Starting...");
 
     let mut init = Info::new();

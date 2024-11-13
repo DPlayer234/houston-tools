@@ -73,7 +73,7 @@ fn who_user_info(user: &User) -> String {
         "**Snowflake:** `{}`\n\
         **Created At:** {}\n",
         user.id,
-        user.created_at().short_date_time(),
+        user.id.created_at().short_date_time(),
     );
 
     if let Some(avatar_url) = user.avatar_url() {
