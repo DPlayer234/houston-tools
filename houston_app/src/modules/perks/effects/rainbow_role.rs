@@ -80,7 +80,7 @@ impl Shape for RainbowRole {
 struct NoRainbowRole;
 
 fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
-    ctx.data_ref::<HBotData>()
+    ctx.data_ref::<HFrameworkData>()
         .config()
         .perks.as_ref()
         .ok_or(NoRainbowRole)?

@@ -88,14 +88,14 @@ pub struct PerkState {
 }
 
 pub fn dispatch_check_perks(ctx: &Context) {
-    let data = ctx.data_ref::<HBotData>();
+    let data = ctx.data_ref::<HFrameworkData>();
     if Module.enabled(data.config()) {
         tokio::task::spawn(check_perks_impl(ctx.clone()));
     }
 }
 
 pub async fn check_perks(ctx: Context) {
-    let data = ctx.data_ref::<HBotData>();
+    let data = ctx.data_ref::<HFrameworkData>();
     if Module.enabled(data.config()) {
         check_perks_impl(ctx).await;
     }
@@ -108,7 +108,7 @@ async fn check_perks_impl(ctx: Context) {
 }
 
 async fn check_perks_core(ctx: Context) -> HResult {
-    let data = ctx.data_ref::<HBotData>();
+    let data = ctx.data_ref::<HFrameworkData>();
     let state = data.perk_state();
     let last = *state.last_check.read().await;
     let next = last

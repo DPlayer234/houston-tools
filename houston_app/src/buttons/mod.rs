@@ -156,7 +156,6 @@ pub mod handler {
         args.reply(ButtonContext {
             serenity: ctx,
             interaction,
-            http: ctx.http(),
             data: ctx.data_ref::<HFrameworkData>(),
         }).await
     }
@@ -261,8 +260,6 @@ pub struct ButtonContext<'a> {
     pub serenity: &'a Context,
     /// The source interaction.
     pub interaction: &'a ComponentInteraction,
-    /// The HTTP API that may be used.
-    pub http: &'a serenity::http::Http,
     /// The bot data.
     pub data: &'a HBotData,
 }
@@ -270,12 +267,12 @@ pub struct ButtonContext<'a> {
 impl ButtonContext<'_> {
     /// Replies to the interaction.
     pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> HResult {
-        Ok(self.interaction.create_response(self.http, create).await?)
+        Ok(self.interaction.create_response(&self.serenity.http, create).await?)
     }
 
     /// Edits a previous reply to the interaction.
     pub async fn edit_reply(&self, create: EditInteractionResponse<'_>) -> HResult {
-        self.interaction.edit_response(self.http, create).await?;
+        self.interaction.edit_response(&self.serenity.http, create).await?;
         Ok(())
     }
 }

@@ -61,7 +61,7 @@ impl View {
     }
 
     async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HBotData>();
+        let data = ctx.data_ref::<HFrameworkData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
@@ -167,7 +167,7 @@ impl View {
     }
 
     async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HBotData>();
+        let data = ctx.data_ref::<HFrameworkData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
@@ -230,7 +230,7 @@ impl View {
     }
 
     async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HBotData>();
+        let data = ctx.data_ref::<HFrameworkData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
@@ -284,7 +284,7 @@ impl View {
     }
 
     async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HBotData>();
+        let data = ctx.data_ref::<HFrameworkData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 
@@ -318,7 +318,7 @@ impl View {
     }
 
     async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HBotData>();
+        let data = ctx.data_ref::<HFrameworkData>();
         let perks = data.config().perks.as_ref().context("perks must be enabled")?;
         let db = data.database()?;
 

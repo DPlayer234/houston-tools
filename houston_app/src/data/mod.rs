@@ -152,7 +152,7 @@ impl<'a> HContextExtensions<'a> for HContext<'a> {
     }
 
     fn data_ref(&self) -> &'a HBotData {
-        self.serenity_context().data_ref()
+        self.serenity_context().data_ref::<HFrameworkData>()
     }
 }
 

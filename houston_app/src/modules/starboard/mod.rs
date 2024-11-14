@@ -75,7 +75,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
 
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
-    let data = ctx.data_ref::<HBotData>();
+    let data = ctx.data_ref::<HFrameworkData>();
 
     // grab the config for the current guild
     let guild_config = data.config()
