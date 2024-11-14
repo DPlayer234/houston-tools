@@ -121,7 +121,11 @@ notices = [
 ]
 ```
 
-The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". Board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
+The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". The channel and board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
+
+Note that the _persistent_ key for a board is the _channel_. You're allowed to swap out an emoji without affecting board scores, but changing the channel will constitute it being a new board.
+
+Also note that messages in nsfw channels are still tracked for sfw board channels, so they will show up on the leaderboards, but they will not be forwarded. Messages will be forwarded from an nsfw channel only if the board is nsfw.
 
 The name is purely cosmetic and may be displayed in places where a channel name may be expected but channel mentions aren't valid.
 

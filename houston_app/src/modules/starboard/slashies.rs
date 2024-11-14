@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use anyhow::Context;
 
 use crate::prelude::*;
@@ -16,13 +14,13 @@ async fn top(
     ctx: HContext<'_>,
     #[description = "What board to look for."]
     #[autocomplete = "autocomplete_board"]
-    board: String,
+    board: u64,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> HResult {
     use super::buttons::top::View;
 
-    let (guild, board) = find_board(&ctx, &board)?;
+    let (guild, board) = find_board(&ctx, board)?;
     let view = View::new(guild, board);
 
     ctx.defer_as(ephemeral).await?;
@@ -37,13 +35,13 @@ async fn top_posts(
     ctx: HContext<'_>,
     #[description = "What board to look for."]
     #[autocomplete = "autocomplete_board"]
-    board: String,
+    board: u64,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> HResult {
     use super::buttons::top_posts::View;
 
-    let (guild, board) = find_board(&ctx, &board)?;
+    let (guild, board) = find_board(&ctx, board)?;
     let view = View::new(guild, board);
 
     ctx.defer_as(ephemeral).await?;
@@ -52,30 +50,24 @@ async fn top_posts(
     Ok(())
 }
 
-fn find_board(ctx: &HContext<'_>, board: &str) -> anyhow::Result<(GuildId, ChannelId)> {
+fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, ChannelId)> {
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 
-    let channel_id = board.parse::<ChannelId>().ok()
-        .ok_or(HArgError("Invalid board."))?;
+    let board = usize::try_from(board).ok()
+        .ok_or(HArgError("Invalid Starboard."))?;
 
-    let guild_config = ctx
+    let board = ctx
         .data_ref()
         .config()
         .starboard
         .get(&guild_id)
-        .ok_or(HArgError("Starboard is not enabled for this server."))?;
-
-    let is_board = guild_config
+        .ok_or(HArgError("Starboard is not enabled for this server."))?
         .boards
-        .iter()
-        .any(|b| b.channel == channel_id);
+        .get(board)
+        .ok_or(HArgError("Unknown Starboard."))?;
 
-    if is_board {
-        Ok((guild_id, channel_id))
-    } else {
-        Err(HArgError("Unknown Starboard.").into())
-    }
+    Ok((guild_id, board.channel))
 }
 
 async fn autocomplete_board<'a>(
@@ -90,9 +82,10 @@ async fn autocomplete_board<'a>(
             .get(&guild_id)
             .into_iter()
             .flat_map(|g| &g.boards)
-            .map(|b| AutocompleteChoice::new(
-                b.name.as_str(),
-                Cow::Owned(b.channel.to_string()),
+            .enumerate()
+            .map(|(index, board)| AutocompleteChoice::new(
+                board.name.as_str(),
+                AutocompleteValue::Integer(index as u64),
             ))
             .collect();
 

@@ -105,7 +105,9 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         return Ok(());
     };
 
-    let message = reaction.message(&ctx).await?;
+    // avoid using the cache here even if it is enabled
+    // we want to ensure that we have the fresh current state
+    let message = reaction.message(&ctx.http).await?;
 
     // cannot starboard yourself
     // there are checks further down to ignore the user's reaction later on
@@ -195,8 +197,8 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
                 .context("expected to find record that was just created")?;
 
             // pin the message if the update just now changed the value
-            // we also need to ignore nsfw channels
-            if !record.pinned && !(is_in_nsfw(&ctx, &message).await?) {
+            // we also need to ignore nsfw-to-sfw posts
+            if !record.pinned && (is_forwarding_allowed(&ctx, &message, board).await?) {
                 let notice = board.notices
                     .choose(&mut thread_rng())
                     .map(String::as_str)
@@ -266,12 +268,20 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     Ok(())
 }
 
-async fn is_in_nsfw(ctx: &Context, message: &Message) -> anyhow::Result<bool> {
-    let nsfw = message
+async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config::StarboardEntry) -> anyhow::Result<bool> {
+    let source = message
         .channel_id
-        .to_channel(ctx, message.guild_id).await?
-        .guild()
-        .is_some_and(|g| g.nsfw);
+        .to_guild_channel(ctx, message.guild_id).await?;
 
-    Ok(nsfw)
+    if !source.nsfw {
+        return Ok(true);
+    }
+
+    let target = board
+        .channel
+        .to_guild_channel(ctx, message.guild_id).await?;
+
+    // at this point, the source channel is nsfw,
+    // so to allow forwarding, the target must also be nsfw
+    Ok(target.nsfw)
 }
