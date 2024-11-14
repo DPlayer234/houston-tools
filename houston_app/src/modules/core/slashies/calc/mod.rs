@@ -11,6 +11,7 @@ mod parse;
 pub async fn calc(
     ctx: HContext<'_>,
     #[description = "The expression to evaluate."]
+    #[max_length = 3000]
     mut expression: String,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
