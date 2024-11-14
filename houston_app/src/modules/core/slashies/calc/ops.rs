@@ -68,11 +68,22 @@ define_op_kind! {
         Sin "sin" => value.sin(),
         Cos "cos" => value.cos(),
         Tan "tan" => value.tan(),
+        SinH "sinh" => value.sinh(),
+        CosH "cosh" => value.cosh(),
+        TanH "tanh" => value.tanh(),
         Asin "asin" => value.asin(),
         Acos "acos" => value.acos(),
         Atan "atan" => value.atan(),
+        AsinH "asinh" => value.asinh(),
+        AcosH "acosh" => value.acosh(),
+        AtanH "atanh" => value.atanh(),
         Ln "ln" => value.ln(),
+        Log10 "log10" => value.log10(),
         Exp "exp" => value.exp(),
+        Floor "floor" => value.floor(),
+        Ceil "ceil" => value.ceil(),
+        Round "round" => value.round_ties_even(),
+        Trunc "trunc" => value.trunc(),
     }
 }
 
@@ -81,10 +92,14 @@ define_op_kind! {
     enum CallOp['a](fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
         Log "log" => {
             let &[a, b] = read_args(values, fn_name)?;
-            Ok(a.log(b))
+            Ok(b.log(a))
         },
         Min "min" => Ok(fold_values(values, f64::min)),
         Max "max" => Ok(fold_values(values, f64::max)),
+        Atan2 "atan2" => {
+            let &[a, b] = read_args(values, fn_name)?;
+            Ok(a.atan2(b))
+        },
     }
 }
 

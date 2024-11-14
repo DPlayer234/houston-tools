@@ -305,9 +305,13 @@ pub enum ButtonMessageMode {
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
         let mode = self.message_mode();
-        let reply = self.create_reply(ctx.clone())?;
-        let reply = reply.to_slash_initial_response(Default::default());
+        let mut reply = self.create_reply(ctx.clone())?;
 
+        if let Some(ephemeral) = ctx.interaction.message.flags.map(|f| f.contains(MessageFlags::EPHEMERAL)) {
+            reply = reply.ephemeral(ephemeral);
+        }
+
+        let reply = reply.to_slash_initial_response(Default::default());
         let reply = match mode {
             ButtonMessageMode::New => CreateInteractionResponse::Message(reply),
             ButtonMessageMode::Edit => CreateInteractionResponse::UpdateMessage(reply),
