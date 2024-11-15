@@ -41,6 +41,13 @@ pub struct HLogConfig {
     pub modules: HashMap<String, log::LevelFilter>,
 }
 
+impl HBotConfig {
+    pub fn perks(&self) -> anyhow::Result<&crate::modules::perks::Config> {
+        use anyhow::Context as _;
+        self.perks.as_ref().context("perks must be enabled")
+    }
+}
+
 pub mod azur_lane {
     use utils::join;
 

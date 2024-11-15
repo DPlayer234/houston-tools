@@ -7,9 +7,14 @@ use crate::helper::bson_id;
 use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
 use crate::prelude::*;
+use crate::slashies::GUILD_INSTALL_ONLY;
 
 /// View your server wallet.
-#[poise::command(slash_command, guild_only)]
+#[poise::command(
+    slash_command,
+    guild_only,
+    custom_data = GUILD_INSTALL_ONLY,
+)]
 pub async fn wallet(
     ctx: HContext<'_>,
     #[description = "Whether to show the response only to yourself."]
@@ -17,7 +22,7 @@ pub async fn wallet(
 ) -> HResult {
     let data = ctx.data_ref();
     let guild_id = ctx.guild_id().context("must be used in guild")?;
-    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
 
     ctx.defer_as(ephemeral).await?;

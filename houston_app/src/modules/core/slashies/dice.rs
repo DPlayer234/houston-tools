@@ -22,7 +22,7 @@ pub async fn dice(
     let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
     if dice_count > 255 {
-        Err(HArgError("You can't roll more than 255 dice at once."))?;
+        Err(HArgError::new("You can't roll more than 255 dice at once."))?;
     }
 
     let (total_sum, content) = get_dice_roll_result(sets);

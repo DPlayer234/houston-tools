@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::{LazyLock, OnceLock};
 
 use anyhow::Context as _;
@@ -30,11 +31,25 @@ use crate::modules::perks::PerkState;
 
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]
-#[error("{0}")]
-pub struct HArgError(
+#[error("{msg}")]
+pub struct HArgError {
     /// The error message
-    pub &'static str
-);
+    pub msg: Cow<'static, str>,
+}
+
+impl HArgError {
+    pub const fn new_const(msg: &'static str) -> Self {
+        Self {
+            msg: Cow::Borrowed(msg),
+        }
+    }
+
+    pub fn new(msg: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            msg: msg.into(),
+        }
+    }
+}
 
 /// The global bot data. Only one instance exists per bot.
 #[derive(Debug)]

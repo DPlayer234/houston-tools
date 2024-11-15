@@ -116,12 +116,12 @@ impl UniqueRole {
 
 pub trait WalletExt {
     async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
-    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet>;
+    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64, perks: &super::config::Config) -> anyhow::Result<Wallet>;
 }
 
 macro_rules! make_item_accessors {
     ($($item:ident => $field:ident,)*) => {
-        fn item_to_name(item: Item) -> &'static str {
+        fn item_to_key(item: Item) -> &'static str {
             match item {
                 $( Item::$item => stringify!($field), )*
             }
@@ -146,7 +146,7 @@ make_item_accessors!(
 
 impl WalletExt for Collection<Wallet> {
     async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet> {
-        let key = item_to_name(item);
+        let key = item_to_key(item);
 
         let filter = doc! {
             "guild": bson_id!(guild_id),
@@ -173,8 +173,8 @@ impl WalletExt for Collection<Wallet> {
         Ok(doc)
     }
 
-    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> anyhow::Result<Wallet> {
-        let key = item_to_name(item);
+    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64, perks: &super::config::Config) -> anyhow::Result<Wallet> {
+        let key = item_to_key(item);
 
         let filter = doc! {
             "guild": bson_id!(guild_id),
@@ -194,7 +194,10 @@ impl WalletExt for Collection<Wallet> {
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::Before)
             .await?
-            .ok_or(HArgError("You can't afford this right now."))?;
+            .ok_or_else(|| HArgError::new(format!(
+                "You need {} {} to do this.",
+                amount, item.info(perks).name,
+            )))?;
 
         Ok(doc)
     }

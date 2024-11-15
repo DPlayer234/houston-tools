@@ -1,6 +1,12 @@
+use std::borrow::Cow;
+
+use serenity::model::application::InstallationContext;
+
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
+
+pub const GUILD_INSTALL_ONLY: &[InstallationContext] = &[InstallationContext::Guild];
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {
@@ -16,34 +22,36 @@ pub async fn pre_command(ctx: HContext<'_>) {
 /// Command execution error handler.
 #[cold]
 pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HError>) {
-    match &error {
+    match error {
         poise::FrameworkError::Command { error, ctx, .. } => {
-            command_error(ctx, error).await
+            command_error(&ctx, error).await
         },
         poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
-            context_error(ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.as_deref().unwrap_or_default())).await
+            context_error(&ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.unwrap_or_default()).into()).await
         },
         _ => log::error!("Oh noes, we got an error: {error:?}"),
     }
 
-    async fn command_error(ctx: &HContext<'_>, err: &HError) {
-        let message = if let Some(err) = err.downcast_ref::<HArgError>() {
-            format!("Command error: ```{err}```")
-        } else {
-            if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
-                // print both errors to preserve the stack trace, if present
-                log::warn!("Discord error in command: {ser_err:?} / {err:?}")
-            } else {
-                log::error!("Error in command: {err:?}");
-            }
+    async fn command_error(ctx: &HContext<'_>, err: HError) {
+        let message = match err.downcast::<HArgError>() {
+            Ok(err) => err.msg,
+            Err(err) => {
+                if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
+                    // print both errors to preserve the stack trace, if present
+                    log::warn!("Discord error in command: {ser_err:?} / {err:?}")
+                } else {
+                    log::error!("Error in command: {err:?}");
+                }
 
-            format!("Internal error: ```{err}```")
+                format!("Internal error: ```{err}```")
+                    .into()
+            }
         };
 
         context_error(ctx, message).await
     }
 
-    async fn context_error(ctx: &HContext<'_>, feedback: String) {
+    async fn context_error(ctx: &HContext<'_>, feedback: Cow<'_, str>) {
         let embed = CreateEmbed::new()
             .description(feedback)
             .color(ERROR_EMBED_COLOR);
@@ -70,7 +78,7 @@ macro_rules! command_group {
             $($($poise_tt)*)?
         )]
         $vis async fn $name(_: $crate::data::HContext<'_>) -> $crate::data::HResult {
-            $crate::data::HResult::Err($crate::data::HArgError(concat!(stringify!($name), " cannot be invoked directly")).into())
+            $crate::data::HResult::Err($crate::data::HArgError::new_const(concat!(stringify!($name), " cannot be invoked directly")).into())
         }
     };
 }

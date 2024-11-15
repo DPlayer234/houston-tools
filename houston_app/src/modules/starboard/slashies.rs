@@ -1,6 +1,7 @@
 use anyhow::Context;
 
 use crate::prelude::*;
+use crate::slashies::GUILD_INSTALL_ONLY;
 
 crate::slashies::command_group!(
     /// Access starboard info.
@@ -9,7 +10,10 @@ crate::slashies::command_group!(
 );
 
 /// Shows a board's top users.
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    custom_data = GUILD_INSTALL_ONLY,
+)]
 async fn top(
     ctx: HContext<'_>,
     #[description = "What board to look for."]
@@ -30,7 +34,11 @@ async fn top(
 }
 
 /// Shows the most-reacted posts in a board.
-#[poise::command(slash_command, rename = "top-posts")]
+#[poise::command(
+    slash_command,
+    rename = "top-posts",
+    custom_data = GUILD_INSTALL_ONLY,
+)]
 async fn top_posts(
     ctx: HContext<'_>,
     #[description = "What board to look for."]
@@ -55,17 +63,17 @@ fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, Channe
         .context("command only available in guilds")?;
 
     let board = usize::try_from(board).ok()
-        .ok_or(HArgError("Invalid Starboard."))?;
+        .ok_or(HArgError::new_const("Invalid Starboard."))?;
 
     let board = ctx
         .data_ref()
         .config()
         .starboard
         .get(&guild_id)
-        .ok_or(HArgError("Starboard is not enabled for this server."))?
+        .ok_or(HArgError::new_const("Starboard is not enabled for this server."))?
         .boards
         .get(board)
-        .ok_or(HArgError("Unknown Starboard."))?;
+        .ok_or(HArgError::new_const("Unknown Starboard."))?;
 
     Ok((guild_id, board.channel))
 }

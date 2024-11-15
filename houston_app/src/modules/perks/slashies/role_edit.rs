@@ -7,9 +7,16 @@ use crate::helper::bson_id;
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
+use crate::slashies::GUILD_INSTALL_ONLY;
 
-/// Edit your custom role.
-#[poise::command(slash_command, rename = "role-edit")]
+// Note: The description is set by the loading code.
+// Edit your custom role.
+#[poise::command(
+    slash_command,
+    rename = "role-edit",
+    guild_only,
+    custom_data = GUILD_INSTALL_ONLY,
+)]
 pub async fn role_edit(
     ctx: HContext<'_>,
     #[description = "The new role name."]
@@ -23,6 +30,7 @@ pub async fn role_edit(
 ) -> HResult {
     let data = ctx.data_ref();
     let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
 
     ctx.defer_ephemeral().await?;
@@ -35,7 +43,7 @@ pub async fn role_edit(
     let unique = UniqueRole::collection(db)
         .find_one(filter)
         .await?
-        .ok_or(HArgError("You don't have a unique role."))?;
+        .ok_or(HArgError::new_const("You don't have a unique role."))?;
 
     let mut edit = EditRole::new().name(name);
     if let Some(HexColor(color)) = color {
@@ -43,14 +51,14 @@ pub async fn role_edit(
     }
 
     Wallet::collection(db)
-        .take_items(guild_id, ctx.author().id, Item::RoleEdit, 1)
+        .take_items(guild_id, ctx.author().id, Item::RoleEdit, 1, perks)
         .await?;
 
     match guild_id.edit_role(ctx.http(), unique.role, edit).await {
         Ok(role) => {
             let description = format!(
-                "Your role is now: {}",
-                role.mention(),
+                "Your role is now: {}\n-# Used 1 {}.",
+                role.mention(), Item::RoleEdit.info(perks).name,
             );
 
             let embed = CreateEmbed::new()

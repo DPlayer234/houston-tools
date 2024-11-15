@@ -13,7 +13,7 @@ macro_rules! make_find {
             let azur_lane = data.azur_lane();
             parse_id_input(name).map(|id| azur_lane.$by_id(id))
                 .unwrap_or_else(|| azur_lane.$by_prefix(name).next())
-                .ok_or(HArgError($error).into())
+                .ok_or(HArgError::new_const($error).into())
         }
     };
 }

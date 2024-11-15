@@ -11,7 +11,7 @@ use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
-use crate::slashies::command_group;
+use crate::slashies::{command_group, GUILD_INSTALL_ONLY};
 
 command_group!(
     /// Managed active perks.
@@ -19,12 +19,15 @@ command_group!(
         rename = "perk-admin",
         default_member_permissions = "MANAGE_GUILD",
         guild_only,
+        custom_data = GUILD_INSTALL_ONLY,
     ),
     "enable", "disable", "list", "give", "unique_role",
 );
 
 /// Enables a perk for a member.
-#[poise::command(slash_command, guild_only)]
+#[poise::command(
+    slash_command,
+)]
 async fn enable(
     ctx: HContext<'_>,
     #[description = "The member to enable the perk for."]
@@ -35,7 +38,7 @@ async fn enable(
     duration: u32,
 ) -> HResult {
     let data = ctx.data_ref();
-    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
     let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
@@ -67,7 +70,9 @@ async fn enable(
 }
 
 /// Disables a perk for a member.
-#[poise::command(slash_command, guild_only)]
+#[poise::command(
+    slash_command,
+)]
 async fn disable(
     ctx: HContext<'_>,
     #[description = "The member to disable the perk for."]
@@ -76,7 +81,7 @@ async fn disable(
     perk: Effect,
 ) -> HResult {
     let data = ctx.data_ref();
-    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
     let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
 
@@ -101,14 +106,16 @@ async fn disable(
 }
 
 /// List active perks of a member.
-#[poise::command(slash_command, guild_only)]
+#[poise::command(
+    slash_command,
+)]
 async fn list(
     ctx: HContext<'_>,
     #[description = "The member to check."]
     member: Member,
 ) -> HResult {
     let data = ctx.data_ref();
-    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
@@ -150,7 +157,9 @@ async fn list(
 }
 
 /// Gives a user items.
-#[poise::command(slash_command, guild_only)]
+#[poise::command(
+    slash_command,
+)]
 async fn give(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]
@@ -161,7 +170,7 @@ async fn give(
     amount: i32,
 ) -> HResult {
     let data = ctx.data_ref();
-    let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+    let perks = data.config().perks()?;
     let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
@@ -183,7 +192,10 @@ async fn give(
 }
 
 /// Sets a user's unique role. Can be omitted to delete the association.
-#[poise::command(slash_command, rename = "unique-role", guild_only)]
+#[poise::command(
+    slash_command,
+    rename = "unique-role",
+)]
 async fn unique_role(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]

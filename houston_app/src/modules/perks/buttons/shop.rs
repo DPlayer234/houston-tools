@@ -62,7 +62,7 @@ impl View {
 
     async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HFrameworkData>();
-        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let wallet = Wallet::collection(db)
@@ -168,7 +168,7 @@ impl View {
 
     async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HFrameworkData>();
-        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let st = effect.price(perks)
@@ -231,7 +231,7 @@ impl View {
 
     async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HFrameworkData>();
-        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let st = item.price(perks)
@@ -285,7 +285,7 @@ impl View {
 
     async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HFrameworkData>();
-        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let args = Args::new(ctx, guild_id, user_id);
@@ -297,7 +297,7 @@ impl View {
             .context("effect cannot be bought")?;
 
         Wallet::collection(db)
-            .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+            .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
             .await?;
 
         let duration = TimeDelta::try_hours(st.duration.into())
@@ -319,14 +319,14 @@ impl View {
 
     async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HFrameworkData>();
-        let perks = data.config().perks.as_ref().context("perks must be enabled")?;
+        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let st = item.price(perks)
             .context("effect cannot be bought")?;
 
         Wallet::collection(db)
-            .take_items(guild_id, user_id, Item::Cash, st.cost.into())
+            .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
             .await?;
 
         Wallet::collection(db)

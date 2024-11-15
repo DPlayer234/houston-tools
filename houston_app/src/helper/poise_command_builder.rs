@@ -1,7 +1,7 @@
 use poise::{Command, ContextMenuCommandAction};
 use serde::Serialize;
 use serenity::builder::CreateCommandOption;
-use serenity::model::application::{CommandOptionType, CommandType};
+use serenity::model::application::{CommandOptionType, CommandType, InstallationContext, InteractionContext};
 use serenity::model::permissions::Permissions;
 
 // Custom Create Command payload type to include new data
@@ -14,8 +14,8 @@ pub struct CustomCreateCommand {
     default_member_permissions: Permissions,
     #[serde(rename = "type")]
     kind: CommandType,
-    contexts: Vec<u8>,
-    integration_types: Vec<u8>,
+    contexts: Vec<InteractionContext>,
+    integration_types: Vec<InstallationContext>,
     nsfw: bool,
 }
 
@@ -46,25 +46,25 @@ pub fn build_commands<E, U>(commands: &[Command<E, U>]) -> Vec<CustomCreateComma
     commands_builder
 }
 
-fn contexts<E, U>(cmd: &Command<E, U>) -> Vec<u8> {
-    // 0 = GUILD, 1 = BOT_DM, 2 = PRIVATE_CHANNEL
-
+fn contexts<E, U>(cmd: &Command<E, U>) -> Vec<InteractionContext> {
     if cmd.guild_only {
-        vec![0]
+        vec![InteractionContext::Guild]
     } else if cmd.dm_only {
-        vec![1, 2]
+        vec![InteractionContext::BotDm, InteractionContext::PrivateChannel]
     } else {
-        vec![0, 1, 2]
+        vec![InteractionContext::Guild, InteractionContext::BotDm, InteractionContext::PrivateChannel]
     }
 }
 
-fn integration_types<E, U>(cmd: &Command<E, U>) -> Vec<u8> {
-    // 0 = GUILD_INSTALL, 1 = USER_INSTALL
+fn integration_types<E, U>(cmd: &Command<E, U>) -> Vec<InstallationContext> {
+    if let Some(&ctx) = cmd.custom_data.downcast_ref::<&[InstallationContext]>() {
+        return ctx.to_vec();
+    }
 
     if cmd.guild_only {
-        vec![0]
+        vec![InstallationContext::Guild]
     } else {
-        vec![0, 1]
+        vec![InstallationContext::Guild, InstallationContext::User]
     }
 }
 

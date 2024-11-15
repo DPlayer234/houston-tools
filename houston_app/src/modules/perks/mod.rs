@@ -36,22 +36,27 @@ impl super::Module for Module {
     }
 
     fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
-        let perks = config.perks.as_ref().expect("must be enabled");
+        let perks = config.perks().unwrap();
         let mut c = vec![
             slashies::perk_admin::perk_admin(),
             slashies::shop::shop(),
             slashies::wallet::wallet(),
         ];
 
-        if perks.pushpin.is_some() {
-            c.extend([
-                slashies::pushpin::pushpin_pin(),
-                slashies::pushpin::pushpin_unpin(),
-            ]);
+        if let Some(pushpin) = &perks.pushpin {
+            let mut pin = slashies::pushpin::pushpin_pin();
+            let mut unpin = slashies::pushpin::pushpin_unpin();
+            pin.context_menu_name = Some(format!("Use {}: Pin", pushpin.name));
+            unpin.context_menu_name = Some(format!("Use {}: Unpin", pushpin.name));
+
+            c.extend([pin, unpin]);
         }
 
-        if perks.role_edit.is_some() {
-            c.push(slashies::role_edit::role_edit());
+        if let Some(role_edit) = &perks.role_edit {
+            let mut edit = slashies::role_edit::role_edit();
+            edit.description = Some(format!("Use {}: Edit your custom role.", role_edit.name));
+
+            c.push(edit);
         }
 
         c
@@ -71,7 +76,7 @@ impl super::Module for Module {
             anyhow::bail!("perks requires a mongodb_uri");
         }
 
-        let perks = config.perks.as_ref().expect("must be enabled");
+        let perks = config.perks().unwrap();
         log::info!("Perks are enabled.");
 
         if let Some(r) = &perks.rainbow {
