@@ -1,5 +1,6 @@
 use std::sync::{LazyLock, OnceLock};
 
+use anyhow::Context as _;
 use serenity::http::Http;
 use serenity::model::Color;
 
@@ -109,8 +110,6 @@ impl HBotData {
 
     pub async fn connect(&self, init: &crate::modules::Info) -> HResult {
         if let Some(uri) = &self.config.mongodb_uri {
-            use anyhow::Context;
-
             let client = mongodb::Client::with_uri_str(uri).await?;
             let db = client.default_database().context("no default database specified")?;
 
@@ -129,7 +128,6 @@ impl HBotData {
     }
 
     pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
-        use anyhow::Context;
         self.database.get().context("database is not yet connected")
     }
 }

@@ -61,7 +61,9 @@ pub trait Module {
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
         _ = db;
-        Box::pin(async { Ok(()) })
+        Box::pin(const {
+            crate::helper::future::Done::new_zst(|| Ok(()))
+        })
     }
 
     /// Applies the settings if enabled.
