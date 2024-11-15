@@ -66,7 +66,7 @@ fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<
 }
 
 /// "effect_base" and "effect_preload" *replace* components of the ship's equipment slots.
-fn replace_equip_slot_part<'a>(lua: &'a Lua, ship: &mut ShipData, effect: LuaTable<'a>, select: impl Fn(&mut EquipWeaponMount) -> &mut u8) -> LuaResult<()> {
+fn replace_equip_slot_part(lua: &Lua, ship: &mut ShipData, effect: LuaTable, select: impl Fn(&mut EquipWeaponMount) -> &mut u8) -> LuaResult<()> {
     let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
     for (index, &new) in effect_base.iter().enumerate() {

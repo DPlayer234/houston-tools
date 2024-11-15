@@ -12,11 +12,11 @@ async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
     use std::sync::{Arc, Mutex};
 
+    use serenity::builder::CreateCommand;
     use serenity::model::prelude::*;
     use serenity::prelude::*;
 
     use data::*;
-    use helper::poise_command_builder::CustomCreateCommand;
     use modules::Info;
 
     // SAFETY: No other code running that accesses this yet.
@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let event_handler = HEventHandler {
-        commands: Mutex::new(Some(helper::poise_command_builder::build_commands(&init.commands))),
+        commands: Mutex::new(Some(poise::builtins::create_application_commands(&init.commands))),
     };
 
     let framework = HFramework::builder()
@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
 
     /// Type to handle various Discord events.
     struct HEventHandler {
-        commands: Mutex<Option<Vec<CustomCreateCommand>>>,
+        commands: Mutex<Option<Vec<CreateCommand<'static>>>>,
     }
 
     #[serenity::async_trait]
@@ -102,14 +102,14 @@ async fn main() -> anyhow::Result<()> {
     }
 
     impl HEventHandler {
-        fn take_commands(&self) -> Option<Vec<CustomCreateCommand>> {
+        fn take_commands(&self) -> Option<Vec<CreateCommand<'static>>> {
             self.commands.lock().unwrap().take()
         }
 
         async fn setup(
             ctx: Context,
             data: &HBotData,
-            commands: &[CustomCreateCommand],
+            commands: &[CreateCommand<'static>],
         ) -> anyhow::Result<()> {
             let commands = ctx.http().create_global_commands(&commands).await?;
             log::trace!("Created {} global commands.", commands.len());

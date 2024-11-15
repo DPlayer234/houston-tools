@@ -7,7 +7,6 @@ use crate::helper::bson_id;
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
-use crate::slashies::GUILD_INSTALL_ONLY;
 
 // Note: The description is set by the loading code.
 // Edit your custom role.
@@ -15,7 +14,8 @@ use crate::slashies::GUILD_INSTALL_ONLY;
     slash_command,
     rename = "role-edit",
     guild_only,
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 pub async fn role_edit(
     ctx: HContext<'_>,

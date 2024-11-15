@@ -40,9 +40,9 @@ pub struct ShipSet<'a> {
     /// The ship ID. Not the group's.
     pub id: u32,
     /// The "ship_data_template" entry.
-    pub template: LuaTable<'a>,
+    pub template: LuaTable,
     /// The "ship_data_statistics" entry.
-    pub statistics: LuaTable<'a>,
+    pub statistics: LuaTable,
     /// The associated strengthen data.
     pub strengthen: Strengthen<'a>,
     /// The associated retrofit data.
@@ -53,22 +53,22 @@ pub struct ShipSet<'a> {
 ///
 /// [`ShipSkin`]: azur_lane::ship::ShipSkin
 #[derive(Debug)]
-pub struct SkinSet<'a> {
+pub struct SkinSet {
     /// The skin ID.
     pub skin_id: u32,
     /// The "ship_skin_template" entry.
-    pub template: LuaTable<'a>,
+    pub template: LuaTable,
     /// The "ship_skin_words" entry.
-    pub words: LuaTable<'a>,
+    pub words: LuaTable,
     /// The "ship_skin_words_extra" entry.
-    pub words_extra: Option<LuaTable<'a>>,
+    pub words_extra: Option<LuaTable>,
 }
 
 /// The strengthen data.
 #[derive(Debug)]
 pub enum Strengthen<'a> {
     /// Normal. Holds the "ship_data_strengthen" entry.
-    Normal(LuaTable<'a>),
+    Normal(LuaTable),
     /// Research.
     Blueprint(BlueprintStrengthen<'a>),
     // META.
@@ -79,40 +79,40 @@ pub enum Strengthen<'a> {
 #[derive(Debug)]
 pub struct BlueprintStrengthen<'a> {
     /// The "ship_data_blueprint" entry.
-    pub data: LuaTable<'a>,
+    pub data: LuaTable,
     /// A reference to "ship_strengthen_blueprint".
-    pub effect_lookup: &'a LuaTable<'a>,
+    pub effect_lookup: &'a LuaTable,
 }
 
 /// Strengthen data for a META ship.
 #[derive(Debug)]
 pub struct MetaStrengthen<'a> {
     /// The "ship_strengthen_meta" entry.
-    pub data: LuaTable<'a>,
+    pub data: LuaTable,
     /// A reference to "ship_meta_repair".
-    pub repair_lookup: &'a LuaTable<'a>,
+    pub repair_lookup: &'a LuaTable,
     /// A reference to "ship_meta_repair_effect".
-    pub repair_effect_lookup: &'a LuaTable<'a>,
+    pub repair_effect_lookup: &'a LuaTable,
 }
 
 /// Retrofit data some ship.
 #[derive(Debug)]
 pub struct Retrofit<'a> {
     /// The "ship_data_trans" entry.
-    pub data: LuaTable<'a>,
+    pub data: LuaTable,
     /// A reference to "transform_data_template".
-    pub list_lookup: &'a LuaTable<'a>,
+    pub list_lookup: &'a LuaTable,
 }
 
 /// A set of data from which [`Augment`] can be constructed.
 ///
 /// [`Augment`]: azur_lane::equip::Augment
 #[derive(Debug)]
-pub struct AugmentSet<'a> {
+pub struct AugmentSet {
     /// The augment's ID.
     pub id: u32,
     /// The "spweapon_data_statistics" entry.
-    pub statistics: LuaTable<'a>,
+    pub statistics: LuaTable,
 }
 
 /// An error when loading the data.

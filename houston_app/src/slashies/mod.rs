@@ -1,12 +1,8 @@
 use std::borrow::Cow;
 
-use serenity::model::application::InstallationContext;
-
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
-
-pub const GUILD_INSTALL_ONLY: &[InstallationContext] = &[InstallationContext::Guild];
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HContext<'_>) {

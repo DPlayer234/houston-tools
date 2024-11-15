@@ -11,7 +11,7 @@ use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
-use crate::slashies::{command_group, GUILD_INSTALL_ONLY};
+use crate::slashies::command_group;
 
 command_group!(
     /// Managed active perks.
@@ -19,7 +19,8 @@ command_group!(
         rename = "perk-admin",
         default_member_permissions = "MANAGE_GUILD",
         guild_only,
-        custom_data = GUILD_INSTALL_ONLY,
+        install_context = "Guild",
+        interaction_context = "Guild",
     ),
     "enable", "disable", "list", "give", "unique_role",
 );

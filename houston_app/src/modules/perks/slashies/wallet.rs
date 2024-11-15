@@ -7,13 +7,13 @@ use crate::helper::bson_id;
 use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
 use crate::prelude::*;
-use crate::slashies::GUILD_INSTALL_ONLY;
 
 /// View your server wallet.
 #[poise::command(
     slash_command,
     guild_only,
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 pub async fn wallet(
     ctx: HContext<'_>,

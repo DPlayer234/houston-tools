@@ -16,7 +16,7 @@ workspace = true
 anyhow = "1.0.93"
 humantime = "2.1.0"
 image = { version = "0.25.5", default-features = false, features = ["webp"] }
-serde = { version = "1.0.214", features = ["derive"] }
+serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.132"
 
 azur_lane = { path = "../azur_lane" }
@@ -24,13 +24,13 @@ unity_read = { path = "../unity_read" }
 utils = { path = "../utils" }
 
 [dependencies.clap]
-version = "4.5.20"
+version = "4.5.21"
 features = ["std", "help", "usage", "error-context", "suggestions", "derive"]
 default-features = false
 
 [dependencies.mlua]
-version = "0.9.9"
-features = ["lua54", "vendored"]
+version = "0.10.1"
+features = ["lua54", "vendored", "send"]
 
 [build-dependencies]
 utils_build = { path = "../utils_build" }

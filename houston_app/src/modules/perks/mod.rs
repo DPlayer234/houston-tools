@@ -46,15 +46,15 @@ impl super::Module for Module {
         if let Some(pushpin) = &perks.pushpin {
             let mut pin = slashies::pushpin::pushpin_pin();
             let mut unpin = slashies::pushpin::pushpin_unpin();
-            pin.context_menu_name = Some(format!("Use {}: Pin", pushpin.name));
-            unpin.context_menu_name = Some(format!("Use {}: Unpin", pushpin.name));
+            pin.context_menu_name = Some(format!("Use {}: Pin", pushpin.name).into());
+            unpin.context_menu_name = Some(format!("Use {}: Unpin", pushpin.name).into());
 
             c.extend([pin, unpin]);
         }
 
         if let Some(role_edit) = &perks.role_edit {
             let mut edit = slashies::role_edit::role_edit();
-            edit.description = Some(format!("Use {}: Edit your custom role.", role_edit.name));
+            edit.description = Some(format!("Use {}: Edit your custom role.", role_edit.name).into());
 
             c.push(edit);
         }

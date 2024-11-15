@@ -3,12 +3,12 @@ use anyhow::Context as _;
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
-use crate::slashies::GUILD_INSTALL_ONLY;
 
 #[poise::command(
     context_menu_command = "[pin/overridden]",
     guild_only,
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 pub async fn pushpin_pin(
     ctx: HContext<'_>,
@@ -65,7 +65,8 @@ pub async fn pushpin_pin(
 #[poise::command(
     context_menu_command = "[unpin/overridden]",
     guild_only,
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 pub async fn pushpin_unpin(
     ctx: HContext<'_>,

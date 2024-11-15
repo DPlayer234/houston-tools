@@ -281,7 +281,7 @@ fn get_sub_barrage(
     let mut shrapnel_parts = Vec::new();
 
     if let LuaValue::Table(extra_param) = bullet.get("extra_param")? {
-        if let Ok(dive_filter) = extra_param.get::<_, Vec<u32>>("diveFilter") {
+        if let Ok(dive_filter) = extra_param.get::<Vec<u32>>("diveFilter") {
             flags = dive_filter
                 .into_iter()
                 .fold(
@@ -413,7 +413,7 @@ fn search_referenced_weapons_in_effect_entry(
     sc: SkillContext,
     effect_list: Vec<LuaTable>,
 ) -> LuaResult<()> {
-    fn get_arg<'a, T: FromLua<'a>>(entry: &LuaTable<'a>, key: &str) -> LuaResult<T> {
+    fn get_arg<T: FromLua>(entry: &LuaTable, key: &str) -> LuaResult<T> {
         let arg_list: LuaTable = entry.get("arg_list").context("skill/buff effect_list entry arg_list")?;
         arg_list.get(key).with_context(context!("skill/buff effect_list entry arg_list {}", key))
     }
@@ -548,7 +548,7 @@ struct ReferencedWeaponsContext {
 #[derive(Debug)]
 struct SkillContext<'a> {
     lua: &'a Lua,
-    skill: &'a LuaTable<'a>,
+    skill: &'a LuaTable,
     skill_id: u32,
     quota: u32,
 }

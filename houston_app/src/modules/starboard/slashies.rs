@@ -1,7 +1,6 @@
 use anyhow::Context;
 
 use crate::prelude::*;
-use crate::slashies::GUILD_INSTALL_ONLY;
 
 crate::slashies::command_group!(
     /// Access starboard info.
@@ -12,7 +11,8 @@ crate::slashies::command_group!(
 /// Shows a board's top users.
 #[poise::command(
     slash_command,
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 async fn top(
     ctx: HContext<'_>,
@@ -37,7 +37,8 @@ async fn top(
 #[poise::command(
     slash_command,
     rename = "top-posts",
-    custom_data = GUILD_INSTALL_ONLY,
+    install_context = "Guild",
+    interaction_context = "Guild",
 )]
 async fn top_posts(
     ctx: HContext<'_>,
