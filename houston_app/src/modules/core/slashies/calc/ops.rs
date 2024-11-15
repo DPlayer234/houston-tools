@@ -88,6 +88,33 @@ define_op_kind! {
 }
 
 define_op_kind! {
+    /// A post-fix unary operator.
+    enum PostUnaryOp(value: f64) -> f64 {
+        Factorial "!" => factorial(value),
+    }
+}
+
+fn factorial(mut value: f64) -> f64 {
+    if value == f64::INFINITY {
+        value
+    } else if value <= 0.0 || value % 1.0 != 0.0 {
+        f64::NAN
+    } else {
+        let mut acc = value;
+        while value > 1.0 {
+            value -= 1.0;
+            acc *= value;
+
+            if !acc.is_finite() {
+                break;
+            }
+        }
+
+        acc
+    }
+}
+
+define_op_kind! {
     /// A function to call.
     enum CallOp['a](fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
         Log "log" => {
@@ -98,7 +125,11 @@ define_op_kind! {
         Max "max" => Ok(fold_values(values, f64::max)),
         Atan2 "atan2" => {
             let &[a, b] = read_args(values, fn_name)?;
-            Ok(a.atan2(b))
+            Ok(if a == 0.0 && b == 0.0 {
+                f64::NAN
+            } else {
+                a.atan2(b)
+            })
         },
     }
 }

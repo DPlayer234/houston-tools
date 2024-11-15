@@ -90,7 +90,7 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
 
     fn is_special_char(c: u8) -> bool {
         // Note: each of these must be an ASCII character
-        matches!(c, b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',')
+        matches!(c, b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',' | b'!')
     }
 
     unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
@@ -248,6 +248,11 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
             return Err(MathError::ExprExpected(tokens.last_token()));
         }
     };
+
+    if let Some(op) = tokens.peek().and_then(|t| PostUnaryOp::from_token(t)) {
+        tokens.next();
+        return Ok(op.apply(expr));
+    }
 
     Ok(expr)
 }
