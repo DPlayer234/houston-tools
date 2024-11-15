@@ -291,6 +291,15 @@ pub trait ButtonMessage: Sized {
     /// How to post the message. Defaults to [`ButtonMessageMode::Edit`].
     #[must_use]
     fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }
+
+    /// Whether to send new messages as ephemeral.
+    ///
+    /// Defaults to the same value as the source message's ephemerality.
+    #[must_use]
+    fn ephemeral(&self, message: &Message) -> impl IntoEphemeral {
+        message.flags
+            .map(|f| f.contains(MessageFlags::EPHEMERAL))
+    }
 }
 
 /// The mode a [`ButtonMessage`] uses to post its message.
@@ -305,11 +314,14 @@ pub enum ButtonMessageMode {
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
         let mode = self.message_mode();
-        let mut reply = self.create_reply(ctx.clone())?;
 
-        if let Some(ephemeral) = ctx.interaction.message.flags.map(|f| f.contains(MessageFlags::EPHEMERAL)) {
-            reply = reply.ephemeral(ephemeral);
-        }
+        let ephemeral = self
+            .ephemeral(&ctx.interaction.message)
+            .into_ephemeral();
+
+        let reply = self
+            .create_reply(ctx.clone())?
+            .ephemeral(ephemeral);
 
         let reply = reply.to_slash_initial_response(Default::default());
         let reply = match mode {

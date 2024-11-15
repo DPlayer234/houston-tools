@@ -40,9 +40,9 @@ pub enum DisplayResolvedArgs<'a> {
 impl Display for DisplayResolvedArgs<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            DisplayResolvedArgs::Options(o) => fmt_resolved_options(o, f),
-            DisplayResolvedArgs::Target(t) => fmt_resolved_target(t, f),
-            DisplayResolvedArgs::String(s) => f.write_str(s),
+            Self::Options(o) => fmt_resolved_options(o, f),
+            Self::Target(t) => fmt_resolved_target(t, f),
+            Self::String(s) => f.write_str(s),
         }
     }
 }
