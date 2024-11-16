@@ -98,13 +98,14 @@ async fn main() -> anyhow::Result<()> {
             buttons::handler::interaction_create(ctx, interaction).await;
         }
 
-        async fn message(&self, ctx: Context, _new_message: Message) {
-            modules::perks::check_perks(ctx).await;
+        async fn message(&self, ctx: Context, new_message: Message) {
+            modules::perks::dispatch_check_perks(&ctx);
+            modules::media_react::message(ctx, new_message).await;
         }
 
         async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
             modules::perks::dispatch_check_perks(&ctx);
-            modules::starboard::handle_reaction(ctx, reaction).await;
+            modules::starboard::reaction_add(ctx, reaction).await;
         }
     }
 

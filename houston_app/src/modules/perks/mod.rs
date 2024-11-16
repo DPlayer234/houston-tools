@@ -99,13 +99,6 @@ pub fn dispatch_check_perks(ctx: &Context) {
     }
 }
 
-pub async fn check_perks(ctx: Context) {
-    let data = ctx.data_ref::<HFrameworkData>();
-    if Module.enabled(data.config()) {
-        check_perks_impl(ctx).await;
-    }
-}
-
 async fn check_perks_impl(ctx: Context) {
     if let Err(why) = check_perks_core(ctx).await {
         log::error!("Perk check failed: {why:?}");

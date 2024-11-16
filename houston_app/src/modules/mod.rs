@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 pub mod azur;
 pub mod core;
+pub mod media_react;
 pub mod perks;
 pub mod starboard;
 
@@ -32,6 +33,7 @@ impl Info {
         core::Module.apply(self, config)?;
         azur::Module.apply(self, config)?;
         perks::Module.apply(self, config)?;
+        media_react::Module.apply(self, config)?;
         starboard::Module.apply(self, config)?;
         Ok(())
     }

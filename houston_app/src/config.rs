@@ -30,6 +30,8 @@ pub struct HBotConfig {
     pub azur_lane_data: Option<PathBuf>,
     pub mongodb_uri: Option<String>,
     #[serde(default)]
+    pub media_react: crate::modules::media_react::Config,
+    #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
     pub perks: Option<crate::modules::perks::Config>,
 }

@@ -7,7 +7,7 @@ use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BoardId(i64);
 
 impl BoardId {

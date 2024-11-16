@@ -5,7 +5,7 @@ use rand::prelude::*;
 use serenity::prelude::*;
 
 use super::Module as _;
-use crate::helper::bson_id;
+use crate::helper::{bson_id, is_unique_set};
 use crate::prelude::*;
 use crate::config::HBotConfig;
 
@@ -42,11 +42,17 @@ impl super::Module for Module {
     }
 
     fn validate(&self, config: &HBotConfig) -> HResult {
+        anyhow::ensure!(
+            config.starboard.values().all(|g| is_unique_set(g.boards.iter().map(|b| b.id))),
+            "starboard requires unique board ids per guild",
+        );
+
         if config.mongodb_uri.is_none() {
             anyhow::bail!("starboard requires a mongodb_uri");
         }
 
         log::info!("Starboard is enabled: {} guild(s)", config.starboard.len());
+
         Ok(())
     }
 }
@@ -61,13 +67,13 @@ fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> anyhow::Res
         .context("starboard not found")
 }
 
-pub async fn handle_reaction(ctx: Context, reaction: Reaction) {
-    if let Err(why) = handle_core(ctx, reaction).await {
+pub async fn reaction_add(ctx: Context, reaction: Reaction) {
+    if let Err(why) = reaction_add_inner(ctx, reaction).await {
         log::error!("Reaction handling failed: {why:?}");
     }
 }
 
-async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
+async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     // only in guilds
     let Some(guild_id) = reaction.guild_id else {
         return Ok(());
