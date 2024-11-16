@@ -9,10 +9,12 @@ mod slashies;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    use std::borrow::Cow;
     use std::num::NonZero;
     use std::sync::{Arc, Mutex};
 
     use serenity::builder::CreateCommand;
+    use serenity::gateway::ActivityData;
     use serenity::model::prelude::*;
     use serenity::prelude::*;
 
@@ -56,6 +58,11 @@ async fn main() -> anyhow::Result<()> {
         .build();
 
     let mut client = Client::builder(&config.discord.token, init.intents)
+        .activity(ActivityData::custom(
+            config.discord.status
+                .map(Cow::Owned)
+                .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION")))
+        ))
         .data(Arc::clone(&bot_data))
         .framework(framework)
         .event_handler(event_handler)

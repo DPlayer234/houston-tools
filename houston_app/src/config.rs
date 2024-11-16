@@ -16,6 +16,7 @@ pub struct HConfig {
 #[derive(Debug, Deserialize)]
 pub struct HDiscordConfig {
     pub token: String,
+    pub status: Option<String>,
 }
 
 const fn default_embed_color() -> Color {
