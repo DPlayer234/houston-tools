@@ -5,10 +5,12 @@ use mongodb::{Collection, Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, MessageId, UserId};
 
+use super::BoardId;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub _id: ObjectId,
-    pub board: ChannelId,
+    pub board: BoardId,
     pub channel: ChannelId,
     pub message: MessageId,
     pub user: UserId,
@@ -21,7 +23,7 @@ pub struct Message {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Score {
     pub _id: ObjectId,
-    pub board: ChannelId,
+    pub board: BoardId,
     pub user: UserId,
     pub score: i64,
 }

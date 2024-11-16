@@ -1,10 +1,30 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use bson::doc;
 
 use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct BoardId(i64);
+
+impl BoardId {
+    pub const fn new(id: i64) -> Self {
+        Self(id)
+    }
+
+    pub const fn get(self) -> i64 {
+        self.0
+    }
+}
+
+impl From<i64> for BoardId {
+    fn from(value: i64) -> Self {
+        Self::new(value)
+    }
+}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardGuild {
@@ -13,6 +33,7 @@ pub struct StarboardGuild {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardEntry {
+    pub id: BoardId,
     pub name: String,
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,
@@ -45,6 +66,12 @@ impl StarboardEmoji {
             (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => self_name == other_name,
             _ => false,
         }
+    }
+}
+
+impl fmt::Display for StarboardEmoji {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 

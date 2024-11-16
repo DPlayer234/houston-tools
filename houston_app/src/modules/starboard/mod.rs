@@ -14,7 +14,7 @@ pub mod config;
 pub mod model;
 mod slashies;
 
-pub use config::Config;
+pub use config::{Config, BoardId};
 
 pub struct Module;
 
@@ -51,13 +51,13 @@ impl super::Module for Module {
     }
 }
 
-fn get_board(config: &HBotConfig, guild: GuildId, board: ChannelId) -> anyhow::Result<&config::StarboardEntry> {
+fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> anyhow::Result<&config::StarboardEntry> {
     config.starboard
         .get(&guild)
         .context("starboard not configured for this guild")?
         .boards
         .iter()
-        .find(|b| b.channel == board)
+        .find(|b| b.id == board)
         .context("starboard not found")
 }
 
@@ -149,13 +149,13 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         }
 
         let filter = doc! {
-            "board": bson_id!(board.channel),
+            "board": board.id.get(),
             "message": bson_id!(message.id),
         };
 
         let update = doc! {
             "$setOnInsert": {
-                "board": bson_id!(board.channel),
+                "board": board.id.get(),
                 "channel": bson_id!(message.channel_id),
                 "message": bson_id!(message.id),
                 "user": bson_id!(message.author.id),
@@ -180,7 +180,7 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
         if now_reacts >= required_reacts && !pinned {
             // update the record to pinned
             let filter = doc! {
-                "board": bson_id!(board.channel),
+                "board": board.id.get(),
                 "message": bson_id!(message.id),
             };
 
@@ -230,13 +230,13 @@ async fn handle_core(ctx: Context, reaction: Reaction) -> HResult {
     if score_increase > 0 {
         // update the user's score if it has increased
         let filter = doc! {
-            "board": bson_id!(board.channel),
+            "board": board.id.get(),
             "user": bson_id!(message.author.id),
         };
 
         let update = doc! {
             "$setOnInsert": {
-                "board": bson_id!(board.channel),
+                "board": board.id.get(),
                 "user": bson_id!(message.author.id),
             },
             "$inc": {

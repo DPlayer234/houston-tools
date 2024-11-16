@@ -3,22 +3,22 @@ use serenity::futures::TryStreamExt;
 
 use utils::text::write_str::*;
 
-use crate::helper::bson_id;
+use crate::buttons::prelude::*;
 use crate::helper::discord::get_pagination_buttons;
 use crate::modules::starboard::get_board;
 use crate::modules::starboard::model;
-use crate::buttons::prelude::*;
+use crate::modules::starboard::BoardId;
 
 // View the leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub guild: GuildId,
-    pub board: ChannelId,
+    pub board: BoardId,
     pub page: u16,
 }
 
 impl View {
-    pub fn new(guild: GuildId, board: ChannelId) -> Self {
+    pub fn new(guild: GuildId, board: BoardId) -> Self {
         Self {
             guild,
             board,
@@ -33,7 +33,7 @@ impl View {
         let board = get_board(data.config(), self.guild, self.board)?;
 
         let filter = doc! {
-            "board": bson_id!(self.board),
+            "board": self.board.get(),
         };
 
         let sort = doc! {
@@ -69,7 +69,7 @@ impl View {
         }
 
         let embed = CreateEmbed::new()
-            .title(format!("<#{}> Leaderboards", self.board))
+            .title(format!("{} Leaderboards", board.emoji))
             .color(data.config().embed_color)
             .description(description)
             .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)));

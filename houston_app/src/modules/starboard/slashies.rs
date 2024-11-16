@@ -1,5 +1,6 @@
 use anyhow::Context;
 
+use super::BoardId;
 use crate::prelude::*;
 
 crate::slashies::command_group!(
@@ -59,7 +60,7 @@ async fn top_posts(
     Ok(())
 }
 
-fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, ChannelId)> {
+fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, BoardId)> {
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 
@@ -76,7 +77,7 @@ fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, Channe
         .get(board)
         .ok_or(HArgError::new_const("Unknown Starboard."))?;
 
-    Ok((guild_id, board.channel))
+    Ok((guild_id, board.id))
 }
 
 async fn autocomplete_board<'a>(

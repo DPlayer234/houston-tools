@@ -101,6 +101,8 @@ Starboard must be configured:
 ```toml
 # the numeric key is the guild id
 [[bot.starboard.1293210831923974204.boards]]
+# this id is used to identify the board db-side
+id = 1
 name = "starboard"
 channel = 1305620816272166962
 emoji = "⭐"
@@ -111,6 +113,7 @@ notices = [
 ]
 
 [[bot.starboard.1293210831923974204.boards]]
+id = 2
 name = "ripboard"
 channel = 1305620834450407606
 emoji = "💀"
