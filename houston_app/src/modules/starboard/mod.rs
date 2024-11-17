@@ -203,8 +203,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                 .context("expected to find record that was just created")?;
 
             // pin the message if the update just now changed the value
-            // we also need to ignore nsfw-to-sfw posts
-            if !record.pinned && (is_forwarding_allowed(&ctx, &message, board).await?) {
+            if !record.pinned {
                 let notice = board.notices
                     .choose(&mut thread_rng())
                     .map(String::as_str)
@@ -213,18 +212,37 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                 let notice = CreateMessage::new()
                     .content(notice.replace("{user}", &format!("<@{}>", message.author.id)));
 
-                // CMBK: replace with proper builder when forwarding is supported
-                let forward = simd_json::json!({
-                    "message_reference": {
-                        "type": 1, // forward
-                        "message_id": message.id,
-                        "channel_id": message.channel_id,
-                    }
-                });
+                // unless it's nsfw-to-sfw, actually forward the message
+                // otherwise, generate an embed with a link
+                if is_forwarding_allowed(&ctx, &message, board).await.unwrap_or(false) {
+                    // CMBK: refactor when forwards are properly supported
+                    let mut forward = MessageReference::from(&message);
+                    forward.kind = MessageReferenceKind::Forward;
 
-                board.channel.send_message(&ctx.http, notice).await?;
-                ctx.http.send_message(board.channel, Vec::new(), &forward).await?;
-                log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
+                    let forward = CreateMessage::new()
+                        .reference_message(forward);
+
+                    board.channel.send_message(&ctx.http, notice).await?;
+                    board.channel.send_message(&ctx.http, forward).await?;
+                    log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
+                } else {
+                    // nsfw-to-sfw
+                    let forward = format!(
+                        "🔞 https://discord.com/channels/{}/{}/{}",
+                        guild_id, message.channel_id, message.id,
+                    );
+
+                    let forward = CreateEmbed::new()
+                        .description(forward)
+                        .color(data.config().embed_color)
+                        .timestamp(message.timestamp);
+
+                    let notice = notice
+                        .embed(forward);
+
+                    board.channel.send_message(&ctx.http, notice).await?;
+                    log::info!("Pinned message {} to {}. (Link)", message.id, board.emoji.name());
+                }
             }
         }
 
