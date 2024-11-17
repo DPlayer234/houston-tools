@@ -51,8 +51,12 @@ pub async fn wallet(
         "<None>".clone_into(&mut description);
     }
 
+    let (display_name, face) = get_display_info(&ctx);
+    let author = format!("{display_name}: Wallet");
+    let author = CreateEmbedAuthor::new(author).icon_url(face);
+
     let embed = CreateEmbed::new()
-        .title(format!("{}: Wallet", get_display_name(&ctx)))
+        .author(author)
         .color(data.config().embed_color)
         .description(description);
 
@@ -60,12 +64,18 @@ pub async fn wallet(
     Ok(())
 }
 
-fn get_display_name<'a>(ctx: &HContext<'a>) -> &'a str {
+fn get_display_info<'a>(ctx: &HContext<'a>) -> (&'a str, String) {
     if let HContext::Application(ctx) = ctx {
         if let Some(member) = &ctx.interaction.member {
-            return member.display_name();
+            return (
+                member.display_name(),
+                member.face(),
+            );
         }
     }
 
-    ctx.author().display_name()
+    (
+        ctx.author().display_name(),
+        ctx.author().face(),
+    )
 }

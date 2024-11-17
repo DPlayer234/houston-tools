@@ -16,6 +16,8 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 pub type HError = anyhow::Error;
 /// The full poise context type.
 pub type HContext<'a> = poise::Context<'a, HFrameworkData, HError>;
+/// The full poise context type.
+pub type HApplicationContext<'a> = poise::ApplicationContext<'a, HFrameworkData, HError>;
 /// The poise command result type.
 pub type HResult = Result<(), HError>;
 /// The poise framework type.

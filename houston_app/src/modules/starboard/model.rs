@@ -25,7 +25,10 @@ pub struct Score {
     pub _id: ObjectId,
     pub board: BoardId,
     pub user: UserId,
+    #[serde(default)]
     pub score: i64,
+    #[serde(default)]
+    pub post_count: i64,
 }
 
 fn name(name: &str) -> IndexOptions {

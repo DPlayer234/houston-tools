@@ -127,6 +127,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
         .context("could not find reaction data")?;
 
     let db = data.database()?;
+    let mut new_post = false;
     let score_increase = {
         // update the message document, if we have enough reacts
         let required_reacts = i64::from(board.reacts);
@@ -204,6 +205,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
 
             // pin the message if the update just now changed the value
             if !record.pinned {
+                new_post = true;
+
                 let notice = board.notices
                     .choose(&mut thread_rng())
                     .map(String::as_str)
@@ -265,6 +268,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
             },
             "$inc": {
                 "score": score_increase,
+                "post_count": i64::from(new_post),
             },
         };
 

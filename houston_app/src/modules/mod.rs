@@ -6,6 +6,7 @@ pub mod azur;
 pub mod core;
 pub mod media_react;
 pub mod perks;
+pub mod profile;
 pub mod starboard;
 
 type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, HResult>;
@@ -34,6 +35,7 @@ impl Info {
         azur::Module.apply(self, config)?;
         perks::Module.apply(self, config)?;
         media_react::Module.apply(self, config)?;
+        profile::Module.apply(self, config)?;
         starboard::Module.apply(self, config)?;
         Ok(())
     }
