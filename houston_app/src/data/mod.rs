@@ -4,6 +4,7 @@ use std::sync::{LazyLock, OnceLock};
 use anyhow::Context as _;
 use serenity::http::Http;
 use serenity::model::Color;
+use serenity::model::user::CurrentUser;
 
 use crate::config::HBotConfig;
 
@@ -58,6 +59,8 @@ impl HArgError {
 pub struct HBotData {
     /// The bot configuration.
     config: HBotConfig,
+    /// The current bot user.
+    current_user: OnceLock<CurrentUser>,
     /// The loaded application emojis.
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
     /// Lazily initialized Azur Lane data.
@@ -75,6 +78,7 @@ impl HBotData {
         let data_path = config.azur_lane_data.clone();
         Self {
             config,
+            current_user: OnceLock::new(),
             app_emojis: OnceLock::new(),
             azur_lane: LazyLock::new(match data_path {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
@@ -114,17 +118,29 @@ impl HBotData {
         Ok(())
     }
 
+    /// Gets the cached current bot user.
+    pub fn current_user(&self) -> anyhow::Result<&CurrentUser> {
+        self.current_user.get().context("current user not loaded")
+    }
+
+    /// Sets the current bot user.
+    pub fn set_current_user(&self, user: CurrentUser) {
+        _ = self.current_user.set(user);
+    }
+
     /// Gets the Azur Lane game data.
     #[must_use]
     pub fn azur_lane(&self) -> &HAzurLane {
         &self.azur_lane
     }
 
+    /// Gets the transient perk state.
     #[must_use]
     pub fn perk_state(&self) -> &PerkState {
         &self.perk_state
     }
 
+    /// Connects to the database and other needed services.
     pub async fn connect(&self, init: &crate::modules::Info) -> HResult {
         if let Some(uri) = &self.config.mongodb_uri {
             let client = mongodb::Client::with_uri_str(uri).await?;
@@ -144,6 +160,7 @@ impl HBotData {
         Ok(())
     }
 
+    /// Gets the database connection.
     pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
         self.database.get().context("database is not yet connected")
     }

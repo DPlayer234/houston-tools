@@ -6,9 +6,9 @@ use chrono::{Utc, TimeDelta};
 use serenity::futures::TryStreamExt;
 use serenity::gateway::client::Context;
 use utils::text::write_str::*;
-use utils::time::TimeMentionable;
 
 use crate::buttons::prelude::*;
+use crate::fmt::discord::TimeMentionable;
 use crate::helper::bson_id;
 use crate::modules::perks::config::Config;
 use crate::modules::perks::effects::Args;

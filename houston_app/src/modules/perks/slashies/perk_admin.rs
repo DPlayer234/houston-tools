@@ -4,9 +4,9 @@ use chrono::*;
 
 use serenity::futures::TryStreamExt;
 use utils::text::write_str::*;
-use utils::time::TimeMentionable;
 
 use crate::helper::bson_id;
+use crate::fmt::discord::TimeMentionable;
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;

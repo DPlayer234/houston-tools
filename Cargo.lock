@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.0.0-beta.5"
+version = "2.0.0-beta.6"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -3296,11 +3296,10 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utils"
-version = "5.1.0-beta.2"
+version = "6.0.0-beta.1"
 dependencies = [
  "anstyle-query",
  "arrayvec",
- "chrono",
  "criterion",
  "smallvec",
  "thiserror 2.0.3",

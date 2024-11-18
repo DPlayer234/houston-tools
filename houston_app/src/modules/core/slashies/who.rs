@@ -1,10 +1,9 @@
 use bitflags::Flags;
 
 use utils::text::write_str::*;
-use utils::time::*;
 use utils::titlecase;
 
-use crate::fmt::discord::get_unique_username;
+use crate::fmt::discord::{get_unique_username, TimeMentionable};
 use crate::prelude::*;
 use crate::slashies::create_reply;
 

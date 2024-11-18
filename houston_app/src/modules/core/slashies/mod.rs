@@ -1,3 +1,4 @@
+pub mod bot_stats;
 pub mod calc;
 pub mod coin;
 pub mod dice;

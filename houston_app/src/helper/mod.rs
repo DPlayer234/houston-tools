@@ -3,6 +3,7 @@ use std::hash::Hash;
 
 pub mod discord;
 pub mod future;
+pub mod time;
 
 macro_rules! bson_id {
     ($expr:expr) => {{

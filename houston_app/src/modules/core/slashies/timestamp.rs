@@ -3,8 +3,7 @@ use std::str::FromStr;
 use chrono::prelude::*;
 use chrono::TimeDelta;
 
-use utils::time::{get_creation_time, parse_date_time};
-
+use crate::helper::time::parse_date_time;
 use crate::prelude::*;
 use crate::slashies::create_reply;
 
@@ -71,8 +70,8 @@ async fn timestamp_of(
     #[description = "The Discord snowflake."]
     snowflake: String,
 ) -> HResult {
-    let timestamp = u64::from_str(&snowflake).ok()
-        .and_then(get_creation_time)
+    let timestamp = UserId::from_str(&snowflake).ok()
+        .map(|s| *s.created_at())
         .ok_or(SNOWFLAKE_INVALID)?;
 
     show_timestamp(&ctx, timestamp).await

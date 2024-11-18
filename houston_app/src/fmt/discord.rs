@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result};
 
+use chrono::prelude::*;
 use serenity::model::application::{ResolvedOption, ResolvedTarget, ResolvedValue};
 use serenity::model::user::User;
 
@@ -24,6 +25,50 @@ pub fn escape_markdown(input: &str) -> impl Display + '_ {
         |c| matches!(c, '*' | '`' | '_' | '>'),
         |c| ['\\', c]
     )
+}
+
+/// Allows mentioning a timestamp in Discord messages.
+#[allow(dead_code, reason = "include all supported formats upfront")]
+pub trait TimeMentionable {
+    /// Formats a mention for a timestamp.
+    fn mention(&self, format: &'static str) -> TimeMention;
+
+    /// Formats a mention with the short time (t) format.
+    fn short_time(&self) -> TimeMention { self.mention("t") }
+    /// Formats a mention with the long time (T) format.
+    fn long_time(&self) -> TimeMention { self.mention("T") }
+    /// Formats a mention with the short date (d) format.
+    fn short_date(&self) -> TimeMention { self.mention("d") }
+    /// Formats a mention with the long date (D) format.
+    fn long_date(&self) -> TimeMention { self.mention("D") }
+    /// Formats a mention with the short date time (f) format.
+    fn short_date_time(&self) -> TimeMention { self.mention("f") }
+    /// Formats a mention with the long date time (F) format.
+    fn long_date_time(&self) -> TimeMention { self.mention("F") }
+    /// Formats a mention with the relative (R) format.
+    fn relative(&self) -> TimeMention { self.mention("R") }
+}
+
+impl<Tz: TimeZone> TimeMentionable for DateTime<Tz> {
+    fn mention(&self, format: &'static str) -> TimeMention {
+        TimeMention {
+            timestamp: self.timestamp(),
+            format,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct TimeMention {
+    timestamp: i64,
+    format: &'static str,
+}
+
+impl Display for TimeMention {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "<t:{}:{}>", self.timestamp, self.format)
+    }
 }
 
 /// Implements [`Display`] to format resolved command arguments.

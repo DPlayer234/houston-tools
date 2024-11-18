@@ -11,7 +11,6 @@ pub mod range;
 pub mod str_as_data;
 pub mod term;
 pub mod text;
-pub mod time;
 
 mod private;
 

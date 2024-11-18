@@ -1,8 +1,6 @@
 use std::fmt;
 
-use utils::time::*;
-
-use crate::fmt::discord::get_unique_username;
+use crate::fmt::discord::{get_unique_username, TimeMentionable};
 use crate::prelude::*;
 use crate::slashies::create_reply;
 

@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     use modules::Info;
 
     // SAFETY: No other code running that accesses this yet.
-    unsafe { utils::time::mark_startup_time(); }
+    unsafe { crate::helper::time::mark_startup_time(); }
 
     let config = build_config()?;
     init_logging(config.log);
@@ -84,8 +84,10 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
+            let data = ctx.data::<HFrameworkData>();
+            data.set_current_user(ready.user);
+
             if let Some(commands) = self.take_commands() {
-                let data = ctx.data::<HFrameworkData>();
                 if let Err(why) = Self::setup(ctx, &data, &commands).await {
                     log::error!("Failure in ready: {why:?}");
                     *self.commands.lock().unwrap() = Some(commands);
