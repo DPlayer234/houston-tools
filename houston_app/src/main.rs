@@ -105,6 +105,10 @@ async fn main() -> anyhow::Result<()> {
             modules::media_react::message(ctx, new_message).await;
         }
 
+        async fn message_delete(&self, ctx: Context, channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
+            modules::starboard::message_delete(ctx, channel_id, message_id, guild_id).await;
+        }
+
         async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
             modules::perks::dispatch_check_perks(&ctx);
             modules::starboard::reaction_add(ctx, reaction).await;

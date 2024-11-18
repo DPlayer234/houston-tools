@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 
 use super::Module as _;
 use crate::config::HBotConfig;
+use crate::helper::doc_object_id;
 use crate::prelude::*;
 
 // 2 minutes is about the minimum safe interval for constant role updates
@@ -153,13 +154,8 @@ async fn check_perks_core(ctx: Context) -> HResult {
         let args = effects::Args::new(&ctx, perk.guild, perk.user);
         perk.effect.disable(args).await?;
 
-        #[allow(clippy::used_underscore_binding)]
-        let filter = doc! {
-            "_id": perk._id,
-        };
-
         model::ActivePerk::collection(db)
-            .delete_one(filter)
+            .delete_one(doc_object_id!(perk))
             .await?;
     }
 

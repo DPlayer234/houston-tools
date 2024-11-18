@@ -2,10 +2,11 @@ use anyhow::Context as _;
 use bson::doc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
+use serenity::futures::TryStreamExt;
 use serenity::prelude::*;
 
 use super::Module as _;
-use crate::helper::{bson_id, is_unique_set};
+use crate::helper::{bson_id, doc_object_id, is_unique_set};
 use crate::prelude::*;
 use crate::config::HBotConfig;
 
@@ -24,7 +25,8 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILD_MESSAGE_REACTIONS
+        GatewayIntents::GUILD_MESSAGE_REACTIONS |
+        GatewayIntents::GUILD_MESSAGES
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
@@ -70,6 +72,16 @@ fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> anyhow::Res
 pub async fn reaction_add(ctx: Context, reaction: Reaction) {
     if let Err(why) = reaction_add_inner(ctx, reaction).await {
         log::error!("Reaction handling failed: {why:?}");
+    }
+}
+
+pub async fn message_delete(ctx: Context, _channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
+    let Some(guild_id) = guild_id else {
+        return;
+    };
+
+    if let Err(why) = message_delete_inner(ctx, guild_id, message_id).await {
+        log::error!("Message delete handling failed: {why:?}");
     }
 }
 
@@ -290,6 +302,97 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                 .await?;
 
             log::trace!("{} gained {} cash.", message.author.name, amount);
+        }
+    }
+
+    Ok(())
+}
+
+async fn message_delete_inner(ctx: Context, guild_id: GuildId, message_id: MessageId) -> HResult {
+    let data = ctx.data_ref::<HFrameworkData>();
+
+    // grab the config for the current guild
+    let guild_config = data.config()
+        .starboard
+        .get(&guild_id);
+
+    let Some(guild_config) = guild_config else {
+        return Ok(());
+    };
+
+    // skip if we don't remove score in this guild
+    if !guild_config.remove_score_on_delete {
+        return Ok(());
+    }
+
+    let db = data.database()?;
+
+    // look for all boards with the message and iterate the entries
+    let board_ids: Vec<_> = guild_config
+        .boards.iter()
+        .map(|b| b.id.get())
+        .collect();
+
+    let filter = doc! {
+        "board": {
+            "$in": board_ids,
+        },
+        "message": bson_id!(message_id),
+    };
+
+    let mut query = model::Message::collection(db)
+        .find(filter)
+        .await?;
+
+    while let Some(item) = query.try_next().await? {
+        // we need the board info, skip if we don't know it
+        let board = guild_config
+            .boards
+            .iter()
+            .find(|b| b.id == item.board);
+
+        let Some(board) = board else {
+            continue;
+        };
+
+        let filter = doc! {
+            "board": item.board.get(),
+            "user": bson_id!(item.user),
+        };
+
+        let update = doc! {
+            "$inc": {
+                "score": -item.max_reacts,
+                "post_count": -1,
+            },
+        };
+
+        // delete the message tracking entry
+        model::Message::collection(db)
+            .delete_one(doc_object_id!(item))
+            .await?;
+
+        log::info!("Deleted message {} score in {}.", message_id, board.emoji);
+
+        // update the user score
+        model::Score::collection(db)
+            .update_one(filter, update)
+            .await?;
+
+        log::trace!("{} lost {} {}.", item.user, item.max_reacts, board.emoji);
+
+        // also remove cash if it's configured
+        if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {
+            use super::perks::model::{Wallet, WalletExt};
+            use super::perks::Item;
+
+            let amount = i64::from(board.cash_gain).saturating_mul(item.max_reacts);
+
+            Wallet::collection(db)
+                .add_items(guild_id, item.user, Item::Cash, -amount)
+                .await?;
+
+            log::trace!("{} lost {} cash.", item.user, amount);
         }
     }
 

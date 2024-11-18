@@ -28,6 +28,8 @@ impl From<i64> for BoardId {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardGuild {
+    #[serde(default)]
+    pub remove_score_on_delete: bool,
     pub boards: Vec<StarboardEntry>,
 }
 
