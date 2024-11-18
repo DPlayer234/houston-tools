@@ -4,6 +4,8 @@ use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
+pub mod args;
+
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: HAnyContext<'_>) {
     log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {
@@ -23,7 +25,12 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
             command_error(&ctx, error).await
         },
         poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
-            context_error(&ctx, format!("Argument invalid: {}\nCaused by input: '{}'", error, input.unwrap_or_default()).into()).await
+            let msg = match input {
+                Some(input) => format!("Argument invalid: {}\nCaused by input: '{}'", error, input),
+                None => format!("Argument invalid: {}", error),
+            };
+
+            context_error(&ctx, msg.into()).await
         },
         _ => log::error!("Oh noes, we got an error: {error:?}"),
     }

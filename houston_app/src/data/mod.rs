@@ -4,6 +4,7 @@ use std::sync::{LazyLock, OnceLock};
 use anyhow::Context as _;
 use serenity::http::Http;
 use serenity::model::Color;
+use serenity::model::id::GuildId;
 use serenity::model::user::CurrentUser;
 
 use crate::config::HBotConfig;
@@ -172,6 +173,8 @@ pub trait HContextExtensions<'a> {
 
     #[must_use]
     fn data_ref(&self) -> &'a HBotData;
+
+    fn require_guild_id(&self) -> anyhow::Result<GuildId>;
 }
 
 impl<'a> HContextExtensions<'a> for HContext<'a> {
@@ -182,6 +185,10 @@ impl<'a> HContextExtensions<'a> for HContext<'a> {
 
     fn data_ref(&self) -> &'a HBotData {
         self.serenity_context().data_ref::<HFrameworkData>()
+    }
+
+    fn require_guild_id(&self) -> anyhow::Result<GuildId> {
+        self.guild_id().context("must be used in guild")
     }
 }
 

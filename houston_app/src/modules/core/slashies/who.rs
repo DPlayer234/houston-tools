@@ -5,6 +5,7 @@ use utils::titlecase;
 
 use crate::fmt::discord::{get_unique_username, TimeMentionable};
 use crate::prelude::*;
+use crate::slashies::args::SlashUser;
 use crate::slashies::create_reply;
 
 /// Returns basic information about the provided user.
@@ -14,6 +15,7 @@ pub async fn who_context(
     #[description = "The user to get info about."]
     user: User,
 ) -> HResult {
+    let user = SlashUser::from_resolved(ctx, user)?;
     who_core(ctx, user, None).await
 }
 
@@ -22,7 +24,7 @@ pub async fn who_context(
 pub async fn who(
     ctx: HContext<'_>,
     #[description = "The user to get info about."]
-    user: User,
+    user: SlashUser,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> HResult {
@@ -31,17 +33,13 @@ pub async fn who(
 
 async fn who_core(
     ctx: HContext<'_>,
-    user: User,
+    user: SlashUser,
     ephemeral: Option<bool>,
 ) -> HResult {
-    let mut embed = who_user_embed(&user)
+    let mut embed = who_user_embed(&user.user)
         .color(ctx.data_ref().config().embed_color);
 
-    // while the resolved params would have the member, that's not available
-    // in context menu commands. in the interest of still supporting that,
-    // manually look up the member in the resolved collection here.
-    // plus, it's more code to implement a custom parameter type that's User + Option<PartialMember>.
-    if let Some(member) = ctx.interaction.data.resolved.members.get(&user.id) {
+    if let Some(member) = &user.member {
         embed = embed.field("Server Member Info", who_member_info(member), false);
     }
 

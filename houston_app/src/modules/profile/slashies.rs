@@ -7,6 +7,7 @@ use utils::text::write_str::*;
 use crate::helper::bson_id;
 use crate::modules::Module as _;
 use crate::prelude::*;
+use crate::slashies::args::SlashMember;
 
 /// View a member's server profile.
 #[poise::command(
@@ -19,10 +20,7 @@ pub async fn profile_context(
     #[description = "The member to view the profile of."]
     member: User,
 ) -> HResult {
-    // thanks, poise
-    let interaction = ctx.interaction;
-    let serenity = ctx.serenity_context();
-    let member = poise::extract_slash_argument!(Member, serenity, interaction, &ResolvedValue::User(&member, None)).await?;
+    let member = SlashMember::from_resolved(ctx, member)?;
     profile_core(ctx, member, None).await
 }
 
@@ -35,7 +33,7 @@ pub async fn profile_context(
 pub async fn profile(
     ctx: HContext<'_>,
     #[description = "The member to view the profile of."]
-    member: Member,
+    member: SlashMember,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> HResult {
@@ -44,7 +42,7 @@ pub async fn profile(
 
 async fn profile_core(
     ctx: HContext<'_>,
-    member: Member,
+    member: SlashMember,
     ephemeral: Option<bool>,
 ) -> HResult {
     let data = ctx.data_ref();
@@ -90,7 +88,7 @@ async fn profile_core(
 
 async fn perks_unique_role(
     ctx: HContext<'_>,
-    member: &Member,
+    member: &SlashMember,
 ) -> anyhow::Result<Option<RoleId>> {
     use crate::modules::perks::model;
 
@@ -116,7 +114,7 @@ async fn perks_unique_role(
 
 async fn perks_collectible_info(
     ctx: HContext<'_>,
-    member: &Member,
+    member: &SlashMember,
 ) -> anyhow::Result<Option<String>> {
     use crate::modules::perks::model;
     use crate::modules::perks::Item;
@@ -144,7 +142,7 @@ async fn perks_collectible_info(
 
 async fn starboard_info(
     ctx: HContext<'_>,
-    member: &Member,
+    member: &SlashMember,
 ) -> anyhow::Result<Option<String>> {
     use crate::modules::starboard::model;
 

@@ -11,6 +11,7 @@ use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
+use crate::slashies::args::SlashMember;
 use crate::slashies::command_group;
 
 command_group!(
@@ -32,16 +33,17 @@ command_group!(
 async fn enable(
     ctx: HContext<'_>,
     #[description = "The member to enable the perk for."]
-    member: Member,
+    member: SlashMember,
     #[description = "The perk to enable."]
     perk: Effect,
     #[description = "How long to enable it for, in hours."]
     duration: u32,
 ) -> HResult {
     let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
-    let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
+    let args = Args::new(ctx.serenity_context(), guild_id, member.user.id);
 
     let duration = TimeDelta::try_hours(i64::from(duration))
         .context("too many hours")?;
@@ -54,7 +56,7 @@ async fn enable(
     perk.enable(args, None).await?;
 
     ActivePerk::collection(db)
-        .set_enabled(member.guild_id, member.user.id, perk, until)
+        .set_enabled(guild_id, member.user.id, perk, until)
         .await?;
 
     let description = format!(
@@ -77,20 +79,21 @@ async fn enable(
 async fn disable(
     ctx: HContext<'_>,
     #[description = "The member to disable the perk for."]
-    member: Member,
+    member: SlashMember,
     #[description = "The perk to disable."]
     perk: Effect,
 ) -> HResult {
     let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
-    let args = Args::new(ctx.serenity_context(), member.guild_id, member.user.id);
+    let args = Args::new(ctx.serenity_context(), guild_id, member.user.id);
 
     ctx.defer_ephemeral().await?;
     perk.disable(args).await?;
 
     ActivePerk::collection(db)
-        .set_disabled(member.guild_id, member.user.id, perk)
+        .set_disabled(guild_id, member.user.id, perk)
         .await?;
 
     let description = format!(
@@ -113,15 +116,16 @@ async fn disable(
 async fn list(
     ctx: HContext<'_>,
     #[description = "The member to check."]
-    member: Member,
+    member: SlashMember,
 ) -> HResult {
     let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
     let filter = doc! {
-        "guild": bson_id!(member.guild_id),
+        "guild": bson_id!(guild_id),
         "user": bson_id!(member.user.id),
     };
 
@@ -164,19 +168,20 @@ async fn list(
 async fn give(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]
-    member: Member,
+    member: SlashMember,
     #[description = "The item to hand out."]
     item: Item,
     #[description = "How many items to give. Negative to remove."]
     amount: i32,
 ) -> HResult {
     let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
     let wallet = Wallet::collection(db)
-        .add_items(member.guild_id, member.user.id, item, amount.into())
+        .add_items(guild_id, member.user.id, item, amount.into())
         .await?;
 
     let description = format!(
@@ -200,23 +205,24 @@ async fn give(
 async fn unique_role(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]
-    member: Member,
+    member: SlashMember,
     #[description = "The role to set as being unique to them."]
     role: Option<Role>,
 ) -> HResult {
     let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
     let db = data.database()?;
     ctx.defer_ephemeral().await?;
 
     let filter = doc! {
-        "guild": bson_id!(member.guild_id),
+        "guild": bson_id!(guild_id),
         "user": bson_id!(member.user.id),
     };
 
     let description = if let Some(role) = role {
         let update = doc! {
             "$setOnInsert": {
-                "guild": bson_id!(member.guild_id),
+                "guild": bson_id!(guild_id),
                 "user": bson_id!(member.user.id),
             },
             "$set": {
