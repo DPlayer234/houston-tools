@@ -15,14 +15,13 @@ use crate::prelude::*;
     interaction_context = "Guild",
 )]
 pub async fn profile_context(
-    ctx: HApplicationContext<'_>,
+    ctx: HContext<'_>,
     #[description = "The member to view the profile of."]
     member: User,
 ) -> HResult {
     // thanks, poise
     let interaction = ctx.interaction;
     let serenity = ctx.serenity_context();
-    let ctx = HContext::Application(ctx);
     let member = poise::extract_slash_argument!(Member, serenity, interaction, &ResolvedValue::User(&member, None)).await?;
     profile_core(ctx, member, None).await
 }

@@ -41,10 +41,8 @@ async fn who_core(
     // in context menu commands. in the interest of still supporting that,
     // manually look up the member in the resolved collection here.
     // plus, it's more code to implement a custom parameter type that's User + Option<PartialMember>.
-    if let HContext::Application(ctx) = &ctx {
-        if let Some(member) = ctx.interaction.data.resolved.members.get(&user.id) {
-            embed = embed.field("Server Member Info", who_member_info(member), false);
-        }
+    if let Some(member) = ctx.interaction.data.resolved.members.get(&user.id) {
+        embed = embed.field("Server Member Info", who_member_info(member), false);
     }
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;

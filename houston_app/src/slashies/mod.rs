@@ -5,13 +5,13 @@ use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
 /// Pre-command execution hook.
-pub async fn pre_command(ctx: HContext<'_>) {
+pub async fn pre_command(ctx: HAnyContext<'_>) {
     log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {
-        HContext::Application(ctx) => ctx.interaction.data.target().map_or(
+        HAnyContext::Application(ctx) => ctx.interaction.data.target().map_or(
             DisplayResolvedArgs::Options(ctx.args),
             DisplayResolvedArgs::Target,
         ),
-        HContext::Prefix(ctx) => DisplayResolvedArgs::String(ctx.args),
+        HAnyContext::Prefix(ctx) => DisplayResolvedArgs::String(ctx.args),
     })
 }
 
@@ -28,7 +28,7 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
         _ => log::error!("Oh noes, we got an error: {error:?}"),
     }
 
-    async fn command_error(ctx: &HContext<'_>, err: HError) {
+    async fn command_error(ctx: &HAnyContext<'_>, err: HError) {
         let message = match err.downcast::<HArgError>() {
             Ok(err) => err.msg,
             Err(err) => {
@@ -47,7 +47,7 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
         context_error(ctx, message).await
     }
 
-    async fn context_error(ctx: &HContext<'_>, feedback: Cow<'_, str>) {
+    async fn context_error(ctx: &HAnyContext<'_>, feedback: Cow<'_, str>) {
         let embed = CreateEmbed::new()
             .description(feedback)
             .color(ERROR_EMBED_COLOR);

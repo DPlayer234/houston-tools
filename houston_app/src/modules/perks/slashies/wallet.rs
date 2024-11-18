@@ -65,17 +65,14 @@ pub async fn wallet(
 }
 
 fn get_display_info<'a>(ctx: &HContext<'a>) -> (&'a str, String) {
-    if let HContext::Application(ctx) = ctx {
-        if let Some(member) = &ctx.interaction.member {
-            return (
-                member.display_name(),
-                member.face(),
-            );
-        }
+    match &ctx.interaction.member {
+        Some(member) => (
+            member.display_name(),
+            member.face(),
+        ),
+        _ => (
+            ctx.author().display_name(),
+            ctx.author().face(),
+        )
     }
-
-    (
-        ctx.author().display_name(),
-        ctx.author().face(),
-    )
 }
