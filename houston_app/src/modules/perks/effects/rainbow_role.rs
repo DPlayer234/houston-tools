@@ -1,8 +1,11 @@
 use anyhow::Context as _;
+use bson::doc;
 use chrono::prelude::*;
 
 use super::*;
+use crate::helper::bson_id;
 use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
+use crate::modules::perks::model::*;
 
 pub struct RainbowRole;
 
@@ -63,12 +66,14 @@ impl Shape for RainbowRole {
 
         let color = hsv_to_color(h, s, v);
 
-        for (guild, entry) in &rainbow.guilds {
-            let edit = EditRole::new()
-                .colour(color);
+        for (&guild, entry) in &rainbow.guilds {
+            if has_any_rainbow_role(ctx, guild).await? {
+                let edit = EditRole::new()
+                    .colour(color);
 
-            let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
-            log::trace!("Updated rainbow role {} to color #{:06X}", role.name, color.0);
+                let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
+                log::trace!("Updated rainbow role {} to color #{:06X}", role.name, color.0);
+            }
         }
 
         Ok(())
@@ -92,6 +97,22 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> anyhow::Result<&'a RainbowRoleEntry
     get_config(args.ctx)?
         .guilds.get(&args.guild_id)
         .context("rainbow role not configured for guild")
+}
+
+async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> anyhow::Result<bool> {
+    let db = ctx.data_ref::<HFrameworkData>().database()?;
+
+    let filter = doc! {
+        "guild": bson_id!(guild_id),
+        "effect": bson::ser::to_bson(&Effect::RainbowRole)?,
+    };
+
+    let exists = ActivePerk::collection(db)
+        .find_one(filter)
+        .await?
+        .is_some();
+
+    Ok(exists)
 }
 
 #[allow(clippy::cast_possible_truncation)]

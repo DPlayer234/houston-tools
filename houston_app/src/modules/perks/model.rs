@@ -87,6 +87,13 @@ impl ActivePerk {
                 })
                 .build(),
             IndexModel::builder()
+                .options(name("guild-effect"))
+                .keys(doc! {
+                    "guild": 1,
+                    "effect": 1,
+                })
+                .build(),
+            IndexModel::builder()
                 .options(name("until"))
                 .keys(doc! {
                     "until": 1,
