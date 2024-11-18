@@ -75,12 +75,12 @@ pub async fn reaction_add(ctx: Context, reaction: Reaction) {
     }
 }
 
-pub async fn message_delete(ctx: Context, _channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
+pub async fn message_delete(ctx: Context, channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
     let Some(guild_id) = guild_id else {
         return;
     };
 
-    if let Err(why) = message_delete_inner(ctx, guild_id, message_id).await {
+    if let Err(why) = message_delete_inner(ctx, guild_id, channel_id, message_id).await {
         log::error!("Message delete handling failed: {why:?}");
     }
 }
@@ -186,7 +186,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
         };
 
         let record = model::Message::collection(db)
-            .find_one_and_update(filter, update)
+            .find_one_and_update(filter.clone(), update)
             .upsert(true)
             .return_document(ReturnDocument::Before)
             .await?;
@@ -197,12 +197,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
 
         // we already checked that we have the required reacts, but for sanity, keep it here
         if now_reacts >= required_reacts && !pinned {
-            // update the record to pinned
-            let filter = doc! {
-                "board": board.id.get(),
-                "message": bson_id!(message.id),
-            };
-
+            // update the record to be pinned
             let update = doc! {
                 "$set": {
                     "pinned": true,
@@ -210,7 +205,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
             };
 
             let record = model::Message::collection(db)
-                .find_one_and_update(filter, update)
+                .find_one_and_update(filter.clone(), update)
                 .return_document(ReturnDocument::Before)
                 .await?
                 .context("expected to find record that was just created")?;
@@ -227,6 +222,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                 let notice = CreateMessage::new()
                     .content(notice.replace("{user}", &format!("<@{}>", message.author.id)));
 
+                let pin_messages;
+
                 // unless it's nsfw-to-sfw, actually forward the message
                 // otherwise, generate an embed with a link
                 if is_forwarding_allowed(&ctx, &message, board).await.unwrap_or(false) {
@@ -237,8 +234,9 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                     let forward = CreateMessage::new()
                         .reference_message(forward);
 
-                    board.channel.send_message(&ctx.http, notice).await?;
-                    board.channel.send_message(&ctx.http, forward).await?;
+                    let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+                    let forward = board.channel.send_message(&ctx.http, forward).await?.id;
+                    pin_messages = vec![bson_id!(notice), bson_id!(forward)];
                     log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
                 } else {
                     // nsfw-to-sfw
@@ -255,9 +253,21 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
                     let notice = notice
                         .embed(forward);
 
-                    board.channel.send_message(&ctx.http, notice).await?;
+                    let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+                    pin_messages = vec![bson_id!(notice)];
                     log::info!("Pinned message {} to {}. (Link)", message.id, board.emoji.name());
                 }
+
+                // also associate what messages are the pins
+                let update = doc! {
+                    "$set": {
+                        "pin_messages": pin_messages,
+                    },
+                };
+
+                model::Message::collection(db)
+                    .update_one(filter, update)
+                    .await?;
             }
         }
 
@@ -308,7 +318,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     Ok(())
 }
 
-async fn message_delete_inner(ctx: Context, guild_id: GuildId, message_id: MessageId) -> HResult {
+async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: ChannelId, message_id: MessageId) -> HResult {
     let data = ctx.data_ref::<HFrameworkData>();
 
     // grab the config for the current guild
@@ -380,6 +390,13 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, message_id: Messa
             .await?;
 
         log::trace!("{} lost {} {}.", item.user, item.max_reacts, board.emoji);
+
+        // delete the associated pins
+        for pin_id in item.pin_messages {
+            if let Err(why) = board.channel.delete_message(&ctx.http, pin_id, Some("pin source deleted")).await {
+                log::warn!("Failed to delete message {pin_id} in {}: {why:?}", board.emoji);
+            }
+        }
 
         // also remove cash if it's configured
         if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {

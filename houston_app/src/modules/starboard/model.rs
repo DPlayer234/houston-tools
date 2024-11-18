@@ -18,6 +18,8 @@ pub struct Message {
     pub max_reacts: i64,
     #[serde(default)]
     pub pinned: bool,
+    #[serde(default)]
+    pub pin_messages: Vec<MessageId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
