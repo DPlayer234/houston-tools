@@ -6,13 +6,17 @@ use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, MessageId, UserId};
 
 use super::BoardId;
+use crate::helper::bson::id_as_i64;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub _id: ObjectId,
     pub board: BoardId,
+    #[serde(with = "id_as_i64")]
     pub channel: ChannelId,
+    #[serde(with = "id_as_i64")]
     pub message: MessageId,
+    #[serde(with = "id_as_i64")]
     pub user: UserId,
     #[serde(default)]
     pub max_reacts: i64,
@@ -26,6 +30,7 @@ pub struct Message {
 pub struct Score {
     pub _id: ObjectId,
     pub board: BoardId,
+    #[serde(with = "id_as_i64")]
     pub user: UserId,
     #[serde(default)]
     pub score: i64,

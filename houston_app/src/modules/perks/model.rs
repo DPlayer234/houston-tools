@@ -11,12 +11,14 @@ use serenity::model::id::{GuildId, RoleId, UserId};
 use super::effects::Effect;
 use super::items::Item;
 use crate::data::HArgError;
-use crate::helper::bson_id;
+use crate::helper::bson::{bson_id, id_as_i64};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Wallet {
     pub _id: ObjectId,
+    #[serde(with = "id_as_i64")]
     pub guild: GuildId,
+    #[serde(with = "id_as_i64")]
     pub user: UserId,
     #[serde(default)]
     pub cash: i64,
@@ -31,7 +33,9 @@ pub struct Wallet {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivePerk {
     pub _id: ObjectId,
+    #[serde(with = "id_as_i64")]
     pub guild: GuildId,
+    #[serde(with = "id_as_i64")]
     pub user: UserId,
     pub effect: Effect,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
@@ -42,8 +46,11 @@ pub struct ActivePerk {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UniqueRole {
     pub _id: ObjectId,
+    #[serde(with = "id_as_i64")]
     pub guild: GuildId,
+    #[serde(with = "id_as_i64")]
     pub user: UserId,
+    #[serde(with = "id_as_i64")]
     pub role: RoleId,
 }
 

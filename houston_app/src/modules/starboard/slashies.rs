@@ -59,20 +59,19 @@ fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, BoardI
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 
-    let board = usize::try_from(board).ok()
-        .ok_or(HArgError::new_const("Invalid Starboard."))?;
-
-    let board = ctx
+    #[allow(clippy::cast_possible_wrap)]
+    let board = BoardId::new(board as i64);
+    _ = ctx
         .data_ref()
         .config()
         .starboard
         .get(&guild_id)
         .ok_or(HArgError::new_const("Starboard is not enabled for this server."))?
         .boards
-        .get(board)
+        .get(&board)
         .ok_or(HArgError::new_const("Unknown Starboard."))?;
 
-    Ok((guild_id, board.id))
+    Ok((guild_id, board))
 }
 
 async fn autocomplete_board<'a>(
@@ -87,10 +86,10 @@ async fn autocomplete_board<'a>(
             .get(&guild_id)
             .into_iter()
             .flat_map(|g| &g.boards)
-            .enumerate()
             .map(|(index, board)| AutocompleteChoice::new(
                 board.name.as_str(),
-                AutocompleteValue::Integer(index as u64),
+                #[allow(clippy::cast_sign_loss)]
+                AutocompleteValue::Integer(index.get() as u64),
             ))
             .collect();
 

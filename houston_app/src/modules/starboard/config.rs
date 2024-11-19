@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use bson::doc;
+use indexmap::IndexMap;
 
 use crate::prelude::*;
 
@@ -30,12 +31,11 @@ impl From<i64> for BoardId {
 pub struct StarboardGuild {
     #[serde(default)]
     pub remove_score_on_delete: bool,
-    pub boards: Vec<StarboardEntry>,
+    pub boards: IndexMap<BoardId, StarboardEntry>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardEntry {
-    pub id: BoardId,
     pub name: String,
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,

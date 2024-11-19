@@ -1081,6 +1081,7 @@ dependencies = [
  "dashmap",
  "env_logger",
  "humantime",
+ "indexmap 2.6.0",
  "log",
  "mongodb",
  "poise",

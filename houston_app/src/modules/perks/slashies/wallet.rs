@@ -3,7 +3,7 @@ use bson::doc;
 
 use utils::text::write_str::*;
 
-use crate::helper::bson_id;
+use crate::helper::bson::bson_id;
 use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
 use crate::prelude::*;

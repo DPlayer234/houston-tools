@@ -3,7 +3,7 @@ use bson::doc;
 use chrono::prelude::*;
 
 use super::*;
-use crate::helper::bson_id;
+use crate::helper::bson::bson_id;
 use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
 use crate::modules::perks::model::*;
 

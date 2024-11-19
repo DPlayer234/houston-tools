@@ -6,7 +6,8 @@ use serenity::futures::TryStreamExt;
 use serenity::prelude::*;
 
 use super::Module as _;
-use crate::helper::{bson_id, doc_object_id, is_unique_set};
+use crate::helper::bson::{bson_id, doc_object_id};
+use crate::helper::is_unique_set;
 use crate::prelude::*;
 use crate::config::HBotConfig;
 
@@ -45,8 +46,8 @@ impl super::Module for Module {
 
     fn validate(&self, config: &HBotConfig) -> HResult {
         anyhow::ensure!(
-            config.starboard.values().all(|g| is_unique_set(g.boards.iter().map(|b| b.id))),
-            "starboard requires unique board ids per guild",
+            is_unique_set(config.starboard.values().flat_map(|b| b.boards.keys())),
+            "starboard ids must be globally unique",
         );
 
         if config.mongodb_uri.is_none() {
@@ -64,8 +65,7 @@ fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> anyhow::Res
         .get(&guild)
         .context("starboard not configured for this guild")?
         .boards
-        .iter()
-        .find(|b| b.id == board)
+        .get(&board)
         .context("starboard not found")
 }
 
@@ -107,7 +107,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     // ignore messages in board channels
     let is_board = guild_config
         .boards
-        .iter()
+        .values()
         .any(|b| b.channel == reaction.channel_id);
 
     if is_board {
@@ -117,9 +117,9 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     let board = guild_config
         .boards
         .iter()
-        .find(|b| b.emoji.equivalent_to(&reaction.emoji));
+        .find(|b| b.1.emoji.equivalent_to(&reaction.emoji));
 
-    let Some(board) = board else {
+    let Some((board_id, board)) = board else {
         return Ok(());
     };
 
@@ -168,13 +168,13 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
         }
 
         let filter = doc! {
-            "board": board.id.get(),
+            "board": board_id.get(),
             "message": bson_id!(message.id),
         };
 
         let update = doc! {
             "$setOnInsert": {
-                "board": board.id.get(),
+                "board": board_id.get(),
                 "channel": bson_id!(message.channel_id),
                 "message": bson_id!(message.id),
                 "user": bson_id!(message.author.id),
@@ -279,13 +279,13 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     if score_increase > 0 {
         // update the user's score if it has increased
         let filter = doc! {
-            "board": board.id.get(),
+            "board": board_id.get(),
             "user": bson_id!(message.author.id),
         };
 
         let update = doc! {
             "$setOnInsert": {
-                "board": board.id.get(),
+                "board": board_id.get(),
                 "user": bson_id!(message.author.id),
             },
             "$inc": {
@@ -339,8 +339,9 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
 
     // look for all boards with the message and iterate the entries
     let board_ids: Vec<_> = guild_config
-        .boards.iter()
-        .map(|b| b.id.get())
+        .boards
+        .keys()
+        .map(|b| b.get())
         .collect();
 
     let filter = doc! {
@@ -358,8 +359,7 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
         // we need the board info, skip if we don't know it
         let board = guild_config
             .boards
-            .iter()
-            .find(|b| b.id == item.board);
+            .get(&item.board);
 
         let Some(board) = board else {
             continue;

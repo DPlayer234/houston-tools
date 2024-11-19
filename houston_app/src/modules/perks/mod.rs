@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use super::Module as _;
 use crate::config::HBotConfig;
-use crate::helper::doc_object_id;
+use crate::helper::bson::doc_object_id;
 use crate::prelude::*;
 
 // 2 minutes is about the minimum safe interval for constant role updates

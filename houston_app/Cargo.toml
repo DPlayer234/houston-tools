@@ -22,6 +22,7 @@ chrono = { version = "0.4.38", default-features = false }
 dashmap = "6.1.0"
 env_logger = { version = "0.11.5", features = ["humantime", "regex"], default-features = false }
 humantime = "2.1.0"
+indexmap = { version = "2.6.0", features = ["serde"] }
 log = { version = "0.4.22", features = ["serde"] }
 mongodb = { version = "3.1.0" }
 rand = "0.8.5"

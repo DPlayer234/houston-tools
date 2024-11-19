@@ -4,7 +4,7 @@ use serenity::futures::TryStreamExt;
 
 use utils::text::write_str::*;
 
-use crate::helper::bson_id;
+use crate::helper::bson::bson_id;
 use crate::modules::Module as _;
 use crate::prelude::*;
 use crate::slashies::args::SlashMember;
@@ -161,8 +161,9 @@ async fn starboard_info(
     };
 
     let board_ids: Vec<_> = guild_config
-        .boards.iter()
-        .map(|b| bson_id!(b.id))
+        .boards
+        .keys()
+        .map(|b| b.get())
         .collect();
 
     let filter = doc! {
@@ -180,8 +181,8 @@ async fn starboard_info(
 
     while let Some(entry) = query.try_next().await? {
         let board = guild_config
-            .boards.iter()
-            .find(|b| b.id == entry.board)
+            .boards
+            .get(&entry.board)
             .context("board not found in config")?;
 
         writeln_str!(
