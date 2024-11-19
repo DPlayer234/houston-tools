@@ -8,7 +8,7 @@ use crate::parse;
 use crate::Retrofit;
 
 /// Applies the full retrofit template to the ship data.
-pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit) -> LuaResult<()> {
+pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -> LuaResult<()> {
     let list: Vec<Vec<LuaTable>> = retrofit.data.get("transform_list")?;
     let mut new_skills = Vec::new();
 

@@ -386,7 +386,7 @@ fn get_sub_barrage(
 
 fn search_referenced_weapons(
     rwc: &mut ReferencedWeaponsContext,
-    sc: SkillContext,
+    sc: SkillContext<'_>,
 ) -> LuaResult<()> {
     let len = sc.skill.len()?;
     if let Ok(len) = usize::try_from(len) {
@@ -410,7 +410,7 @@ fn search_referenced_weapons(
 
 fn search_referenced_weapons_in_effect_entry(
     rwc: &mut ReferencedWeaponsContext,
-    sc: SkillContext,
+    sc: SkillContext<'_>,
     effect_list: Vec<LuaTable>,
 ) -> LuaResult<()> {
     fn get_arg<T: FromLua>(entry: &LuaTable, key: &str) -> LuaResult<T> {

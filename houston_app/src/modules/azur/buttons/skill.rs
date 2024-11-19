@@ -315,7 +315,10 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
     }
 
     fn write_barrage_summary(buf: &mut String, barrage: &Barrage, target: Option<SkillAttackTarget>) -> bool {
-        struct Value<'a> { amount: u32, bullet: &'a Bullet }
+        struct Value<'a> {
+            amount: u32,
+            bullet: &'a Bullet,
+        }
 
         fn match_key(a: &Bullet, b: &Bullet) -> bool {
             a.kind == b.kind &&
@@ -323,7 +326,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             a.modifiers == b.modifiers
         }
 
-        let mut sets: Vec<Value> = Vec::new();
+        let mut sets: Vec<Value<'_>> = Vec::new();
         for bullet in &barrage.bullets {
             // find & modify, or insert
             match sets.iter_mut().find(|i| match_key(i.bullet, bullet)) {

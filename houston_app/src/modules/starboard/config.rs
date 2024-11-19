@@ -103,7 +103,7 @@ impl<'de> serde::Deserialize<'de> for StarboardEmoji {
         impl<'de> serde::de::Visitor<'de> for Visitor {
             type Value = StarboardEmoji;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str("expected string for emoji")
             }
 

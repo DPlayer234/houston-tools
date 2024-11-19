@@ -9,7 +9,7 @@ use crate::model::*;
 use crate::parse;
 
 /// Constructs ship data from this set.
-pub fn load_ship_data(lua: &Lua, set: &ShipSet) -> LuaResult<ShipData> {
+pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     /// Reads a single value; target-typed.
     macro_rules! read {
         ($table:expr, $field:expr) => {

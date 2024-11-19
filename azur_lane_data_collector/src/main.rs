@@ -199,7 +199,7 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
         let total = action.amount();
         action.finish();
 
-        let make_ship_set = |id: u32| -> LuaResult<ShipSet> {
+        let make_ship_set = |id: u32| -> LuaResult<ShipSet<'_>> {
             let template: LuaTable = ship_data_template.get(id).with_context(context!("!ship_data_template with id {id}"))?;
             let statistics: LuaTable = ship_data_statistics.get(id).with_context(context!("ship_data_statistics with id {id}"))?;
 
@@ -244,7 +244,7 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
                 Err(LuaError::external(DataError::NoMlb).context(format!("no mlb for ship with id {}", group.id)))?
             };
 
-            let raw_retrofits: Vec<&ShipSet> = members.iter().filter(|t| t.id > raw_mlb.id).collect();
+            let raw_retrofits: Vec<&ShipSet<'_>> = members.iter().filter(|t| t.id > raw_mlb.id).collect();
 
             let raw_skins: Vec<u32> = ship_skin_template_get_id_list_by_ship_group.get(group.id).with_context(context!("skin ids for ship with id {}", group.id))?;
             let raw_skins = raw_skins.into_iter().map(|skin_id| Ok(SkinSet {
@@ -389,7 +389,7 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
     })
 }
 
-fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet) -> LuaResult<()> {
+fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<()> {
     let buff_list_display: Vec<u32> = set.template.get("buff_list_display")?;
     ship.skills.sort_by_key(|s| {
         buff_list_display.iter().enumerate()
