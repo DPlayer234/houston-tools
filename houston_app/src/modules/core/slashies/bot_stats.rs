@@ -1,3 +1,7 @@
+use std::time::Instant;
+
+use utils::text::write_str::*;
+
 use crate::fmt::discord::{get_unique_username, TimeMentionable};
 use crate::helper::time::get_startup_time;
 use crate::prelude::*;
@@ -19,22 +23,44 @@ pub async fn bot_stats(
 
     let current_user = data.current_user()?;
     let author = get_unique_username(current_user);
-    let author = CreateEmbedAuthor::new(author).icon_url(current_user.face());
+    let author_icon = current_user.face();
 
-    let description = format!(
-        "**Started:** {startup}\n\
-         **Version:** `{version}`\n\
-         **Git Rev:** `{git_hash}`",
-    );
-
+    // both of these only borrow the data so cloning the resulting embed is cheap
+    let author = CreateEmbedAuthor::new(&*author).icon_url(&author_icon);
     let footer = CreateEmbedFooter::new("Houston Tools");
 
-    let embed = CreateEmbed::new()
+    let base_embed = CreateEmbed::new()
         .author(author)
-        .description(description)
         .footer(footer)
-        .color(ctx.data_ref().config().embed_color);
+        .color(data.config().embed_color);
 
-    ctx.send(CreateReply::new().embed(embed)).await?;
+    // 128 bytes is enough for the entire description
+    // the code here is slightly weird so we can reuse the buffer
+    let mut description = String::with_capacity(128);
+    write_str!(
+        description,
+        "**Started:** {startup}\n\
+         **Version:** `{version}`\n\
+         **Git Rev:** `{git_hash}`\n\
+         **Ping:** <wait>"
+    );
+
+    let embed = base_embed.clone().description(&description);
+    let now = Instant::now();
+    let reply = ctx.send(CreateReply::new().embed(embed)).await?;
+
+    let elapsed = now.elapsed().as_millis();
+
+    description.clear();
+    write_str!(
+        description,
+        "**Started:** {startup}\n\
+         **Version:** `{version}`\n\
+         **Git Rev:** `{git_hash}`\n\
+         **Ping:** {elapsed} ms"
+    );
+
+    let embed = base_embed.description(description);
+    reply.edit(ctx.into(), CreateReply::new().embed(embed)).await?;
     Ok(())
 }
