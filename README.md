@@ -4,8 +4,7 @@ Small Discord bot intended to be self-hosted.
 
 Optionally loads Azur Lane game data collected by the Azur Lane Data Collector in this repo.
 
-> [!WARNING]
-> This branch uses serenity and poise "next" versions.
+This bot uses serenity and poise "next" versions, so there may be sudden internal changes when those update.
 
 ## Setup
 
