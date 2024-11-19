@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "2.0.0-beta.2"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.0.0-beta.6"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -2528,7 +2528,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.4"
-source = "git+https://github.com/serenity-rs/serenity.git?branch=next#099315f3df9cf38bbcb4fe5998103aa4fb7eb5c5"
+source = "git+https://github.com/serenity-rs/serenity.git?branch=next#1a0a809832e90884d48a2253c1e404af000d40df"
 dependencies = [
  "aformat",
  "arrayvec",
@@ -3272,7 +3272,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utils"
-version = "6.0.0-beta.1"
+version = "6.0.0"
 dependencies = [
  "anstyle-query",
  "arrayvec",
