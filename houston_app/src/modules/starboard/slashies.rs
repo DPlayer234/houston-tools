@@ -76,20 +76,25 @@ fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, BoardI
 
 async fn autocomplete_board<'a>(
     ctx: HContext<'a>,
-    _partial: &'a str,
+    partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
     if let Some(guild_id) = ctx.guild_id() {
         let choices: Vec<_> = ctx
             .data_ref()
             .config()
             .starboard
+            // get the config for this guild and flatten into the board iter
             .get(&guild_id)
             .into_iter()
             .flat_map(|g| &g.boards)
-            .map(|(index, board)| AutocompleteChoice::new(
+            // filter to ones whose name contains the input
+            // if the input is empty, that's all of them
+            .filter(|(_, board)| board.name.contains(partial))
+            // map it to an autocomplete choice with the board id as the value
+            .map(|(id, board)| AutocompleteChoice::new(
                 board.name.as_str(),
                 #[allow(clippy::cast_sign_loss)]
-                AutocompleteValue::Integer(index.get() as u64),
+                AutocompleteValue::Integer(id.get() as u64),
             ))
             .collect();
 
