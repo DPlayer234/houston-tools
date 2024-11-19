@@ -5,7 +5,10 @@ use crate::prelude::*;
 use crate::slashies::create_reply;
 
 /// Creates a copyable, quotable version of the message.
-#[poise::command(context_menu_command = "Get as Quote")]
+#[poise::command(
+    context_menu_command = "Get as Quote",
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn quote(
     ctx: HContext<'_>,
     mut message: Message,

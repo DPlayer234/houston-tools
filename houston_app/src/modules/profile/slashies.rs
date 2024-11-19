@@ -12,6 +12,7 @@ use crate::slashies::args::SlashMember;
 /// View a member's server profile.
 #[poise::command(
     context_menu_command = "Server Profile",
+    guild_only,
     install_context = "Guild",
     interaction_context = "Guild",
 )]
@@ -27,6 +28,7 @@ pub async fn profile_context(
 /// View a member's server profile.
 #[poise::command(
     slash_command,
+    guild_only,
     install_context = "Guild",
     interaction_context = "Guild",
 )]

@@ -7,7 +7,10 @@ mod ops;
 mod parse;
 
 /// Evaluates a mathematical equation. Warning: Floating point math.
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn calc(
     ctx: HContext<'_>,
     #[description = "The expression to evaluate."]

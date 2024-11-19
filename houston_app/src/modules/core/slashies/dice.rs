@@ -11,7 +11,10 @@ use crate::prelude::*;
 use crate::slashies::create_reply;
 
 /// Rolls some dice.
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn dice(
     ctx: HContext<'_>,
     #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]

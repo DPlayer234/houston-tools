@@ -9,7 +9,10 @@ use crate::slashies::args::SlashUser;
 use crate::slashies::create_reply;
 
 /// Returns basic information about the provided user.
-#[poise::command(context_menu_command = "User Info")]
+#[poise::command(
+    context_menu_command = "User Info",
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn who_context(
     ctx: HContext<'_>,
     #[description = "The user to get info about."]

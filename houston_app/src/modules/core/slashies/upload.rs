@@ -4,7 +4,10 @@ use crate::prelude::*;
 use crate::slashies::create_reply;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged into multiple devices.
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn upload(
     ctx: HContext<'_>,
     #[description = "The file to upload."]

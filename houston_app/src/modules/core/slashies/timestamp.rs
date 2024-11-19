@@ -13,7 +13,9 @@ const SNOWFLAKE_INVALID: HArgError = HArgError::new_const("The Discord snowflake
 
 crate::slashies::command_group!(
     /// Provides methods for localized timestamps.
-    pub timestamp,
+    pub timestamp (
+        interaction_context = "Guild | BotDm | PrivateChannel",
+    ),
     "timestamp_in", "timestamp_at", "timestamp_of"
 );
 

@@ -27,9 +27,7 @@ command_group!(
 );
 
 /// Enables a perk for a member.
-#[poise::command(
-    slash_command,
-)]
+#[poise::command(slash_command)]
 async fn enable(
     ctx: HContext<'_>,
     #[description = "The member to enable the perk for."]
@@ -73,9 +71,7 @@ async fn enable(
 }
 
 /// Disables a perk for a member.
-#[poise::command(
-    slash_command,
-)]
+#[poise::command(slash_command)]
 async fn disable(
     ctx: HContext<'_>,
     #[description = "The member to disable the perk for."]
@@ -110,9 +106,7 @@ async fn disable(
 }
 
 /// List active perks of a member.
-#[poise::command(
-    slash_command,
-)]
+#[poise::command(slash_command)]
 async fn list(
     ctx: HContext<'_>,
     #[description = "The member to check."]
@@ -162,9 +156,7 @@ async fn list(
 }
 
 /// Gives a user items.
-#[poise::command(
-    slash_command,
-)]
+#[poise::command(slash_command)]
 async fn give(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]
@@ -198,10 +190,7 @@ async fn give(
 }
 
 /// Sets a user's unique role. Can be omitted to delete the association.
-#[poise::command(
-    slash_command,
-    rename = "unique-role",
-)]
+#[poise::command(slash_command, rename = "unique-role")]
 async fn unique_role(
     ctx: HContext<'_>,
     #[description = "The member to give items to."]

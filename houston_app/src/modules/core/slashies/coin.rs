@@ -4,7 +4,10 @@ use crate::prelude::*;
 use crate::slashies::create_reply;
 
 /// Flips a coin.
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    interaction_context = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn coin(
     ctx: HContext<'_>,
     #[description = "Whether to show the response only to yourself."]

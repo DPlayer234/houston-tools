@@ -10,7 +10,9 @@ use choices::*;
 
 command_group!(
     /// Information about mobile game Azur Lane.
-    pub azur,
+    pub azur (
+        interaction_context = "Guild | BotDm | PrivateChannel",
+    ),
     "ship", "search_ship",
     "equip", "search_equip",
     "augment", "search_augment",
