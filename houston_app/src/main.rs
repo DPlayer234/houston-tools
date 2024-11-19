@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
             data.set_current_user(ready.user);
 
             if let Some(commands) = self.take_commands() {
-                if let Err(why) = Self::setup(ctx, &data, &commands).await {
+                if let Err(why) = ready_setup(ctx, &data, &commands).await {
                     log::error!("Failure in ready: {why:?}");
                     *self.commands.lock().unwrap() = Some(commands);
                 }
@@ -119,18 +119,18 @@ async fn main() -> anyhow::Result<()> {
         fn take_commands(&self) -> Option<Vec<CreateCommand<'static>>> {
             self.commands.lock().unwrap().take()
         }
+    }
 
-        async fn setup(
-            ctx: Context,
-            data: &HBotData,
-            commands: &[CreateCommand<'static>],
-        ) -> anyhow::Result<()> {
-            let commands = ctx.http().create_global_commands(&commands).await?;
-            log::trace!("Created {} global commands.", commands.len());
+    async fn ready_setup(
+        ctx: Context,
+        data: &HBotData,
+        commands: &[CreateCommand<'static>],
+    ) -> anyhow::Result<()> {
+        let commands = ctx.http().create_global_commands(&commands).await?;
+        log::trace!("Created {} global commands.", commands.len());
 
-            data.load_app_emojis(ctx.http()).await?;
-            Ok(())
-        }
+        data.load_app_emojis(ctx.http()).await?;
+        Ok(())
     }
 
     async fn load_azur_lane(bot_data: Arc<HBotData>) {
@@ -142,11 +142,23 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    fn profile() -> anyhow::Result<Cow<'static, str>> {
+        use std::env::{var, VarError::NotPresent};
+
+        match var("HOUSTON_PROFILE") {
+            Ok(value) => Ok(value.into()),
+            Err(NotPresent) => Ok("release".into()),
+            Err(err) => Err(err.into()),
+        }
+    }
+
     fn build_config() -> anyhow::Result<config::HConfig> {
         use config_rs::{Config, Environment, File, FileFormat};
 
+        let profile = profile()?;
         let config = Config::builder()
             .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
+            .add_source(File::new(&format!("houston_app.{profile}.toml"), FileFormat::Toml).required(false))
             .add_source(Environment::default().separator("__"))
             .build()?
             .try_deserialize()?;

@@ -13,7 +13,7 @@ The minimum setup requires setting the environment variable `DISCORD__TOKEN` to 
 
 Upon startup, it will register its commands globally.
 
-Configuration is supported either via environent variables or a file named `houston_app.toml` in the working directory. The TOML config has this structure:
+Configuration is supported either via environment variables or a file named `houston_app.toml` in the working directory. The TOML config has this structure:
 
 ```toml
 [discord]
@@ -43,6 +43,8 @@ default = "warn"
 # may specify additional keys matching module names to filter their messages.
 # log levels may be "trace", "debug", "info", "warn", or "error".
 ```
+
+Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`.
 
 ## Commands
 
