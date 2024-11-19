@@ -55,7 +55,7 @@ impl super::Module for Module {
 
         if let Some(role_edit) = &perks.role_edit {
             let mut edit = slashies::role_edit::role_edit();
-            edit.description = Some(format!("Use {}: Edit your custom role.", role_edit.name).into());
+            edit.description = Some(format!("Use {}: Edit your unique role.", role_edit.name).into());
 
             c.push(edit);
         }

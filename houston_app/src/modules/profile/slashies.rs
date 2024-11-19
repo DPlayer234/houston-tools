@@ -160,16 +160,10 @@ async fn starboard_info(
         return Ok(None);
     };
 
-    let board_ids: Vec<_> = guild_config
-        .boards
-        .keys()
-        .map(|b| b.get())
-        .collect();
-
     let filter = doc! {
         "user": bson_id!(member.user.id),
         "board": {
-            "$in": board_ids,
+            "$in": guild_config.board_db_keys(),
         },
     };
 

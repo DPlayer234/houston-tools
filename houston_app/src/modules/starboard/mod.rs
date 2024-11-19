@@ -135,8 +135,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
 
     let reaction = message.reactions
         .iter()
-        .find(|r| r.reaction_type == reaction.emoji)
-        .context("could not find reaction data")?;
+        .find(|r| board.emoji.equivalent_to(&r.reaction_type))
+        .context("could not find message reaction data")?;
 
     let db = data.database()?;
     let mut new_post = false;
@@ -338,15 +338,9 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
     let db = data.database()?;
 
     // look for all boards with the message and iterate the entries
-    let board_ids: Vec<_> = guild_config
-        .boards
-        .keys()
-        .map(|b| b.get())
-        .collect();
-
     let filter = doc! {
         "board": {
-            "$in": board_ids,
+            "$in": guild_config.board_db_keys(),
         },
         "message": bson_id!(message_id),
     };

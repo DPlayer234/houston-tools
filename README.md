@@ -101,10 +101,9 @@ Furthermore, for each board, it will track a leaderboard score.
 Starboard must be configured:
 
 ```toml
-# the numeric key is the guild id
-[[bot.starboard.1293210831923974204.boards]]
-# this id is used to identify the board db-side
-id = 1
+# the first numeric key is the guild id.
+# the second is the board id.
+[bot.starboard.1293210831923974204.boards.1]
 name = "starboard"
 channel = 1305620816272166962
 emoji = "⭐"
@@ -114,11 +113,10 @@ notices = [
     "{user}, the stars aligned.",
 ]
 
-[[bot.starboard.1293210831923974204.boards]]
-id = 2
+[bot.starboard.1293210831923974204.boards.2]
 name = "ripboard"
 channel = 1305620834450407606
-emoji = "💀"
+emoji = "wowie:1305835613790146631"
 reacts = 3
 notices = [
     "What a stinker, {user}!",
@@ -126,9 +124,11 @@ notices = [
 ]
 ```
 
-The board emoji must either be a unicode emoji or "&lt;id&gt;:&lt;name&gt;", i.e. "1305835613790146631:wowie". The channel and board emojis must be unique per guild. Unicode emojis are matches exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
+The board ID is used database-side to identify the board globally. As such, the board ID must be unique _globally_, not just per guild. Moving a board to another channel or emoji may have side effects but it won't break the scores.
 
-Note that the _persistent_ key for a board is the _channel_. You're allowed to swap out an emoji without affecting board scores, but changing the channel will constitute it being a new board.
+The board emoji must either be a unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631". The board emojis must be unique per guild. Unicode emojis are matched exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
+
+The board channel is not required to be unique and multiple boards may use the same channel.
 
 Also note that messages in nsfw channels are still tracked for sfw board channels, so they will show up on the leaderboards, but they will not be forwarded. Messages will be forwarded from an nsfw channel only if the board is nsfw.
 
@@ -176,17 +176,60 @@ duration = 24
 # the bot must have "Manage Roles" and have its role placed above it for this to work correctly.
 # the perk will only be purchasable in servers configured here.
 1293210831923974204.role = 1305905884807041124
+
+# pushpin enables an item that lets someone pin/unpin a message
+# to use the item, they need to use the context menu commands
+[bot.perks.pushpin]
+name = "Pushpin"
+description = "Allow pinning or unpinning a message."
+cost = 40
+
+# role_edit enables an item that lets someone edit their unique role
+# to change the role, they need to use /role-edit while owning this item
+# to set the role, an admin must use `/perk-admin unique-role`
+[bot.perks.role_edit]
+name = "Orb of Change"
+description = "Allows editing your unique role color and/or name."
+cost = 10
 ```
 
 The following commands will be enabled:
 
-| Command             | Description |
-|:------------------- |:----------- |
-| perk-admin enable   | Enables a perk for a member. |
-| perk-admin disable  | Disables a perk for a member. |
-| perk-admin list     | List active perks of a member. |
-| perk-admin give     | Gives a user items. |
-| shop                | View the server shop. |
+| Command                | Description |
+|:---------------------- |:----------- |
+| perk-admin enable      | Enables a perk for a member. |
+| perk-admin disable     | Disables a perk for a member. |
+| perk-admin list        | List active perks of a member. |
+| perk-admin give        | Gives a user items. |
+| perk-admin unique-role | Sets a user's unique role. Can be omitted to delete the association. |
+| role-edit              | Edit your unique role. |
+| shop                   | View the server shop. |
+| wallet                 | View your server wallet. |
+
+The following commands are supported in context menus:
+
+| Command            | Description |
+|:------------------ |:----------- |
+| Use Pushpin: Pin   | (Message) Pin this message. |
+| Use Pushpin: Unpin | (Message) Unpin this message. |
+
+Commands are only available when the corresponding perk is enabled.
+
+## Server Profile
+
+This feature is enabled if either the starboard or perks are enabled.
+
+The following commands will be enabled:
+
+| Command        | Description |
+|:-------------- |:----------- |
+| profile        | View a member's server profile. |
+
+The following commands are supported in context menus:
+
+| Command        | Description |
+|:-------------- |:----------- |
+| Server Profile | (User) Equivalent to `/profile`. |
 
 # Azur Lane Data Collector
 

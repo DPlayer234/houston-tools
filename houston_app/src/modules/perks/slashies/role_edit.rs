@@ -9,7 +9,7 @@ use crate::modules::perks::model::*;
 use crate::prelude::*;
 
 // Note: The description is set by the loading code.
-// Edit your custom role.
+// Edit your unique role.
 #[poise::command(
     slash_command,
     rename = "role-edit",

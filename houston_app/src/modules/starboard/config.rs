@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bson::doc;
+use bson::{doc, Bson};
 use indexmap::IndexMap;
 
 use crate::prelude::*;
@@ -32,6 +32,18 @@ pub struct StarboardGuild {
     #[serde(default)]
     pub remove_score_on_delete: bool,
     pub boards: IndexMap<BoardId, StarboardEntry>,
+}
+
+impl StarboardGuild {
+    /// Gets the BSON database keys for this guild.
+    ///
+    /// This is intended to be used with an `$in` filter.
+    pub fn board_db_keys(&self) -> Bson {
+        self.boards
+            .keys()
+            .map(|b| b.get())
+            .collect()
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -99,9 +111,10 @@ impl<'de> serde::Deserialize<'de> for StarboardEmoji {
             where
                 E: serde::de::Error,
             {
-                let emoji = if let Some((id, name)) = v.split_once(':') {
-                    let id = id.parse::<EmojiId>().map_err(|_| E::custom("invalid emoji id"))?;
-                    ReactionType::Custom { animated: false, id, name: Some(FixedString::from_str_trunc(name)) }
+                let emoji = if let Some((name, id)) = v.split_once(':') {
+                    let id = id.parse().map_err(|_| E::custom("invalid emoji id"))?;
+                    let name = Some(FixedString::from_str_trunc(name));
+                    ReactionType::Custom { animated: false, id, name }
                 } else {
                     ReactionType::Unicode(FixedString::from_str_trunc(v))
                 };

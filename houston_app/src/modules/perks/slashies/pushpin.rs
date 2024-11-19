@@ -4,6 +4,7 @@ use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::prelude::*;
 
+/// Pin this message.
 #[poise::command(
     context_menu_command = "[pin/overridden]",
     guild_only,
@@ -62,6 +63,7 @@ pub async fn pushpin_pin(
     Ok(())
 }
 
+/// Unpin this message.
 #[poise::command(
     context_menu_command = "[unpin/overridden]",
     guild_only,

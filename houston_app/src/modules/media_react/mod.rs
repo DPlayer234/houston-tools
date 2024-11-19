@@ -32,11 +32,11 @@ pub async fn message(ctx: Context, new_message: Message) {
 
 async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()> {
     // we only consider regular messages from users, not bots
-    let invalid = new_message.kind != MessageType::Regular
+    let valid = new_message.kind != MessageType::Regular
         && !new_message.author.bot()
         && !new_message.author.system();
 
-    if invalid {
+    if valid {
         return Ok(());
     }
 
