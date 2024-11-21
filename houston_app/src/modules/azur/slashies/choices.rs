@@ -50,6 +50,7 @@ make_choice!(EFaction for Faction {
     #[name = "Collab: SSSS"] CollabSSSS,
     #[name = "Collab: Atelier Ryza"] CollabAtelierRyza,
     #[name = "Collab: Senran Kagura"] CollabSenranKagura,
+    #[name = "Collab: To Love Ru"] CollabToLoveRu,
 });
 
 make_choice!(EHullType for HullType {

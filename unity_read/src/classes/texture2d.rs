@@ -61,12 +61,14 @@ impl Texture2DData<'_> {
 
                 Ok(image)
             },
-            TextureFormat::ETC2_RGBA8 => {
-                args.decode_with(|args, buf| {
-                    texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
-                        .map_err(Error::InvalidData)
-                })
-            },
+            TextureFormat::ETC2_RGBA8 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            TextureFormat::ASTC_RGB_6x6 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_6_6(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
             _ => Err(Error::Unsupported(
                 format!("texture format not implemented: {:?}", self.texture.format())
             ))?,

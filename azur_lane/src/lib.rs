@@ -53,6 +53,7 @@ define_data_enum! {
         CollabIdolmaster("Idolm@ster", None),
         CollabSSSS("SSSS", None),
         CollabAtelierRyza("Atelier Ryza", None),
-        CollabSenranKagura("Senran Kagura", None)
+        CollabSenranKagura("Senran Kagura", None),
+        CollabToLoveRu("To Love Ru", None)
     }
 }
