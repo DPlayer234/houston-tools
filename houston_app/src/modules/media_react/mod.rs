@@ -32,11 +32,11 @@ pub async fn message(ctx: Context, new_message: Message) {
 
 async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()> {
     // we only consider regular messages from users, not bots
-    let valid = new_message.kind != MessageType::Regular
+    let valid = is_normal_message(new_message.kind)
         && !new_message.author.bot()
         && !new_message.author.system();
 
-    if valid {
+    if !valid {
         return Ok(());
     }
 
@@ -70,6 +70,14 @@ async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()>
     }
 
     Ok(())
+}
+
+fn is_normal_message(kind: MessageType) -> bool {
+    matches!(
+        kind,
+        MessageType::Regular |
+        MessageType::InlineReply
+    )
 }
 
 fn has_media_content(content: &str) -> bool {
