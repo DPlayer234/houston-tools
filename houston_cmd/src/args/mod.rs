@@ -10,7 +10,7 @@ mod impls;
 
 use crate::context::Context;
 use crate::error::Error;
-use crate::model::{Choice, Invoke};
+use crate::model::Choice;
 
 pub use ::houston_cmd_macros::ChoiceArg;
 
@@ -73,36 +73,9 @@ where
     }
 }
 
-/// This serves somewhat as a hack to get both user and message context parameters
-/// to work via the same trait. However, it isn't automatically implemented, and
-/// you must use [`crate::impl_user_context_arg`] or [`crate::impl_message_context_arg`].
+/// Enables a type to be loaded as a [`#[context_command(user)]`](crate::context_command) parameter.
 ///
-/// Either way, beyond existing, this trait is not considered to be public API.
-#[doc(hidden)]
-pub trait ContextArg<'ctx>: Sized {
-    /// Used to indicate which kind of context menu this argument is used by.
-    const INVOKE: Invoke;
-
-    fn extract_user(
-        _ctx: &Context<'ctx>,
-        _user: &'ctx User,
-        _member: Option<&'ctx PartialMember>,
-    ) -> Result<Self, Error<'ctx>> {
-        unreachable!()
-    }
-
-    fn extract_message(
-        _ctx: &Context<'ctx>,
-        _message: &'ctx Message,
-    ) -> Result<Self, Error<'ctx>> {
-        unreachable!()
-    }
-}
-
-/// Enables a type to be loaded as a [`#[context_command]`](crate::context_command) parameter.
 /// By default, this is implemented for [`&User`](User).
-///
-/// Also use [`crate::impl_user_context_arg`] on your type.
 pub trait UserContextArg<'ctx>: Sized {
     fn extract(
         ctx: &Context<'ctx>,
@@ -111,10 +84,9 @@ pub trait UserContextArg<'ctx>: Sized {
     ) -> Result<Self, Error<'ctx>>;
 }
 
-/// Enables a type to be loaded as a [`#[context_command]`](crate::context_command) parameter.
-/// By default, this is implemented for [`&Message`](Message).
+/// Enables a type to be loaded as a [`#[context_command(message)]`](crate::context_command) parameter.
 ///
-/// Also use [`crate::impl_message_context_arg`] on your type.
+/// By default, this is implemented for [`&Message`](Message).
 pub trait MessageContextArg<'ctx>: Sized {
     fn extract(
         ctx: &Context<'ctx>,

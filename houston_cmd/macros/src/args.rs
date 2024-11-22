@@ -10,6 +10,10 @@ pub struct ChatCommandArgs {
 
 #[derive(Debug, darling::FromMeta)]
 pub struct ContextCommandArgs {
+    #[darling(default)]
+    pub user: bool,
+    #[darling(default)]
+    pub message: bool,
     pub name: String,
     #[darling(flatten)]
     pub main: AnyCommandArgs,

@@ -9,6 +9,7 @@ use crate::slashies::prelude::*;
 
 /// View a member's server profile.
 #[context_command(
+    user,
     name = "Server Profile",
     contexts = "Guild",
     integration_types = "Guild",

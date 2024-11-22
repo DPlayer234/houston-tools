@@ -39,6 +39,7 @@
 //! # use houston_cmd::*;
 //! # use serenity::all::User;
 //! #[context_command(
+//!     user,
 //!     name = "User Profile",
 //! )]
 //! async fn profile(
@@ -49,8 +50,9 @@
 //! }
 //! ```
 //!
-//! The `name` is required for context menu commands, but the doc-string isn't since context menu
-//! commands cannot have descriptions.
+//! You must specify either `user` or `message` in the attribute, specifying which context
+//! to register the command to. The `name` is required for context menu commands, but the
+//! doc-string isn't since context menu commands cannot have descriptions.
 //!
 //! Chat commands can also be used to create groups:
 //!
@@ -132,7 +134,7 @@ pub mod model;
 pub mod private;
 mod reply;
 
-pub use args::{SlashArg, ChoiceArg, ContextArg, UserContextArg, MessageContextArg};
+pub use args::{SlashArg, ChoiceArg, UserContextArg, MessageContextArg};
 pub use context::Context;
 pub use error::Error;
 pub use framework::Framework;

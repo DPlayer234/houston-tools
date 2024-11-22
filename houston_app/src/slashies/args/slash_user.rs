@@ -34,8 +34,6 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
     }
 }
 
-houston_cmd::impl_user_context_arg!('ctx SlashUser<'ctx>);
-
 #[derive(Debug, Clone, Copy)]
 pub struct SlashMember<'a> {
     pub user: &'a User,
@@ -73,8 +71,6 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         Ok(Self { user, member })
     }
 }
-
-houston_cmd::impl_user_context_arg!('ctx SlashMember<'ctx>);
 
 macro_rules! impl_shared_user_fn {
     ($l:lifetime => $($t:tt)*) => {

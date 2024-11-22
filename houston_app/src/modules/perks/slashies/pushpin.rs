@@ -4,6 +4,7 @@ use crate::slashies::prelude::*;
 
 /// Pin this message.
 #[context_command(
+    message,
     name = "[pin/overridden]",
     contexts = "Guild",
     integration_types = "Guild",
@@ -62,6 +63,7 @@ pub async fn pushpin_pin(
 
 /// Unpin this message.
 #[context_command(
+    message,
     name = "[unpin/overridden]",
     contexts = "Guild",
     integration_types = "Guild",

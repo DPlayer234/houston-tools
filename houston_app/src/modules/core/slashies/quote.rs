@@ -5,6 +5,7 @@ use crate::slashies::prelude::*;
 
 /// Creates a copyable, quotable version of the message.
 #[context_command(
+    message,
     name = "Get as Quote",
     contexts = "Guild | BotDm | PrivateChannel",
 )]

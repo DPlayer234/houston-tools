@@ -23,7 +23,6 @@ macro_rules! impl_slash {
 
 macro_rules! impl_user_context {
     ($l:lifetime $ty:ty => |$ctx:pat_param, $user:pat_param, $member:pat_param| $out:expr) => {
-        $crate::impl_user_context_arg!($l $ty);
         impl<$l> UserContextArg<$l> for $ty {
             fn extract(
                 $ctx: &crate::Context<$l>,
@@ -38,7 +37,6 @@ macro_rules! impl_user_context {
 
 macro_rules! impl_message_context {
     ($l:lifetime $ty:ty => |$ctx:pat_param, $message:pat_param| $out:expr) => {
-        $crate::impl_message_context_arg!($l $ty);
         impl<$l> MessageContextArg<$l> for $ty {
             fn extract(
                 $ctx: &crate::Context<$l>,

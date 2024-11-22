@@ -8,6 +8,7 @@ use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.
 #[context_command(
+    user,
     name = "User Info",
     contexts = "Guild | BotDm | PrivateChannel",
 )]
