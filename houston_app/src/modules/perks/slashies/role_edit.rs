@@ -1,43 +1,40 @@
 use std::str::FromStr;
 
-use anyhow::Context as _;
 use bson::doc;
 
 use crate::helper::bson::bson_id;
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
 // Note: The description is set by the loading code.
-// Edit your unique role.
-#[poise::command(
-    slash_command,
-    rename = "role-edit",
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+/// Edit your unique role.
+#[chat_command(
+    name = "role-edit",
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn role_edit(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The new role name."]
     #[min_length = 2]
     #[max_length = 100]
-    name: String,
+    name: &str,
     #[description = "The new role color as an RGB hex code."]
     #[min_length = 6]
     #[max_length = 6]
     color: Option<HexColor>,
-) -> HResult {
+) -> Result {
     let data = ctx.data_ref();
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
 
-    ctx.defer_ephemeral().await?;
+    ctx.defer_as(Ephemeral).await?;
 
     let filter = doc! {
         "guild": bson_id!(guild_id),
-        "user": bson_id!(ctx.author().id),
+        "user": bson_id!(ctx.user().id),
     };
 
     let unique = UniqueRole::collection(db)
@@ -51,7 +48,7 @@ pub async fn role_edit(
     }
 
     Wallet::collection(db)
-        .take_items(guild_id, ctx.author().id, Item::RoleEdit, 1, perks)
+        .take_items(guild_id, ctx.user().id, Item::RoleEdit, 1, perks)
         .await?;
 
     match guild_id.edit_role(ctx.http(), unique.role, edit).await {
@@ -69,7 +66,7 @@ pub async fn role_edit(
         }
         Err(_) => {
             Wallet::collection(db)
-                .add_items(guild_id, ctx.author().id, Item::RoleEdit, 1)
+                .add_items(guild_id, ctx.user().id, Item::RoleEdit, 1)
                 .await?;
 
             let embed = CreateEmbed::new()
@@ -98,3 +95,5 @@ impl FromStr for HexColor {
             .map_err(|_| NotHex)
     }
 }
+
+houston_cmd::impl_slash_arg_via_from_str!(HexColor);

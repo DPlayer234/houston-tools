@@ -70,7 +70,7 @@ macro_rules! define_button_args {
                 }
             }
 
-            async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+            async fn reply(self, ctx: ButtonContext<'_>) -> Result {
                 match self {
                     $(
                         ButtonArgs::$name(args) => args.reply(ctx).await,
@@ -141,7 +141,7 @@ pub mod handler {
     }
 
     /// Handles the component interaction dispatch.
-    async fn interaction_dispatch(ctx: &Context, interaction: &ComponentInteraction) -> HResult {
+    async fn interaction_dispatch(ctx: &Context, interaction: &ComponentInteraction) -> Result {
         use ComponentInteractionDataKind as Kind;
 
         let custom_id: &str = match &interaction.data.kind {
@@ -156,7 +156,7 @@ pub mod handler {
         args.reply(ButtonContext {
             serenity: ctx,
             interaction,
-            data: ctx.data_ref::<HFrameworkData>(),
+            data: ctx.data_ref::<HContextData>(),
         }).await
     }
 
@@ -179,7 +179,7 @@ pub mod handler {
             .ephemeral(true)
             .embed(embed);
 
-        let response = reply.to_slash_followup_response(Default::default());
+        let response = reply.into_interaction_followup();
 
         let res = interaction.create_followup(ctx.http(), response).await;
         if let Err(res) = res {
@@ -266,12 +266,12 @@ pub struct ButtonContext<'a> {
 
 impl ButtonContext<'_> {
     /// Replies to the interaction.
-    pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> HResult {
+    pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> Result {
         Ok(self.interaction.create_response(&self.serenity.http, create).await?)
     }
 
     /// Edits a previous reply to the interaction.
-    pub async fn edit_reply(&self, create: EditInteractionResponse<'_>) -> HResult {
+    pub async fn edit_reply(&self, create: EditInteractionResponse<'_>) -> Result {
         self.interaction.edit_response(&self.serenity.http, create).await?;
         Ok(())
     }
@@ -280,7 +280,7 @@ impl ButtonContext<'_> {
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonArgsReply: Sized {
     /// Replies to the interaction.
-    async fn reply(self, ctx: ButtonContext<'_>) -> HResult;
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result;
 }
 
 /// Provides a way for button arguments to modify the create-reply payload.
@@ -312,7 +312,7 @@ pub enum ButtonMessageMode {
 }
 
 impl<T: ButtonMessage> ButtonArgsReply for T {
-    async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let mode = self.message_mode();
 
         let ephemeral = self
@@ -323,7 +323,7 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
             .create_reply(ctx.clone())?
             .ephemeral(ephemeral);
 
-        let reply = reply.to_slash_initial_response(Default::default());
+        let reply = reply.into_interaction_response();
         let reply = match mode {
             ButtonMessageMode::New => CreateInteractionResponse::Message(reply),
             ButtonMessageMode::Edit => CreateInteractionResponse::UpdateMessage(reply),

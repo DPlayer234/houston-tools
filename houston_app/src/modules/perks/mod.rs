@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use bson::{doc, Bson};
 use chrono::prelude::*;
 use chrono::TimeDelta;
@@ -6,6 +5,7 @@ use serenity::futures::TryStreamExt;
 use serenity::prelude::*;
 use tokio::sync::RwLock;
 
+use super::HCommand;
 use super::Module as _;
 use crate::config::HBotConfig;
 use crate::helper::bson::doc_object_id;
@@ -47,15 +47,15 @@ impl super::Module for Module {
         if let Some(pushpin) = &perks.pushpin {
             let mut pin = slashies::pushpin::pushpin_pin();
             let mut unpin = slashies::pushpin::pushpin_unpin();
-            pin.context_menu_name = Some(format!("Use {}: Pin", pushpin.name).into());
-            unpin.context_menu_name = Some(format!("Use {}: Unpin", pushpin.name).into());
+            pin.data.name = format!("Use {}: Pin", pushpin.name).into();
+            unpin.data.name = format!("Use {}: Unpin", pushpin.name).into();
 
             c.extend([pin, unpin]);
         }
 
         if let Some(role_edit) = &perks.role_edit {
             let mut edit = slashies::role_edit::role_edit();
-            edit.description = Some(format!("Use {}: Edit your unique role.", role_edit.name).into());
+            edit.data.description = format!("Use {}: Edit your unique role.", role_edit.name).into();
 
             c.push(edit);
         }
@@ -63,7 +63,7 @@ impl super::Module for Module {
         c
     }
 
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
+    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
         Box::pin(async move {
             model::Wallet::collection(db).create_indexes(model::Wallet::indices()).await?;
             model::ActivePerk::collection(db).create_indexes(model::ActivePerk::indices()).await?;
@@ -72,7 +72,7 @@ impl super::Module for Module {
         })
     }
 
-    fn validate(&self, config: &HBotConfig) -> HResult {
+    fn validate(&self, config: &HBotConfig) -> Result {
         if config.mongodb_uri.is_none() {
             anyhow::bail!("perks requires a mongodb_uri");
         }
@@ -94,7 +94,7 @@ pub struct PerkState {
 }
 
 pub fn dispatch_check_perks(ctx: &Context) {
-    let data = ctx.data_ref::<HFrameworkData>();
+    let data = ctx.data_ref::<HContextData>();
     if Module.enabled(data.config()) {
         tokio::task::spawn(check_perks_impl(ctx.clone()));
     }
@@ -106,8 +106,8 @@ async fn check_perks_impl(ctx: Context) {
     }
 }
 
-async fn check_perks_core(ctx: Context) -> HResult {
-    let data = ctx.data_ref::<HFrameworkData>();
+async fn check_perks_core(ctx: Context) -> Result {
+    let data = ctx.data_ref::<HContextData>();
     let state = data.perk_state();
     let last = *state.last_check.read().await;
     let next = last

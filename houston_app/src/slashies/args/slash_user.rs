@@ -1,80 +1,95 @@
-#![expect(dead_code)]
-
-use anyhow::Context;
-use poise::{SlashArgError, SlashArgument};
+use houston_cmd::{Context, Error, SlashArg, UserContextArg};
 
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
-pub struct SlashUser {
-    pub user: User,
-    pub member: Option<PartialMember>,
+#[derive(Debug, Clone, Copy)]
+pub struct SlashUser<'a> {
+    pub user: &'a User,
+    pub member: Option<&'a PartialMember>,
 }
 
-#[serenity::async_trait]
-impl SlashArgument for SlashUser {
-    async fn extract(
-        _ctx: &serenity::gateway::client::Context,
-        _interaction: &CommandInteraction,
-        value: &ResolvedValue<'_>,
-    ) -> Result<Self, SlashArgError> {
-        match *value {
-            ResolvedValue::User(user, member) => Ok(Self {
-                user: user.clone(),
-                member: member.cloned(),
-            }),
-            _ => Err(SlashArgError::new_command_structure_mismatch("expected user"))
+impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
+    fn extract(
+        ctx: &Context<'ctx>,
+        resolved: &ResolvedValue<'ctx>,
+    ) -> Result<Self, Error<'ctx>> {
+        match *resolved {
+            ResolvedValue::User(user, member) => Ok(Self { user, member }),
+            _ => Err(Error::structure_mismatch(*ctx, "expected User"))
         }
     }
 
-    fn create(builder: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
-        builder.kind(CommandOptionType::User)
+    fn set_options(option: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
+        option.kind(CommandOptionType::User)
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SlashMember {
-    pub user: User,
-    pub member: PartialMember,
+impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
+    fn extract(
+        _ctx: &Context<'ctx>,
+        user: &'ctx User,
+        member: Option<&'ctx PartialMember>,
+    ) -> Result<Self, Error<'ctx>> {
+        Ok(Self { user, member })
+    }
+}
+
+houston_cmd::impl_user_context_arg!('ctx SlashUser<'ctx>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct SlashMember<'a> {
+    pub user: &'a User,
+    pub member: &'a PartialMember,
 }
 
 #[serenity::async_trait]
-impl SlashArgument for SlashMember {
-    async fn extract(
-        _ctx: &serenity::gateway::client::Context,
-        _interaction: &CommandInteraction,
-        value: &ResolvedValue<'_>,
-    ) -> Result<Self, SlashArgError> {
-        match *value {
-            ResolvedValue::User(user, Some(member)) => return Ok(Self {
-                user: user.clone(),
-                member: member.clone(),
-            }),
+impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
+    fn extract(
+        ctx: &Context<'ctx>,
+        resolved: &ResolvedValue<'ctx>,
+    ) -> Result<Self, Error<'ctx>> {
+        match *resolved {
+            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member }),
             // delegate to this method to get the correct error
-            _ => drop(<PartialMember as SlashArgument>::extract(_ctx, _interaction, value).await?)
+            _ => drop(<PartialMember as SlashArg>::extract(ctx, resolved)?)
         }
 
         // this is functionally unreachable
-        Err(SlashArgError::new_command_structure_mismatch("expected member"))
+        Err(Error::structure_mismatch(*ctx, "expected Member"))
     }
 
-    fn create(builder: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
-        builder.kind(CommandOptionType::User)
+    fn set_options(options: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
+        options.kind(CommandOptionType::User)
     }
 }
 
+impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
+    fn extract(
+        ctx: &Context<'ctx>,
+        user: &'ctx User,
+        member: Option<&'ctx PartialMember>,
+    ) -> Result<Self, Error<'ctx>> {
+        let member = member.ok_or_else(|| Error::slash_arg_invalid(*ctx, "unknown server member"))?;
+        Ok(Self { user, member })
+    }
+}
+
+houston_cmd::impl_user_context_arg!('ctx SlashMember<'ctx>);
+
 macro_rules! impl_shared_user_fn {
-    ($($t:tt)*) => {
-        impl SlashUser {
+    ($l:lifetime => $($t:tt)*) => {
+        #[allow(dead_code)]
+        impl<$l> SlashUser<$l> {
             $($t)*
         }
-        impl SlashMember {
+        #[allow(dead_code)]
+        impl<$l> SlashMember<$l> {
             $($t)*
         }
     };
 }
 
-impl_shared_user_fn! {
+impl_shared_user_fn! { 'a =>
     pub fn display_name(&self) -> &str {
         self.member()
             .and_then(|m| m.nick.as_deref())
@@ -85,45 +100,24 @@ impl_shared_user_fn! {
         // CMBK: PartialMember has no guild avatar field
         self.user.face()
     }
+}
 
-    pub fn from_resolved(ctx: HContext<'_>, user: User) -> anyhow::Result<Self> {
-        let member = ctx.interaction.data
-            .resolved.members
-            .get(&user.id);
-
-        Self::new_priv(user, member)
+#[allow(dead_code)]
+impl<'a> SlashUser<'a> {
+    fn member(&self) -> Option<&'a PartialMember> {
+        self.member
     }
 }
 
-impl SlashUser {
-    fn new_priv(user: User, member: Option<&PartialMember>) -> anyhow::Result<Self> {
-        Ok(Self {
-            user,
-            member: member.cloned(),
-        })
-    }
-
-    fn member(&self) -> Option<&PartialMember> {
-        self.member.as_ref()
+#[allow(dead_code)]
+impl<'a> SlashMember<'a> {
+    fn member(&self) -> Option<&'a PartialMember> {
+        Some(self.member)
     }
 }
 
-impl SlashMember {
-    fn new_priv(user: User, member: Option<&PartialMember>) -> anyhow::Result<Self> {
-        let member = member.context("expected member")?;
-        Ok(Self {
-            user,
-            member: member.clone(),
-        })
-    }
-
-    fn member(&self) -> Option<&PartialMember> {
-        Some(&self.member)
-    }
-}
-
-impl From<SlashMember> for SlashUser {
-    fn from(value: SlashMember) -> Self {
+impl<'a> From<SlashMember<'a>> for SlashUser<'a> {
+    fn from(value: SlashMember<'a>) -> Self {
         Self {
             user: value.user,
             member: Some(value.member),
@@ -131,13 +125,13 @@ impl From<SlashMember> for SlashUser {
     }
 }
 
-impl Mentionable for SlashUser {
+impl Mentionable for SlashUser<'_> {
     fn mention(&self) -> Mention {
         Mention::User(self.user.id)
     }
 }
 
-impl Mentionable for SlashMember {
+impl Mentionable for SlashMember<'_> {
     fn mention(&self) -> Mention {
         Mention::User(self.user.id)
     }

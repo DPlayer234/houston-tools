@@ -1,6 +1,6 @@
 mod slashies;
 
-use crate::prelude::*;
+use super::HCommand;
 use crate::config::HBotConfig;
 
 pub struct Module;

@@ -40,7 +40,7 @@ async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()>
         return Ok(());
     }
 
-    let data = ctx.data_ref::<HFrameworkData>();
+    let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current channel
     let channel_config = data.config()

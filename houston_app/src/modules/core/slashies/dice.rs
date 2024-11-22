@@ -7,21 +7,19 @@ use smallvec::SmallVec;
 
 use utils::text::write_str::*;
 
-use crate::prelude::*;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 /// Rolls some dice.
-#[poise::command(
-    slash_command,
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[chat_command(
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn dice(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]
     sets: DiceSetVec,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
     if dice_count > 255 {
@@ -124,3 +122,5 @@ impl FromStr for DiceSetVec {
             .and_then(|v| Self::from_vec(v).ok_or(DiceParseError(())))
     }
 }
+
+houston_cmd::impl_slash_arg_via_from_str!(DiceSetVec);

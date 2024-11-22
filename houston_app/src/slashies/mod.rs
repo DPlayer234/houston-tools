@@ -1,4 +1,7 @@
 use std::borrow::Cow;
+use std::fmt;
+
+use houston_cmd::Context;
 
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
@@ -6,36 +9,67 @@ use crate::prelude::*;
 
 pub mod args;
 
+pub mod prelude {
+    pub use houston_cmd::{chat_command, context_command};
+    pub use houston_cmd::Context;
+
+    pub use super::args::*;
+    pub use super::create_reply;
+    pub use super::ContextExt as _;
+    pub use crate::prelude::*;
+}
+
 /// Pre-command execution hook.
-pub async fn pre_command(ctx: HAnyContext<'_>) {
-    log::info!("{}: /{} {}", ctx.author().name, ctx.command().qualified_name, match ctx {
-        HAnyContext::Application(ctx) => ctx.interaction.data.target().map_or(
-            DisplayResolvedArgs::Options(ctx.args),
+pub async fn pre_command(ctx: Context<'_>) {
+    let options = ctx
+        .interaction
+        .data.target()
+        .map_or_else(
+            || DisplayResolvedArgs::Options(ctx.options()),
             DisplayResolvedArgs::Target,
-        ),
-        HAnyContext::Prefix(ctx) => DisplayResolvedArgs::String(ctx.args),
-    })
+        );
+
+    struct Tree<'a>(&'a CommandInteraction);
+    impl fmt::Display for Tree<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(&self.0.data.name)?;
+            let mut options = &self.0.data.options;
+            while let Some(CommandDataOption {
+                name,
+                value: CommandDataOptionValue::SubCommand(next_options) | CommandDataOptionValue::SubCommandGroup(next_options),
+                ..
+            }) = options.first() {
+                f.write_str(" ")?;
+                f.write_str(name)?;
+                options = next_options;
+            }
+
+            Ok(())
+        }
+    }
+
+    log::info!("{}: /{} {options}", ctx.user().name, Tree(ctx.interaction))
 }
 
 /// Command execution error handler.
 #[cold]
-pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HError>) {
+pub async fn error_handler(error: houston_cmd::Error<'_>) {
     match error {
-        poise::FrameworkError::Command { error, ctx, .. } => {
-            command_error(&ctx, error).await
+        houston_cmd::Error::Command { error, ctx } => {
+            command_error(ctx, error).await
         },
-        poise::FrameworkError::ArgumentParse { error, input, ctx, .. } => {
+        houston_cmd::Error::ArgumentParse { error, input, ctx } => {
             let msg = match input {
                 Some(input) => format!("Argument invalid: {}\nCaused by input: '{}'", error, input),
                 None => format!("Argument invalid: {}", error),
             };
 
-            context_error(&ctx, msg.into()).await
+            context_error(ctx, msg.into()).await
         },
         _ => log::error!("Oh noes, we got an error: {error:?}"),
     }
 
-    async fn command_error(ctx: &HAnyContext<'_>, err: HError) {
+    async fn command_error(ctx: Context<'_>, err: anyhow::Error) {
         let message = match err.downcast::<HArgError>() {
             Ok(err) => err.msg,
             Err(err) => {
@@ -54,7 +88,7 @@ pub async fn error_handler(error: poise::FrameworkError<'_, HFrameworkData, HErr
         context_error(ctx, message).await
     }
 
-    async fn context_error(ctx: &HAnyContext<'_>, feedback: Cow<'_, str>) {
+    async fn context_error(ctx: Context<'_>, feedback: Cow<'_, str>) {
         let embed = CreateEmbed::new()
             .description(feedback)
             .color(ERROR_EMBED_COLOR);
@@ -71,19 +105,27 @@ pub fn create_reply<'new>(ephemeral: impl IntoEphemeral) -> CreateReply<'new> {
         .ephemeral(ephemeral.into_ephemeral())
 }
 
-macro_rules! command_group {
-    ($(#[$meta:meta])* $vis:vis $name:ident $(($($poise_tt:tt)*))? , $($sub_command:literal),* $(,)?) => {
-        $(#[$meta])*
-        #[::poise::command(
-            slash_command,
-            subcommands($($sub_command),*),
-            subcommand_required,
-            $($($poise_tt)*)?
-        )]
-        $vis async fn $name(_: $crate::data::HContext<'_>) -> $crate::data::HResult {
-            $crate::data::HResult::Err($crate::data::HArgError::new_const(concat!(stringify!($name), " cannot be invoked directly")).into())
-        }
-    };
+/// Extension trait for the poise context.
+pub trait ContextExt<'a> {
+    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result;
+
+    #[must_use]
+    fn data_ref(&self) -> &'a HBotData;
+
+    fn require_guild_id(&self) -> anyhow::Result<GuildId>;
 }
 
-pub(crate) use command_group;
+impl<'a> ContextExt<'a> for Context<'a> {
+    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result {
+        self.defer(ephemeral.into_ephemeral()).await?;
+        Ok(())
+    }
+
+    fn data_ref(&self) -> &'a HBotData {
+        self.serenity.data_ref::<HContextData>()
+    }
+
+    fn require_guild_id(&self) -> anyhow::Result<GuildId> {
+        self.guild_id().context("must be used in guild")
+    }
+}

@@ -15,7 +15,7 @@ impl Shape for RainbowRole {
         Ok(find_rainbow_role(&args).is_ok())
     }
 
-    async fn enable(&self, args: Args<'_>, _state: Option<Bson>) -> HResult {
+    async fn enable(&self, args: Args<'_>, _state: Option<Bson>) -> Result {
         let role = find_rainbow_role(&args)?;
 
         args.ctx.http.add_member_role(
@@ -27,7 +27,7 @@ impl Shape for RainbowRole {
         Ok(())
     }
 
-    async fn disable(&self, args: Args<'_>) -> HResult {
+    async fn disable(&self, args: Args<'_>) -> Result {
         if let Ok(role) = find_rainbow_role(&args) {
             args.ctx.http.remove_member_role(
                 args.guild_id,
@@ -40,7 +40,7 @@ impl Shape for RainbowRole {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context) -> HResult {
+    async fn update(&self, ctx: &Context) -> Result {
         const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {
@@ -85,7 +85,7 @@ impl Shape for RainbowRole {
 struct NoRainbowRole;
 
 fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
-    ctx.data_ref::<HFrameworkData>()
+    ctx.data_ref::<HContextData>()
         .config()
         .perks.as_ref()
         .ok_or(NoRainbowRole)?
@@ -100,7 +100,7 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> anyhow::Result<&'a RainbowRoleEntry
 }
 
 async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> anyhow::Result<bool> {
-    let db = ctx.data_ref::<HFrameworkData>().database()?;
+    let db = ctx.data_ref::<HContextData>().database()?;
 
     let filter = doc! {
         "guild": bson_id!(guild_id),

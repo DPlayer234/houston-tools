@@ -1,18 +1,16 @@
 use rand::prelude::*;
 
-use crate::prelude::*;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 /// Flips a coin.
-#[poise::command(
-    slash_command,
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[chat_command(
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn coin(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     const EDGE_TOSS_CHANCE: f64 = 1f64 / 6000f64;
     let content = {
         let mut rng = thread_rng();

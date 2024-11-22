@@ -25,18 +25,18 @@ trait Shape {
         Ok(true)
     }
 
-    async fn enable(&self, args: Args<'_>, state: Option<Bson>) -> HResult {
+    async fn enable(&self, args: Args<'_>, state: Option<Bson>) -> Result {
         _ = args;
         _ = state;
         Ok(())
     }
 
-    async fn disable(&self, args: Args<'_>) -> HResult {
+    async fn disable(&self, args: Args<'_>) -> Result {
         _ = args;
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context) -> HResult {
+    async fn update(&self, ctx: &Context) -> Result {
         _ = ctx;
         Ok(())
     }
@@ -44,7 +44,7 @@ trait Shape {
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq,
-    serde::Serialize, serde::Deserialize, poise::ChoiceParameter,
+    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
 )]
 pub enum Effect {
     RainbowRole,
@@ -68,9 +68,9 @@ macro_rules! impl_kind_fn {
 
 impl Effect {
     impl_kind_fn!(supported(args: Args<'_>) -> anyhow::Result<bool>);
-    impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> HResult);
-    impl_kind_fn!(disable(args: Args<'_>) -> HResult);
-    impl_kind_fn!(update(args: &Context) -> HResult);
+    impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> Result);
+    impl_kind_fn!(disable(args: Args<'_>) -> Result);
+    impl_kind_fn!(update(args: &Context) -> Result);
 
     pub fn all() -> &'static [Self] {
         &[

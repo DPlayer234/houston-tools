@@ -88,11 +88,11 @@ impl View {
 }
 
 impl ButtonArgsReply for View {
-    async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         ctx.reply(CreateInteractionResponse::Acknowledge).await?;
 
         let reply = self.create_reply(ctx.data).await?;
-        let edit = reply.to_slash_initial_response_edit(Default::default());
+        let edit = reply.into_interaction_edit();
 
         ctx.edit_reply(edit).await?;
         Ok(())

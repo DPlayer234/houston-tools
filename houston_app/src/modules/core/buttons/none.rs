@@ -20,7 +20,7 @@ impl None {
 }
 
 impl ButtonArgsReply for None {
-    async fn reply(self, _ctx: ButtonContext<'_>) -> HResult {
+    async fn reply(self, _ctx: ButtonContext<'_>) -> Result {
         anyhow::bail!("this button is not intended to be used");
     }
 }

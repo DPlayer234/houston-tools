@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use bson::doc;
 
 use bson::Document;
@@ -61,7 +60,7 @@ impl View {
     }
 
     async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HFrameworkData>();
+        let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
 
@@ -167,7 +166,7 @@ impl View {
     }
 
     async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HFrameworkData>();
+        let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
 
@@ -230,7 +229,7 @@ impl View {
     }
 
     async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HFrameworkData>();
+        let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
 
@@ -284,7 +283,7 @@ impl View {
     }
 
     async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HFrameworkData>();
+        let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
 
@@ -318,7 +317,7 @@ impl View {
     }
 
     async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
-        let data = ctx.data_ref::<HFrameworkData>();
+        let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
 
@@ -349,14 +348,14 @@ impl View {
 }
 
 impl ButtonArgsReply for View {
-    async fn reply(self, ctx: ButtonContext<'_>) -> HResult {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let guild_id = ctx.interaction.guild_id.context("requires guild")?;
         let user_id = ctx.interaction.user.id;
 
         ctx.reply(CreateInteractionResponse::Acknowledge).await?;
 
         let reply = self.create_reply(ctx.serenity, guild_id, user_id).await?;
-        let edit = reply.to_slash_initial_response_edit(Default::default());
+        let edit = reply.into_interaction_edit();
 
         ctx.edit_reply(edit).await?;
         Ok(())

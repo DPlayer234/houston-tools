@@ -1,25 +1,23 @@
 use parse::Token;
 
-use crate::prelude::*;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 mod ops;
 mod parse;
 
 /// Evaluates a mathematical equation. Warning: Floating point math.
-#[poise::command(
-    slash_command,
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[chat_command(
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn calc(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The expression to evaluate."]
     #[max_length = 3000]
-    mut expression: String,
+    expression: &str,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
-    expression.make_ascii_lowercase();
+) -> anyhow::Result<()> {
+    let expression = expression.to_ascii_lowercase();
 
     macro_rules! error_embed {
         ($($t:tt)*) => {

@@ -2,7 +2,7 @@ use super::config::{Config, ItemPrice};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq,
-    serde::Serialize, serde::Deserialize, poise::ChoiceParameter,
+    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
 )]
 pub enum Item {
     Cash,

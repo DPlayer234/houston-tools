@@ -4,42 +4,40 @@ use utils::text::write_str::*;
 use utils::titlecase;
 
 use crate::fmt::discord::{get_unique_username, TimeMentionable};
-use crate::prelude::*;
-use crate::slashies::args::SlashUser;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.
-#[poise::command(
-    context_menu_command = "User Info",
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[context_command(
+    name = "User Info",
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn who_context(
-    ctx: HContext<'_>,
-    #[description = "The user to get info about."]
-    user: User,
-) -> HResult {
-    let user = SlashUser::from_resolved(ctx, user)?;
+    ctx: Context<'_>,
+    user: SlashUser<'_>,
+) -> Result {
     who_core(ctx, user, None).await
 }
 
 /// Returns basic information about the provided user.
-#[poise::command(slash_command)]
+#[chat_command(
+    contexts = "Guild | BotDm | PrivateChannel",
+)]
 pub async fn who(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The user to get info about."]
-    user: SlashUser,
+    user: SlashUser<'_>,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     who_core(ctx, user, ephemeral).await
 }
 
 async fn who_core(
-    ctx: HContext<'_>,
-    user: SlashUser,
+    ctx: Context<'_>,
+    user: SlashUser<'_>,
     ephemeral: Option<bool>,
-) -> HResult {
-    let mut embed = who_user_embed(&user.user)
+) -> Result {
+    let mut embed = who_user_embed(user.user)
         .color(ctx.data_ref().config().embed_color);
 
     if let Some(member) = &user.member {

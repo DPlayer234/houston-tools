@@ -1,0 +1,21 @@
+[package]
+name = "houston_cmd"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = "1.0.93"
+derivative = "2.2.0"
+log = { version = "0.4.22", features = ["serde"] }
+thiserror = "2.0.3"
+
+houston_cmd_macros = { path = "./macros" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
+default-features = false
+features = [
+    "builder", "framework", "gateway", "model", "http", "utils"
+]

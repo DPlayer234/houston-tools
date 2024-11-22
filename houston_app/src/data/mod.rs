@@ -4,7 +4,6 @@ use std::sync::{LazyLock, OnceLock};
 use anyhow::Context as _;
 use serenity::http::Http;
 use serenity::model::Color;
-use serenity::model::id::GuildId;
 use serenity::model::user::CurrentUser;
 
 use crate::config::HBotConfig;
@@ -14,20 +13,8 @@ mod app_emojis;
 /// A general color that can be used for embeds indicating errors.
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
-/// The error type used for the poise context.
-pub type HError = anyhow::Error;
-/// The full poise context type.
-pub type HContext<'a> = poise::ApplicationContext<'a, HFrameworkData, HError>;
-/// The full poise context type.
-pub type HAnyContext<'a> = poise::Context<'a, HFrameworkData, HError>;
-/// The poise command result type.
-pub type HResult = Result<(), HError>;
-/// The poise framework type.
-pub type HFramework = poise::framework::Framework<HFrameworkData, HError>;
 /// Actual data type provided to serenity's user data.
-pub type HFrameworkData = HBotData;
-
-pub type HCommand = poise::Command<HFrameworkData, HError>;
+pub type HContextData = HBotData;
 
 pub use app_emojis::HAppEmojis;
 use crate::modules::azur::data::HAzurLane;
@@ -110,7 +97,7 @@ impl HBotData {
     /// Loads all app emojis.
     ///
     /// This doesn't return them. Use [`Self::app_emojis`].
-    pub async fn load_app_emojis(&self, ctx: &Http) -> HResult {
+    pub async fn load_app_emojis(&self, ctx: &Http) -> anyhow::Result<()> {
         if self.app_emojis.get().is_none() {
             _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
             log::info!("Loaded App Emojis.");
@@ -142,7 +129,7 @@ impl HBotData {
     }
 
     /// Connects to the database and other needed services.
-    pub async fn connect(&self, init: &crate::modules::Info) -> HResult {
+    pub async fn connect(&self, init: &crate::modules::Info) -> anyhow::Result<()> {
         if let Some(uri) = &self.config.mongodb_uri {
             let client = mongodb::Client::with_uri_str(uri).await?;
             let db = client.default_database().context("no default database specified")?;
@@ -164,31 +151,6 @@ impl HBotData {
     /// Gets the database connection.
     pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
         self.database.get().context("database is not yet connected")
-    }
-}
-
-/// Extension trait for the poise context.
-pub trait HContextExtensions<'a> {
-    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> HResult;
-
-    #[must_use]
-    fn data_ref(&self) -> &'a HBotData;
-
-    fn require_guild_id(&self) -> anyhow::Result<GuildId>;
-}
-
-impl<'a> HContextExtensions<'a> for HContext<'a> {
-    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> HResult {
-        self.defer_response(ephemeral.into_ephemeral()).await?;
-        Ok(())
-    }
-
-    fn data_ref(&self) -> &'a HBotData {
-        self.serenity_context().data_ref::<HFrameworkData>()
-    }
-
-    fn require_guild_id(&self) -> anyhow::Result<GuildId> {
-        self.guild_id().context("must be used in guild")
     }
 }
 

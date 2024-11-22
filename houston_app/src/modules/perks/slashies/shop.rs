@@ -1,24 +1,20 @@
-use anyhow::Context;
-
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
 /// View the server shop.
-#[poise::command(
-    slash_command,
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[chat_command(
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn shop(
-    ctx: HContext<'_>,
-) -> HResult {
+    ctx: Context<'_>,
+) -> Result {
     use crate::modules::perks::buttons::shop::View;
 
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
 
-    ctx.defer_ephemeral().await?;
+    ctx.defer_as(Ephemeral).await?;
 
-    let reply = View::new().create_reply(ctx.serenity_context(), guild_id, ctx.author().id).await?;
+    let reply = View::new().create_reply(ctx.serenity, guild_id, ctx.user().id).await?;
     ctx.send(reply.ephemeral(true)).await?;
     Ok(())
 }

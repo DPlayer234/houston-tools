@@ -1,3 +1,4 @@
+use super::HCommand;
 use crate::prelude::*;
 
 pub mod buttons;

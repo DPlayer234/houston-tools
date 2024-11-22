@@ -4,17 +4,16 @@ use utils::text::write_str::*;
 
 use crate::fmt::discord::{get_unique_username, TimeMentionable};
 use crate::helper::time::get_startup_time;
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
 /// Shows information about the current bot session.
-#[poise::command(
-    slash_command,
-    rename = "bot-stats",
-    interaction_context = "BotDm",
+#[chat_command(
+    name = "bot-stats",
+    contexts = "BotDm",
 )]
 pub async fn bot_stats(
-    ctx: HContext<'_>,
-) -> HResult {
+    ctx: Context<'_>,
+) -> Result {
     let data = ctx.data_ref();
 
     let startup = get_startup_time().short_date_time();
@@ -61,6 +60,6 @@ pub async fn bot_stats(
     );
 
     let embed = base_embed.description(description);
-    reply.edit(ctx.into(), CreateReply::new().embed(embed)).await?;
+    reply.edit(CreateReply::new().embed(embed)).await?;
     Ok(())
 }

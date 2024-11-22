@@ -78,8 +78,6 @@ pub enum DisplayResolvedArgs<'a> {
     Options(&'a [ResolvedOption<'a>]),
     /// Uses the resolved target from a context menu command.
     Target(ResolvedTarget<'a>),
-    /// Uses the input string from a message command.
-    String(&'a str),
 }
 
 impl Display for DisplayResolvedArgs<'_> {
@@ -87,7 +85,6 @@ impl Display for DisplayResolvedArgs<'_> {
         match self {
             Self::Options(o) => fmt_resolved_options(o, f),
             Self::Target(t) => fmt_resolved_target(t, f),
-            Self::String(s) => f.write_str(s),
         }
     }
 }

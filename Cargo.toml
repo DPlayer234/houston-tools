@@ -1,13 +1,15 @@
 [workspace]
+resolver = "2"
 members = [
     "azur_lane",
     "azur_lane_data_collector",
     "houston_app",
+	"houston_cmd",
+	"houston_cmd/macros",
     "unity_read",
     "utils",
     "utils_build",
 ]
-resolver = "2"
 
 [workspace.package]
 edition = "2021"

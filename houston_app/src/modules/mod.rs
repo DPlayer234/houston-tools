@@ -9,7 +9,8 @@ pub mod perks;
 pub mod profile;
 pub mod starboard;
 
-type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, HResult>;
+type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, Result>;
+type HCommand = houston_cmd::model::Command;
 
 /// Initialization data.
 pub struct Info {
@@ -30,7 +31,7 @@ impl Info {
         }
     }
 
-    pub fn load(&mut self, config: &config::HBotConfig) -> HResult {
+    pub fn load(&mut self, config: &config::HBotConfig) -> Result {
         core::Module.apply(self, config)?;
         azur::Module.apply(self, config)?;
         perks::Module.apply(self, config)?;
@@ -58,12 +59,12 @@ pub trait Module {
     }
 
     /// Validates that the config is good.
-    fn validate(&self, config: &config::HBotConfig) -> HResult {
+    fn validate(&self, config: &config::HBotConfig) -> Result {
         _ = config;
         Ok(())
     }
 
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
+    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
         _ = db;
         Box::pin(const {
             crate::helper::future::Done::new_zst(|| Ok(()))
@@ -71,7 +72,7 @@ pub trait Module {
     }
 
     /// Applies the settings if enabled.
-    fn apply(&self, init: &mut Info, config: &config::HBotConfig) -> HResult {
+    fn apply(&self, init: &mut Info, config: &config::HBotConfig) -> Result {
         if self.enabled(config) {
             self.validate(config)?;
             init.intents |= self.intents(config);

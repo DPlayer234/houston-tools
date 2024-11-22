@@ -1,4 +1,3 @@
-use anyhow::Context;
 use bson::doc;
 use serenity::futures::TryStreamExt;
 
@@ -6,47 +5,41 @@ use utils::text::write_str::*;
 
 use crate::helper::bson::bson_id;
 use crate::modules::Module as _;
-use crate::prelude::*;
-use crate::slashies::args::SlashMember;
+use crate::slashies::prelude::*;
 
 /// View a member's server profile.
-#[poise::command(
-    context_menu_command = "Server Profile",
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[context_command(
+    name = "Server Profile",
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn profile_context(
-    ctx: HContext<'_>,
-    #[description = "The member to view the profile of."]
-    member: User,
-) -> HResult {
-    let member = SlashMember::from_resolved(ctx, member)?;
+    ctx: Context<'_>,
+    member: SlashMember<'_>,
+) -> Result {
     profile_core(ctx, member, None).await
 }
 
 /// View a member's server profile.
-#[poise::command(
-    slash_command,
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[chat_command(
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn profile(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The member to view the profile of."]
-    member: SlashMember,
+    member: SlashMember<'_>,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     profile_core(ctx, member, ephemeral).await
 }
 
 async fn profile_core(
-    ctx: HContext<'_>,
-    member: SlashMember,
+    ctx: Context<'_>,
+    member: SlashMember<'_>,
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     let data = ctx.data_ref();
     ctx.defer_as(ephemeral).await?;
 
@@ -58,11 +51,11 @@ async fn profile_core(
         .color(data.config().embed_color);
 
     if crate::modules::perks::Module.enabled(data.config()) {
-        if let Some(unique_role) = perks_unique_role(ctx, &member).await? {
+        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
             embed = embed.description(format!("-# <@&{unique_role}>"));
         }
 
-        if let Some(collection) = perks_collectible_info(ctx, &member).await? {
+        if let Some(collection) = perks_collectible_info(ctx, member).await? {
             embed = embed.field(
                 "Collection",
                 collection,
@@ -72,7 +65,7 @@ async fn profile_core(
     }
 
     if crate::modules::starboard::Module.enabled(data.config()) {
-        if let Some(starboard) = starboard_info(ctx, &member).await? {
+        if let Some(starboard) = starboard_info(ctx, member).await? {
             embed = embed.field(
                 "Starboard",
                 starboard,
@@ -89,14 +82,14 @@ async fn profile_core(
 }
 
 async fn perks_unique_role(
-    ctx: HContext<'_>,
-    member: &SlashMember,
+    ctx: Context<'_>,
+    member: SlashMember<'_>,
 ) -> anyhow::Result<Option<RoleId>> {
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
     let db = data.database()?;
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
 
     let filter = doc! {
         "guild": bson_id!(guild_id),
@@ -115,8 +108,8 @@ async fn perks_unique_role(
 }
 
 async fn perks_collectible_info(
-    ctx: HContext<'_>,
-    member: &SlashMember,
+    ctx: Context<'_>,
+    member: SlashMember<'_>,
 ) -> anyhow::Result<Option<String>> {
     use crate::modules::perks::model;
     use crate::modules::perks::Item;
@@ -124,7 +117,7 @@ async fn perks_collectible_info(
     let data = ctx.data_ref();
     let db = data.database()?;
     let perks = data.config().perks()?;
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
 
     let filter = doc! {
         "guild": bson_id!(guild_id),
@@ -143,14 +136,14 @@ async fn perks_collectible_info(
 }
 
 async fn starboard_info(
-    ctx: HContext<'_>,
-    member: &SlashMember,
+    ctx: Context<'_>,
+    member: SlashMember<'_>,
 ) -> anyhow::Result<Option<String>> {
     use crate::modules::starboard::model;
 
     let data = ctx.data_ref();
     let db = data.database()?;
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
 
     let guild_config = data.config()
         .starboard

@@ -1,11 +1,10 @@
-use anyhow::Context as _;
 use bson::doc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use serenity::futures::TryStreamExt;
 use serenity::prelude::*;
 
-use super::Module as _;
+use super::{HCommand, Module as _};
 use crate::helper::bson::{bson_id, doc_object_id};
 use crate::helper::is_unique_set;
 use crate::prelude::*;
@@ -36,7 +35,7 @@ impl super::Module for Module {
         ]
     }
 
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, HResult> {
+    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
         Box::pin(async move {
             model::Message::collection(db).create_indexes(model::Message::indices()).await?;
             model::Score::collection(db).create_indexes(model::Score::indices()).await?;
@@ -44,7 +43,7 @@ impl super::Module for Module {
         })
     }
 
-    fn validate(&self, config: &HBotConfig) -> HResult {
+    fn validate(&self, config: &HBotConfig) -> Result {
         anyhow::ensure!(
             is_unique_set(config.starboard.values().flat_map(|b| b.boards.keys())),
             "starboard ids must be globally unique",
@@ -85,7 +84,7 @@ pub async fn message_delete(ctx: Context, channel_id: ChannelId, message_id: Mes
     }
 }
 
-async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
+async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     // only in guilds
     let Some(guild_id) = reaction.guild_id else {
         return Ok(());
@@ -93,7 +92,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
 
     // look up the board associated with the emoji
     // note: the emoji name is part of the reaction data
-    let data = ctx.data_ref::<HFrameworkData>();
+    let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current guild
     let guild_config = data.config()
@@ -318,8 +317,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> HResult {
     Ok(())
 }
 
-async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: ChannelId, message_id: MessageId) -> HResult {
-    let data = ctx.data_ref::<HFrameworkData>();
+async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: ChannelId, message_id: MessageId) -> Result {
+    let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current guild
     let guild_config = data.config()

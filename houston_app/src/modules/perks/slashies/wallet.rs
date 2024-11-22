@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use bson::doc;
 
 use utils::text::write_str::*;
@@ -6,29 +5,27 @@ use utils::text::write_str::*;
 use crate::helper::bson::bson_id;
 use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
 /// View your server wallet.
-#[poise::command(
-    slash_command,
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[chat_command(
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn wallet(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
-) -> HResult {
+) -> Result {
     let data = ctx.data_ref();
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
 
     ctx.defer_as(ephemeral).await?;
 
     let filter = doc! {
-        "user": bson_id!(ctx.author().id),
+        "user": bson_id!(ctx.user().id),
         "guild": bson_id!(guild_id),
     };
 
@@ -51,7 +48,7 @@ pub async fn wallet(
         "<None>".clone_into(&mut description);
     }
 
-    let (display_name, face) = get_display_info(&ctx);
+    let (display_name, face) = get_display_info(ctx);
     let author = format!("{display_name}: Wallet");
     let author = CreateEmbedAuthor::new(author).icon_url(face);
 
@@ -64,15 +61,15 @@ pub async fn wallet(
     Ok(())
 }
 
-fn get_display_info<'a>(ctx: &HContext<'a>) -> (&'a str, String) {
+fn get_display_info(ctx: Context<'_>) -> (&str, String) {
     match &ctx.interaction.member {
         Some(member) => (
             member.display_name(),
             member.face(),
         ),
         _ => (
-            ctx.author().display_name(),
-            ctx.author().face(),
+            ctx.user().display_name(),
+            ctx.user().face(),
         )
     }
 }

@@ -1,22 +1,19 @@
-use anyhow::Context as _;
-
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
 /// Pin this message.
-#[poise::command(
-    context_menu_command = "[pin/overridden]",
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[context_command(
+    name = "[pin/overridden]",
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn pushpin_pin(
-    ctx: HContext<'_>,
-    message: Message,
-) -> HResult {
+    ctx: Context<'_>,
+    message: &Message,
+) -> Result {
     let data = ctx.data_ref();
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
 
@@ -27,10 +24,10 @@ pub async fn pushpin_pin(
 
         ctx.send(CreateReply::new().embed(embed).ephemeral(true)).await?;
     } else {
-        ctx.defer_ephemeral().await?;
+        ctx.defer_as(Ephemeral).await?;
 
         Wallet::collection(db)
-            .take_items(guild_id, ctx.author().id, Item::Pushpin, 1, perks)
+            .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
         match message.pin(ctx.http(), Some("pinned by pushpin item")).await {
@@ -48,7 +45,7 @@ pub async fn pushpin_pin(
             }
             Err(_) => {
                 Wallet::collection(db)
-                    .add_items(guild_id, ctx.author().id, Item::Pushpin, 1)
+                    .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
                     .await?;
 
                 let embed = CreateEmbed::new()
@@ -64,18 +61,17 @@ pub async fn pushpin_pin(
 }
 
 /// Unpin this message.
-#[poise::command(
-    context_menu_command = "[unpin/overridden]",
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
+#[context_command(
+    name = "[unpin/overridden]",
+    contexts = "Guild",
+    integration_types = "Guild",
 )]
 pub async fn pushpin_unpin(
-    ctx: HContext<'_>,
-    message: Message,
-) -> HResult {
+    ctx: Context<'_>,
+    message: &Message,
+) -> Result {
     let data = ctx.data_ref();
-    let guild_id = ctx.guild_id().context("must be used in guild")?;
+    let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
     let db = data.database()?;
 
@@ -86,10 +82,10 @@ pub async fn pushpin_unpin(
 
         ctx.send(CreateReply::new().embed(embed).ephemeral(true)).await?;
     } else {
-        ctx.defer_ephemeral().await?;
+        ctx.defer_as(Ephemeral).await?;
 
         Wallet::collection(db)
-            .take_items(guild_id, ctx.author().id, Item::Pushpin, 1, perks)
+            .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
         match message.unpin(ctx.http(), Some("unpinned by pushpin item")).await {
@@ -107,7 +103,7 @@ pub async fn pushpin_unpin(
             }
             Err(_) => {
                 Wallet::collection(db)
-                    .add_items(guild_id, ctx.author().id, Item::Pushpin, 1)
+                    .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
                     .await?;
 
                 let embed = CreateEmbed::new()

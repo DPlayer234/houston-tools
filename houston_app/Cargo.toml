@@ -35,6 +35,7 @@ tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 
 azur_lane = { path = "../azur_lane" }
+houston_cmd = { path = "../houston_cmd" }
 utils = { path = "../utils" }
 
 [dependencies.serenity]
@@ -44,14 +45,6 @@ default-features = false
 features = [
     "rustls_backend",
     "builder", "chrono", "framework", "gateway", "model", "http", "utils"
-]
-
-[dependencies.poise]
-git = "https://github.com/serenity-rs/poise.git"
-branch = "serenity-next"
-default-features = false
-features = [
-    "chrono", "handle_panics"
 ]
 
 [dependencies.config_rs]

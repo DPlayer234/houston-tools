@@ -18,6 +18,8 @@ async fn main() -> anyhow::Result<()> {
     use serenity::model::prelude::*;
     use serenity::prelude::*;
 
+    use houston_cmd::Framework;
+
     use data::*;
     use modules::Info;
 
@@ -45,16 +47,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let event_handler = HEventHandler {
-        commands: Mutex::new(Some(poise::builtins::create_application_commands(&init.commands))),
+        commands: Mutex::new(Some(init.commands.iter().map(|c| c.to_application_command()).collect())),
     };
 
-    let framework = HFramework::builder()
-        .options(poise::FrameworkOptions {
-            commands: init.commands,
-            pre_command: |ctx| Box::pin(slashies::pre_command(ctx)),
-            on_error: |err| Box::pin(slashies::error_handler(err)),
-            ..Default::default()
-        })
+    let framework = Framework::builder()
+        .commands(init.commands)
+        .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
+        .on_error(|err| Box::pin(slashies::error_handler(err)))
         .build();
 
     let mut client = Client::builder(&config.discord.token, init.intents)
@@ -84,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
-            let data = ctx.data::<HFrameworkData>();
+            let data = ctx.data::<HContextData>();
             data.set_current_user(ready.user);
 
             if let Some(commands) = self.take_commands() {

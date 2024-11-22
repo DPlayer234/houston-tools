@@ -1,18 +1,16 @@
 use std::fmt;
 
-use crate::prelude::*;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged into multiple devices.
-#[poise::command(
-    slash_command,
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[chat_command(
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn upload(
-    ctx: HContext<'_>,
+    ctx: Context<'_>,
     #[description = "The file to upload."]
-    attachment: Attachment,
-) -> HResult {
+    attachment: &Attachment,
+) -> Result {
     let description = format!(
         "**{}**\n> {}",
         attachment.filename,
@@ -28,7 +26,7 @@ pub async fn upload(
     }
 
     let buttons = [
-        CreateButton::new_link(attachment.url)
+        CreateButton::new_link(attachment.url.as_str())
             .label("Download")
     ];
 

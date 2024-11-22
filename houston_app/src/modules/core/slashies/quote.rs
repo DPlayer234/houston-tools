@@ -1,25 +1,21 @@
 use std::fmt;
 
 use crate::fmt::discord::{get_unique_username, TimeMentionable};
-use crate::prelude::*;
-use crate::slashies::create_reply;
+use crate::slashies::prelude::*;
 
 /// Creates a copyable, quotable version of the message.
-#[poise::command(
-    context_menu_command = "Get as Quote",
-    interaction_context = "Guild | BotDm | PrivateChannel",
+#[context_command(
+    name = "Get as Quote",
+    contexts = "Guild | BotDm | PrivateChannel",
 )]
 pub async fn quote(
-    ctx: HContext<'_>,
-    mut message: Message,
-) -> HResult {
+    ctx: Context<'_>,
+    message: &Message,
+) -> Result {
     // seemingly not always correctly set for messages received in interactions
-    message.channel_id = ctx.channel_id();
-    message.guild_id = ctx.guild_id();
-
     let content = format!(
         "-# Quote: {t:x}\n```\n{t}\n```",
-        t = QuoteTarget::new(&message)
+        t = QuoteTarget::new(message, ctx.channel_id(), ctx.guild_id())
     );
 
     let embed = CreateEmbed::new()
@@ -32,20 +28,22 @@ pub async fn quote(
 
 struct QuoteTarget<'a> {
     message: &'a Message,
+    channel_id: ChannelId,
+    guild_id: Option<GuildId>,
 }
 
 impl<'a> QuoteTarget<'a> {
-    fn new(message: &'a Message) -> Self {
-        Self { message }
+    fn new(message: &'a Message, channel_id: ChannelId, guild_id: Option<GuildId>) -> Self {
+        Self { message, channel_id, guild_id }
     }
 }
 
 impl fmt::LowerHex for QuoteTarget<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let channel_id = self.message.channel_id;
+        let channel_id = self.channel_id;
         let message_id = self.message.id;
 
-        if let Some(guild_id) = self.message.guild_id {
+        if let Some(guild_id) = self.guild_id {
             write!(f, "https://discord.com/channels/{guild_id}/{channel_id}/{message_id}")
         } else {
             write!(f, "https://discord.com/channels/@me/{channel_id}/{message_id}")

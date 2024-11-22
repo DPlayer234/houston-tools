@@ -1,61 +1,56 @@
-use anyhow::Context;
-
 use super::BoardId;
-use crate::prelude::*;
+use crate::slashies::prelude::*;
 
-crate::slashies::command_group!(
-    /// Access starboard info.
-    pub starboard (
-        guild_only,
-        install_context = "Guild",
-        interaction_context = "Guild",
-    ),
-    "top", "top_posts",
-);
+/// Access starboard info.
+#[chat_command(
+    contexts = "Guild",
+    integration_types = "Guild",
+)]
+pub mod starboard {
+    /// Shows a board's top users.
+    #[sub_command]
+    async fn top(
+        ctx: Context<'_>,
+        #[description = "What board to look for."]
+        #[autocomplete = "autocomplete_board"]
+        board: u64,
+        #[description = "Whether to show the response only to yourself."]
+        ephemeral: Option<bool>,
+    ) -> Result {
+        use super::buttons::top::View;
 
-/// Shows a board's top users.
-#[poise::command(slash_command)]
-async fn top(
-    ctx: HContext<'_>,
-    #[description = "What board to look for."]
-    #[autocomplete = "autocomplete_board"]
-    board: u64,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
-) -> HResult {
-    use super::buttons::top::View;
+        let (guild, board) = find_board(ctx, board)?;
+        let view = View::new(guild, board);
 
-    let (guild, board) = find_board(&ctx, board)?;
-    let view = View::new(guild, board);
+        ctx.defer_as(ephemeral).await?;
+        ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
 
-    ctx.defer_as(ephemeral).await?;
-    ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
+        Ok(())
+    }
 
-    Ok(())
+    /// Shows the most-reacted posts in a board.
+    #[sub_command(name = "top-posts")]
+    async fn top_posts(
+        ctx: Context<'_>,
+        #[description = "What board to look for."]
+        #[autocomplete = "autocomplete_board"]
+        board: u64,
+        #[description = "Whether to show the response only to yourself."]
+        ephemeral: Option<bool>,
+    ) -> Result {
+        use super::buttons::top_posts::View;
+
+        let (guild, board) = find_board(ctx, board)?;
+        let view = View::new(guild, board);
+
+        ctx.defer_as(ephemeral).await?;
+        ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
+
+        Ok(())
+    }
 }
 
-/// Shows the most-reacted posts in a board.
-#[poise::command(slash_command, rename = "top-posts")]
-async fn top_posts(
-    ctx: HContext<'_>,
-    #[description = "What board to look for."]
-    #[autocomplete = "autocomplete_board"]
-    board: u64,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
-) -> HResult {
-    use super::buttons::top_posts::View;
-
-    let (guild, board) = find_board(&ctx, board)?;
-    let view = View::new(guild, board);
-
-    ctx.defer_as(ephemeral).await?;
-    ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
-
-    Ok(())
-}
-
-fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, BoardId)> {
+fn find_board(ctx: Context<'_>, board: u64) -> anyhow::Result<(GuildId, BoardId)> {
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 
@@ -75,7 +70,7 @@ fn find_board(ctx: &HContext<'_>, board: u64) -> anyhow::Result<(GuildId, BoardI
 }
 
 async fn autocomplete_board<'a>(
-    ctx: HContext<'a>,
+    ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
     if let Some(guild_id) = ctx.guild_id() {

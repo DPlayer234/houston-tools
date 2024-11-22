@@ -2,11 +2,13 @@ use std::borrow::Cow;
 
 use serenity::builder::{AutocompleteChoice, CreateAutocompleteResponse};
 
-use crate::data::{HContext, HContextExtensions};
+use houston_cmd::Context;
+
+use crate::slashies::ContextExt;
 
 macro_rules! make_autocomplete {
     ($fn_name:ident, $by_prefix:ident, $id:ident) => {
-        pub async fn $fn_name<'a>(ctx: HContext<'a>, partial: &'a str) -> CreateAutocompleteResponse<'a> {
+        pub async fn $fn_name<'a>(ctx: Context<'a>, partial: &'a str) -> CreateAutocompleteResponse<'a> {
             let choices: Vec<_> = ctx
                 .data_ref()
                 .azur_lane()
