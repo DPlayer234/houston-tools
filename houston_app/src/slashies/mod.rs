@@ -58,6 +58,10 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
         houston_cmd::Error::Command { error, ctx } => {
             command_error(ctx, error).await
         },
+        houston_cmd::Error::ArgInvalid { message, ctx } => {
+            let msg = format!("Argument invalid: {}", message);
+            context_error(ctx, msg.into()).await
+        },
         houston_cmd::Error::ArgumentParse { error, input, ctx } => {
             let msg = match input {
                 Some(input) => format!("Argument invalid: {}\nCaused by input: '{}'", error, input),

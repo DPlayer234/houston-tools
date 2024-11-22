@@ -188,7 +188,7 @@ pub mod perk_admin {
         #[description = "The member to give items to."]
         member: SlashMember<'_>,
         #[description = "The role to set as being unique to them."]
-        role: Option<Role>,
+        role: Option<&Role>,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;

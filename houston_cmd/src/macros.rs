@@ -1,3 +1,4 @@
+/// Parses a slash argument from a context by its name and type.
 #[macro_export]
 macro_rules! parse_slash_argument {
     ($ctx:expr, $name:literal, Option<$ty:ty>) => {
@@ -15,7 +16,11 @@ macro_rules! parse_slash_argument {
     }};
 }
 
+/// Creates the base data needed for a slash argument.
+///
+/// This exists only to support the macro infrastructure and isn't considered public API.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! create_slash_argument {
     (Option<$ty:ty>, $($setter:tt)*) => {
         $crate::create_slash_argument!(@internal $ty, false, $($setter)*)
@@ -35,6 +40,8 @@ macro_rules! create_slash_argument {
     };
 }
 
+/// Implements the necessary traits to allow a [`UserContextArg`](crate::UserContextArg)
+/// to actually work as a [`#[context_command]`](crate::context_command) parameter.
 #[macro_export]
 macro_rules! impl_user_context_arg {
     ($l:lifetime $ty:ty) => {
@@ -55,6 +62,8 @@ macro_rules! impl_user_context_arg {
     };
 }
 
+/// Implements the necessary traits to allow a [`MessageContextArg`](crate::MessageContextArg)
+/// to actually work as a [`#[context_command]`](crate::context_command) parameter.
 #[macro_export]
 macro_rules! impl_message_context_arg {
     ($l:lifetime $ty:ty) => {
@@ -74,6 +83,7 @@ macro_rules! impl_message_context_arg {
     };
 }
 
+/// Implements [`SlashArg`](crate::SlashArg) via a type's [`FromStr`](std::str::FromStr) implementations.
 #[macro_export]
 macro_rules! impl_slash_arg_via_from_str {
     ($ty:ty) => {

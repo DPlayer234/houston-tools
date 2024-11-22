@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.0.1"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -1100,7 +1100,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "derivative",
@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd_macros"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "darling",
  "proc-macro2",

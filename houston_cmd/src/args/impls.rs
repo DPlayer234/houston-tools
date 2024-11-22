@@ -54,26 +54,18 @@ impl_slash!('ctx f32 => |_, Number(x)| x as f32);
 impl_slash!('ctx f64 => |_, Number(x)| x);
 impl_slash!('ctx i64 => |_, Integer(x)| x);
 impl_slash!('ctx bool => |_, Boolean(x)| x);
-impl_slash!('ctx String => |_, String(x)| x.to_owned());
 impl_slash!('ctx &'ctx str => |_, String(x)| x);
-impl_slash!('ctx User => |_, User(user, _)| user.clone());
 impl_slash!('ctx &'ctx User => |_, User(user, _)| user);
-impl_slash!('ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| Error::slash_arg_invalid(*ctx, "unknown server member"))?.clone());
-impl_slash!('ctx &'ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| Error::slash_arg_invalid(*ctx, "unknown server member"))?);
-impl_slash!('ctx Role => |_, Role(role)| role.clone());
+impl_slash!('ctx &'ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?);
 impl_slash!('ctx &'ctx Role => |_, Role(role)| role);
-impl_slash!('ctx PartialChannel => |_, Channel(channel)| channel.clone());
 impl_slash!('ctx &'ctx PartialChannel => |_, Channel(channel)| channel);
-impl_slash!('ctx Attachment => |_, Attachment(attachment)| attachment.clone());
 impl_slash!('ctx &'ctx Attachment => |_, Attachment(attachment)| attachment);
 
-impl_slash!('ctx (User, Option<PartialMember>) => |_, User(user, member)| (user.clone(), member.cloned()));
 impl_slash!('ctx (&'ctx User, Option<&'ctx PartialMember>) => |_, User(user, member)| (user, member));
 
-impl_user_context!('ctx User => |_, user, _| user.clone());
 impl_user_context!('ctx &'ctx User => |_, user, _| user);
+impl_user_context!('ctx (&'ctx User, Option<&'ctx PartialMember>) => |_, user, member| (user, member));
 
-impl_message_context!('ctx Message => |_, message| message.clone());
 impl_message_context!('ctx &'ctx Message => |_, message| message);
 
 macro_rules! impl_slash_int {

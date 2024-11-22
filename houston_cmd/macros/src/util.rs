@@ -48,7 +48,7 @@ impl Fold for FoldLifetimeAsStatic {
 macro_rules! ensure_spanned {
     ($span:expr, $cond:expr => $($t:tt)*) => {
         if !$cond {
-            return Err(syn::Error::new_spanned($span, format_args!($(t)*)))
+            return Err(syn::Error::new_spanned($span, format_args!($($t)*)))
         }
     };
 }

@@ -30,6 +30,7 @@ pub struct Command {
     pub data: CommandOption,
 }
 
+/// Contains the data for a command or command-group.
 #[derive(Derivative)]
 #[derivative(Debug(bound=""), Clone(bound=""))]
 pub struct CommandOption {
@@ -102,7 +103,10 @@ impl From<SubCommandData> for CommandOptionData {
 }
 
 impl Command {
-    pub fn to_application_command(&self) -> CreateCommand<'static> {
+    /// Builds a [`CreateCommand`] instance from this value.
+    ///
+    /// Also see [`crate::to_create_command`] which allows bulk-converting them.
+    pub fn to_create_command(&self) -> CreateCommand<'static> {
         let mut command = CreateCommand::new(self.data.name.clone())
             .nsfw(self.nsfw);
 
@@ -122,7 +126,7 @@ impl Command {
             CommandOptionData::Group(group) => {
                 command = command.description(self.data.description.clone());
                 for sub_command in group.sub_commands.iter() {
-                    command = command.add_option(sub_command.to_application_option());
+                    command = command.add_option(sub_command.to_create_command_option());
                 }
             },
             CommandOptionData::Command(cmd) => {
@@ -133,7 +137,7 @@ impl Command {
                 };
 
                 for param in cmd.parameters.iter() {
-                    command = command.add_option(param.to_application_option());
+                    command = command.add_option(param.to_create_command_option());
                 }
             },
         }
@@ -143,20 +147,21 @@ impl Command {
 }
 
 impl CommandOption {
-    fn to_application_option(&self) -> CreateCommandOption<'static> {
+    /// Builds a [`CreateCommandOption`] instance from this value.
+    fn to_create_command_option(&self) -> CreateCommandOption<'static> {
         let mut command = CreateCommandOption::new(CommandOptionType::SubCommandGroup, self.name.clone(), self.description.clone());
 
         match &self.data {
             CommandOptionData::Group(group) => {
                 command = command.kind(CommandOptionType::SubCommandGroup);
                 for sub_command in group.sub_commands.iter() {
-                    command = command.add_sub_option(sub_command.to_application_option());
+                    command = command.add_sub_option(sub_command.to_create_command_option());
                 }
             },
             CommandOptionData::Command(cmd) => {
                 command = command.kind(CommandOptionType::SubCommand);
                 for param in cmd.parameters.iter() {
-                    command = command.add_sub_option(param.to_application_option());
+                    command = command.add_sub_option(param.to_create_command_option());
                 }
             },
         }
@@ -166,7 +171,8 @@ impl CommandOption {
 }
 
 impl Parameter {
-    pub fn to_application_option(&self) -> CreateCommandOption<'static> {
+    /// Builds a [`CreateCommandOption`] instance from this value.
+    pub fn to_create_command_option(&self) -> CreateCommandOption<'static> {
         let mut option = CreateCommandOption::new(CommandOptionType::String, self.name.clone(), self.description.clone())
             .required(self.required)
             .set_autocomplete(self.autocomplete.is_some());

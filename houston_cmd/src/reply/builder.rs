@@ -6,6 +6,8 @@ use serenity::builder::{
     EditInteractionResponse,
 };
 
+/// Allows building a reply to an interaction, abstracting away
+/// the differences between initial responses, follow-ups, and edits.
 #[derive(Debug, Default, Clone)]
 pub struct CreateReply<'a> {
     content: Option<Cow<'a, str>>,
@@ -17,6 +19,7 @@ pub struct CreateReply<'a> {
 }
 
 impl<'a> CreateReply<'a> {
+    /// Creates a new empty builder.
     pub fn new() -> Self {
         Self::default()
     }
@@ -27,17 +30,13 @@ impl<'a> CreateReply<'a> {
         self
     }
 
-    /// Adds an embed to the message.
-    ///
-    /// Existing embeds are kept.
+    /// Adds a new embed to the message.
     pub fn embed(mut self, embed: CreateEmbed<'a>) -> Self {
         self.embeds.push(embed);
         self
     }
 
-    /// Set components (buttons and select menus) for this message.
-    ///
-    /// Any previously set components will be overwritten.
+    /// Set components for this message.
     pub fn components(
         mut self,
         components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
@@ -52,25 +51,21 @@ impl<'a> CreateReply<'a> {
         self
     }
 
-    /// Toggles whether the message is an ephemeral response (only invoking user can see it).
+    /// Sets whether the message is ephemeral.
     ///
-    /// This only has an effect in slash commands!
+    /// This has no effect on edits.
     pub fn ephemeral(mut self, ephemeral: bool) -> Self {
         self.ephemeral = Some(ephemeral);
         self
     }
 
     /// Set the allowed mentions for the message.
-    ///
-    /// See [`serenity::CreateAllowedMentions`] for more information.
-    pub fn allowed_mentions(
-        mut self,
-        allowed_mentions: CreateAllowedMentions<'a>,
-    ) -> Self {
+    pub fn allowed_mentions(mut self, allowed_mentions: CreateAllowedMentions<'a>) -> Self {
         self.allowed_mentions = Some(allowed_mentions);
         self
     }
 
+    /// Creates an interaction response message from the builder.
     pub fn into_interaction_response(self) -> CreateInteractionResponseMessage<'a> {
         let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
 
@@ -94,6 +89,7 @@ impl<'a> CreateReply<'a> {
         builder
     }
 
+    /// Creates an interaction followup from the builder.
     pub fn into_interaction_followup(self) -> CreateInteractionResponseFollowup<'a> {
         let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
 
@@ -117,6 +113,7 @@ impl<'a> CreateReply<'a> {
         builder
     }
 
+    /// Creates an interaction edit from the builder.
     pub fn into_interaction_edit(self) -> EditInteractionResponse<'a> {
         let Self { content, embeds, attachments, components, ephemeral: _, allowed_mentions } = self;
 

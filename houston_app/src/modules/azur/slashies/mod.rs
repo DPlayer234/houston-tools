@@ -35,7 +35,7 @@ pub mod azur {
     async fn search_ship(
         ctx: Context<'_>,
         #[description = "A name to search for."]
-        name: Option<String>,
+        name: Option<&str>,
         #[description = "The faction to select."]
         faction: Option<EFaction>,
         #[description = "The hull type to select."]
@@ -54,7 +54,7 @@ pub mod azur {
         let data = ctx.data_ref();
 
         let filter = Filter {
-            name,
+            name: name.map(str::to_owned),
             faction: faction.map(EFaction::convert),
             hull_type: hull_type.map(EHullType::convert),
             rarity: rarity.map(EShipRarity::convert),
@@ -90,7 +90,7 @@ pub mod azur {
     async fn search_equip(
         ctx: Context<'_>,
         #[description = "A name to search for."]
-        name: Option<String>,
+        name: Option<&str>,
         #[description = "The faction to select."]
         faction: Option<EFaction>,
         #[description = "The kind to select."]
@@ -105,7 +105,7 @@ pub mod azur {
         let data = ctx.data_ref();
 
         let filter = Filter {
-            name,
+            name: name.map(str::to_owned),
             faction: faction.map(EFaction::convert),
             kind: kind.map(EEquipKind::convert),
             rarity: rarity.map(EEquipRarity::convert),
@@ -140,7 +140,7 @@ pub mod azur {
     async fn search_augment(
         ctx: Context<'_>,
         #[description = "A name to search for."]
-        name: Option<String>,
+        name: Option<&str>,
         #[description = "The allowed hull type."]
         #[name = "hull-type"]
         hull_type: Option<EHullType>,
@@ -149,7 +149,7 @@ pub mod azur {
         #[description = "The name of the ship it is uniquely for."]
         #[autocomplete = "autocomplete::ship_name"]
         #[name = "for-ship"]
-        for_ship: Option<String>,
+        for_ship: Option<&str>,
         #[description = "Whether to show the response only to yourself."]
         ephemeral: Option<bool>,
     ) -> Result {
@@ -158,12 +158,12 @@ pub mod azur {
         let data = ctx.data_ref();
 
         let unique_ship_id = match for_ship {
-            Some(for_ship) => Some(find::ship(data, &for_ship)?.group_id),
+            Some(for_ship) => Some(find::ship(data, for_ship)?.group_id),
             None => None,
         };
 
         let filter = Filter {
-            name,
+            name: name.map(str::to_owned),
             hull_type: hull_type.map(EHullType::convert),
             rarity: rarity.map(EAugmentRarity::convert),
             unique_ship_id,

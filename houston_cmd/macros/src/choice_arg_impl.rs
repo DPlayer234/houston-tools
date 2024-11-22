@@ -2,8 +2,9 @@ use darling::ast::NestedMeta;
 use darling::FromMeta;
 use proc_macro2::TokenStream;
 use syn::ext::IdentExt;
-use syn::spanned::Spanned;
 use syn::{Data, Fields};
+
+use crate::util::ensure_spanned;
 
 #[derive(Debug, darling::FromMeta)]
 struct VariantArgs {
@@ -12,7 +13,7 @@ struct VariantArgs {
 
 pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let Data::Enum(data) = input.data else {
-        return Err(syn::Error::new(input.span(), "choice args must be enums"));
+        return Err(syn::Error::new_spanned(input, "choice args must be enums"));
     };
 
     let mut names = Vec::new();
@@ -20,7 +21,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
 
     for variant in data.variants {
         if !matches!(variant.fields, Fields::Unit) {
-            return Err(syn::Error::new(variant.span(), "choice arg variants cannot have fields"));
+            return Err(syn::Error::new_spanned(variant, "choice arg variants cannot have fields"));
         }
 
         let attrs: Vec<_> = variant.attrs
@@ -29,7 +30,10 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             .collect();
         let attrs = VariantArgs::from_list(&attrs)?;
 
-        names.push(attrs.name.unwrap_or_else(|| variant.ident.unraw().to_string()));
+        let name = attrs.name.unwrap_or_else(|| variant.ident.unraw().to_string());
+        ensure_spanned!(variant.ident, (1..=100).contains(&name.chars().count()) => "the name must be 1 to 100 characters long");
+
+        names.push(name);
         idents.push(variant.ident);
     }
 

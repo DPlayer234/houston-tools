@@ -6,6 +6,8 @@ use crate::context::Context;
 
 use super::CreateReply;
 
+/// Represents a handle to a sent interaction response or follow-up,
+/// allowing edits or deletion.
 #[derive(Debug, Clone, Copy)]
 pub struct ReplyHandle<'a> {
     http: &'a Http,
@@ -20,7 +22,7 @@ enum Target {
 }
 
 impl<'a> ReplyHandle<'a> {
-    pub fn original(ctx: Context<'a>) -> Self {
+    pub(crate) fn original(ctx: Context<'a>) -> Self {
         Self {
             http: ctx.http(),
             interaction: ctx.interaction,
@@ -28,7 +30,7 @@ impl<'a> ReplyHandle<'a> {
         }
     }
 
-    pub fn followup(ctx: Context<'a>, message_id: MessageId) -> Self {
+    pub(crate) fn followup(ctx: Context<'a>, message_id: MessageId) -> Self {
         Self {
             http: ctx.http(),
             interaction: ctx.interaction,
@@ -36,6 +38,7 @@ impl<'a> ReplyHandle<'a> {
         }
     }
 
+    /// Delete the message.
     pub async fn delete(self) -> serenity::Result<()> {
         match self.target {
             Target::Original => self.interaction.delete_response(self.http).await?,
@@ -45,6 +48,9 @@ impl<'a> ReplyHandle<'a> {
         Ok(())
     }
 
+    /// Edit the message.
+    ///
+    /// You cannot edit whether a message is ephemeral.
     pub async fn edit(self, reply: CreateReply<'_>) -> serenity::Result<()> {
         match self.target {
             Target::Original => {

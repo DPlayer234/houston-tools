@@ -62,7 +62,7 @@ pub async fn wallet(
 }
 
 fn get_display_info(ctx: Context<'_>) -> (&str, String) {
-    match &ctx.interaction.member {
+    match ctx.member() {
         Some(member) => (
             member.display_name(),
             member.face(),

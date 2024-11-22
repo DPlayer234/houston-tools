@@ -3,11 +3,10 @@ use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::ext::IdentExt;
-use syn::spanned::Spanned;
 use syn::{FnArg, ItemFn, Pat, Type};
 
 use crate::args::ParameterArgs;
-use crate::util::{extract_description, quote_map_option};
+use crate::util::{ensure_spanned, extract_description, quote_map_option};
 
 struct Parameter {
     name: String,
@@ -40,7 +39,11 @@ pub fn to_command_option_command(func: &mut ItemFn, name: Option<String>) -> syn
     let func_ident = &func.sig.ident;
     let name = name.unwrap_or_else(|| func.sig.ident.unraw().to_string());
     let description = extract_description(&func.attrs)
-        .ok_or_else(|| syn::Error::new(func.span(), "a description is required, add a doc comment"))?;
+        .ok_or_else(|| syn::Error::new_spanned(&func, "a description is required, add a doc comment"))?;
+
+    ensure_spanned!(func, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
+    ensure_spanned!(func, (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
+    ensure_spanned!(func, (0..=25).contains(&parameters.len()) => "there must be at most 25 parameters");
 
     Ok(quote::quote! {
         ::houston_cmd::model::CommandOption {
@@ -73,7 +76,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
     for input in func.sig.inputs.iter_mut().skip(1) {
         let input = match input {
             FnArg::Typed(x) => x,
-            FnArg::Receiver(receiver) => return Err(syn::Error::new(receiver.span(), "invalid self argument")),
+            FnArg::Receiver(receiver) => return Err(syn::Error::new_spanned(receiver, "invalid self argument")),
         };
 
         let args = input.attrs
@@ -87,8 +90,11 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
         } else if let Pat::Ident(ident) = &*input.pat {
             ident.ident.unraw().to_string()
         } else {
-            return Err(syn::Error::new(input.pat.span(), "#[name = ...] must be specified for pattern parameters"));
+            return Err(syn::Error::new_spanned(&input.pat, "#[name = ...] must be specified for pattern parameters"));
         };
+
+        ensure_spanned!(input, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
+        ensure_spanned!(input, (1..=100).contains(&args.description.chars().count()) => "the description must be 1 to 100 characters long");
 
         parameters.push(Parameter {
             name,

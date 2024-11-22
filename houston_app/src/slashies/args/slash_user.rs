@@ -51,7 +51,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
         match *resolved {
             ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member }),
             // delegate to this method to get the correct error
-            _ => drop(<PartialMember as SlashArg>::extract(ctx, resolved)?)
+            _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?)
         }
 
         // this is functionally unreachable
@@ -69,7 +69,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         user: &'ctx User,
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
-        let member = member.ok_or_else(|| Error::slash_arg_invalid(*ctx, "unknown server member"))?;
+        let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
         Ok(Self { user, member })
     }
 }

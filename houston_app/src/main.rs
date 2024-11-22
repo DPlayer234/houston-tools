@@ -47,14 +47,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let event_handler = HEventHandler {
-        commands: Mutex::new(Some(init.commands.iter().map(|c| c.to_application_command()).collect())),
+        commands: Mutex::new(Some(houston_cmd::to_create_command(&init.commands))),
     };
 
-    let framework = Framework::builder()
+    let framework = Framework::new()
         .commands(init.commands)
         .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
-        .on_error(|err| Box::pin(slashies::error_handler(err)))
-        .build();
+        .on_error(|err| Box::pin(slashies::error_handler(err)));
 
     let mut client = Client::builder(&config.discord.token, init.intents)
         .activity(ActivityData::custom(

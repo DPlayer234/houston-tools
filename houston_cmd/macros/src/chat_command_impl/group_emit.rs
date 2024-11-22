@@ -3,19 +3,18 @@ use std::mem::take;
 use darling::FromMeta;
 use proc_macro2::TokenStream;
 use syn::ext::IdentExt;
-use syn::spanned::Spanned;
 use syn::{Attribute, Item, ItemMod, Meta};
 
 use super::command_emit::to_command_option_command;
 
 use crate::args::SubCommandArgs;
-use crate::util::extract_description;
+use crate::util::{ensure_spanned, extract_description};
 
 pub fn to_command_option_group(module: &mut ItemMod, name: Option<String>) -> syn::Result<TokenStream> {
-    let span = module.span();
-    let content_src = &mut module.content.as_mut()
-        .ok_or_else(|| syn::Error::new(span, "command must have a body"))?
-        .1;
+    let content_src = match module.content.as_mut() {
+        Some(content) => &mut content.1,
+        None => return Err(syn::Error::new_spanned(module, "command must have a body")),
+    };
 
     let content = take(content_src);
     let mut use_items = Vec::new();
@@ -28,27 +27,31 @@ pub fn to_command_option_group(module: &mut ItemMod, name: Option<String>) -> sy
                 let tokens = to_command_option_command(&mut item, args.name)?;
                 sub_commands.push(tokens);
             } else {
-                return Err(syn::Error::new(item.span(), "function must be attributed with #[sub_command]"));
+                return Err(syn::Error::new_spanned(item, "function must be attributed with #[sub_command]"));
             },
             Item::Mod(mut item) => if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
                 let args = parse_sub_command_args(&attr.meta)?;
                 let tokens = to_command_option_group(&mut item, args.name)?;
                 sub_commands.push(tokens);
             } else {
-                return Err(syn::Error::new(item.span(), "group must be attributed with #[sub_command]"));
+                return Err(syn::Error::new_spanned(item, "group must be attributed with #[sub_command]"));
             },
             Item::Use(item) => use_items.push(item),
-            _ => return Err(syn::Error::new(item.span(), "only `use`, `fn`, and `mod` items are allowed in a #[chat_command]")),
+            _ => return Err(syn::Error::new_spanned(item, "only `use`, `fn`, and `mod` items are allowed in a #[chat_command]")),
         }
     }
 
     if sub_commands.is_empty() {
-        return Err(syn::Error::new(span, "command group must have at least one #[sub_command] function"));
+        return Err(syn::Error::new_spanned(module, "command group must have at least one #[sub_command] function"));
     }
 
     let name = name.unwrap_or_else(|| module.ident.unraw().to_string());
     let description = extract_description(&module.attrs)
-        .ok_or_else(|| syn::Error::new(module.span(), "a description is required, add a doc comment"))?;
+        .ok_or_else(|| syn::Error::new_spanned(&module, "a description is required, add a doc comment"))?;
+
+    ensure_spanned!(module, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
+    ensure_spanned!(module, (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
+    ensure_spanned!(module, (1..=25).contains(&sub_commands.len()) => "there must be 1 to 25 sub commands");
 
     Ok(quote::quote! {{
         #(#use_items)*

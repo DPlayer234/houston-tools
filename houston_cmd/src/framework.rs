@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::mem::take;
 use std::sync::atomic::AtomicBool;
 
@@ -15,8 +17,12 @@ use crate::BoxFuture;
 type PreCommandFn = fn(Context<'_>) -> BoxFuture<'_, ()>;
 type OnErrorFn = fn(Error<'_>) -> BoxFuture<'_, ()>;
 
+/// The command framework itself.
+///
+/// Can be registered to serenity's client.
+#[derive(Debug, Default)]
 pub struct Framework {
-    commands: Vec<Command>,
+    commands: HashMap<Cow<'static, str>, Command>,
     pre_command: Option<PreCommandFn>,
     on_error: Option<OnErrorFn>,
 }
@@ -41,9 +47,38 @@ impl SerenityFramework for Framework {
 }
 
 impl Framework {
+    /// Constructs a new empty framework.
+    ///
+    /// At minimum, you should call [`Self::commands`] to register the supported commands.
     #[must_use]
-    pub fn builder() -> FrameworkBuilder {
-        FrameworkBuilder::default()
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Registers the list of commands.
+    ///
+    /// Repeated calls replace the entire list.
+    #[must_use]
+    pub fn commands(mut self, commands: impl IntoIterator<Item = Command>) -> Self {
+        self.commands = commands
+            .into_iter()
+            .map(|c| (c.data.name.clone(), c))
+            .collect();
+        self
+    }
+
+    /// Sets a function to call before every command invocation.
+    #[must_use]
+    pub fn pre_command(mut self, pre_command: PreCommandFn) -> Self {
+        self.pre_command = Some(pre_command);
+        self
+    }
+
+    /// Sets the error handler function.
+    #[must_use]
+    pub fn on_error(mut self, on_error: OnErrorFn) -> Self {
+        self.on_error = Some(on_error);
+        self
     }
 
     async fn handle_error(&self, why: Error<'_>) {
@@ -183,12 +218,7 @@ impl Framework {
         let mut options = data.options();
 
         // find the root command
-        let Some(root) = self.commands
-            .iter()
-            .find(|c| c.data.name == name)
-        else {
-            return Err("unknown command");
-        };
+        let root = self.commands.get(name).ok_or("unknown command")?;
 
         // traverse the command tree to find the correct sub command
         let mut command = &root.data;
@@ -219,46 +249,5 @@ impl Framework {
         };
 
         Ok((command, options))
-    }
-}
-
-pub struct FrameworkBuilder {
-    inner: Framework,
-}
-
-impl FrameworkBuilder {
-    #[must_use]
-    pub fn commands(mut self, commands: Vec<Command>) -> Self {
-        self.inner.commands = commands;
-        self
-    }
-
-    #[must_use]
-    pub fn pre_command(mut self, pre_command: PreCommandFn) -> Self {
-        self.inner.pre_command = Some(pre_command);
-        self
-    }
-
-    #[must_use]
-    pub fn on_error(mut self, on_error: OnErrorFn) -> Self {
-        self.inner.on_error = Some(on_error);
-        self
-    }
-
-    #[must_use]
-    pub fn build(self) -> Framework {
-        self.inner
-    }
-}
-
-impl Default for FrameworkBuilder {
-    fn default() -> Self {
-        Self {
-            inner: Framework {
-                commands: Vec::new(),
-                pre_command: None,
-                on_error: None,
-            }
-        }
     }
 }

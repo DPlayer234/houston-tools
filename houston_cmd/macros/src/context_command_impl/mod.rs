@@ -1,6 +1,5 @@
 use darling::FromMeta;
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 use syn::{FnArg, ItemFn};
 
 use crate::any_command_impl::to_command_shared;
@@ -12,7 +11,7 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStr
 
     let func: ItemFn = syn::parse2(item)?;
     if func.sig.asyncness.is_none() {
-        return Err(syn::Error::new(func.sig.span(), "command function must be async"));
+        return Err(syn::Error::new_spanned(func.sig, "command function must be async"));
     }
 
     let command_option = to_command_option_command(&func, args.name)?;
@@ -24,11 +23,11 @@ pub fn to_command_option_command(func: &ItemFn, name: String) -> syn::Result<Tok
 
     let inputs: Vec<_> = func.sig.inputs.iter().collect();
     let &[_, arg] = inputs.as_slice() else {
-        return Err(syn::Error::new(func.span(), "expected exacty 1 command argument"));
+        return Err(syn::Error::new_spanned(&func.sig, "expected exacty 1 command argument"));
     };
 
     let arg = match arg {
-        FnArg::Receiver(receiver) => return Err(syn::Error::new(receiver.span(), "invalid self argument")),
+        FnArg::Receiver(receiver) => return Err(syn::Error::new_spanned(receiver, "invalid self argument")),
         FnArg::Typed(x) => x,
     };
 
