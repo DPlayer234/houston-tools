@@ -9,6 +9,15 @@ pub mod perks;
 pub mod profile;
 pub mod starboard;
 
+mod prelude {
+    pub use serenity::prelude::*;
+
+    pub use super::Module as _;
+    pub(super) use super::HCommand;
+    pub use crate::prelude::*;
+    pub use crate::config::HBotConfig;
+}
+
 type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, Result>;
 type HCommand = houston_cmd::model::Command;
 

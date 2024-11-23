@@ -1,15 +1,10 @@
 use bson::{doc, Bson};
 use chrono::prelude::*;
 use chrono::TimeDelta;
-use serenity::futures::TryStreamExt;
-use serenity::prelude::*;
 use tokio::sync::RwLock;
 
-use super::HCommand;
-use super::Module as _;
-use crate::config::HBotConfig;
+use super::prelude::*;
 use crate::helper::bson::doc_object_id;
-use crate::prelude::*;
 
 // 2 minutes is about the minimum safe interval for constant role updates
 // we go a little higher since we use this interval for other stuff too

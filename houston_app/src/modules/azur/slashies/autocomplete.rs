@@ -1,10 +1,4 @@
-use std::borrow::Cow;
-
-use serenity::builder::{AutocompleteChoice, CreateAutocompleteResponse};
-
-use houston_cmd::Context;
-
-use crate::slashies::ContextExt;
+use crate::slashies::prelude::*;
 
 macro_rules! make_autocomplete {
     ($fn_name:ident, $by_prefix:ident, $id:ident) => {

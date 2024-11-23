@@ -1,5 +1,4 @@
 use bson::doc;
-use serenity::futures::TryStreamExt;
 
 use utils::text::write_str::*;
 

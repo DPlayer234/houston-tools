@@ -1,10 +1,6 @@
-use std::borrow::Cow;
 use std::sync::{LazyLock, OnceLock};
 
-use anyhow::Context as _;
 use serenity::http::Http;
-use serenity::model::Color;
-use serenity::model::user::CurrentUser;
 
 use crate::config::HBotConfig;
 
@@ -19,6 +15,7 @@ pub type HContextData = HBotData;
 pub use app_emojis::HAppEmojis;
 use crate::modules::azur::data::HAzurLane;
 use crate::modules::perks::PerkState;
+use crate::prelude::*;
 
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]

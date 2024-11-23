@@ -7,7 +7,7 @@ use serenity::async_trait;
 use serenity::builder::CreateInteractionResponse;
 use serenity::framework::Framework as SerenityFramework;
 use serenity::gateway::client::{Context as SerenityContext, FullEvent};
-use serenity::model::application::{CommandInteraction, CommandType, Interaction, ResolvedOption, ResolvedValue};
+use serenity::model::prelude::*;
 
 use crate::context::Context;
 use crate::error::Error;

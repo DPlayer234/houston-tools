@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
+use serenity::builder::*;
 
 pub use builder::CreateReply;
 pub use handle::ReplyHandle;

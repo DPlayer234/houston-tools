@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use serenity::prelude::*;
-
+use super::prelude::*;
 use super::starboard::config::StarboardEmoji;
-use crate::prelude::*;
 
 pub struct Module;
 

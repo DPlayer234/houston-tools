@@ -1,4 +1,4 @@
-use crate::config::HBotConfig;
+use super::prelude::*;
 
 pub mod buttons;
 mod slashies;

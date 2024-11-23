@@ -1,10 +1,6 @@
 use std::borrow::Cow;
 
-use serenity::builder::{
-    CreateActionRow, CreateAllowedMentions, CreateAttachment, CreateEmbed,
-    CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
-    EditInteractionResponse,
-};
+use serenity::builder::*;
 
 /// Allows building a reply to an interaction, abstracting away
 /// the differences between initial responses, follow-ups, and edits.

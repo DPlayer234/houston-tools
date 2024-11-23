@@ -1,8 +1,7 @@
 use bson::Bson;
-use serenity::gateway::client::Context;
 
 use super::config::{Config, EffectPrice};
-use crate::prelude::*;
+use crate::modules::prelude::*;
 
 pub mod rainbow_role;
 

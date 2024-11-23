@@ -1,7 +1,6 @@
 use bson::doc;
 use chrono::*;
 
-use serenity::futures::TryStreamExt;
 use utils::text::write_str::*;
 
 use crate::fmt::discord::TimeMentionable;

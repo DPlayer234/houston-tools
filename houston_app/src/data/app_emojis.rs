@@ -1,13 +1,12 @@
 use std::sync::LazyLock;
 
 use serenity::http::Http;
-use serenity::model::channel::ReactionType;
-use serenity::model::guild::Emoji;
 
 use azur_lane::ship::HullType;
 
 use super::HBotConfig;
 use crate::modules::Module;
+use crate::prelude::*;
 
 macro_rules! generate {
     ({ $($key:ident = $name:literal $(if $condition:expr)?;)* }) => {

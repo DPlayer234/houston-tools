@@ -2,10 +2,7 @@ use std::sync::atomic::AtomicBool;
 
 use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
-use serenity::model::application::{CommandInteraction, ResolvedOption};
-use serenity::model::id::{ChannelId, GuildId};
-use serenity::model::guild::Member;
-use serenity::model::user::User;
+use serenity::model::prelude::*;
 
 use crate::reply::CreateReply;
 use crate::ReplyHandle;

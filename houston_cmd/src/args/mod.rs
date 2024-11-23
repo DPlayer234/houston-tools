@@ -1,10 +1,7 @@
 use std::borrow::Cow;
 
 use serenity::builder::CreateCommandOption;
-use serenity::model::application::{CommandOptionType, ResolvedValue};
-use serenity::model::channel::{Attachment, Message, PartialChannel};
-use serenity::model::guild::{PartialMember, Role};
-use serenity::model::user::User;
+use serenity::model::prelude::*;
 
 mod impls;
 

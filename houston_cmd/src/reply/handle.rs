@@ -1,6 +1,5 @@
 use serenity::http::Http;
-use serenity::model::application::CommandInteraction;
-use serenity::model::id::MessageId;
+use serenity::model::prelude::*;
 
 use crate::context::Context;
 

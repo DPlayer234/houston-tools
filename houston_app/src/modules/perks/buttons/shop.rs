@@ -2,16 +2,14 @@ use bson::doc;
 
 use bson::Document;
 use chrono::{Utc, TimeDelta};
-use serenity::futures::TryStreamExt;
-use serenity::gateway::client::Context;
+use serenity::prelude::*;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::fmt::discord::TimeMentionable;
 use crate::helper::bson::bson_id;
 use crate::modules::perks::config::Config;
-use crate::modules::perks::effects::Args;
-use crate::modules::perks::effects::Effect;
+use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 

@@ -1,11 +1,10 @@
 //! Provides utilities for formatting Discord data.
 
-use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result};
 
 use chrono::prelude::*;
-use serenity::model::application::{ResolvedOption, ResolvedTarget, ResolvedValue};
-use serenity::model::user::User;
+
+use crate::prelude::*;
 
 /// Gets a unique username for this user.
 ///

@@ -1,12 +1,8 @@
 use std::borrow::Cow;
 
 use derivative::Derivative;
-use serenity::builder::{CreateAutocompleteResponse, CreateCommand, CreateCommandOption};
-use serenity::model::application::{CommandOptionType, CommandType, InstallationContext, InteractionContext};
-use serenity::model::channel::Message;
-use serenity::model::guild::PartialMember;
-use serenity::model::permissions::Permissions;
-use serenity::model::user::User;
+use serenity::builder::*;
+use serenity::model::prelude::*;
 
 use crate::context::Context;
 use crate::error::Error;

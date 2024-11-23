@@ -1,14 +1,10 @@
 use bson::doc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
-use serenity::futures::TryStreamExt;
-use serenity::prelude::*;
 
-use super::{HCommand, Module as _};
+use super::prelude::*;
 use crate::helper::bson::{bson_id, doc_object_id};
 use crate::helper::is_unique_set;
-use crate::prelude::*;
-use crate::config::HBotConfig;
 
 pub mod buttons;
 pub mod config;

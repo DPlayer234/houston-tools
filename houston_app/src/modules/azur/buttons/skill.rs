@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
