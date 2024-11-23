@@ -99,7 +99,7 @@ async fn load_emojis(ctx: &Http) -> anyhow::Result<Vec<Emoji>> {
 
 #[inline(never)]
 async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> anyhow::Result<ReactionType> {
-    let map = simd_json::json!({
+    let map = serde_json::json!({
         "name": name,
         "image": png_to_data_url(image_data),
     });

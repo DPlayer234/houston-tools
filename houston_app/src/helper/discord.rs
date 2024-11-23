@@ -18,7 +18,6 @@ pub fn create_string_select_menu_row<'a>(
     )
 }
 
-
 pub fn get_pagination_buttons<'a, T: ToCustomData>(
     obj: &mut T,
     page_field: impl utils::fields::FieldMut<T, u16>,

@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io;
 use std::path::{Component, Path, PathBuf};
 
 use bytes::Bytes;
@@ -40,7 +41,8 @@ impl HAzurLane {
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
             use anyhow::Context as _;
             let f = fs::File::open(data_path.join("main.json")).context("Failed to read Azur Lane data.")?;
-            let data = simd_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
+            let f = io::BufReader::new(f);
+            let data = serde_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
             Ok(data)
         }
 

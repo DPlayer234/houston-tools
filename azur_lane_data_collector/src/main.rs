@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::io;
 use std::io::Write;
 use std::path::Path;
 
@@ -83,6 +84,7 @@ fn main() -> anyhow::Result<()> {
 
         fs::create_dir_all(out_dir)?;
         let file = fs::File::create(Path::new(out_dir).join("main.json"))?;
+        let file = io::BufWriter::new(file);
         let mut action = log::ActionWrite::new(action, file);
         if cli.minimize {
             serde_json::to_writer(&mut action, &out_data)?;

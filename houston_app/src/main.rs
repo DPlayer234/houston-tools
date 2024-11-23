@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
         .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
         .on_error(|err| Box::pin(slashies::error_handler(err)));
 
-    let mut client = Client::builder(&config.discord.token, init.intents)
+    let mut client = Client::builder(config.discord.token, init.intents)
         .activity(ActivityData::custom(
             config.discord.status
                 .map(Cow::Owned)
