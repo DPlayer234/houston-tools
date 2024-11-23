@@ -1,4 +1,8 @@
 use super::config::{Config, ItemPrice};
+use super::effects::Args;
+use crate::modules::prelude::*;
+
+mod collectible;
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq,
@@ -11,13 +15,34 @@ pub enum Item {
     Collectible,
 }
 
+trait Shape {
+    async fn on_buy(&self, args: Args<'_>, owned: i64) -> Result {
+        _ = args;
+        _ = owned;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ItemInfo<'a> {
     pub name: &'a str,
     pub description: &'a str,
 }
 
+macro_rules! impl_kind_fn {
+    ($name:ident ( $($args:ident: $args_ty:ty),* ) -> $ret:ty) => {
+        pub async fn $name(self, $($args: $args_ty),*) -> $ret {
+            match self {
+                Self::Cash | Self::Pushpin | Self::RoleEdit => Ok(()),
+                Self::Collectible => collectible::Collectible.$name($($args),*).await,
+            }
+        }
+    };
+}
+
 impl Item {
+    impl_kind_fn!(on_buy(args: Args<'_>, owned: i64) -> Result);
+
     pub fn all() -> &'static [Self] {
         &[
             Self::Cash,

@@ -3,7 +3,15 @@ use bson::Bson;
 use super::config::{Config, EffectPrice};
 use crate::modules::prelude::*;
 
-pub mod rainbow_role;
+mod rainbow_role;
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq,
+    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
+)]
+pub enum Effect {
+    RainbowRole,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Args<'a> {
@@ -39,14 +47,6 @@ trait Shape {
         _ = ctx;
         Ok(())
     }
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq,
-    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
-)]
-pub enum Effect {
-    RainbowRole,
 }
 
 #[derive(Debug, Clone, Copy, Default)]

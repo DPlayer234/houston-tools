@@ -54,23 +54,17 @@ async fn profile_core(
         if let Some(unique_role) = perks_unique_role(ctx, member).await? {
             embed = embed.description(format!("-# <@&{unique_role}>"));
         }
-
-        if let Some(collection) = perks_collectible_info(ctx, member).await? {
-            embed = embed.field(
-                "Collection",
-                collection,
-                false,
-            );
-        }
     }
 
     if crate::modules::starboard::Module.enabled(data.config()) {
         if let Some(starboard) = starboard_info(ctx, member).await? {
-            embed = embed.field(
-                "Starboard",
-                starboard,
-                false,
-            );
+            embed = embed.field("Starboard", starboard, false);
+        }
+    }
+
+    if crate::modules::perks::Module.enabled(data.config()) {
+        if let Some(collection) = perks_collectible_info(ctx, member).await? {
+            embed = embed.field("Collection", collection, false);
         }
     }
 
@@ -129,10 +123,24 @@ async fn perks_collectible_info(
         .await?
         .unwrap_or_default();
 
-    Ok((wallet.crab != 0).then(|| format!(
+    if wallet.crab <= 0 {
+        return Ok(None);
+    }
+
+    let mut content = format!(
         "- **{}:** x{}",
         Item::Collectible.info(perks).name, wallet.crab,
-    )))
+    );
+
+    if let Some(guild_config) = perks.collectible.as_ref().and_then(|c| c.guilds.get(&guild_id)) {
+        for &(need, role) in &guild_config.prize_roles {
+            if wallet.crab >= need.into() {
+                write_str!(content, "\n-# - <@&{role}>");
+            }
+        }
+    }
+
+    Ok(Some(content))
 }
 
 async fn starboard_info(

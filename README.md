@@ -164,6 +164,21 @@ name = "Crab Plushy 🦀"
 description = "Necessary for every rustacean."
 cost = 4
 
+# you may also set prize roles for owning the collectible
+[bot.perks.collectible.1293210831923974204]
+# the notice part is optional
+# if set, you need both the channel and text
+notice.channel = 1293210831923974207
+notice.text = "Look, look! {user} reached {role}!"
+# these are pairs of (needed, role_id)
+# only checked on purchase
+prize_roles = [
+    [20, 1309970796516610119],
+    [40, 1309970817882259498],
+    [80, 1309970846491742339],
+    [160, 1309970845531246633],
+]
+
 # rainbow enables rainbow roles.
 # the color will only cycle when an event is received, at most once every 5 minutes.
 # duration is specified in hours (only integers).

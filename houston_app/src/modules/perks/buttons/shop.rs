@@ -326,9 +326,13 @@ impl View {
             .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
             .await?;
 
-        Wallet::collection(db)
+       let wallet =  Wallet::collection(db)
             .add_items(guild_id, user_id, item, st.amount.into())
             .await?;
+
+        let owned = wallet.item(item);
+        let args = Args::new(ctx, guild_id, user_id);
+        item.on_buy(args, owned).await?;
 
         self.action = Action::ViewItem(item);
         self.view_item(ctx, guild_id, user_id, item).await

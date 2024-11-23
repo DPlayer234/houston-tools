@@ -12,6 +12,7 @@ use crate::slashies::prelude::*;
 
 /// Managed active perks.
 #[chat_command(
+    name = "perk-admin",
     default_member_permissions = "MANAGE_GUILD",
     contexts = "Guild",
     integration_types = "Guild",

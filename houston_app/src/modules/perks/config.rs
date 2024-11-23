@@ -98,4 +98,18 @@ pub struct CollectibleConfig {
     pub description: String,
     #[serde(flatten)]
     pub price: ItemPrice,
+    #[serde(flatten)]
+    pub guilds: HashMap<GuildId, CollectibleGuildEntry>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CollectibleGuildEntry {
+    pub notice: Option<CollectibleNotice>,
+    pub prize_roles: Vec<(u32, RoleId)>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CollectibleNotice {
+    pub channel: ChannelId,
+    pub text: String,
 }
