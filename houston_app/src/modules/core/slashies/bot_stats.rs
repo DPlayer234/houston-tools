@@ -10,6 +10,7 @@ use crate::slashies::prelude::*;
 #[chat_command(
     name = "bot-stats",
     contexts = "BotDm",
+    integration_types = "Guild | User",
 )]
 pub async fn bot_stats(
     ctx: Context<'_>,

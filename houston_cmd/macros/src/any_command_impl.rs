@@ -10,6 +10,16 @@ pub fn to_command_shared(
     command_option: TokenStream,
     args: AnyCommandArgs,
 ) -> syn::Result<TokenStream> {
+    let warning = (args.contexts.is_none() || args.integration_types.is_none())
+        .then(|| quote::quote!{
+            #[allow(clippy::let_unit_binding)]
+            const _: () = {
+                #[deprecated(note = "specify both `contexts` and `integration_types`, discord's defaults can be faulty")]
+                const W: () = ();
+                _ = W;
+            };
+        });
+
     let contexts = quote_map_option(args.contexts, |c| {
         let c = c.into_iter();
         quote::quote! {
@@ -42,6 +52,7 @@ pub fn to_command_shared(
     let nsfw = args.nsfw;
 
     Ok(quote::quote! {
+        #warning
         #vis const fn #ident() -> ::houston_cmd::model::Command {
             const {
                 ::houston_cmd::model::Command {
@@ -54,18 +65,4 @@ pub fn to_command_shared(
             }
         }
     })
-
-    /*Ok(quote::quote! {
-        #vis const fn #ident() -> ::houston_cmd::model::Command {
-            const {
-                ::houston_cmd::model::Command {
-                    contexts: #contexts,
-                    integration_types: #integration_types,
-                    default_member_permissions: #permissions,
-                    nsfw: #nsfw,
-                    data: #command_option,
-                }
-            }
-        }
-    })*/
 }

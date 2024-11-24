@@ -8,6 +8,7 @@ use crate::slashies::prelude::*;
     message,
     name = "Get as Quote",
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub async fn quote(
     ctx: Context<'_>,

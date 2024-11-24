@@ -13,6 +13,7 @@ const SNOWFLAKE_INVALID: HArgError = HArgError::new_const("The Discord snowflake
 /// Provides methods for localized timestamps.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub mod timestamp {
     /// Gets a timestamp offset from the current time.

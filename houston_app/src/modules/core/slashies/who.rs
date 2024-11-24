@@ -11,6 +11,7 @@ use crate::slashies::prelude::*;
     user,
     name = "User Info",
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub async fn who_context(
     ctx: Context<'_>,
@@ -22,6 +23,7 @@ pub async fn who_context(
 /// Returns basic information about the provided user.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub async fn who(
     ctx: Context<'_>,

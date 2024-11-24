@@ -50,12 +50,6 @@ async fn profile_core(
         .author(author)
         .color(data.config().embed_color);
 
-    if crate::modules::perks::Module.enabled(data.config()) {
-        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
-            embed = embed.description(format!("-# <@&{unique_role}>"));
-        }
-    }
-
     if crate::modules::starboard::Module.enabled(data.config()) {
         if let Some(starboard) = starboard_info(ctx, member).await? {
             embed = embed.field("Starboard", starboard, false);
@@ -63,8 +57,12 @@ async fn profile_core(
     }
 
     if crate::modules::perks::Module.enabled(data.config()) {
-        if let Some(collection) = perks_collectible_info(ctx, member).await? {
-            embed = embed.field("Collection", collection, false);
+        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
+            embed = embed.description(format!("-# <@&{unique_role}>"));
+        }
+
+        if let Some(info) = perks_collectible_info(ctx, member).await? {
+            embed = embed.field("Collection", info, false);
         }
     }
 
@@ -78,7 +76,7 @@ async fn profile_core(
 async fn perks_unique_role(
     ctx: Context<'_>,
     member: SlashMember<'_>,
-) -> anyhow::Result<Option<RoleId>> {
+) -> Result<Option<RoleId>> {
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
@@ -104,7 +102,7 @@ async fn perks_unique_role(
 async fn perks_collectible_info(
     ctx: Context<'_>,
     member: SlashMember<'_>,
-) -> anyhow::Result<Option<String>> {
+) -> Result<Option<String>> {
     use crate::modules::perks::model;
     use crate::modules::perks::Item;
 
@@ -112,6 +110,10 @@ async fn perks_collectible_info(
     let db = data.database()?;
     let perks = data.config().perks()?;
     let guild_id = ctx.require_guild_id()?;
+
+    let Some(collectible) = perks.collectible.as_ref() else {
+        return Ok(None);
+    };
 
     let filter = doc! {
         "guild": bson_id!(guild_id),
@@ -123,19 +125,17 @@ async fn perks_collectible_info(
         .await?
         .unwrap_or_default();
 
-    if wallet.crab <= 0 {
-        return Ok(None);
-    }
-
     let mut content = format!(
-        "- **{}:** x{}",
+        "-# **{}:** x{}",
         Item::Collectible.info(perks).name, wallet.crab,
     );
 
-    if let Some(guild_config) = perks.collectible.as_ref().and_then(|c| c.guilds.get(&guild_id)) {
+    if let Some(guild_config) = collectible.guilds.get(&guild_id) {
         for &(need, role) in &guild_config.prize_roles {
             if wallet.crab >= need.into() {
-                write_str!(content, "\n-# - <@&{role}>");
+                write_str!(content, "\n- <@&{role}>");
+            } else {
+                write_str!(content, "\n-# - 🔒 ({need})")
             }
         }
     }
@@ -146,7 +146,7 @@ async fn perks_collectible_info(
 async fn starboard_info(
     ctx: Context<'_>,
     member: SlashMember<'_>,
-) -> anyhow::Result<Option<String>> {
+) -> Result<Option<String>> {
     use crate::modules::starboard::model;
 
     let data = ctx.data_ref();

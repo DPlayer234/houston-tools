@@ -12,6 +12,7 @@ use crate::slashies::prelude::*;
 /// Rolls some dice.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub async fn dice(
     ctx: Context<'_>,

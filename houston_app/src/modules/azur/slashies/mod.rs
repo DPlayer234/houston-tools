@@ -10,6 +10,7 @@ use choices::*;
 /// Information about mobile game Azur Lane.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
+    integration_types = "Guild | User",
 )]
 pub mod azur {
     /// Shows information about a ship.
