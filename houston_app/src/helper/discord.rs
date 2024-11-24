@@ -36,3 +36,31 @@ pub fn get_pagination_buttons<'a, T: ToCustomData>(
         }.emoji('▶'),
     ]))
 }
+
+/// Serializes a Discord ID as an [`u64`].
+pub mod id_as_u64 {
+    use serde::de::Error;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: From<u64>,
+    {
+        let int = u64::deserialize(deserializer)?;
+        if int != u64::MAX {
+            Ok(T::from(int))
+        } else {
+            Err(D::Error::custom("invalid discord id"))
+        }
+    }
+
+    pub fn serialize<S, T>(val: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Into<u64> + Copy,
+    {
+        let int: u64 = (*val).into();
+        int.serialize(serializer)
+    }
+}

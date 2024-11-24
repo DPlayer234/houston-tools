@@ -82,6 +82,7 @@ pub async fn message_delete(ctx: Context, channel_id: ChannelId, message_id: Mes
 
 async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     // only in guilds
+    // i'd also check for bots but... that's not in the reaction event
     let Some(guild_id) = reaction.guild_id else {
         return Ok(());
     };
@@ -138,7 +139,14 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     let score_increase = {
         // update the message document, if we have enough reacts
         let required_reacts = i64::from(board.reacts);
+
+        // get the current reaction count
+        // discount the bot's own reactions
         let mut now_reacts = i64::try_from(reaction.count)?;
+        if reaction.me {
+            now_reacts -= 1;
+        }
+
         if now_reacts < required_reacts {
             return Ok(());
         }
@@ -296,11 +304,13 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
         log::trace!("{} gained {} {}.", message.author.name, score_increase, board.emoji.name());
 
-        if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {
+        if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
             use super::perks::model::{Wallet, WalletExt};
             use super::perks::Item;
 
-            let amount = i64::from(board.cash_gain).saturating_mul(score_increase);
+            let amount = score_increase
+                .saturating_mul(board.cash_gain.into())
+                .saturating_add(if new_post { board.cash_pin_gain.into() } else { 0 });
 
             Wallet::collection(db)
                 .add_items(guild_id, message.author.id, Item::Cash, amount)
@@ -388,11 +398,13 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
         }
 
         // also remove cash if it's configured
-        if board.cash_gain != 0 && super::perks::Module.enabled(data.config()) {
+        if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
             use super::perks::model::{Wallet, WalletExt};
             use super::perks::Item;
 
-            let amount = i64::from(board.cash_gain).saturating_mul(item.max_reacts);
+            let amount = item.max_reacts
+                .saturating_mul(board.cash_gain.into())
+                .saturating_add(if item.pinned { board.cash_pin_gain.into() } else { 0 });
 
             Wallet::collection(db)
                 .add_items(guild_id, item.user, Item::Cash, -amount)

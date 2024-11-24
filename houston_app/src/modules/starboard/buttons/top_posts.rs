@@ -3,7 +3,7 @@ use bson::doc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::get_pagination_buttons;
+use crate::helper::discord::{get_pagination_buttons, id_as_u64};
 use crate::modules::starboard::get_board;
 use crate::modules::starboard::model;
 use crate::modules::starboard::BoardId;
@@ -11,6 +11,7 @@ use crate::modules::starboard::BoardId;
 // View the post leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
+    #[serde(with = "id_as_u64")]
     pub guild: GuildId,
     pub board: BoardId,
     pub page: u16,

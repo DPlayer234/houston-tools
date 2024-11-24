@@ -55,7 +55,15 @@ pub struct StarboardEntry {
     #[serde(default = "Vec::new")]
     pub notices: Vec<String>,
     #[serde(default)]
-    pub cash_gain: i8,
+    pub cash_gain: i32,
+    #[serde(default)]
+    pub cash_pin_gain: i32,
+}
+
+impl StarboardEntry {
+    pub fn any_cash_gain(&self) -> bool {
+        self.cash_gain != 0 || self.cash_pin_gain != 0
+    }
 }
 
 #[derive(Debug)]
