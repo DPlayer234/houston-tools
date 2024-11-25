@@ -141,33 +141,28 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         let required_reacts = i64::from(board.reacts);
 
         // get the current reaction count
-        // discount the bot's own reactions
+        // discount the bot's own reactions including supers,
+        // even though bots can't add them anymore
         let mut now_reacts = i64::try_from(reaction.count)?;
-        if reaction.me {
+        if reaction.me || reaction.me_burst {
             now_reacts -= 1;
+            if now_reacts < required_reacts {
+                return Ok(());
+            }
         }
 
-        if now_reacts < required_reacts {
-            return Ok(());
-        }
-
-        // we grab a single user after the reacting user's id
-        // if this is the reacting user, we subtract 1 from the count
+        // if the author of this message has reacted, we subtract 1 from the count
         // so their own reaction does not contribute score
-        let reacted_users = message.reaction_users(
-            &ctx.http,
-            reaction.reaction_type.clone(),
-            Some(1), // limit: we just need the next one
-            Some(UserId::new(message.author.id.get().saturating_sub(1))),
-        ).await?;
+        // if there are super reactions, also check there
+        let has_self_reaction = |burst| has_reaction_by_user(&ctx, &message, &reaction.reaction_type, message.author.id, burst);
+        let has_self_reaction = has_self_reaction(false).await?
+            || (reaction.count_details.burst != 0 && has_self_reaction(true).await?);
 
-        if reacted_users.iter().any(|u| u.id == message.author.id) {
+        if has_self_reaction {
             now_reacts -= 1;
-        }
-
-        // we may now have less reacts than needed
-        if now_reacts < required_reacts {
-            return Ok(());
+            if now_reacts < required_reacts {
+                return Ok(());
+            }
         }
 
         let filter = doc! {
@@ -415,6 +410,34 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
     }
 
     Ok(())
+}
+
+async fn has_reaction_by_user(ctx: &Context, message: &Message, emoji: &ReactionType, user_id: UserId, burst: bool) -> Result<bool> {
+    use arrayvec::ArrayVec;
+    use serenity::http::{LightMethod, Request, Route};
+    use to_arraystring::ToArrayString;
+
+    let after = UserId::new(user_id.get().saturating_sub(1));
+    let after_str = after.to_arraystring();
+
+    // we grab a single user after the reacting user's id
+    // to check whether they added this kind of reaction
+    let params = [
+        ("limit", "1"),
+        ("after", &after_str),
+        ("type", if burst { "1" } else { "0" }),
+    ];
+
+    let route = Route::ChannelMessageReactionEmoji {
+        channel_id: message.channel_id,
+        message_id: message.id,
+        reaction: &emoji.as_data(),
+    };
+
+    // since we only grab 1 user at most, use `ArrayVec` to avoid an allocation
+    let request = Request::new(route, LightMethod::Get).params(&params);
+    let reacted_users: ArrayVec<User, 1> = ctx.http.fire(request).await?;
+    Ok(reacted_users.first().is_some_and(|u| u.id == user_id))
 }
 
 async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config::StarboardEntry) -> anyhow::Result<bool> {

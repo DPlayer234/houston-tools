@@ -1039,9 +1039,10 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.2.1"
+version = "2.2.2"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "azur_lane",
  "base64 0.22.1",
  "bitflags 2.6.0",
@@ -1063,6 +1064,7 @@ dependencies = [
  "serenity",
  "smallvec",
  "thiserror 2.0.3",
+ "to-arraystring",
  "tokio",
  "urlencoding",
  "utils",
