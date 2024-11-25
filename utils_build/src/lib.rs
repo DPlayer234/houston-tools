@@ -1,14 +1,16 @@
 use std::env;
 use std::process::Command;
 
+mod ensure;
+
 /// Compiles Windows resources files and instructs Cargo to link them.
 ///
 /// Uses the [`winresource`] crate.
 pub fn embed_windows_resources() {
-    println!("cargo::rerun-if-changed=Cargo.toml");
-
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     if target_os == "windows" {
+        println!("cargo::rerun-if-changed=Cargo.toml");
+
         let res = winresource::WindowsResource::new();
         if let Err(why) = res.compile() {
             println!("cargo::warning=failed to add windows resources to exe: {why}");
@@ -39,13 +41,10 @@ pub fn include_git_commit_hash() {
         .args(["rev-parse", "HEAD"])
         .output();
 
-    match output {
-        Ok(output) => {
-            match String::from_utf8(output.stdout) {
-                Ok(git_hash) => println!("cargo::rustc-env=GIT_HASH={}", git_hash),
-                Err(_) => println!("cargo::warning=git commit hash is invalid utf-8"),
-            }
-        }
-        Err(why) => println!("cargo::warning=cannot find git commit hash: {why}"),
-    };
+    let output = ensure::ok_or!(output, why => "cannot find git commit hash: {why}");
+    ensure::or!(output.status.success(), "`git rev-parse HEAD` exited with non-success error code");
+
+    let git_hash = String::from_utf8(output.stdout);
+    let git_hash = ensure::ok_or!(git_hash, _ => "git commit hash is invalid utf-8");
+    println!("cargo::rustc-env=GIT_HASH={}", git_hash);
 }
