@@ -49,7 +49,7 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved list of skills and a base embed.
-    fn modify_with_skills<'a>(
+    fn create_with_skills<'a>(
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
         mut embed: CreateEmbed<'a>,
@@ -80,7 +80,7 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn modify_with_ship<'a>(
+    fn create_with_ship<'a>(
         mut self,
         data: &'a HBotData,
         ship: &'a ShipData,
@@ -134,12 +134,12 @@ impl View {
             }
         }
 
-        let (embed, row) = self.modify_with_skills(skills.into_iter(), embed);
+        let (embed, row) = self.create_with_skills(skills.into_iter(), embed);
         CreateReply::new().embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
-    fn modify_with_augment(self, augment: &Augment) -> CreateReply<'_> {
+    fn create_with_augment(self, augment: &Augment) -> CreateReply<'_> {
         let embed = CreateEmbed::new()
             .color(augment.rarity.color_rgb())
             .author(CreateEmbedAuthor::new(&augment.name));
@@ -151,7 +151,7 @@ impl View {
             CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back")
         ]));
 
-        let (embed, row) = self.modify_with_skills(skills, embed);
+        let (embed, row) = self.create_with_skills(skills, embed);
         CreateReply::new().embed(embed).components(rows_without_empty([nav_row, Some(row)]))
     }
 
@@ -231,11 +231,11 @@ impl ButtonMessage for View {
             ViewSource::Ship(source) => {
                 let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;
                 let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                Ok(self.modify_with_ship(ctx.data, ship, Some(base_ship)))
+                Ok(self.create_with_ship(ctx.data, ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
                 let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AzurParseError::Augment)?;
-                Ok(self.modify_with_augment(augment))
+                Ok(self.create_with_augment(augment))
             }
         }
     }

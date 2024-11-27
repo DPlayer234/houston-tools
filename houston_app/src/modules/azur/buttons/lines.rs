@@ -38,7 +38,7 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship and skin data.
-    pub fn modify_with_ship<'a>(
+    pub fn create_with_ship<'a>(
         mut self,
         data: &'a HBotData,
         ship: &'a ShipData,
@@ -225,7 +225,7 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
-        Ok(self.modify_with_ship(ctx.data, ship, skin))
+        Ok(self.create_with_ship(ctx.data, ship, skin))
     }
 }
 

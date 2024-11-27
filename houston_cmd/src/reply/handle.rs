@@ -3,7 +3,7 @@ use serenity::model::prelude::*;
 
 use crate::context::Context;
 
-use super::CreateReply;
+use super::EditReply;
 
 /// Represents a handle to a sent interaction response or follow-up,
 /// allowing edits or deletion.
@@ -50,18 +50,15 @@ impl<'a> ReplyHandle<'a> {
     /// Edit the message.
     ///
     /// You cannot edit whether a message is ephemeral.
-    pub async fn edit(self, reply: CreateReply<'_>) -> serenity::Result<()> {
+    pub async fn edit(self, reply: EditReply<'_>) -> serenity::Result<Message> {
         match self.target {
             Target::Original => {
                 let reply = reply.into_interaction_edit();
-                self.interaction.edit_response(self.http, reply).await?;
+                self.interaction.edit_response(self.http, reply).await
             },
             Target::Followup(message_id) => {
-                let reply = reply.into_interaction_followup();
-                self.interaction.edit_followup(self.http, message_id, reply).await?;
+                reply.execute_as_followup_edit(self.http, &self.interaction.token, message_id).await
             },
         }
-
-        Ok(())
     }
 }

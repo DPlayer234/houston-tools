@@ -61,6 +61,6 @@ pub async fn bot_stats(
     );
 
     let embed = base_embed.description(description);
-    reply.edit(CreateReply::new().embed(embed)).await?;
+    reply.edit(EditReply::new().embed(embed)).await?;
     Ok(())
 }

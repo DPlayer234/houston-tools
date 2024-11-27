@@ -27,7 +27,7 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn modify_with_iter<'a>(
+    pub fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
         iter: impl Iterator<Item = &'a ShipData>,
@@ -50,7 +50,7 @@ impl View {
                 ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
             );
 
-            let view_ship = super::ship::View::new(ship.group_id).new_message();
+            let view_ship = super::ship::View::new(ship.group_id).back(self.to_custom_data());
             options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
         }
 
@@ -86,18 +86,18 @@ impl View {
         CreateReply::new().embed(embed).components(rows)
     }
 
-    pub fn modify(self, data: &HBotData) -> CreateReply<'_> {
+    pub fn create(self, data: &HBotData) -> CreateReply<'_> {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.modify_with_iter(data, filtered)
+        self.create_with_iter(data, filtered)
     }
 }
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        Ok(self.modify(ctx.data))
+        Ok(self.create(ctx.data))
     }
 }
 

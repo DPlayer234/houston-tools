@@ -26,7 +26,7 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn modify_with_iter<'a>(
+    pub fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
         iter: impl Iterator<Item = &'a Augment>,
@@ -47,7 +47,7 @@ impl View {
                 augment.name, augment.rarity.name(),
             );
 
-            let view = super::augment::View::new(augment.augment_id).new_message();
+            let view = super::augment::View::new(augment.augment_id).back(self.to_custom_data());
             options.push(CreateSelectMenuOption::new(&augment.name, view.to_custom_id()));
         }
 
@@ -83,18 +83,18 @@ impl View {
         CreateReply::new().embed(embed).components(rows)
     }
 
-    pub fn modify(self, data: &HBotData) -> CreateReply<'_> {
+    pub fn create(self, data: &HBotData) -> CreateReply<'_> {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.modify_with_iter(data, filtered)
+        self.create_with_iter(data, filtered)
     }
 }
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        Ok(self.modify(ctx.data))
+        Ok(self.create(ctx.data))
     }
 }
 

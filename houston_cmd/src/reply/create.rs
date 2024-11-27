@@ -6,10 +6,10 @@ use serenity::builder::*;
 /// the differences between initial responses, follow-ups, and edits.
 #[derive(Debug, Default, Clone)]
 pub struct CreateReply<'a> {
-    content: Option<Cow<'a, str>>,
-    embeds: Vec<CreateEmbed<'a>>,
-    attachments: Vec<CreateAttachment<'a>>,
-    components: Option<Cow<'a, [CreateActionRow<'a>]>>,
+    pub(crate) content: Cow<'a, str>,
+    pub(crate) embeds: Vec<CreateEmbed<'a>>,
+    pub(crate) attachments: Vec<CreateAttachment<'a>>,
+    pub(crate) components: Cow<'a, [CreateActionRow<'a>]>,
     pub(crate) ephemeral: Option<bool>,
     pub(crate) allowed_mentions: Option<CreateAllowedMentions<'a>>,
 }
@@ -22,7 +22,7 @@ impl<'a> CreateReply<'a> {
 
     /// Set the content of the message.
     pub fn content(mut self, content: impl Into<Cow<'a, str>>) -> Self {
-        self.content = Some(content.into());
+        self.content = content.into();
         self
     }
 
@@ -37,7 +37,7 @@ impl<'a> CreateReply<'a> {
         mut self,
         components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
     ) -> Self {
-        self.components = Some(components.into());
+        self.components = components.into();
         self
     }
 
@@ -66,15 +66,11 @@ impl<'a> CreateReply<'a> {
         let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
 
         let mut builder = CreateInteractionResponseMessage::new()
-            .add_files(attachments)
-            .embeds(embeds);
+            .content(content)
+            .embeds(embeds)
+            .components(components)
+            .add_files(attachments);
 
-        if let Some(content) = content {
-            builder = builder.content(content);
-        }
-        if let Some(components) = components {
-            builder = builder.components(components);
-        }
         if let Some(ephemeral) = ephemeral {
             builder = builder.ephemeral(ephemeral);
         }
@@ -90,15 +86,11 @@ impl<'a> CreateReply<'a> {
         let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
 
         let mut builder = CreateInteractionResponseFollowup::new()
-            .add_files(attachments)
-            .embeds(embeds);
+            .content(content)
+            .embeds(embeds)
+            .components(components)
+            .add_files(attachments);
 
-        if let Some(content) = content {
-            builder = builder.content(content);
-        }
-        if let Some(components) = components {
-            builder = builder.components(components);
-        }
         if let Some(ephemeral) = ephemeral {
             builder = builder.ephemeral(ephemeral);
         }
@@ -114,14 +106,11 @@ impl<'a> CreateReply<'a> {
         let Self { content, embeds, attachments, components, ephemeral: _, allowed_mentions } = self;
 
         let mut builder = EditInteractionResponse::new()
-            .embeds(embeds);
+            .content(content)
+            .embeds(embeds)
+            .components(components)
+            .clear_attachments();
 
-        if let Some(content) = content {
-            builder = builder.content(content);
-        }
-        if let Some(components) = components {
-            builder = builder.components(components);
-        }
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);
         }

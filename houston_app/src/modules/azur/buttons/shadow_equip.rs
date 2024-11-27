@@ -19,7 +19,7 @@ impl View {
         }
     }
 
-    pub fn modify_with_ship<'a>(
+    pub fn create_with_ship<'a>(
         self,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
@@ -78,8 +78,8 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(ship, None),
-            Some(retrofit) => self.modify_with_ship(retrofit, Some(ship))
+            None => self.create_with_ship(ship, None),
+            Some(retrofit) => self.create_with_ship(retrofit, Some(ship))
         })
     }
 }

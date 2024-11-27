@@ -7,27 +7,26 @@ use crate::buttons::prelude::*;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub equip_id: u32,
-    mode: ButtonMessageMode,
+    pub back: Option<CustomData>,
 }
 
 impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
-        Self { equip_id, mode: ButtonMessageMode::Edit }
+        Self { equip_id, back: None }
     }
 
-    /// Makes the button send a new message.
-    pub fn new_message(mut self) -> Self {
-        self.mode = ButtonMessageMode::New;
+    /// Sets the back button target.
+    pub fn back(mut self, back: CustomData) -> Self {
+        self.back = Some(back);
         self
     }
 
     /// Modifies the create-reply with a preresolved equipment.
-    pub fn modify_with_equip(
-        mut self,
+    pub fn create_with_equip(
+        self,
         equip: &Equip,
     ) -> CreateReply<'_> {
-        self.mode = ButtonMessageMode::Edit;
         let description = format!(
             "**{}**\n{}",
             equip.kind.name(),
@@ -50,7 +49,14 @@ impl View {
             )))
             .fields(self.get_disallowed_field(equip));
 
-        CreateReply::new().embed(embed).components(vec![])
+        let components = match &self.back {
+            Some(back) => vec![CreateActionRow::buttons(vec![
+                CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"),
+            ])],
+            None => vec![],
+        };
+
+        CreateReply::new().embed(embed).components(components)
     }
 
     fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<SimpleEmbedFieldCreate<'a>> {
@@ -69,10 +75,6 @@ impl View {
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(AzurParseError::Equip)?;
-        Ok(self.modify_with_equip(equip))
-    }
-
-    fn message_mode(&self) -> ButtonMessageMode {
-        self.mode
+        Ok(self.create_with_equip(equip))
     }
 }

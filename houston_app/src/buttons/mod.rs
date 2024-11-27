@@ -15,7 +15,7 @@ mod test;
 pub mod prelude {
     pub use crate::prelude::*;
     #[allow(unused_imports)]
-    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, ButtonMessageMode, CustomData, ToCustomData};
+    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ToCustomData};
 }
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
@@ -287,48 +287,17 @@ pub trait ButtonMessage: Sized {
     /// Modifies the create-reply payload.
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>>;
 
-    /// How to post the message. Defaults to [`ButtonMessageMode::Edit`].
-    #[must_use]
-    fn message_mode(&self) -> ButtonMessageMode { ButtonMessageMode::Edit }
-
-    /// Whether to send new messages as ephemeral.
-    ///
-    /// Defaults to the same value as the source message's ephemerality.
-    #[must_use]
-    fn ephemeral(&self, message: &Message) -> impl IntoEphemeral {
-        message.flags
-            .map(|f| f.contains(MessageFlags::EPHEMERAL))
+    /// Modifies the create-reply payload.
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+        self.create_reply(ctx).map(EditReply::from)
     }
-}
-
-/// The mode a [`ButtonMessage`] uses to post its message.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum ButtonMessageMode {
-    /// Edit the existing message of the button.
-    #[default] Edit,
-    /// Create a new message.
-    New,
 }
 
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let mode = self.message_mode();
-
-        let ephemeral = self
-            .ephemeral(&ctx.interaction.message)
-            .into_ephemeral();
-
-        let reply = self
-            .create_reply(ctx.clone())?
-            .ephemeral(ephemeral);
-
-        let reply = reply.into_interaction_response();
-        let reply = match mode {
-            ButtonMessageMode::New => CreateInteractionResponse::Message(reply),
-            ButtonMessageMode::Edit => CreateInteractionResponse::UpdateMessage(reply),
-        };
-
-        ctx.reply(reply).await
+        let reply = self.edit_reply(ctx.clone())?;
+        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
+        Ok(())
     }
 }
 

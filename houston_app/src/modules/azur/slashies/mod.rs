@@ -27,7 +27,7 @@ pub mod azur {
         let ship = find::ship(data, name)?;
 
         let view = buttons::ship::View::new(ship.group_id);
-        ctx.send(view.modify_with_ship(data, ship, None).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create_with_ship(data, ship, None).ephemeral(ephemeral.into_ephemeral())).await?;
         Ok(())
     }
 
@@ -63,7 +63,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }
@@ -82,7 +82,7 @@ pub mod azur {
         let equip = find::equip(data, name)?;
 
         let view = buttons::equip::View::new(equip.equip_id);
-        ctx.send(view.modify_with_equip(equip).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create_with_equip(equip).ephemeral(ephemeral.into_ephemeral())).await?;
         Ok(())
     }
 
@@ -113,7 +113,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }
@@ -132,7 +132,7 @@ pub mod azur {
         let augment = find::augment(data, name)?;
 
         let view = buttons::augment::View::new(augment.augment_id);
-        ctx.send(view.modify_with_augment(data, augment).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create_with_augment(data, augment).ephemeral(ephemeral.into_ephemeral())).await?;
         Ok(())
     }
 
@@ -171,7 +171,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.modify(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }

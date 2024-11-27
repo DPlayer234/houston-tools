@@ -15,7 +15,7 @@ pub struct View {
     pub level: u8,
     pub affinity: ViewAffinity,
     pub retrofit: Option<u8>,
-    mode: ButtonMessageMode,
+    pub back: Option<CustomData>,
 }
 
 /// The affinity used to calculate stat values.
@@ -29,23 +29,22 @@ pub enum ViewAffinity {
 impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, mode: ButtonMessageMode::Edit }
+        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, back: None }
     }
 
-    /// Makes the button send a new message.
-    pub fn new_message(mut self) -> Self {
-        self.mode = ButtonMessageMode::New;
+    /// Sets the back button target.
+    pub fn back(mut self, back: CustomData) -> Self {
+        self.back = Some(back);
         self
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn modify_with_ship<'a>(
+    pub fn create_with_ship<'a>(
         mut self,
         data: &'a HBotData,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
-        self.mode = ButtonMessageMode::Edit;
         let base_ship = base_ship.unwrap_or(ship);
 
         let description = format!(
@@ -81,18 +80,22 @@ impl View {
     }
 
     fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow<'_>>) {
-        rows.push(
-            CreateActionRow::buttons(vec![
-                self.button_with_level(120)
-                    .label("Lv.120"),
-                self.button_with_level(125)
-                    .label("Lv.125"),
-                self.button_with_affinity(ViewAffinity::Love)
-                    .emoji('❤').label("100"),
-                self.button_with_affinity(ViewAffinity::Oath)
-                    .emoji('💗').label("200"),
-            ])
-        );
+        let mut row = vec![
+            self.button_with_level(120)
+                .label("Lv.120"),
+            self.button_with_level(125)
+                .label("Lv.125"),
+            self.button_with_affinity(ViewAffinity::Love)
+                .emoji('❤').label("100"),
+            self.button_with_affinity(ViewAffinity::Oath)
+                .emoji('💗').label("200"),
+        ];
+
+        if let Some(back) = &self.back {
+            row.insert(0, CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
+        }
+
+        rows.push(CreateActionRow::buttons(row));
     }
 
     fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
@@ -292,13 +295,9 @@ impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.modify_with_ship(ctx.data, ship, None),
-            Some(retrofit) => self.modify_with_ship(ctx.data, retrofit, Some(ship))
+            None => self.create_with_ship(ctx.data, ship, None),
+            Some(retrofit) => self.create_with_ship(ctx.data, retrofit, Some(ship))
         })
-    }
-
-    fn message_mode(&self) -> ButtonMessageMode {
-        self.mode
     }
 }
 

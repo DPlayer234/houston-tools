@@ -8,28 +8,27 @@ use crate::buttons::prelude::*;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     pub augment_id: u32,
-    mode: ButtonMessageMode,
+    pub back: Option<CustomData>,
 }
 
 impl View {
     /// Creates a new instance.
     pub fn new(augment_id: u32) -> Self {
-        Self { augment_id, mode: ButtonMessageMode::Edit }
+        Self { augment_id, back: None }
     }
 
-    /// Makes the button send a new message.
-    pub fn new_message(mut self) -> Self {
-        self.mode = ButtonMessageMode::New;
+    /// Sets the back button target.
+    pub fn back(mut self, back: CustomData) -> Self {
+        self.back = Some(back);
         self
     }
 
     /// Modifies the create-reply with a preresolved augment.
-    pub fn modify_with_augment<'a>(
-        mut self,
+    pub fn create_with_augment<'a>(
+        self,
         data: &'a HBotData,
         augment: &'a Augment,
     ) -> CreateReply<'a> {
-        self.mode = ButtonMessageMode::Edit;
         let description = crate::fmt::azur::AugmentStats::new(augment).to_string();
 
         let embed = CreateEmbed::new()
@@ -40,6 +39,10 @@ impl View {
             .fields(self.get_skill_field("Skill Upgrade", augment.skill_upgrade.as_ref().map(|s| &s.skill)));
 
         let mut components = Vec::new();
+
+        if let Some(back) = &self.back {
+            components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
+        }
 
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
@@ -57,7 +60,7 @@ impl View {
                 CreateButton::new("=dummy-usability").label(label).disabled(true)
             },
             AugmentUsability::UniqueShipId(ship_id) => if let Some(ship) = data.azur_lane().ship_by_id(*ship_id) {
-                let view = super::ship::View::new(ship.group_id).new_message();
+                let view = super::ship::View::new(ship.group_id).back(self.to_custom_data());
                 let label = utils::text::truncate(format!("For: {}", ship.name), 25);
                 CreateButton::new(view.to_custom_id()).label(label)
             } else {
@@ -79,10 +82,6 @@ impl View {
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
         let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AzurParseError::Augment)?;
-        Ok(self.modify_with_augment(ctx.data, augment))
-    }
-
-    fn message_mode(&self) -> ButtonMessageMode {
-        self.mode
+        Ok(self.create_with_augment(ctx.data, augment))
     }
 }

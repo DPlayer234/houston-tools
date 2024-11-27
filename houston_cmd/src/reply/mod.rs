@@ -2,12 +2,14 @@ use std::sync::atomic::Ordering;
 
 use serenity::builder::*;
 
-pub use builder::CreateReply;
+pub use create::CreateReply;
+pub use edit::EditReply;
 pub use handle::ReplyHandle;
 
 use crate::context::Context;
 
-mod builder;
+mod create;
+mod edit;
 mod handle;
 
 pub async fn defer(

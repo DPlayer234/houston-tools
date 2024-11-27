@@ -1,6 +1,6 @@
 [package]
 name = "houston_cmd"
-version = "1.0.0"
+version = "1.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
@@ -8,6 +8,7 @@ rust-version.workspace = true
 anyhow = "1.0.93"
 derivative = "2.2.0"
 log = { version = "0.4.22", features = ["serde"] }
+serde = "1.0.215"
 thiserror = "2.0.3"
 
 houston_cmd_macros = { path = "./macros" }

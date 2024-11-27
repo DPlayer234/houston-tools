@@ -138,7 +138,7 @@ pub use args::{SlashArg, ChoiceArg, UserContextArg, MessageContextArg};
 pub use context::Context;
 pub use error::Error;
 pub use framework::Framework;
-pub use reply::{CreateReply, ReplyHandle};
+pub use reply::{CreateReply, EditReply, ReplyHandle};
 
 pub use ::houston_cmd_macros::{chat_command, context_command};
 
