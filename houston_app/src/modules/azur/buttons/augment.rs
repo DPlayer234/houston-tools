@@ -30,7 +30,7 @@ impl View {
         augment: &'a Augment,
     ) -> CreateReply<'a> {
         self.mode = ButtonMessageMode::Edit;
-        let description = format!("{}", crate::fmt::azur::AugmentStats::new(augment));
+        let description = crate::fmt::azur::AugmentStats::new(augment).to_string();
 
         let embed = CreateEmbed::new()
             .author(CreateEmbedAuthor::new(&augment.name))

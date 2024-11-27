@@ -146,9 +146,10 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         let mut now_reacts = i64::try_from(reaction.count)?;
         if reaction.me || reaction.me_burst {
             now_reacts -= 1;
-            if now_reacts < required_reacts {
-                return Ok(());
-            }
+        }
+
+        if now_reacts < required_reacts {
+            return Ok(());
         }
 
         // if the author of this message has reacted, we subtract 1 from the count
