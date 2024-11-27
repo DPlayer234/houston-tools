@@ -74,11 +74,11 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
 
 macro_rules! impl_shared_user_fn {
     ($l:lifetime => $($t:tt)*) => {
-        #[allow(dead_code)]
+        #[allow(dead_code, reason = "shared methods")]
         impl<$l> SlashUser<$l> {
             $($t)*
         }
-        #[allow(dead_code)]
+        #[allow(dead_code, reason = "shared methods")]
         impl<$l> SlashMember<$l> {
             $($t)*
         }
@@ -98,14 +98,12 @@ impl_shared_user_fn! { 'a =>
     }
 }
 
-#[allow(dead_code)]
 impl<'a> SlashUser<'a> {
     fn member(&self) -> Option<&'a PartialMember> {
         self.member
     }
 }
 
-#[allow(dead_code)]
 impl<'a> SlashMember<'a> {
     fn member(&self) -> Option<&'a PartialMember> {
         Some(self.member)

@@ -284,13 +284,8 @@ pub trait ButtonArgsReply: Sized {
 
 /// Provides a way for button arguments to modify the create-reply payload.
 pub trait ButtonMessage: Sized {
-    /// Modifies the create-reply payload.
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>>;
-
-    /// Modifies the create-reply payload.
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
-        self.create_reply(ctx).map(EditReply::from)
-    }
+    /// Creates an edit-reply payload.
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>>;
 }
 
 impl<T: ButtonMessage> ButtonArgsReply for T {

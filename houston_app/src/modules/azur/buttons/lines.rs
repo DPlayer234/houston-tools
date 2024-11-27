@@ -13,7 +13,7 @@ pub struct View {
     pub skin_index: u8,
     pub part: ViewPart,
     pub extra: bool,
-    pub back: Option<CustomData>
+    pub back: CustomData,
 }
 
 /// Which part of the lines to display.
@@ -27,33 +27,9 @@ pub enum ViewPart {
 }
 
 impl View {
-    /// Creates a new instance.
-    #[allow(dead_code)] // planned for future use
-    pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back: None }
-    }
-
     /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(ship_id: u32, back: CustomData) -> Self {
-        Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back: Some(back) }
-    }
-
-    /// Modifies the create-reply with preresolved ship and skin data.
-    pub fn create_with_ship<'a>(
-        self,
-        data: &'a HBotData,
-        ship: &'a ShipData,
-        skin: &'a ShipSkin,
-    ) -> CreateReply<'a> {
-        let (mut embed, components) = self.with_ship(data, ship, skin);
-        let mut create = CreateReply::new();
-
-        if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-            create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
-            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
-        }
-
-        create.embed(embed).components(components)
+        Self { ship_id, skin_index: 0, part: ViewPart::Info, extra: false, back }
     }
 
     fn edit_with_ship<'a>(
@@ -96,10 +72,9 @@ impl View {
 
         let mut components = Vec::new();
 
-        let mut top_row = Vec::new();
-        if let Some(back) = &self.back {
-            top_row.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
-        }
+        let mut top_row = vec![
+            CreateButton::new(self.back.to_custom_id()).emoji('⏪').label("Back"),
+        ];
 
         if skin.words_extra.is_some() {
             top_row.push(self.button_with_extra(false).label("Base"));
@@ -261,11 +236,6 @@ impl ViewPart {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        let (ship, skin) = self.resolve(&ctx)?;
-        Ok(self.create_with_ship(ctx.data, ship, skin))
-    }
-
     fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
         let (ship, skin) = self.resolve(&ctx)?;
         Ok(self.edit_with_ship(&ctx, ship, skin))

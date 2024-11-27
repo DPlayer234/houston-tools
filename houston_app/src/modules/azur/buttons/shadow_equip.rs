@@ -14,9 +14,7 @@ pub struct View {
 
 impl View {
     pub fn new(inner: ShipView) -> Self {
-        Self {
-            inner
-        }
+        Self { inner }
     }
 
     pub fn create_with_ship<'a>(
@@ -75,11 +73,11 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.create_with_ship(ship, None),
-            Some(retrofit) => self.create_with_ship(retrofit, Some(ship))
+            None => self.create_with_ship(ship, None).into(),
+            Some(retrofit) => self.create_with_ship(retrofit, Some(ship)).into()
         })
     }
 }

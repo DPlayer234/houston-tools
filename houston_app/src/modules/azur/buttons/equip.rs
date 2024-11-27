@@ -73,8 +73,8 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
         let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(AzurParseError::Equip)?;
-        Ok(self.create_with_equip(equip))
+        Ok(self.create_with_equip(equip).into())
     }
 }

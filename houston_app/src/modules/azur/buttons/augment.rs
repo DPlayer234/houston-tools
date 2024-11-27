@@ -80,8 +80,8 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
         let augment = ctx.data.azur_lane().augment_by_id(self.augment_id).ok_or(AzurParseError::Augment)?;
-        Ok(self.create_with_augment(ctx.data, augment))
+        Ok(self.create_with_augment(ctx.data, augment).into())
     }
 }

@@ -93,8 +93,8 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        Ok(self.create(ctx.data))
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+        Ok(self.create(ctx.data).into())
     }
 }
 

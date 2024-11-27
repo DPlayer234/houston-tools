@@ -11,7 +11,7 @@ use crate::buttons::prelude::*;
 pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
-    pub back: Option<CustomData>,
+    pub back: CustomData,
     augment_index: Option<u8>,
 }
 
@@ -45,11 +45,11 @@ type EmbedFieldCreate<'a> = (String, Cow<'a, str>, bool);
 impl View {
     /// Creates a new instance including a button to go back with some custom ID.
     pub fn with_back(source: ViewSource, back: CustomData) -> Self {
-        Self { source, skill_index: None, back: Some(back), augment_index: None }
+        Self { source, skill_index: None, back, augment_index: None }
     }
 
     /// Modifies the create-reply with a preresolved list of skills and a base embed.
-    fn create_with_skills<'a>(
+    fn edit_with_skills<'a>(
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
         mut embed: CreateEmbed<'a>,
@@ -80,12 +80,12 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn create_with_ship<'a>(
+    fn edit_with_ship<'a>(
         mut self,
         data: &'a HBotData,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
-    ) -> CreateReply<'a> {
+    ) -> EditReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
@@ -93,10 +93,9 @@ impl View {
             .color(ship.rarity.color_rgb())
             .author(super::get_ship_wiki_url(base_ship));
 
-        let mut components = Vec::new();
-        if let Some(back) = &self.back {
-            components.push(CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
-        }
+        let mut components = vec![
+            CreateButton::new(self.back.to_custom_id()).emoji('⏪').label("Back"),
+        ];
 
         for (a_index, augment) in data.azur_lane().augments_by_ship_id(ship.group_id).enumerate().take(4) {
             if a_index == 0 {
@@ -134,12 +133,12 @@ impl View {
             }
         }
 
-        let (embed, row) = self.create_with_skills(skills.into_iter(), embed);
-        CreateReply::new().embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
+        let (embed, row) = self.edit_with_skills(skills.into_iter(), embed);
+        EditReply::clear().embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
-    fn create_with_augment(self, augment: &Augment) -> CreateReply<'_> {
+    fn edit_with_augment(self, augment: &Augment) -> EditReply<'_> {
         let embed = CreateEmbed::new()
             .color(augment.rarity.color_rgb())
             .author(CreateEmbedAuthor::new(&augment.name));
@@ -147,12 +146,12 @@ impl View {
         let skills = augment.effect.iter()
             .chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
 
-        let nav_row = self.back.as_ref().map(|back| CreateActionRow::buttons(vec![
-            CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back")
-        ]));
+        let nav_row = CreateActionRow::buttons(vec![
+            CreateButton::new(self.back.to_custom_id()).emoji('⏪').label("Back"),
+        ]);
 
-        let (embed, row) = self.create_with_skills(skills, embed);
-        CreateReply::new().embed(embed).components(rows_without_empty([nav_row, Some(row)]))
+        let (embed, row) = self.edit_with_skills(skills, embed);
+        EditReply::clear().embed(embed).components(rows_without_empty([nav_row, row]))
     }
 
     /// Creates a button that redirects to a skill index.
@@ -214,28 +213,26 @@ impl View {
     }
 }
 
-fn rows_without_empty<'a, I, T>(rows: I) -> Vec<CreateActionRow<'a>>
+fn rows_without_empty<'a, I>(rows: I) -> Vec<CreateActionRow<'a>>
 where
-    I: IntoIterator<Item = T>,
-    T: Into<Option<CreateActionRow<'a>>>,
+    I: IntoIterator<Item = CreateActionRow<'a>>,
 {
     rows.into_iter()
-        .filter_map(|a| a.into())
         .filter(|a| !matches!(a, CreateActionRow::Buttons(a) if a.is_empty()))
         .collect()
 }
 
 impl ButtonMessage for View {
-    fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
         match &self.source {
             ViewSource::Ship(source) => {
                 let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;
                 let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
-                Ok(self.create_with_ship(ctx.data, ship, Some(base_ship)))
+                Ok(self.edit_with_ship(ctx.data, ship, Some(base_ship)))
             }
             ViewSource::Augment(augment_id) => {
                 let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AzurParseError::Augment)?;
-                Ok(self.create_with_augment(augment))
+                Ok(self.edit_with_augment(augment))
             }
         }
     }

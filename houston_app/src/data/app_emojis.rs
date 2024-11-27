@@ -18,7 +18,7 @@ macro_rules! generate {
         #[derive(Debug, Clone, Copy)]
         pub struct HAppEmojis<'a>(pub(super) Option<&'a HAppEmojiStore>);
 
-        #[allow(dead_code)]
+        #[allow(dead_code, reason = "macro generated in bulk")]
         impl<'a> HAppEmojis<'a> {
             $(
                 #[must_use]

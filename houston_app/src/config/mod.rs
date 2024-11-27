@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, reason = "config might be partly unused")]
 use std::collections::HashMap;
 use std::path::PathBuf;
 
