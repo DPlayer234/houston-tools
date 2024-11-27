@@ -23,6 +23,7 @@ impl<'a> EditReply<'a> {
         Self::default()
     }
 
+    /// Creates a new empty builder, which has all fields set to empty rather than absent.
     pub fn clear() -> Self {
         Self {
             content: Some(Cow::Borrowed("")),
@@ -54,17 +55,19 @@ impl<'a> EditReply<'a> {
         self
     }
 
-    /// Add an attachment.
+    /// Add a new attachment.
     pub fn new_attachment(self, attachment: CreateAttachment<'a>) -> Self {
         self.attachment(Attachment::New(attachment))
     }
 
+    /// Keeps an existing attachment with the given ID.
     pub fn keep_existing_attachment(self, attachment_id: AttachmentId) -> Self {
         self.attachment(Attachment::Existing(ExistingAttachment {
             id: attachment_id
         }))
     }
 
+    /// Removes all attachments already present.
     pub fn clear_attachments(mut self) -> Self {
         self.attachments.get_or_insert_with(InEditAttachments::default);
         self
@@ -116,27 +119,26 @@ impl<'a> EditReply<'a> {
     }
 }
 
-impl<'a> From<EditReply<'a>> for CreateReply<'a> {
-    fn from(value: EditReply<'a>) -> Self {
-        Self {
-            content: value.content.unwrap_or_default(),
-            embeds: value.embeds.unwrap_or_default(),
-            attachments: value.attachments.map_or_else(Vec::new, InEditAttachments::into_files),
-            components: value.components.unwrap_or_default(),
-            ephemeral: None,
-            allowed_mentions: value.allowed_mentions,
-        }
-    }
-}
-
 impl<'a> From<CreateReply<'a>> for EditReply<'a> {
+    /// Creates an edit that will put the message into the same state as the
+    /// message this would create.
+    ///
+    /// This means, that unless specified as non-empty in the source value,
+    /// the resulting will clear content, embeds, components, and attachments.
     fn from(value: CreateReply<'a>) -> Self {
+        let CreateReply { content, embeds, attachments, components, ephemeral: _, allowed_mentions } = value;
+
+        let attachments = attachments
+            .into_iter()
+            .map(Attachment::New)
+            .collect();
+
         Self {
-            content: Some(value.content),
-            embeds: Some(value.embeds),
-            attachments: Some(InEditAttachments { vec: value.attachments.into_iter().map(Attachment::New).collect() }),
-            components: Some(value.components),
-            allowed_mentions: value.allowed_mentions,
+            content: Some(content),
+            embeds: Some(embeds),
+            attachments: Some(InEditAttachments { vec: attachments }),
+            components: Some(components),
+            allowed_mentions,
         }
     }
 }
@@ -146,7 +148,6 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
 // Serenity currently doesn't support a couple things when editing interaction
 // responses and follow-ups, most notable keeping existing attachments.
 // This may be incomplete in other ways, but is sufficient for houston-app purposes.
-
 
 /// This type replicates logic that is performed by [`EditAttachments`].
 /// However i want to avoid cloning the data here, and we can't use that
@@ -168,16 +169,6 @@ enum Attachment<'a> {
 }
 
 impl<'a> InEditAttachments<'a> {
-    fn into_files(self) -> Vec<CreateAttachment<'a>> {
-        self.vec
-            .into_iter()
-            .filter_map(|e| match e {
-                Attachment::New(attachment) => Some(attachment),
-                _ => None,
-            })
-            .collect()
-    }
-
     fn get_files(&self) -> Vec<CreateAttachment<'a>> {
         self.vec
             .iter()

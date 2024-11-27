@@ -5,6 +5,7 @@ use azur_lane::ship::*;
 use utils::join;
 use utils::text::write_str::*;
 
+use super::get_ship_preview_name;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 
@@ -40,13 +41,62 @@ impl View {
 
     /// Modifies the create-reply with preresolved ship data.
     pub fn create_with_ship<'a>(
-        mut self,
+        self,
         data: &'a HBotData,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
+        let (mut embed, rows) = self.with_ship(data, ship, base_ship);
 
+        let mut create = CreateReply::new();
+
+        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
+            if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
+                create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
+                embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+            }
+        }
+
+        create.embed(embed).components(rows)
+    }
+
+    fn edit_with_ship<'a>(
+        self,
+        ctx: &ButtonContext<'a>,
+        ship: &'a ShipData,
+        base_ship: Option<&'a ShipData>,
+    ) -> EditReply<'a> {
+        let base_ship = base_ship.unwrap_or(ship);
+        let (mut embed, rows) = self.with_ship(ctx.data, ship, base_ship);
+        let mut create = EditReply::new();
+
+        // try expressions when
+        let base_skin = || {
+            let skin = base_ship.skin_by_id(ship.default_skin_id)?;
+            let image = ctx.data.azur_lane().get_chibi_image(&skin.image_key)?;
+            Some((skin, image))
+        };
+
+        if let Some((skin, image_data)) = base_skin() {
+            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+
+            if Some(skin.image_key.as_str()) != get_ship_preview_name(ctx) {
+                create = create.new_attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
+            }
+        } else {
+            create = create.clear_attachments();
+        }
+
+        create.embed(embed).components(rows)
+    }
+
+    fn with_ship<'a>(
+        mut self,
+        data: &'a HBotData,
+        ship: &'a ShipData,
+        base_ship: &'a ShipData,
+    ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
         let description = format!(
             "[{}] {:★<star_pad$}\n{} {} {}",
             ship.rarity.name(), '★',
@@ -54,7 +104,7 @@ impl View {
             star_pad = usize::from(ship.stars)
         );
 
-        let mut embed = CreateEmbed::new()
+        let embed = CreateEmbed::new()
             .author(super::get_ship_wiki_url(base_ship))
             .description(description)
             .color(ship.rarity.color_rgb())
@@ -67,16 +117,7 @@ impl View {
         self.add_retro_state_row(base_ship, &mut rows);
         self.add_nav_row(ship, &mut rows);
 
-        let mut create = CreateReply::new();
-
-        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
-            if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-                create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
-                embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
-            }
-        }
-
-        create.embed(embed).components(rows)
+        (embed, rows)
     }
 
     fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow<'_>>) {
@@ -297,6 +338,14 @@ impl ButtonMessage for View {
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.create_with_ship(ctx.data, ship, None),
             Some(retrofit) => self.create_with_ship(ctx.data, retrofit, Some(ship))
+        })
+    }
+
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
+        Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
+            None => self.edit_with_ship(&ctx, ship, None),
+            Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship))
         })
     }
 }

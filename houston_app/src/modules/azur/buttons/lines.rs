@@ -1,6 +1,7 @@
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
+use super::get_ship_preview_name;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
@@ -39,17 +40,56 @@ impl View {
 
     /// Modifies the create-reply with preresolved ship and skin data.
     pub fn create_with_ship<'a>(
-        mut self,
+        self,
         data: &'a HBotData,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> CreateReply<'a> {
+        let (mut embed, components) = self.with_ship(data, ship, skin);
+        let mut create = CreateReply::new();
+
+        if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
+            create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
+            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+        }
+
+        create.embed(embed).components(components)
+    }
+
+    fn edit_with_ship<'a>(
+        self,
+        ctx: &ButtonContext<'a>,
+        ship: &'a ShipData,
+        skin: &'a ShipSkin,
+    ) -> EditReply<'a> {
+        let (mut embed, components) = self.with_ship(ctx.data, ship, skin);
+        let mut create = EditReply::new();
+
+        if let Some(image_data) = ctx.data.azur_lane().get_chibi_image(&skin.image_key) {
+            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+
+            if Some(skin.image_key.as_str()) != get_ship_preview_name(ctx) {
+                create = create.new_attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
+            }
+        } else {
+            create = create.clear_attachments();
+        }
+
+        create.embed(embed).components(components)
+    }
+
+    fn with_ship<'a>(
+        mut self,
+        data: &'a HBotData,
+        ship: &'a ShipData,
+        skin: &'a ShipSkin,
+    ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
         let words = match (&self, skin) {
             (Self { extra: true, .. }, ShipSkin { words_extra: Some(words), .. } ) => words.as_ref(),
             _ => { self.extra = false; &skin.words }
         };
 
-        let mut embed = CreateEmbed::new()
+        let embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
             .author(super::get_ship_wiki_url(ship))
             .description(self.part.get_description(data, words));
@@ -90,14 +130,7 @@ impl View {
             ));
         }
 
-        let mut create = CreateReply::new();
-
-        if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-            create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
-            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
-        }
-
-        create.embed(embed).components(components)
+        (embed, components)
     }
 
     /// Creates a button that redirects to a different Base/EX state.
@@ -116,6 +149,12 @@ impl View {
         // Just as-cast the index to u8 since we'd have problems long before an overflow.
         #[allow(clippy::cast_possible_truncation)]
         self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
+    }
+
+    fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> anyhow::Result<(&'a ShipData, &'a ShipSkin)> {
+        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
+        let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
+        Ok((ship, skin))
     }
 }
 
@@ -223,9 +262,13 @@ impl ViewPart {
 
 impl ButtonMessage for View {
     fn create_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<CreateReply<'_>> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
-        let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
+        let (ship, skin) = self.resolve(&ctx)?;
         Ok(self.create_with_ship(ctx.data, ship, skin))
+    }
+
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+        let (ship, skin) = self.resolve(&ctx)?;
+        Ok(self.edit_with_ship(&ctx, ship, skin))
     }
 }
 
