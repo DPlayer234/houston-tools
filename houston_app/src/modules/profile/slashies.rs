@@ -135,7 +135,7 @@ async fn perks_collectible_info(
             if wallet.crab >= need.into() {
                 write_str!(content, "\n- <@&{role}>");
             } else {
-                write_str!(content, "\n-# - 🔒 ({need})")
+                write_str!(content, "\n- -# 🔒 ({need})")
             }
         }
     }
