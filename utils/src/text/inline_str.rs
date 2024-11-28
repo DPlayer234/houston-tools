@@ -89,7 +89,7 @@ impl<const LEN: usize> InlineStr<LEN> {
 
     /// Converts this value to a mutable [`str`] slice.
     #[must_use]
-    pub fn as_mut_str(&mut self) -> &mut str {
+    pub const fn as_mut_str(&mut self) -> &mut str {
         unsafe {
             // SAFETY: Only constructed with valid UTF-8
             std::str::from_utf8_unchecked_mut(&mut self.0)
@@ -111,7 +111,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     ///
     /// Also refer to [`str::as_bytes_mut`].
     #[must_use]
-    pub unsafe fn as_bytes_mut(&mut self) -> &mut [u8; LEN] {
+    pub const unsafe fn as_bytes_mut(&mut self) -> &mut [u8; LEN] {
         &mut self.0
     }
 

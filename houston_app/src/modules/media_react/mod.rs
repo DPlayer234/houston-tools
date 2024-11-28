@@ -53,7 +53,7 @@ async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()>
     // attach the emoji to the message
     // CMBK: check message snapshots when forwarding is fully implemented
     let has_media = !new_message.attachments.is_empty()
-        || new_message.message_reference.as_ref().map_or(false, |m| m.kind == MessageReferenceKind::Forward)
+        || new_message.message_reference.as_ref().is_some_and(|m| m.kind == MessageReferenceKind::Forward)
         || has_media_content(&new_message.content);
 
     if !has_media {

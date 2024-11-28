@@ -108,7 +108,7 @@ impl<'de> serde::Deserialize<'de> for StarboardEmoji {
 
         struct Visitor;
 
-        impl<'de> serde::de::Visitor<'de> for Visitor {
+        impl serde::de::Visitor<'_> for Visitor {
             type Value = StarboardEmoji;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

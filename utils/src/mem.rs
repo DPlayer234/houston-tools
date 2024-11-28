@@ -24,10 +24,8 @@ use std::slice;
 #[inline]
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
-    match try_as_sized(slice) {
-        Some(slice) => slice,
-        None => panic!("requested size incorrect"),
-    }
+    try_as_sized(slice)
+        .expect("requested size must match exactly")
 }
 
 /// Tries to convert a slice to an array reference of size `N`.

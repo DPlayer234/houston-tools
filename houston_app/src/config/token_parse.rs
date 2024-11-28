@@ -12,7 +12,7 @@ where
     D: Deserializer<'de>,
 {
     struct TokenVisitor;
-    impl<'de> Visitor<'de> for TokenVisitor {
+    impl Visitor<'_> for TokenVisitor {
         type Value = Token;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

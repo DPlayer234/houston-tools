@@ -9,7 +9,7 @@ pub mod write_str;
 
 pub use escape::{escape_by_char, EscapeByChar, EscapeByCharIter};
 pub use inline_str::InlineStr;
-pub use truncate_impl::{truncate, Truncate};
+pub use truncate_impl::truncate;
 pub use titlecase_impl::to_titlecase;
 
 /// Joins an arbitrary amount of const [`str`] values.

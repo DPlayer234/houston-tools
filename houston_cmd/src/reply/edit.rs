@@ -42,7 +42,7 @@ impl<'a> EditReply<'a> {
 
     /// Adds a new embed to the message.
     pub fn embed(mut self, embed: CreateEmbed<'a>) -> Self {
-        self.embeds.get_or_insert_with(Vec::new).push(embed);
+        self.embeds.get_or_insert_default().push(embed);
         self
     }
 
@@ -69,13 +69,13 @@ impl<'a> EditReply<'a> {
 
     /// Removes all attachments already present.
     pub fn clear_attachments(mut self) -> Self {
-        self.attachments.get_or_insert_with(InEditAttachments::default);
+        self.attachments.get_or_insert_default();
         self
     }
 
     fn attachment(mut self, attachment: Attachment<'a>) -> Self {
         self.attachments
-            .get_or_insert_with(InEditAttachments::default)
+            .get_or_insert_default()
             .vec
             .push(attachment);
         self
@@ -232,7 +232,7 @@ struct EditData<'a> {
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
 }
 
-impl<'a> EditReply<'a> {
+impl EditReply<'_> {
     /// Invokes [`create_interaction_response`] with the correct information for an edit.
     ///
     /// Hidden because I don't want this in the public API but I do need it in `houston_app`.

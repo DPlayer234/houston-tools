@@ -1,6 +1,8 @@
 #![doc(hidden)]
 //! Needed for macro implementations. Not public API.
 
+use std::ptr;
+
 use super::InlineStr;
 
 /// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
@@ -30,10 +32,9 @@ pub const fn count_str_const(slices: &[&str]) -> usize {
 
     let mut slice_index = 0usize;
     while slice_index < slices.len() {
-        offset = match offset.checked_add(slices[slice_index].len()) {
-            Some(value) => value,
-            None => panic!("total length overflows usize"),
-        };
+        offset = offset
+            .checked_add(slices[slice_index].len())
+            .expect("total length must not overflow");
         slice_index += 1;
     }
 
@@ -55,11 +56,11 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     let mut slice_index = 0usize;
     while slice_index < slices.len() {
         let slice = slices[slice_index].as_bytes();
+        assert!(offset + slice.len() <= N, "N was shorter than total input length");
 
-        let mut index = 0usize;
-        while index < slice.len() {
-            out[offset + index] = slice[index];
-            index += 1;
+        unsafe {
+            // SAFETY: just checked that `slice` fits in `out`
+            ptr::copy_nonoverlapping(slice.as_ptr(), out.as_mut_ptr().add(offset), slice.len());
         }
 
         offset += slice.len();
@@ -67,8 +68,40 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     }
 
     assert!(offset == N, "total input length must be N");
+
     unsafe {
         // SAFETY: Only UTF-8 data was joined.
         InlineStr::from_utf8_unchecked(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::hint::black_box;
+
+    use super::join_str_const;
+
+    #[test]
+    #[should_panic = "N was shorter than total input length"]
+    fn join_str_const_panics_too_short_n() {
+        let slices = &["hello", "world"];
+        black_box(join_str_const::<9>(slices));
+    }
+
+    #[test]
+    #[should_panic = "total input length must be N"]
+    fn join_str_const_panics_too_long_n() {
+        let slices = &["hello", "world"];
+        black_box(join_str_const::<11>(slices));
+    }
+
+    #[test]
+    fn join_str_const_correct() {
+        let value = const {
+            let slices = &["hello", "world"];
+            join_str_const::<10>(slices)
+        };
+
+        assert_eq!(value.as_str(), "helloworld");
     }
 }

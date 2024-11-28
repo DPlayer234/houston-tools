@@ -13,7 +13,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.82"
+rust-version = "1.83"
 
 [profile.release]
 lto = true
@@ -89,7 +89,7 @@ missing_asserts_for_indexing = "warn"
 pub_without_shorthand = "deny"
 rc_buffer = "warn"
 rc_mutex = "warn"
-# ref_option = "warn" // rust 1.84
+ref_option = "warn"
 ref_option_ref = "warn"
 ref_patterns = "warn"
 rest_pat_in_fully_bound_structs = "deny"
@@ -110,6 +110,3 @@ redundant_clone = "warn"
 uninhabited_references = "deny"
 use_self = "warn"
 useless_let_if_seq = "warn"
-
-# allows
-#upper_case_acronyms = "allow"
