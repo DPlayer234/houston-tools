@@ -28,10 +28,15 @@ pub async fn profile_context(
 pub async fn profile(
     ctx: Context<'_>,
     #[description = "The member to view the profile of."]
-    member: SlashMember<'_>,
+    member: Option<SlashMember<'_>>,
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> Result {
+    let member = match member {
+        Some(member) => member,
+        None => SlashMember::from_ctx(ctx)?,
+    };
+
     profile_core(ctx, member, ephemeral).await
 }
 

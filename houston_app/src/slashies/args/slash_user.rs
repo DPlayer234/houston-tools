@@ -37,7 +37,13 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
 #[derive(Debug, Clone, Copy)]
 pub struct SlashMember<'a> {
     pub user: &'a User,
-    pub member: &'a PartialMember,
+    pub member: AnyMember<'a>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AnyMember<'a> {
+    Full(&'a Member),
+    Partial(&'a PartialMember),
 }
 
 #[serenity::async_trait]
@@ -47,7 +53,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
         resolved: &ResolvedValue<'ctx>,
     ) -> Result<Self, Error<'ctx>> {
         match *resolved {
-            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member }),
+            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member: AnyMember::Partial(member) }),
             // delegate to this method to get the correct error
             _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?)
         }
@@ -68,53 +74,46 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
         let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
-        Ok(Self { user, member })
+        Ok(Self { user, member: AnyMember::Partial(member) })
     }
 }
 
-macro_rules! impl_shared_user_fn {
-    ($l:lifetime => $($t:tt)*) => {
-        #[allow(dead_code, reason = "shared methods")]
-        impl<$l> SlashUser<$l> {
-            $($t)*
-        }
-        #[allow(dead_code, reason = "shared methods")]
-        impl<$l> SlashMember<$l> {
-            $($t)*
-        }
-    };
-}
-
-impl_shared_user_fn! { 'a =>
+#[allow(dead_code)]
+impl SlashUser<'_> {
     pub fn display_name(&self) -> &str {
-        self.member()
+        self.member
             .and_then(|m| m.nick.as_deref())
             .unwrap_or_else(|| self.user.display_name())
     }
 
     pub fn face(&self) -> String {
-        // CMBK: PartialMember has no guild avatar field
         self.user.face()
     }
 }
 
-impl<'a> SlashUser<'a> {
-    fn member(&self) -> Option<&'a PartialMember> {
-        self.member
-    }
-}
-
 impl<'a> SlashMember<'a> {
-    fn member(&self) -> Option<&'a PartialMember> {
-        Some(self.member)
+    pub fn from_ctx(ctx: Context<'a>) -> Result<Self> {
+        let member = ctx.member().context("member must be present")?;
+        Ok(Self { user: ctx.user(), member: AnyMember::Full(member) })
     }
-}
 
-impl<'a> From<SlashMember<'a>> for SlashUser<'a> {
-    fn from(value: SlashMember<'a>) -> Self {
-        Self {
-            user: value.user,
-            member: Some(value.member),
+    pub fn nick(&self) -> Option<&str> {
+        match self.member {
+            AnyMember::Full(m) => m.nick.as_deref(),
+            AnyMember::Partial(m) => m.nick.as_deref(),
+        }
+    }
+
+    pub fn display_name(&self) -> &str {
+        self.nick()
+            .unwrap_or_else(|| self.user.display_name())
+    }
+
+    pub fn face(&self) -> String {
+        match self.member {
+            AnyMember::Full(m) => m.face(),
+            // PartialMember has no guild avatar
+            AnyMember::Partial(_) => self.user.face(),
         }
     }
 }
