@@ -94,7 +94,7 @@ impl HBotData {
     /// Loads all app emojis.
     ///
     /// This doesn't return them. Use [`Self::app_emojis`].
-    pub async fn load_app_emojis(&self, ctx: &Http) -> anyhow::Result<()> {
+    pub async fn load_app_emojis(&self, ctx: &Http) -> Result {
         if self.app_emojis.get().is_none() {
             _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
             log::info!("Loaded App Emojis.");
@@ -104,7 +104,7 @@ impl HBotData {
     }
 
     /// Gets the cached current bot user.
-    pub fn current_user(&self) -> anyhow::Result<&CurrentUser> {
+    pub fn current_user(&self) -> Result<&CurrentUser> {
         self.current_user.get().context("current user not loaded")
     }
 
@@ -126,10 +126,15 @@ impl HBotData {
     }
 
     /// Connects to the database and other needed services.
-    pub async fn connect(&self, init: &crate::modules::Info) -> anyhow::Result<()> {
+    pub async fn connect(&self, init: &crate::modules::Info) -> Result {
         if let Some(uri) = &self.config.mongodb_uri {
-            let client = mongodb::Client::with_uri_str(uri).await?;
-            let db = client.default_database().context("no default database specified")?;
+            let client = mongodb::Client::with_uri_str(uri)
+                .await
+                .context("failed to connect to database cluster")?;
+
+            let db = client
+                .default_database()
+                .context("no default database specified")?;
 
             for init in &init.db_init {
                 init(&db).await?;

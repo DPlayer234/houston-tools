@@ -13,6 +13,7 @@ async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
     use std::sync::{Arc, Mutex};
 
+    use anyhow::Context as _;
     use serenity::builder::CreateCommand;
     use serenity::gateway::ActivityData;
     use serenity::model::prelude::*;
@@ -64,9 +65,10 @@ async fn main() -> anyhow::Result<()> {
         .data(Arc::clone(&bot_data))
         .framework(framework)
         .event_handler(event_handler)
-        .await?;
+        .await
+        .context("failed to build discord client")?;
 
-    client.start().await?;
+    client.start().await.context("failed to start discord client")?;
     loader.await?;
 
     return Ok(());
@@ -124,7 +126,11 @@ async fn main() -> anyhow::Result<()> {
         data: &HBotData,
         commands: &[CreateCommand<'static>],
     ) -> anyhow::Result<()> {
-        let commands = ctx.http().create_global_commands(&commands).await?;
+        let commands = ctx.http()
+            .create_global_commands(&commands)
+            .await
+            .context("failed to create global commands")?;
+
         log::trace!("Created {} global commands.", commands.len());
 
         data.load_app_emojis(ctx.http()).await?;
@@ -146,7 +152,7 @@ async fn main() -> anyhow::Result<()> {
         match var("HOUSTON_PROFILE") {
             Ok(value) => Ok(value.into()),
             Err(NotPresent) => Ok("release".into()),
-            Err(err) => Err(err.into()),
+            Err(err) => Err(err).context("cannot load HOUSTON_PROFILE env variable"),
         }
     }
 
@@ -158,8 +164,8 @@ async fn main() -> anyhow::Result<()> {
             .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
             .add_source(File::new(&format!("houston_app.{profile}.toml"), FileFormat::Toml).required(false))
             .add_source(Environment::default().separator("__"))
-            .build()?
-            .try_deserialize()?;
+            .build().context("cannot build config")?
+            .try_deserialize().context("cannot deserialize config")?;
 
         Ok(config)
     }

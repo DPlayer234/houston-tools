@@ -32,8 +32,8 @@ macro_rules! generate {
         }
 
         impl HAppEmojiStore {
-            pub async fn load_and_update(config: &HBotConfig, ctx: &Http) -> anyhow::Result<HAppEmojiStore> {
-                let emojis = load_emojis(ctx).await?;
+            pub async fn load_and_update(config: &HBotConfig, ctx: &Http) -> Result<HAppEmojiStore> {
+                let emojis = load_emojis(ctx).await.context("failed to load app emojis")?;
 
                 struct Temp {
                     $($key: Option<ReactionType>,)*
@@ -92,12 +92,12 @@ generate!({
 
 static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| ReactionType::from('❔'));
 
-async fn load_emojis(ctx: &Http) -> anyhow::Result<Vec<Emoji>> {
+async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
     Ok(ctx.get_application_emojis().await?)
 }
 
 #[inline(never)]
-async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> anyhow::Result<ReactionType> {
+async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> Result<ReactionType> {
     let map = serde_json::json!({
         "name": name,
         "image": png_to_data_url(image_data),

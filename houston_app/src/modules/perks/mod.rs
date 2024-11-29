@@ -68,9 +68,10 @@ impl super::Module for Module {
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
-        if config.mongodb_uri.is_none() {
-            anyhow::bail!("perks requires a mongodb_uri");
-        }
+        anyhow::ensure!(
+            config.mongodb_uri.is_some(),
+            "perks requires a mongodb_uri",
+        );
 
         let perks = config.perks().unwrap();
         log::info!("Perks are enabled.");

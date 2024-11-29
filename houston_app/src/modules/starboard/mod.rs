@@ -45,9 +45,10 @@ impl super::Module for Module {
             "starboard ids must be globally unique",
         );
 
-        if config.mongodb_uri.is_none() {
-            anyhow::bail!("starboard requires a mongodb_uri");
-        }
+        anyhow::ensure!(
+            config.mongodb_uri.is_some(),
+            "starboard requires a mongodb_uri",
+        );
 
         log::info!("Starboard is enabled: {} guild(s)", config.starboard.len());
 
