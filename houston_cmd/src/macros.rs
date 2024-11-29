@@ -2,17 +2,16 @@
 #[macro_export]
 macro_rules! parse_slash_argument {
     ($ctx:expr, $name:literal, Option<$ty:ty>) => {
-        if let Some(value) = $ctx.options().iter().find(|o| o.name == $name) {
-            Some(<$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?)
-        } else {
-            None
+        match $ctx.options().iter().find(|o| o.name == $name) {
+            Some(value) => Some(<$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?),
+            None => None,
         }
     };
     ($ctx:expr, $name:literal, $ty:ty) => {{
-        let Some(value) = $ctx.options().iter().find(|o| o.name == $name)
-        else { return Err($crate::Error::structure_mismatch($ctx, "a required parameter is missing")) };
-
-        <$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?
+        match $ctx.options().iter().find(|o| o.name == $name) {
+            Some(value) => <$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?,
+            None => return Err($crate::Error::structure_mismatch($ctx, "a required parameter is missing")),
+        }
     }};
 }
 

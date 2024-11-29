@@ -1,6 +1,8 @@
 use super::BoardId;
 use crate::slashies::prelude::*;
 
+mod overview;
+
 /// Access starboard info.
 #[chat_command(
     contexts = "Guild",
@@ -47,6 +49,16 @@ pub mod starboard {
         ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
 
         Ok(())
+    }
+
+    /// Shows an overview of all boards.
+    #[sub_command]
+    async fn overview(
+        ctx: Context<'_>,
+        #[description = "Whether to show the response only to yourself."]
+        ephemeral: Option<bool>,
+    ) -> Result {
+        overview::overview(ctx, ephemeral).await
     }
 }
 
