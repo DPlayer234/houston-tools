@@ -2,6 +2,7 @@ use bson::doc;
 
 use utils::text::write_str::*;
 
+use crate::helper::bson::bson_id;
 use crate::modules::starboard::model;
 use crate::slashies::prelude::*;
 
@@ -19,43 +20,39 @@ pub async fn overview(
 
     ctx.defer_as(ephemeral).await?;
 
-    let filter = doc! {
-        "board": {
-            "$in": guild_config.board_db_keys(),
-        },
-    };
-
-    let sort = doc! {
-        "max_reacts": -1,
-    };
-
-    let top_posts = model::Message::collection(db)
-        .find(filter.clone())
-        .sort(sort)
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-
-    let sort = doc! {
-        "score": -1,
-    };
-
-    let top_users = model::Score::collection(db)
-        .find(filter)
-        .sort(sort)
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-
     let mut embed = CreateEmbed::new()
         .title("Starboard Overview")
         .color(data.config().embed_color);
 
     for (id, board) in &guild_config.boards {
+        // CMBK: this might be possible to implement without 2 requests per board
+        // maybe with an aggregate pipeline?
+        let filter = doc! {
+            "board": bson_id!(id),
+        };
+
+        let sort = doc! {
+            "max_reacts": -1,
+        };
+
+        let top_post = model::Message::collection(db)
+            .find_one(filter.clone())
+            .sort(sort)
+            .await?;
+
+        let sort = doc! {
+            "score": -1,
+        };
+
+        let top_user = model::Score::collection(db)
+            .find_one(filter)
+            .sort(sort)
+            .await?;
+
         let mut value = String::with_capacity(256);
 
         write_str!(value, "- **Top Post:** ");
-        match top_posts.iter().find(|m| m.board == *id) {
+        match top_post {
             Some(top_post) => writeln_str!(
                 value,
                 "https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
@@ -65,7 +62,7 @@ pub async fn overview(
         }
 
         write_str!(value, "- **Top Poster:** ");
-        match top_users.iter().find(|m| m.board == *id) {
+        match top_user {
             Some(top_user) => write_str!(
                 value,
                 "<@{}>: {} {}",
