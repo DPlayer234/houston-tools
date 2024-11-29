@@ -8,7 +8,7 @@ use utils::text::write_str::*;
 use crate::buttons::prelude::*;
 use crate::fmt::discord::TimeMentionable;
 use crate::helper::bson::bson_id;
-use crate::modules::perks::config::Config;
+use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
@@ -25,7 +25,7 @@ enum Action {
     ViewEffect(Effect),
     ViewItem(Item),
     BuyEffect(Effect),
-    BuyItem(Item),
+    BuyItem(Item, u16),
 }
 
 // 20 EM dashes.
@@ -263,16 +263,34 @@ impl View {
         let back = Self::new().to_custom_id();
         let back = CreateButton::new(back).emoji('⏪').label("Back");
 
-        let buy = Self::with_action(Action::BuyItem(item)).to_custom_id();
+        let buy = Self::with_action(Action::BuyItem(item, 1)).to_custom_id();
         let buy = CreateButton::new(buy)
             .label("Buy")
             .style(ButtonStyle::Success)
             .disabled(wallet.cash < st.cost.into());
 
-        let components = vec![
-            CreateActionRow::buttons(vec![back, buy]),
-        ];
+        let mut buttons = vec![back, buy];
 
+        fn buy_button<'new>(wallet: &Wallet, st: ItemPrice, item: Item, mult: u16) -> CreateButton<'new> {
+            let cost = i64::from(st.cost) * i64::from(mult);
+            let buy = View::with_action(Action::BuyItem(item, mult)).to_custom_id();
+            CreateButton::new(buy)
+                .label(format!("x{mult}"))
+                .style(ButtonStyle::Success)
+                .disabled(wallet.cash < cost)
+        }
+
+        if owned >= 10 {
+            buttons.push(buy_button(&wallet, st, item, 10));
+        }
+        if owned >= 50 {
+            buttons.push(buy_button(&wallet, st, item, 50));
+        }
+        if owned >= 250 {
+            buttons.push(buy_button(&wallet, st, item, 250));
+        }
+
+        let components = vec![CreateActionRow::buttons(buttons)];
         let reply = CreateReply::new()
             .embed(embed)
             .components(components);
@@ -314,7 +332,7 @@ impl View {
         self.view_effect(ctx, guild_id, user_id, effect).await
     }
 
-    async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> Result<CreateReply<'_>> {
+    async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item, mult: u16) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -322,12 +340,14 @@ impl View {
         let st = item.price(perks)
             .context("effect cannot be bought")?;
 
+        let cost = i64::from(st.cost) * i64::from(mult);
         Wallet::collection(db)
-            .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
+            .take_items(guild_id, user_id, Item::Cash, cost, perks)
             .await?;
 
-       let wallet =  Wallet::collection(db)
-            .add_items(guild_id, user_id, item, st.amount.into())
+        let amount = i64::from(st.amount) * i64::from(mult);
+        let wallet = Wallet::collection(db)
+            .add_items(guild_id, user_id, item, amount)
             .await?;
 
         let owned = wallet.item(item);
@@ -344,7 +364,7 @@ impl View {
             Action::ViewEffect(effect) => self.view_effect(ctx, guild_id, user_id, effect).await,
             Action::ViewItem(item) => self.view_item(ctx, guild_id, user_id, item).await,
             Action::BuyEffect(effect) => self.buy_effect(ctx, guild_id, user_id, effect).await,
-            Action::BuyItem(item) => self.buy_item(ctx, guild_id, user_id, item).await,
+            Action::BuyItem(item, mult) => self.buy_item(ctx, guild_id, user_id, item, mult).await,
         }
     }
 }
