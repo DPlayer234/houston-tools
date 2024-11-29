@@ -6,6 +6,8 @@ use crate::data::IntoEphemeral;
 use crate::fmt::discord::DisplayResolvedArgs;
 use crate::prelude::*;
 
+use args::SlashMember;
+
 pub mod args;
 
 pub mod prelude {
@@ -15,6 +17,7 @@ pub mod prelude {
     pub use super::args::*;
     pub use super::create_reply;
     pub use super::ContextExt as _;
+    pub use super::SlashUserExt as _;
     pub use crate::prelude::*;
 }
 
@@ -110,25 +113,42 @@ pub fn create_reply<'new>(ephemeral: impl IntoEphemeral) -> CreateReply<'new> {
 
 /// Extension trait for the poise context.
 pub trait ContextExt<'a> {
-    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result;
+    async fn defer_as(self, ephemeral: impl IntoEphemeral) -> Result;
 
     #[must_use]
-    fn data_ref(&self) -> &'a HBotData;
+    fn data_ref(self) -> &'a HBotData;
 
-    fn require_guild_id(&self) -> anyhow::Result<GuildId>;
+    fn require_guild_id(self) -> anyhow::Result<GuildId>;
 }
 
 impl<'a> ContextExt<'a> for Context<'a> {
-    async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result {
+    async fn defer_as(self, ephemeral: impl IntoEphemeral) -> Result {
         self.defer(ephemeral.into_ephemeral()).await?;
         Ok(())
     }
 
-    fn data_ref(&self) -> &'a HBotData {
+    fn data_ref(self) -> &'a HBotData {
         self.serenity.data_ref::<HContextData>()
     }
 
-    fn require_guild_id(&self) -> anyhow::Result<GuildId> {
+    fn require_guild_id(self) -> anyhow::Result<GuildId> {
         self.guild_id().context("must be used in guild")
+    }
+}
+
+pub trait SlashUserExt<'a>: Sized {
+    type Inner;
+    fn or_invoking(self, ctx: Context<'a>) -> Result<Self::Inner>;
+}
+
+impl<'a> SlashUserExt<'a> for Option<SlashMember<'a>> {
+    type Inner = SlashMember<'a>;
+
+    #[inline]
+    fn or_invoking(self, ctx: Context<'a>) -> Result<Self::Inner> {
+        match self {
+            Some(member) => Ok(member),
+            None => SlashMember::from_ctx(ctx),
+        }
     }
 }

@@ -37,6 +37,27 @@ pub fn get_pagination_buttons<'a, T: ToCustomData>(
     ]))
 }
 
+pub trait WithPartial {
+    type Partial;
+}
+
+#[derive(Debug)]
+pub enum PartialRef<'a, T: WithPartial> {
+    Full(&'a T),
+    Partial(&'a T::Partial),
+}
+
+impl<T: WithPartial> Copy for PartialRef<'_, T> {}
+impl<T: WithPartial> Clone for PartialRef<'_, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl WithPartial for Member {
+    type Partial = PartialMember;
+}
+
 /// Serializes a Discord ID as an [`u64`].
 pub mod id_as_u64 {
     use serde::de::Error;

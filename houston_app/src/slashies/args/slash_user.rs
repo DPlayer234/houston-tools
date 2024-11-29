@@ -1,5 +1,6 @@
 use houston_cmd::{Context, Error, SlashArg, UserContextArg};
 
+use crate::helper::discord::PartialRef;
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -37,13 +38,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
 #[derive(Debug, Clone, Copy)]
 pub struct SlashMember<'a> {
     pub user: &'a User,
-    pub member: AnyMember<'a>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum AnyMember<'a> {
-    Full(&'a Member),
-    Partial(&'a PartialMember),
+    pub member: PartialRef<'a, Member>,
 }
 
 #[serenity::async_trait]
@@ -53,7 +48,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
         resolved: &ResolvedValue<'ctx>,
     ) -> Result<Self, Error<'ctx>> {
         match *resolved {
-            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member: AnyMember::Partial(member) }),
+            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member: PartialRef::Partial(member) }),
             // delegate to this method to get the correct error
             _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?)
         }
@@ -74,7 +69,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
         let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
-        Ok(Self { user, member: AnyMember::Partial(member) })
+        Ok(Self { user, member: PartialRef::Partial(member) })
     }
 }
 
@@ -94,13 +89,13 @@ impl SlashUser<'_> {
 impl<'a> SlashMember<'a> {
     pub fn from_ctx(ctx: Context<'a>) -> Result<Self> {
         let member = ctx.member().context("member must be present")?;
-        Ok(Self { user: ctx.user(), member: AnyMember::Full(member) })
+        Ok(Self { user: ctx.user(), member: PartialRef::Full(member) })
     }
 
     pub fn nick(&self) -> Option<&str> {
         match self.member {
-            AnyMember::Full(m) => m.nick.as_deref(),
-            AnyMember::Partial(m) => m.nick.as_deref(),
+            PartialRef::Full(m) => m.nick.as_deref(),
+            PartialRef::Partial(m) => m.nick.as_deref(),
         }
     }
 
@@ -111,9 +106,9 @@ impl<'a> SlashMember<'a> {
 
     pub fn face(&self) -> String {
         match self.member {
-            AnyMember::Full(m) => m.face(),
+            PartialRef::Full(m) => m.face(),
             // PartialMember has no guild avatar
-            AnyMember::Partial(_) => self.user.face(),
+            PartialRef::Partial(_) => self.user.face(),
         }
     }
 }

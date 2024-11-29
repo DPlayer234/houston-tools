@@ -8,7 +8,7 @@ use crate::reply::CreateReply;
 use crate::ReplyHandle;
 
 /// The context for a command invocation.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Context<'a> {
     pub(crate) reply_state: &'a AtomicBool,
     /// The serenity context that triggered this command.
@@ -16,13 +16,6 @@ pub struct Context<'a> {
     /// The command interaction that this context corresponds to.
     pub interaction: &'a CommandInteraction,
     pub(crate) options: &'a [ResolvedOption<'a>],
-}
-
-impl Copy for Context<'_> {}
-impl Clone for Context<'_> {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 
 impl<'a> Context<'a> {

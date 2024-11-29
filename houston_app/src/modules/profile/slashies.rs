@@ -32,11 +32,7 @@ pub async fn profile(
     #[description = "Whether to show the response only to yourself."]
     ephemeral: Option<bool>,
 ) -> Result {
-    let member = match member {
-        Some(member) => member,
-        None => SlashMember::from_ctx(ctx)?,
-    };
-
+    let member = member.or_invoking(ctx)?;
     profile_core(ctx, member, ephemeral).await
 }
 
