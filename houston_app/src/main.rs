@@ -9,20 +9,15 @@ mod slashies;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    use std::borrow::Cow;
     use std::num::NonZero;
     use std::sync::{Arc, Mutex};
 
-    use anyhow::Context as _;
-    use serenity::builder::CreateCommand;
     use serenity::gateway::ActivityData;
-    use serenity::model::prelude::*;
     use serenity::prelude::*;
 
     use houston_cmd::Framework;
 
-    use data::*;
-    use modules::Info;
+    use crate::prelude::*;
 
     // SAFETY: No other code running that accesses this yet.
     unsafe { crate::helper::time::mark_startup_time(); }
@@ -37,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting...");
 
-    let mut init = Info::new();
+    let mut init = modules::Info::new();
     init.load(&config.bot)?;
 
     let bot_data = Arc::new(HBotData::new(config.bot));
@@ -125,7 +120,7 @@ async fn main() -> anyhow::Result<()> {
         ctx: Context,
         data: &HBotData,
         commands: &[CreateCommand<'static>],
-    ) -> anyhow::Result<()> {
+    ) -> Result {
         let commands = ctx.http()
             .create_global_commands(&commands)
             .await
@@ -146,7 +141,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    fn profile() -> anyhow::Result<Cow<'static, str>> {
+    fn profile() -> Result<Cow<'static, str>> {
         use std::env::{var, VarError::NotPresent};
 
         match var("HOUSTON_PROFILE") {
@@ -156,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    fn build_config() -> anyhow::Result<config::HConfig> {
+    fn build_config() -> Result<config::HConfig> {
         use config_rs::{Config, Environment, File, FileFormat};
 
         let profile = profile()?;

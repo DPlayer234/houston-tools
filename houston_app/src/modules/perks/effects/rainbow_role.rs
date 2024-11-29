@@ -10,7 +10,7 @@ use crate::modules::perks::model::*;
 pub struct RainbowRole;
 
 impl Shape for RainbowRole {
-    async fn supported(&self, args: Args<'_>) -> anyhow::Result<bool> {
+    async fn supported(&self, args: Args<'_>) -> Result<bool> {
         // this only errors if there is no role
         Ok(find_rainbow_role(&args).is_ok())
     }
@@ -93,13 +93,13 @@ fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
         .ok_or(NoRainbowRole)
 }
 
-fn find_rainbow_role<'a>(args: &Args<'a>) -> anyhow::Result<&'a RainbowRoleEntry> {
+fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry> {
     get_config(args.ctx)?
         .guilds.get(&args.guild_id)
         .context("rainbow role not configured for guild")
 }
 
-async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> anyhow::Result<bool> {
+async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> {
     let db = ctx.data_ref::<HContextData>().database()?;
 
     let filter = doc! {

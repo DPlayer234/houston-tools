@@ -111,7 +111,7 @@ define_button_args! {
 
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
-    pub fn from_custom_id(id: &str) -> anyhow::Result<Self> {
+    pub fn from_custom_id(id: &str) -> Result<Self> {
         let mut bytes = SmallVec::new();
         utils::str_as_data::decode_b65536(&mut bytes, id)?;
         CustomData(bytes).to_button_args()
@@ -285,7 +285,7 @@ pub trait ButtonArgsReply: Sized {
 /// Provides a way for button arguments to modify the create-reply payload.
 pub trait ButtonMessage: Sized {
     /// Creates an edit-reply payload.
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>>;
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>>;
 }
 
 impl<T: ButtonMessage> ButtonArgsReply for T {
@@ -311,7 +311,7 @@ impl CustomData {
     }
 
     /// Converts this instance to [`ButtonArgs`].
-    pub fn to_button_args(&self) -> anyhow::Result<ButtonArgs> {
+    pub fn to_button_args(&self) -> Result<ButtonArgs> {
         Ok(serde_bare::from_slice(&self.0)?)
     }
 

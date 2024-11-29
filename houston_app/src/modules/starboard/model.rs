@@ -1,12 +1,5 @@
-use bson::doc;
-use bson::oid::ObjectId;
-use mongodb::options::IndexOptions;
-use mongodb::{Collection, Database, IndexModel};
-use serde::{Deserialize, Serialize};
-use serenity::model::id::{ChannelId, MessageId, UserId};
-
 use super::BoardId;
-use crate::helper::bson::id_as_i64;
+use crate::modules::model_prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {

@@ -27,7 +27,7 @@ impl<'a> Args<'a> {
 }
 
 trait Shape {
-    async fn supported(&self, args: Args<'_>) -> anyhow::Result<bool> {
+    async fn supported(&self, args: Args<'_>) -> Result<bool> {
         _ = args;
         Ok(true)
     }
@@ -66,7 +66,7 @@ macro_rules! impl_kind_fn {
 }
 
 impl Effect {
-    impl_kind_fn!(supported(args: Args<'_>) -> anyhow::Result<bool>);
+    impl_kind_fn!(supported(args: Args<'_>) -> Result<bool>);
     impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> Result);
     impl_kind_fn!(disable(args: Args<'_>) -> Result);
     impl_kind_fn!(update(args: &Context) -> Result);

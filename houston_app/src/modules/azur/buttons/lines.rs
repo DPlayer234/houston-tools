@@ -126,7 +126,7 @@ impl View {
         self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
     }
 
-    fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> anyhow::Result<(&'a ShipData, &'a ShipSkin)> {
+    fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> Result<(&'a ShipData, &'a ShipSkin)> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         let skin = ship.skins.get(usize::from(self.skin_index)).ok_or(AzurParseError::Ship)?;
         Ok((ship, skin))
@@ -236,7 +236,7 @@ impl ViewPart {
 }
 
 impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
         let (ship, skin) = self.resolve(&ctx)?;
         Ok(self.edit_with_ship(&ctx, ship, skin))
     }

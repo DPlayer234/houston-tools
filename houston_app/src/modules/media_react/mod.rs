@@ -28,7 +28,7 @@ pub async fn message(ctx: Context, new_message: Message) {
     }
 }
 
-async fn message_inner(ctx: Context, new_message: Message) -> anyhow::Result<()> {
+async fn message_inner(ctx: Context, new_message: Message) -> Result {
     // we only consider regular messages from users, not bots
     let valid = is_normal_message(new_message.kind)
         && !new_message.author.bot()

@@ -151,7 +151,7 @@ impl HBotData {
     }
 
     /// Gets the database connection.
-    pub fn database(&self) -> anyhow::Result<&mongodb::Database> {
+    pub fn database(&self) -> Result<&mongodb::Database> {
         self.database.get().context("database is not yet connected")
     }
 }

@@ -50,7 +50,7 @@ pub mod starboard {
     }
 }
 
-fn find_board(ctx: Context<'_>, board: u64) -> anyhow::Result<(GuildId, BoardId)> {
+fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
     let guild_id = ctx.guild_id()
         .context("command only available in guilds")?;
 

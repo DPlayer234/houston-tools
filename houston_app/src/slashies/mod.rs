@@ -118,7 +118,7 @@ pub trait ContextExt<'a> {
     #[must_use]
     fn data_ref(self) -> &'a HBotData;
 
-    fn require_guild_id(self) -> anyhow::Result<GuildId>;
+    fn require_guild_id(self) -> Result<GuildId>;
 }
 
 impl<'a> ContextExt<'a> for Context<'a> {
@@ -131,7 +131,7 @@ impl<'a> ContextExt<'a> for Context<'a> {
         self.serenity.data_ref::<HContextData>()
     }
 
-    fn require_guild_id(self) -> anyhow::Result<GuildId> {
+    fn require_guild_id(self) -> Result<GuildId> {
         self.guild_id().context("must be used in guild")
     }
 }

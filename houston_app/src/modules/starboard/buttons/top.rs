@@ -26,7 +26,7 @@ impl View {
         }
     }
 
-    pub async fn create_reply<'new>(mut self, data: &HBotData) -> anyhow::Result<CreateReply<'new>> {
+    pub async fn create_reply<'new>(mut self, data: &HBotData) -> Result<CreateReply<'new>> {
         const PAGE_SIZE: u32 = 15;
 
         let db = data.database()?;

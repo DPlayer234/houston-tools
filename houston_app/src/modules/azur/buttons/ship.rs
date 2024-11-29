@@ -333,7 +333,7 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<EditReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
         let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
         Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
             None => self.edit_with_ship(&ctx, ship, None),

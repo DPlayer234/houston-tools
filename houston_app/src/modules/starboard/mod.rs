@@ -56,7 +56,7 @@ impl super::Module for Module {
     }
 }
 
-fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> anyhow::Result<&config::StarboardEntry> {
+fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> Result<&config::StarboardEntry> {
     config.starboard
         .get(&guild)
         .context("starboard not configured for this guild")?
@@ -442,7 +442,7 @@ async fn has_reaction_by_user(ctx: &Context, message: &Message, emoji: &Reaction
     Ok(reacted_users.first().is_some_and(|u| u.id == user_id))
 }
 
-async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config::StarboardEntry) -> anyhow::Result<bool> {
+async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config::StarboardEntry) -> Result<bool> {
     let source = message
         .channel_id
         .to_guild_channel(ctx, message.guild_id).await?;

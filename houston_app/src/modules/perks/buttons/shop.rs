@@ -57,7 +57,7 @@ impl View {
         Self { action }
     }
 
-    async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
+    async fn view_main(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -163,7 +163,7 @@ impl View {
         Ok(reply)
     }
 
-    async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
+    async fn view_effect(self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -226,7 +226,7 @@ impl View {
         Ok(reply)
     }
 
-    async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
+    async fn view_item(self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -280,7 +280,7 @@ impl View {
         Ok(reply)
     }
 
-    async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> anyhow::Result<CreateReply<'_>> {
+    async fn buy_effect(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -314,7 +314,7 @@ impl View {
         self.view_effect(ctx, guild_id, user_id, effect).await
     }
 
-    async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> anyhow::Result<CreateReply<'_>> {
+    async fn buy_item(mut self, ctx: &Context, guild_id: GuildId, user_id: UserId, item: Item) -> Result<CreateReply<'_>> {
         let data = ctx.data_ref::<HContextData>();
         let perks = data.config().perks()?;
         let db = data.database()?;
@@ -338,7 +338,7 @@ impl View {
         self.view_item(ctx, guild_id, user_id, item).await
     }
 
-    pub async fn create_reply(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> anyhow::Result<CreateReply<'_>> {
+    pub async fn create_reply(self, ctx: &Context, guild_id: GuildId, user_id: UserId) -> Result<CreateReply<'_>> {
         match self.action {
             Action::Main => self.view_main(ctx, guild_id, user_id).await,
             Action::ViewEffect(effect) => self.view_effect(ctx, guild_id, user_id, effect).await,
