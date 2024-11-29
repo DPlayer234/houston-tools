@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct BoardId(i64);
 
 impl BoardId {
@@ -31,7 +31,22 @@ impl From<i64> for BoardId {
 pub struct StarboardGuild {
     #[serde(default)]
     pub remove_score_on_delete: bool,
+    #[serde(with = "board_order_fix")]
     pub boards: IndexMap<BoardId, StarboardEntry>,
+}
+
+mod board_order_fix {
+    use serde::de::{Deserialize, Deserializer};
+
+    use super::*;
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<IndexMap<BoardId, StarboardEntry>, D::Error> {
+        let mut map = <IndexMap<BoardId, StarboardEntry>>::deserialize(deserializer)?;
+        map.sort_unstable_by(|k1, v1, k2, v2| v1.sort.cmp(&v2.sort).reverse().then(k1.cmp(k2)));
+        Ok(map)
+    }
 }
 
 impl StarboardGuild {
@@ -58,6 +73,8 @@ pub struct StarboardEntry {
     pub cash_gain: i32,
     #[serde(default)]
     pub cash_pin_gain: i32,
+    #[serde(default)]
+    pub sort: i8,
 }
 
 impl StarboardEntry {
