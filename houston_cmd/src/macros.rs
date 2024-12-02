@@ -21,18 +21,16 @@ macro_rules! parse_slash_argument {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! create_slash_argument {
-    (Option<$ty:ty>, $($setter:tt)*) => {
-        $crate::create_slash_argument!(@internal $ty, false, $($setter)*)
+    (($($body:tt)*), Option<$ty:ty>, $($setter:tt)*) => {
+        $crate::create_slash_argument!(@internal ($($body)*), $ty, false, $($setter)*)
     };
-    ($ty:ty, $($setter:tt)*) => {
-        $crate::create_slash_argument!(@internal $ty, true, $($setter)*)
+    (($($body:tt)*), $ty:ty, $($setter:tt)*) => {
+        $crate::create_slash_argument!(@internal ($($body)*), $ty, true, $($setter)*)
     };
-    (@internal $ty:ty, $req:literal, $($setter:tt)*) => {
+    (@internal ($($body:tt)*), $ty:ty, $req:literal, $($setter:tt)*) => {
         $crate::model::Parameter {
-            name: ::std::borrow::Cow::Borrowed(""),
-            description: ::std::borrow::Cow::Borrowed(""),
+            $($body)*,
             required: $req,
-            autocomplete: ::core::option::Option::None,
             choices: <$ty as $crate::SlashArg>::choices,
             type_setter: |c| <$ty as $crate::SlashArg>::set_options(c) $($setter)*,
         }

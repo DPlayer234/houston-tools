@@ -119,11 +119,10 @@ fn to_command_parameter(p: &Parameter) -> TokenStream {
     if let Some(m) = &p.args.max_length { setter.append_all(quote::quote! { .max_length(#m) }); }
 
     quote::quote! {
-        ::houston_cmd::model::Parameter {
+        ::houston_cmd::create_slash_argument!((
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(#description),
-            autocomplete: #autocomplete,
-            .. ::houston_cmd::create_slash_argument!(#ty, #setter)
-        }
+            autocomplete: #autocomplete
+        ), #ty, #setter)
     }
 }
