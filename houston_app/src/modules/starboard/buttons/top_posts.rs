@@ -3,7 +3,8 @@ use bson::doc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::{get_pagination_buttons, id_as_u64};
+use crate::helper::discord::id_as_u64;
+use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::get_board;
 use crate::modules::starboard::model;
 use crate::modules::starboard::BoardId;
@@ -70,10 +71,9 @@ impl View {
         let embed = CreateEmbed::new()
             .title(format!("{} Top Posts", board.emoji))
             .color(data.config().embed_color)
-            .description(description)
-            .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)));
+            .description(description);
 
-        let components = get_pagination_buttons(&mut self, utils::field_mut!(Self: page), index >= u64::from(PAGE_SIZE))
+        let components = ToPage::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), index >= u64::from(PAGE_SIZE))
             .as_slice()
             .to_vec();
 
@@ -86,9 +86,10 @@ impl View {
 }
 
 impl ButtonArgsReply for View {
-    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+    async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
         ctx.reply(CreateInteractionResponse::Acknowledge).await?;
 
+        ToPage::load_page(&mut self.page, ctx.interaction);
         let reply = self.create_reply(ctx.data).await?;
         let edit = reply.into_interaction_edit();
 

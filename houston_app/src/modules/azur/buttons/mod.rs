@@ -26,9 +26,12 @@ fn get_ship_wiki_url(base_ship: &azur_lane::ship::ShipData) -> CreateEmbedAuthor
 }
 
 fn get_ship_preview_name<'a>(ctx: &ButtonContext<'a>) -> Option<&'a str> {
-    ctx.interaction.message
-        .embeds.first()
-        .and_then(get_thumbnail_filename)
+    let embed = ctx.interaction
+        .message()?
+        .embeds
+        .first()?;
+
+    get_thumbnail_filename(embed)
 }
 
 fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
@@ -37,7 +40,4 @@ fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
     Some(name.split_once('.').map_or(name, |a| a.0))
 }
 
-use crate::helper::discord::{
-    get_pagination_buttons,
-    create_string_select_menu_row,
-};
+use crate::helper::discord::create_string_select_menu_row;

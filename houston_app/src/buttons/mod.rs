@@ -9,13 +9,16 @@ use utils::fields::FieldMut;
 use crate::prelude::*;
 use crate::modules::{azur, core as core_mod, perks, starboard};
 
+mod context;
 #[cfg(test)]
 mod test;
+
+pub use context::{ButtonContext, ButtonInteraction};
 
 pub mod prelude {
     pub use crate::prelude::*;
     #[allow(unused_imports)]
-    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ToCustomData};
+    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonInteraction, ButtonMessage, CustomData, ToCustomData};
 }
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
@@ -64,7 +67,7 @@ macro_rules! define_button_args {
             pub const fn borrow(&self) -> ButtonArgsRef<'_> {
                 match self {
                     $(
-                        ButtonArgs::$name(v) => ButtonArgsRef::$name(v),
+                        Self::$name(v) => ButtonArgsRef::$name(v),
                     )*
                 }
             }
@@ -72,7 +75,7 @@ macro_rules! define_button_args {
             async fn reply(self, ctx: ButtonContext<'_>) -> Result {
                 match self {
                     $(
-                        ButtonArgs::$name(args) => args.reply(ctx).await,
+                        Self::$name(args) => args.reply(ctx).await,
                     )*
                 }
             }
@@ -80,6 +83,8 @@ macro_rules! define_button_args {
     };
 }
 
+// to avoid unexpected effects for old buttons, don't insert new variants
+// anywhere other than the bottom and don't reorder them!
 define_button_args! {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
     None(core_mod::buttons::None),
@@ -107,6 +112,8 @@ define_button_args! {
     StarboardTop(starboard::buttons::top::View),
     /// Open the starboard top posts view.
     StarboardTopPosts(starboard::buttons::top_posts::View),
+    /// Open the "go to page" modal.
+    ToPage(core_mod::buttons::ToPage),
 }
 
 impl ButtonArgs {
@@ -130,17 +137,21 @@ pub mod handler {
 
     /// To be called in [`EventHandler::interaction_create`].
     pub async fn interaction_create(ctx: Context, interaction: Interaction) {
-        // We only care about component interactions.
-        let Interaction::Component(interaction) = interaction else { return };
+        match interaction {
+            Interaction::Component(interaction) => dispatch_component(ctx, interaction).await,
+            Interaction::Modal(interaction) => dispatch_modal(ctx, interaction).await,
+            _ => {}, // we only handle component and modal interactions
+        }
+    }
 
-        // Dispatch, then handle errors.
-        if let Err(err) = interaction_dispatch(&ctx, &interaction).await {
-            handle_dispatch_error(ctx, interaction, err).await
+    async fn dispatch_component(ctx: Context, interaction: ComponentInteraction) {
+        if let Err(err) = handle_component(&ctx, &interaction).await {
+            handle_dispatch_error(ctx, &interaction.token, err).await
         }
     }
 
     /// Handles the component interaction dispatch.
-    async fn interaction_dispatch(ctx: &Context, interaction: &ComponentInteraction) -> Result {
+    async fn handle_component(ctx: &Context, interaction: &ComponentInteraction) -> Result {
         use ComponentInteractionDataKind as Kind;
 
         let custom_id: &str = match &interaction.data.kind {
@@ -154,13 +165,31 @@ pub mod handler {
 
         args.reply(ButtonContext {
             serenity: ctx,
-            interaction,
+            interaction: ButtonInteraction::Component(interaction),
+            data: ctx.data_ref::<HContextData>(),
+        }).await
+    }
+
+    async fn dispatch_modal(ctx: Context, interaction: ModalInteraction) {
+        if let Err(err) = handle_modal(&ctx, &interaction).await {
+            handle_dispatch_error(ctx, &interaction.token, err).await
+        }
+    }
+
+    /// Handles the modal interaction dispatch.
+    async fn handle_modal(ctx: &Context, interaction: &ModalInteraction) -> Result {
+        let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
+        log::trace!("{}: {:?}", interaction.user.name, args);
+
+        args.reply(ButtonContext {
+            serenity: ctx,
+            interaction: ButtonInteraction::Modal(interaction),
             data: ctx.data_ref::<HContextData>(),
         }).await
     }
 
     #[cold]
-    async fn handle_dispatch_error(ctx: Context, interaction: ComponentInteraction, err: anyhow::Error) {
+    async fn handle_dispatch_error(ctx: Context, interaction_token: &str, err: anyhow::Error) {
         if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
             // print both errors to preserve the stack trace, if present
             log::warn!("Discord interaction error: {ser_err:?} / {err:?}");
@@ -179,8 +208,7 @@ pub mod handler {
             .embed(embed);
 
         let response = reply.into_interaction_followup();
-
-        let res = interaction.create_followup(ctx.http(), response).await;
+        let res = response.execute(&ctx.http, None, interaction_token).await;
         if let Err(res) = res {
             log::warn!("Error sending component error: {res}");
         }
@@ -252,30 +280,6 @@ where
     }
 }
 
-/// Execution context for [`ButtonArgsReply`].
-#[derive(Debug, Clone)]
-pub struct ButtonContext<'a> {
-    /// The serenity context.
-    pub serenity: &'a Context,
-    /// The source interaction.
-    pub interaction: &'a ComponentInteraction,
-    /// The bot data.
-    pub data: &'a HBotData,
-}
-
-impl ButtonContext<'_> {
-    /// Replies to the interaction.
-    pub async fn reply(&self, create: CreateInteractionResponse<'_>) -> Result {
-        Ok(self.interaction.create_response(&self.serenity.http, create).await?)
-    }
-
-    /// Edits a previous reply to the interaction.
-    pub async fn edit_reply(&self, create: EditInteractionResponse<'_>) -> Result {
-        self.interaction.edit_response(&self.serenity.http, create).await?;
-        Ok(())
-    }
-}
-
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonArgsReply: Sized {
     /// Replies to the interaction.
@@ -291,7 +295,7 @@ pub trait ButtonMessage: Sized {
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let reply = self.edit_reply(ctx.clone())?;
-        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
+        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id(), ctx.interaction.token()).await?;
         Ok(())
     }
 }

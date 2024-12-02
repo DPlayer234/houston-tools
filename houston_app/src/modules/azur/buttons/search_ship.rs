@@ -4,6 +4,7 @@ use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::modules::azur::data::HAzurLane;
+use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -68,12 +69,11 @@ impl View {
 
         let embed = CreateEmbed::new()
             .author(author)
-            .footer(CreateEmbedFooter::new(format!("Page {}", self.page + 1)))
             .description(desc)
             .color(data.config().embed_color);
 
         let mut rows = Vec::new();
-        if let Some(pagination) = super::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {
+        if let Some(pagination) = ToPage::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {
             rows.push(pagination);
         }
 
@@ -96,7 +96,8 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+    fn edit_reply(mut self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+        ToPage::load_page(&mut self.page, ctx.interaction);
         Ok(self.create(ctx.data).into())
     }
 }
