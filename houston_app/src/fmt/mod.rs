@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result, Write};
 
 use smallvec::SmallVec;
@@ -5,6 +6,17 @@ use smallvec::SmallVec;
 pub mod azur;
 pub mod discord;
 pub mod log;
+
+/// If non-empty, turns the string into a [`Cow::Owned`].
+///
+/// Otherwise returns a [`Cow::Borrowed`] with the `default`.
+pub fn written_or(string: String, default: &str) -> Cow<'_, str> {
+    if string.is_empty() {
+        Cow::Borrowed(default)
+    } else {
+        Cow::Owned(string)
+    }
+}
 
 pub fn write_join<W, I>(mut f: W, mut iter: I, join: &str) -> Result
 where

@@ -111,24 +111,24 @@ pub async fn overview(
     for (id, board) in &guild_config.boards {
         let mut value = String::with_capacity(256);
 
-        write_str!(value, "- **Top Post:** ");
+        value.push_str("- **Top Post:** ");
         match top_posts.iter().find(|t| t.board == *id) {
             Some(top_post) => writeln_str!(
                 value,
                 "https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
                 guild, top_post.channel, top_post.message, top_post.user, top_post.max_reacts, board.emoji,
             ),
-            None => writeln_str!(value, "<None>"),
+            None => value.push_str("<None>\n"),
         }
 
-        write_str!(value, "- **Top Poster:** ");
+        value.push_str("- **Top Poster:** ");
         match top_users.iter().find(|t| t.board == *id) {
             Some(top_user) => write_str!(
                 value,
                 "<@{}>: {} {} from {} post(s)",
                 top_user.user, top_user.score, board.emoji, top_user.post_count,
             ),
-            None => write_str!(value, "<None>"),
+            None => value.push_str("<None>"),
         }
 
         embed = embed.field(

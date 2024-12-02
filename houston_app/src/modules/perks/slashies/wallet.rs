@@ -44,9 +44,7 @@ pub async fn wallet(
         }
     }
 
-    if description.is_empty() {
-        "<None>".clone_into(&mut description);
-    }
+    let description = crate::fmt::written_or(description, "<None>");
 
     let (display_name, face) = get_display_info(ctx);
     let author = format!("{display_name}: Wallet");

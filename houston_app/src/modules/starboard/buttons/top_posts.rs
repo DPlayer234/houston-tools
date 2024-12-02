@@ -65,9 +65,7 @@ impl View {
             );
         }
 
-        if description.is_empty() {
-            "<None>".clone_into(&mut description);
-        }
+        let description = crate::fmt::written_or(description, "<None>");
 
         let embed = CreateEmbed::new()
             .title(format!("{} Top Posts", board.emoji))

@@ -129,9 +129,7 @@ pub mod perk_admin {
             );
         }
 
-        if description.is_empty() {
-            "<None>".clone_into(&mut description);
-        }
+        let description = crate::fmt::written_or(description, "<None>");
 
         let title = format!(
             "{}'s Perks",
