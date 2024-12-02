@@ -59,10 +59,11 @@ impl super::Module for Module {
     }
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
+        use crate::helper::bson::update_indices;
         Box::pin(async move {
-            model::Wallet::collection(db).create_indexes(model::Wallet::indices()).await?;
-            model::ActivePerk::collection(db).create_indexes(model::ActivePerk::indices()).await?;
-            model::UniqueRole::collection(db).create_indexes(model::UniqueRole::indices()).await?;
+            update_indices(model::Wallet::collection(db), model::Wallet::indices()).await?;
+            update_indices(model::ActivePerk::collection(db), model::ActivePerk::indices()).await?;
+            update_indices(model::UniqueRole::collection(db), model::UniqueRole::indices()).await?;
             Ok(())
         })
     }

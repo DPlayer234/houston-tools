@@ -2,9 +2,36 @@ use bson::doc;
 
 use utils::text::write_str::*;
 
-use crate::helper::bson::bson_id;
+use crate::helper::bson::id_as_i64;
 use crate::modules::starboard::model;
+use crate::modules::starboard::BoardId;
 use crate::slashies::prelude::*;
+
+#[derive(Debug, serde::Deserialize)]
+struct TopScore {
+    #[serde(rename = "_id")]
+    board: BoardId,
+    #[serde(with = "id_as_i64")]
+    user: UserId,
+    #[serde(default)]
+    score: i64,
+    #[serde(default)]
+    post_count: i64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct TopMessage {
+    #[serde(rename = "_id")]
+    board: BoardId,
+    #[serde(with = "id_as_i64")]
+    pub channel: ChannelId,
+    #[serde(with = "id_as_i64")]
+    pub message: MessageId,
+    #[serde(with = "id_as_i64")]
+    pub user: UserId,
+    #[serde(default)]
+    pub max_reacts: i64,
+}
 
 pub async fn overview(
     ctx: Context<'_>,
@@ -20,39 +47,72 @@ pub async fn overview(
 
     ctx.defer_as(ephemeral).await?;
 
+    let filter = doc! {
+        "board": {
+            "$in": guild_config.board_db_keys(),
+        },
+    };
+
+    let top_posts = model::Message::collection(db)
+        .aggregate([
+            doc! {
+                "$match": filter.clone(),
+            },
+            doc! {
+                "$sort": {
+                    "max_reacts": -1,
+                    "message": -1,
+                },
+            },
+            doc! {
+                "$group": {
+                    "_id": "$board",
+                    "channel": { "$first": "$channel" },
+                    "message": { "$first": "$message" },
+                    "user": { "$first": "$user" },
+                    "max_reacts": { "$max": "$max_reacts" },
+                },
+            },
+        ])
+        .with_type::<TopMessage>()
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let top_users = model::Score::collection(db)
+        .aggregate([
+            doc! {
+                "$match": filter,
+            },
+            doc! {
+                "$sort": {
+                    "score": -1,
+                    "post_count": -1,
+                },
+            },
+            doc! {
+                "$group": {
+                    "_id": "$board",
+                    "user": { "$first": "$user" },
+                    "score": { "$max": "$score" },
+                    "post_count": { "$first": "$post_count" },
+                },
+            },
+        ])
+        .with_type::<TopScore>()
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
     let mut embed = CreateEmbed::new()
         .title("Starboard Overview")
         .color(data.config().embed_color);
 
     for (id, board) in &guild_config.boards {
-        // CMBK: this might be possible to implement without 2 requests per board
-        // maybe with an aggregate pipeline?
-        let filter = doc! {
-            "board": bson_id!(id),
-        };
-
-        let sort = doc! {
-            "max_reacts": -1,
-        };
-
-        let top_post = model::Message::collection(db)
-            .find_one(filter.clone())
-            .sort(sort)
-            .await?;
-
-        let sort = doc! {
-            "score": -1,
-        };
-
-        let top_user = model::Score::collection(db)
-            .find_one(filter)
-            .sort(sort)
-            .await?;
-
         let mut value = String::with_capacity(256);
 
         write_str!(value, "- **Top Post:** ");
-        match top_post {
+        match top_posts.iter().find(|t| t.board == *id) {
             Some(top_post) => writeln_str!(
                 value,
                 "https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
@@ -62,11 +122,11 @@ pub async fn overview(
         }
 
         write_str!(value, "- **Top Poster:** ");
-        match top_user {
+        match top_users.iter().find(|t| t.board == *id) {
             Some(top_user) => write_str!(
                 value,
-                "<@{}>: {} {}",
-                top_user.user, top_user.score, board.emoji,
+                "<@{}>: {} {} from {} post(s)",
+                top_user.user, top_user.score, board.emoji, top_user.post_count,
             ),
             None => write_str!(value, "<None>"),
         }

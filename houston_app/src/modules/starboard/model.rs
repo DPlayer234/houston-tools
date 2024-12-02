@@ -42,8 +42,8 @@ impl Message {
         db.collection("starboard.messages")
     }
 
-    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
-        [
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
             IndexModel::builder()
                 .options(name("board-message"))
                 .keys(doc! {
@@ -68,8 +68,8 @@ impl Score {
         db.collection("starboard.scores")
     }
 
-    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
-        [
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
             IndexModel::builder()
                 .options(name("board-user"))
                 .keys(doc! {
@@ -82,6 +82,7 @@ impl Score {
                 .keys(doc! {
                     "board": 1,
                     "score": 1,
+                    "post_count": 1,
                 })
                 .build()
         ]

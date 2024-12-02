@@ -55,8 +55,8 @@ impl Wallet {
         db.collection("perks.wallet")
     }
 
-    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
-        [
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
             IndexModel::builder()
                 .options(name("guild-user"))
                 .keys(doc! {
@@ -73,8 +73,8 @@ impl ActivePerk {
         db.collection("perks.active_perks")
     }
 
-    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
-        [
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
             IndexModel::builder()
                 .options(name("guild-user-effect"))
                 .keys(doc! {
@@ -105,8 +105,8 @@ impl UniqueRole {
         db.collection("perks.unique_role")
     }
 
-    pub fn indices() -> impl IntoIterator<Item = IndexModel> {
-        [
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
             IndexModel::builder()
                 .options(name("guild-user"))
                 .keys(doc! {

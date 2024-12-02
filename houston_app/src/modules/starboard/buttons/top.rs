@@ -38,6 +38,7 @@ impl View {
 
         let sort = doc! {
             "score": -1,
+            "post_count": -1,
         };
 
         let offset = u64::from(PAGE_SIZE) * u64::from(self.page);
@@ -59,8 +60,8 @@ impl View {
             index += 1;
             writeln_str!(
                 description,
-                "{}. <@{}>: {} {}",
-                offset + index, item.user, item.score, board.emoji.as_emoji(),
+                "{}. <@{}>: {} {} from {} post(s)",
+                offset + index, item.user, item.score, board.emoji.as_emoji(), item.post_count,
             );
         }
 

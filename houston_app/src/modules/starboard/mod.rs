@@ -32,9 +32,10 @@ impl super::Module for Module {
     }
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
+        use crate::helper::bson::update_indices;
         Box::pin(async move {
-            model::Message::collection(db).create_indexes(model::Message::indices()).await?;
-            model::Score::collection(db).create_indexes(model::Score::indices()).await?;
+            update_indices(model::Message::collection(db), model::Message::indices()).await?;
+            update_indices(model::Score::collection(db), model::Score::indices()).await?;
             Ok(())
         })
     }
