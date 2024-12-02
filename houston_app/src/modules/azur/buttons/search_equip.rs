@@ -93,7 +93,11 @@ impl View {
 }
 
 impl ButtonMessage for View {
-    fn edit_reply(mut self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+        Ok(self.create(ctx.data).into())
+    }
+
+    fn edit_modal_reply(mut self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
         ToPage::load_page(&mut self.page, ctx.interaction);
         Ok(self.create(ctx.data).into())
     }

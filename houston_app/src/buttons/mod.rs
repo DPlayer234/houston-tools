@@ -13,12 +13,12 @@ mod context;
 #[cfg(test)]
 mod test;
 
-pub use context::{ButtonContext, ButtonInteraction};
+pub use context::{ButtonContext, ModalContext};
 
 pub mod prelude {
     pub use crate::prelude::*;
     #[allow(unused_imports)]
-    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonInteraction, ButtonMessage, CustomData, ToCustomData};
+    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ModalContext, ToCustomData};
 }
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
@@ -76,6 +76,14 @@ macro_rules! define_button_args {
                 match self {
                     $(
                         Self::$name(args) => args.reply(ctx).await,
+                    )*
+                }
+            }
+
+            async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
+                match self {
+                    $(
+                        Self::$name(args) => args.modal_reply(ctx).await,
                     )*
                 }
             }
@@ -165,7 +173,7 @@ pub mod handler {
 
         args.reply(ButtonContext {
             serenity: ctx,
-            interaction: ButtonInteraction::Component(interaction),
+            interaction,
             data: ctx.data_ref::<HContextData>(),
         }).await
     }
@@ -181,9 +189,9 @@ pub mod handler {
         let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
         log::trace!("{}: {:?}", interaction.user.name, args);
 
-        args.reply(ButtonContext {
+        args.modal_reply(ModalContext {
             serenity: ctx,
-            interaction: ButtonInteraction::Modal(interaction),
+            interaction,
             data: ctx.data_ref::<HContextData>(),
         }).await
     }
@@ -282,20 +290,38 @@ where
 
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonArgsReply: Sized {
-    /// Replies to the interaction.
+    /// Replies to the component interaction.
     async fn reply(self, ctx: ButtonContext<'_>) -> Result;
+
+    /// Replies to the modal interaction.
+    async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
+        _ = ctx;
+        anyhow::bail!("this button args type does not support modals");
+    }
 }
 
 /// Provides a way for button arguments to modify the create-reply payload.
 pub trait ButtonMessage: Sized {
     /// Creates an edit-reply payload.
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>>;
+
+    /// Creates an edit-reply payload.
+    fn edit_modal_reply(self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
+        _ = ctx;
+        anyhow::bail!("this button args type does not support modals");
+    }
 }
 
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let reply = self.edit_reply(ctx.clone())?;
-        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id(), ctx.interaction.token()).await?;
+        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
+        Ok(())
+    }
+
+    async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
+        let reply = self.edit_modal_reply(ctx.clone())?;
+        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
         Ok(())
     }
 }

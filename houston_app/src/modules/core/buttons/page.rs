@@ -2,24 +2,23 @@ use crate::buttons::prelude::*;
 
 /// Opens a modal for page navigation.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct ToPage {
-    data: CustomData,
-}
+pub struct ToPage(CustomData);
 
 impl ToPage {
     /// Opens a modal for page navigation.
     pub fn new(data: CustomData) -> Self {
-        Self { data }
+        Self(data)
     }
 
-    pub fn load_page(page: &mut u16, interaction: ButtonInteraction<'_>) {
+    pub fn load_page(page: &mut u16, interaction: &ModalInteraction) {
         if let Some(new_page) = Self::get_page(interaction) {
             *page = new_page;
         }
     }
 
-    pub fn get_page(interaction: ButtonInteraction<'_>) -> Option<u16> {
-        let component = interaction.modal_data()?
+    pub fn get_page(interaction: &ModalInteraction) -> Option<u16> {
+        let component = interaction
+            .data
             .components.first()?
             .components.first()?;
 
@@ -77,7 +76,8 @@ impl ButtonArgsReply for ToPage {
             CreateActionRow::input_text(input_text),
         ];
 
-        let modal = CreateModal::new(self.data.to_custom_id(), "Go to page...")
+        let custom_id = self.0.to_custom_id();
+        let modal = CreateModal::new(custom_id, "Go to page...")
             .components(components);
 
         let create = CreateInteractionResponse::Modal(modal);

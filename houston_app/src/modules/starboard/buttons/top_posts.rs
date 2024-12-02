@@ -86,7 +86,17 @@ impl View {
 }
 
 impl ButtonArgsReply for View {
-    async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        ctx.reply(CreateInteractionResponse::Acknowledge).await?;
+
+        let reply = self.create_reply(ctx.data).await?;
+        let edit = reply.into_interaction_edit();
+
+        ctx.edit_reply(edit).await?;
+        Ok(())
+    }
+
+    async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
         ctx.reply(CreateInteractionResponse::Acknowledge).await?;
 
         ToPage::load_page(&mut self.page, ctx.interaction);

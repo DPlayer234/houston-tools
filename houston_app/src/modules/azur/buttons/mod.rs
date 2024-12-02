@@ -26,11 +26,7 @@ fn get_ship_wiki_url(base_ship: &azur_lane::ship::ShipData) -> CreateEmbedAuthor
 }
 
 fn get_ship_preview_name<'a>(ctx: &ButtonContext<'a>) -> Option<&'a str> {
-    let embed = ctx.interaction
-        .message()?
-        .embeds
-        .first()?;
-
+    let embed = ctx.interaction.message.embeds.first()?;
     get_thumbnail_filename(embed)
 }
 
