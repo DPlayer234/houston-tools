@@ -69,7 +69,8 @@ impl Shape for RainbowRole {
         for (&guild, entry) in &rainbow.guilds {
             if has_any_rainbow_role(ctx, guild).await? {
                 let edit = EditRole::new()
-                    .colour(color);
+                    .colour(color)
+                    .audit_log_reason("rainbow role cycle");
 
                 let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
                 log::trace!("Updated rainbow role {} to color #{:06X}", role.name, color.0);

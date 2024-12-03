@@ -31,7 +31,10 @@ pub async fn pushpin_pin(
             .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
-        match message.pin(ctx.http(), Some("pinned by pushpin item")).await {
+        match message.pin(
+            ctx.http(),
+            Some(&format!("pushpin used by {}", ctx.user().name)),
+        ).await {
             Ok(()) => {
                 let description = format!(
                     "Pinned!\n-# Used 1 {}.",
@@ -90,7 +93,10 @@ pub async fn pushpin_unpin(
             .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
-        match message.unpin(ctx.http(), Some("unpinned by pushpin item")).await {
+        match message.unpin(
+            ctx.http(),
+            Some(&format!("pushpin used by {}", ctx.user().name)),
+        ).await {
             Ok(()) => {
                 let description = format!(
                     "Unpinned!\n-# Used 1 {}.",

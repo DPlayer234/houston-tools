@@ -42,7 +42,10 @@ pub async fn role_edit(
         .await?
         .ok_or(HArgError::new_const("You don't have a unique role."))?;
 
-    let mut edit = EditRole::new().name(name);
+    let mut edit = EditRole::new()
+        .name(name)
+        .audit_log_reason("use of role-edit command");
+
     if let Some(HexColor(color)) = color {
         edit = edit.colour(color);
     }
