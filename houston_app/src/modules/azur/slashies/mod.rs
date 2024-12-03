@@ -63,7 +63,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }
@@ -113,7 +113,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }
@@ -171,7 +171,7 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
 
         Ok(())
     }

@@ -37,3 +37,34 @@ fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
 }
 
 use crate::helper::discord::create_string_select_menu_row;
+
+const PAGE_SIZE: usize = 15;
+
+macro_rules! pagination {
+    ($rows:ident => $obj:expr, $options:expr, $iter:expr) => {
+        if $options.is_empty() {
+            if $obj.page == 0 {
+                let embed = CreateEmbed::new()
+                    .color(ERROR_EMBED_COLOR)
+                    .description("No results for that filter.");
+
+                return Ok(CreateReply::new().embed(embed));
+            } else {
+                return Err(HArgError::new("This page has no data.").into())
+            }
+        }
+
+        let mut $rows = Vec::new();
+
+        #[allow(clippy::cast_possible_truncation)]
+        let page_count = 1 + $obj.page + $iter.count().div_ceil($crate::modules::azur::buttons::PAGE_SIZE) as u16;
+        let pagination = $crate::modules::core::buttons::ToPage::build_row(&mut $obj, ::utils::field_mut!(Self: page))
+            .exact_page_count(page_count);
+
+        if let Some(pagination) = pagination.end() {
+            $rows.push(pagination);
+        }
+    };
+}
+
+pub(crate) use pagination;

@@ -29,6 +29,7 @@ impl View {
 
     pub async fn create_reply<'new>(mut self, data: &HBotData) -> Result<CreateReply<'new>> {
         const PAGE_SIZE: u32 = 15;
+        const MAX_PAGE: u16 = 50;
 
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
@@ -66,6 +67,26 @@ impl View {
             );
         }
 
+        if self.page > 0 && description.is_empty() {
+            return Err(HArgError::new("No data for this page.").into());
+        }
+
+        let has_more = index >= u64::from(PAGE_SIZE);
+        let page_count = if has_more {
+            let filter = doc! {
+                "board": self.board.get(),
+            };
+
+            model::Message::collection(db)
+                .count_documents(filter)
+                .limit((u64::from(MAX_PAGE) + 1) * u64::from(PAGE_SIZE))
+                .await?
+                .div_ceil(PAGE_SIZE.into())
+                .try_into()?
+        } else {
+            self.page + 1
+        };
+
         let description = crate::fmt::written_or(description, "<None>");
 
         let embed = CreateEmbed::new()
@@ -73,7 +94,9 @@ impl View {
             .color(data.config().embed_color)
             .description(description);
 
-        let components = ToPage::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), index >= u64::from(PAGE_SIZE))
+        let components = ToPage::build_row(&mut self, utils::field_mut!(Self: page))
+            .auto_page_count(page_count, has_more, MAX_PAGE)
+            .end()
             .as_slice()
             .to_vec();
 
@@ -87,23 +110,19 @@ impl View {
 
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        ctx.reply(CreateInteractionResponse::Acknowledge).await?;
+        ctx.acknowledge().await?;
 
         let reply = self.create_reply(ctx.data).await?;
-        let edit = reply.into_interaction_edit();
-
-        ctx.edit_reply(edit).await?;
+        ctx.edit(reply.into()).await?;
         Ok(())
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
-        ctx.reply(CreateInteractionResponse::Acknowledge).await?;
+        ctx.acknowledge().await?;
 
-        ToPage::load_page(&mut self.page, ctx.interaction);
+        ToPage::set_page_from(&mut self.page, ctx.interaction);
         let reply = self.create_reply(ctx.data).await?;
-        let edit = reply.into_interaction_edit();
-
-        ctx.edit_reply(edit).await?;
+        ctx.edit(reply.into()).await?;
         Ok(())
     }
 }

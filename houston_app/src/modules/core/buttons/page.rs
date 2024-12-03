@@ -1,3 +1,5 @@
+use utils::fields::FieldMut;
+
 use crate::buttons::prelude::*;
 
 /// Opens a modal for page navigation.
@@ -10,7 +12,7 @@ impl ToPage {
         Self(data)
     }
 
-    pub fn load_page(page: &mut u16, interaction: &ModalInteraction) {
+    pub fn set_page_from(page: &mut u16, interaction: &ModalInteraction) {
         if let Some(new_page) = Self::get_page(interaction) {
             *page = new_page;
         }
@@ -35,28 +37,91 @@ impl ToPage {
         }
 
         let page: u16 = value.parse().ok()?;
-        page.checked_sub(1)
+        (1..=9999).contains(&page).then_some(page - 1)
     }
 
-
-    pub fn get_pagination_buttons<'new, T: ToCustomData>(
+    pub fn build_row<T, F>(
         obj: &mut T,
-        page_field: impl utils::fields::FieldMut<T, u16>,
-        has_next: bool,
-    ) -> Option<CreateActionRow<'new>> {
-        let page = *page_field.get(obj);
-        (page > 0 || has_next).then(move || CreateActionRow::buttons(vec![
+        page_field: F,
+    ) -> PageRowBuilder<'_, T, F>
+    where
+        T: ToCustomData,
+        F: FieldMut<T, u16>,
+    {
+        PageRowBuilder {
+            obj,
+            page_field,
+            max_page: MaxPage::NoMore,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PageRowBuilder<'a, T, F> {
+    obj: &'a mut T,
+    page_field: F,
+    max_page: MaxPage,
+}
+
+#[derive(Debug)]
+enum MaxPage {
+    NoMore,
+    Exact(u16),
+    Minimum(u16),
+}
+
+impl<T, F> PageRowBuilder<'_, T, F>
+where
+    T: ToCustomData,
+    F: FieldMut<T, u16>,
+{
+    pub fn exact_page_count(mut self, pages: u16) -> Self {
+        self.max_page = MaxPage::Exact(pages);
+        self
+    }
+
+    pub fn min_page_count(mut self, pages: u16) -> Self {
+        self.max_page = MaxPage::Minimum(pages);
+        self
+    }
+
+    pub fn auto_page_count(self, pages: u16, has_more: bool, max_show: u16) -> Self {
+        if pages <= max_show {
+            self.exact_page_count(pages)
+        } else if has_more {
+            let page = *self.page_field.get(self.obj);
+            self.min_page_count(max_show.max(page + 1))
+        } else {
+            let page = *self.page_field.get(self.obj);
+            self.exact_page_count(page + 1)
+        }
+    }
+
+    pub fn end<'new>(self) -> Option<CreateActionRow<'new>> {
+        let page = *self.page_field.get(self.obj);
+
+        let has_more = match self.max_page {
+            MaxPage::NoMore => false,
+            MaxPage::Exact(e) => e > page + 1,
+            MaxPage::Minimum(_) => true,
+        };
+
+        (page > 0 || has_more).then(move || CreateActionRow::buttons(vec![
             if page > 0 {
-                obj.new_button(&page_field, page - 1, |_| 1)
+                self.obj.new_button(&self.page_field, page - 1, |_| 1)
             } else {
                 CreateButton::new("#no-back").disabled(true)
             }.emoji('◀'),
 
-            CreateButton::new(Self::new(obj.to_custom_data()).to_custom_id())
-                .label((page + 1).to_string()),
+            CreateButton::new(ToPage::new(self.obj.to_custom_data()).to_custom_id())
+                .label(match self.max_page {
+                    MaxPage::NoMore => format!("{0} / {0}", page + 1),
+                    MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
+                    MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
+                }),
 
-            if has_next {
-                obj.new_button(&page_field, page + 1, |_| 2)
+            if has_more {
+                self.obj.new_button(&self.page_field, page + 1, |_| 2)
             } else {
                 CreateButton::new("#no-forward").disabled(true)
             }.emoji('▶'),
@@ -80,8 +145,6 @@ impl ButtonArgsReply for ToPage {
         let modal = CreateModal::new(custom_id, "Go to page...")
             .components(components);
 
-        let create = CreateInteractionResponse::Modal(modal);
-
-        ctx.reply(create).await
+        ctx.modal(modal).await
     }
 }

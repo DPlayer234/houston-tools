@@ -30,18 +30,12 @@ impl View {
     pub fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
-        iter: impl Iterator<Item = &'a Equip>,
-    ) -> CreateReply<'a> {
+        mut iter: impl Iterator<Item = &'a Equip>,
+    ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
-        let mut has_next = false;
 
-        for equip in iter {
-            if options.len() >= PAGE_SIZE {
-                has_next = true;
-                break
-            }
-
+        for equip in iter.by_ref().take(PAGE_SIZE) {
             writeln_str!(
                 desc,
                 "- **{}** [{} {} {}]",
@@ -52,27 +46,15 @@ impl View {
             options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
         }
 
+        super::pagination!(rows => self, options, iter);
+
         let author = CreateEmbedAuthor::new("Equipments")
             .url(config::azur_lane::EQUIPMENT_LIST_URL);
-
-        if options.is_empty() {
-            let embed = CreateEmbed::new()
-                .author(author)
-                .color(ERROR_EMBED_COLOR)
-                .description("No results for that filter.");
-
-            return CreateReply::new().embed(embed);
-        }
 
         let embed = CreateEmbed::new()
             .author(author)
             .description(desc)
             .color(data.config().embed_color);
-
-        let mut rows = Vec::new();
-        if let Some(pagination) = ToPage::get_pagination_buttons(&mut self, utils::field_mut!(Self: page), has_next) {
-            rows.push(pagination);
-        }
 
         rows.push(super::create_string_select_menu_row(
             self.to_custom_id(),
@@ -80,10 +62,10 @@ impl View {
             "View equipment...",
         ));
 
-        CreateReply::new().embed(embed).components(rows)
+        Ok(CreateReply::new().embed(embed).components(rows))
     }
 
-    pub fn create(self, data: &HBotData) -> CreateReply<'_> {
+    pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
         let filtered = self.filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
@@ -94,12 +76,12 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        Ok(self.create(ctx.data).into())
+        self.create(ctx.data).map(EditReply::from)
     }
 
     fn edit_modal_reply(mut self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
-        ToPage::load_page(&mut self.page, ctx.interaction);
-        Ok(self.create(ctx.data).into())
+        ToPage::set_page_from(&mut self.page, ctx.interaction);
+        self.create(ctx.data).map(EditReply::from)
     }
 }
 

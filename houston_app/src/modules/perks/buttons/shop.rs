@@ -374,12 +374,10 @@ impl ButtonArgsReply for View {
         let guild_id = ctx.interaction.guild_id.context("requires guild")?;
         let user_id = ctx.interaction.user.id;
 
-        ctx.reply(CreateInteractionResponse::Acknowledge).await?;
+        ctx.acknowledge().await?;
 
         let reply = self.create_reply(ctx.serenity, guild_id, user_id).await?;
-        let edit = reply.into_interaction_edit();
-
-        ctx.edit_reply(edit).await?;
+        ctx.edit(reply.into()).await?;
         Ok(())
     }
 }

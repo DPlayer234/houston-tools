@@ -141,6 +141,7 @@ impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
 
 /// Event handler for custom button menus.
 pub mod handler {
+    use std::sync::atomic::AtomicBool;
     use super::*;
 
     /// To be called in [`EventHandler::interaction_create`].
@@ -153,13 +154,14 @@ pub mod handler {
     }
 
     async fn dispatch_component(ctx: Context, interaction: ComponentInteraction) {
-        if let Err(err) = handle_component(&ctx, &interaction).await {
-            handle_dispatch_error(ctx, &interaction.token, err).await
+        let reply_state = AtomicBool::new(false);
+        if let Err(err) = handle_component(&ctx, &interaction, &reply_state).await {
+            handle_dispatch_error(ctx, interaction.id, &interaction.token, reply_state.into_inner(), err).await
         }
     }
 
     /// Handles the component interaction dispatch.
-    async fn handle_component(ctx: &Context, interaction: &ComponentInteraction) -> Result {
+    async fn handle_component(ctx: &Context, interaction: &ComponentInteraction, reply_state: &AtomicBool) -> Result {
         use ComponentInteractionDataKind as Kind;
 
         let custom_id: &str = match &interaction.data.kind {
@@ -172,6 +174,7 @@ pub mod handler {
         log::trace!("{}: {:?}", interaction.user.name, args);
 
         args.reply(ButtonContext {
+            reply_state,
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
@@ -179,17 +182,19 @@ pub mod handler {
     }
 
     async fn dispatch_modal(ctx: Context, interaction: ModalInteraction) {
-        if let Err(err) = handle_modal(&ctx, &interaction).await {
-            handle_dispatch_error(ctx, &interaction.token, err).await
+        let reply_state = AtomicBool::new(false);
+        if let Err(err) = handle_modal(&ctx, &interaction, &reply_state).await {
+            handle_dispatch_error(ctx, interaction.id, &interaction.token, reply_state.into_inner(), err).await
         }
     }
 
     /// Handles the modal interaction dispatch.
-    async fn handle_modal(ctx: &Context, interaction: &ModalInteraction) -> Result {
+    async fn handle_modal(ctx: &Context, interaction: &ModalInteraction, reply_state: &AtomicBool) -> Result {
         let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
         log::trace!("{}: {:?}", interaction.user.name, args);
 
         args.modal_reply(ModalContext {
+            reply_state,
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
@@ -197,16 +202,23 @@ pub mod handler {
     }
 
     #[cold]
-    async fn handle_dispatch_error(ctx: Context, interaction_token: &str, err: anyhow::Error) {
+    async fn handle_dispatch_error(ctx: Context, interaction_id: InteractionId, interaction_token: &str, reply_state: bool, err: anyhow::Error) {
         if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
             // print both errors to preserve the stack trace, if present
             log::warn!("Discord interaction error: {ser_err:?} / {err:?}");
             return;
         }
 
-        log::warn!("Component error: {err:?}");
+        let err_text = match err.downcast::<HArgError>() {
+            Ok(err) => {
+                err.msg
+            },
+            Err(err) => {
+                log::warn!("Component error: {err:?}");
+                format!("Button error: ```{err}```").into()
+            },
+        };
 
-        let err_text = format!("Button error: ```{err}```");
         let embed = CreateEmbed::new()
             .description(err_text)
             .color(ERROR_EMBED_COLOR);
@@ -215,8 +227,15 @@ pub mod handler {
             .ephemeral(true)
             .embed(embed);
 
-        let response = reply.into_interaction_followup();
-        let res = response.execute(&ctx.http, None, interaction_token).await;
+        let res = if reply_state {
+            let response = reply.into_interaction_followup();
+            response.execute(&ctx.http, None, interaction_token).await.map(|_| ())
+        } else {
+            let response = reply.into_interaction_response();
+            let response = CreateInteractionResponse::Message(response);
+            response.execute(&ctx.http, interaction_id, interaction_token).await
+        };
+
         if let Err(res) = res {
             log::warn!("Error sending component error: {res}");
         }
