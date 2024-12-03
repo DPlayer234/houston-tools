@@ -62,9 +62,10 @@ fn to_command_option_command(func: &ItemFn, name: String, kind: ContextKind) -> 
                     ::houston_cmd::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
                         let arg = <#arg_ty as ::houston_cmd:: #kind_trait <'_>>::extract(&ctx, #kind_args)?;
 
-                        #func_ident (ctx, arg)
-                            .await
-                            .map_err(|e| ::houston_cmd::Error::command(ctx, e))
+                        match #func_ident (ctx, arg).await {
+                            ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
+                            ::std::result::Result::Err(e) => ::std::result::Result::Err(::houston_cmd::Error::command(ctx, e)),
+                        }
                     }))
                 },
                 parameters: ::std::borrow::Cow::Borrowed(&[]),

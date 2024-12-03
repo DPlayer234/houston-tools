@@ -58,9 +58,10 @@ pub fn to_command_option_command(func: &mut ItemFn, name: Option<String>) -> syn
                             let #param_idents = ::houston_cmd::parse_slash_argument!(ctx, #param_names, #param_tys);
                         )*
 
-                        #func_ident (ctx, #(#param_idents),*)
-                            .await
-                            .map_err(|e| ::houston_cmd::Error::command(ctx, e))
+                        match #func_ident (ctx, #(#param_idents),*).await {
+                            ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
+                            ::std::result::Result::Err(e) => ::std::result::Result::Err(::houston_cmd::Error::command(ctx, e)),
+                        }
                     }))
                 },
                 parameters: ::std::borrow::Cow::Borrowed(&[
