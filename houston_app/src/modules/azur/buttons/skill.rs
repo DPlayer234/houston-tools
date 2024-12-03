@@ -12,6 +12,7 @@ pub struct View {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
     pub back: CustomData,
+    // this should honestly be in `ShipViewSource` but that's a pain
     augment_index: Option<u8>,
 }
 

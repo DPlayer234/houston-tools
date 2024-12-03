@@ -1,3 +1,9 @@
+use std::slice;
+
+use utils::text::write_str::*;
+
+use crate::fmt::replace_holes;
+
 use super::*;
 
 pub struct Collectible;
@@ -26,13 +32,16 @@ impl Shape for Collectible {
                 ).await?;
 
                 if let Some(notice) = &guild_config.notice {
-                    let message = notice.text
-                        .replace("{user}", &args.user_id.mention().to_string())
-                        .replace("{role}", &role.mention().to_string());
+                    let message = replace_holes(&notice.text, |out, n| match n {
+                        "user" => write_str!(out, "<@{}>", args.user_id),
+                        "role" => write_str!(out, "<@&{}>", role),
+                        _ => out.push(char::REPLACEMENT_CHARACTER),
+                    });
 
+                    // ping the user but _no_ roles
                     let allowed_mentions = CreateAllowedMentions::new()
-                        .empty_roles()
-                        .all_roles(true);
+                        .users(slice::from_ref(&args.user_id))
+                        .empty_roles();
 
                     let message = CreateMessage::new()
                         .content(message)

@@ -1,8 +1,13 @@
+use std::char;
+
 use bson::doc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 
+use utils::text::write_str::*;
+
 use super::prelude::*;
+use crate::fmt::replace_holes;
 use crate::helper::bson::{bson_id, doc_object_id};
 use crate::helper::is_unique_set;
 
@@ -220,8 +225,13 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                     .map(String::as_str)
                     .unwrap_or("{user}, your post made it! Wow!");
 
+                let notice = replace_holes(notice, |out, n| match n {
+                    "user" => write_str!(out, "<@{}>", message.author.id),
+                    _ => out.push(char::REPLACEMENT_CHARACTER),
+                });
+
                 let notice = CreateMessage::new()
-                    .content(notice.replace("{user}", &format!("<@{}>", message.author.id)));
+                    .content(notice);
 
                 let pin_messages;
 
