@@ -1,5 +1,4 @@
 #![allow(dead_code, reason = "config might be partly unused")]
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -14,7 +13,7 @@ pub struct HConfig {
     pub discord: HDiscordConfig,
     pub bot: HBotConfig,
     #[serde(default)]
-    pub log: HLogConfig,
+    pub log: log4rs::config::RawConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -39,14 +38,6 @@ pub struct HBotConfig {
     #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
     pub perks: Option<crate::modules::perks::Config>,
-}
-
-#[derive(Debug, Deserialize, Default)]
-pub struct HLogConfig {
-    pub color: Option<bool>,
-    pub default: Option<log::LevelFilter>,
-    #[serde(flatten)]
-    pub modules: HashMap<String, log::LevelFilter>,
 }
 
 impl HBotConfig {

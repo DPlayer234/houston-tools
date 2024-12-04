@@ -5,7 +5,6 @@ use smallvec::SmallVec;
 
 pub mod azur;
 pub mod discord;
-pub mod log;
 
 /// If non-empty, turns the string into a [`Cow::Owned`].
 ///

@@ -1,6 +1,7 @@
 mod buttons;
 mod config;
 mod data;
+mod logging;
 mod modules;
 mod fmt;
 mod helper;
@@ -23,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     unsafe { crate::helper::time::mark_startup_time(); }
 
     let config = build_config()?;
-    init_logging(config.log);
+    init_logging(config.log)?;
 
     match option_env!("GIT_HASH") {
         Some(git_hash) => log::info!("Houston Tools [Commit: {git_hash}]"),
@@ -159,44 +160,30 @@ async fn main() -> anyhow::Result<()> {
             .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
             .add_source(File::new(&format!("houston_app.{profile}.toml"), FileFormat::Toml).required(false))
             .add_source(Environment::default().separator("__"))
+            // defaults for logging
+            .set_default("log.root.level", "warn")?
+            .set_default("log.root.appenders[0]", "default")?
+            .set_default("log.appenders.default.kind", "default")?
+            .set_default("log.appenders.default.encoder.kind", "default")?
+            .set_default(concat!("log.loggers.", module_path!(), ".level"), "trace")?
             .build().context("cannot build config")?
             .try_deserialize().context("cannot deserialize config")?;
 
         Ok(config)
     }
 
-    fn init_logging(config: config::HLogConfig) {
-        use log::LevelFilter;
-
-        let mut builder = env_logger::builder();
-
-        // doing the detection and format ourselves removes the
-        // anstream dependency and some other related crates
-
-        // env_logger defaults to using stderr
-        let has_color = config.color
-            .unwrap_or_else(|| utils::term::supports_ansi_escapes(&std::io::stderr()));
-
-        if has_color {
-            builder.format(fmt::log::format_styled);
-        } else {
-            builder.format(fmt::log::format_unstyled);
+    fn init_logging(config: log4rs::config::RawConfig) -> anyhow::Result<()> {
+        let (appenders, errors) = config.appenders_lossy(&logging::deserializers());
+        if !errors.is_empty() {
+            return Err(errors.into());
         }
 
-        match config.default {
-            Some(value) => builder.filter_level(value),
+        let config = log4rs::Config::builder()
+            .appenders(appenders)
+            .loggers(config.loggers())
+            .build(config.root())?;
 
-            // if no default is specified, set it to warn for everything,
-            // but to trace for the main app crate
-            None => builder
-                .filter_level(LevelFilter::Warn)
-                .filter_module(std::module_path!(), LevelFilter::Trace),
-        };
-
-        for (module, level) in config.modules {
-            builder.filter_module(&module, level);
-        }
-
-        builder.init();
+        log4rs::init_config(config)?;
+        Ok(())
     }
 }
