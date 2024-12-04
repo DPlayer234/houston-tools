@@ -1050,6 +1050,7 @@ dependencies = [
  "thiserror 2.0.3",
  "to-arraystring",
  "tokio",
+ "url",
  "urlencoding",
  "utils",
  "utils_build",

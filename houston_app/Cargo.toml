@@ -32,6 +32,7 @@ smallvec = { version = "1.13.2", features = ["const_generics", "const_new", "uni
 thiserror = "2.0.3"
 tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
 to-arraystring = "0.2.2"
+url = "2.5.4"
 urlencoding = "2.1.3"
 
 azur_lane = { path = "../azur_lane" }
@@ -60,6 +61,7 @@ features = [
     "config_parsing",
     "rolling_file_appender", "compound_policy", "delete_roller", "fixed_window_roller", "size_trigger",
     "pattern_encoder",
+    "threshold_filter",
     "chrono",
 ]
 
