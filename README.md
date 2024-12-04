@@ -27,21 +27,9 @@ azur_lane_data = "azur_lane_data"
 # sets the color used for most embeds.
 # optional. defaults to 0xDDA0DD
 embed_color = 0xDDA0DD
-
-# optional section to configure the terminal output.
-# the logger writes to `stderr`.
-[log]
-# sets whether the logger should use colors.
-# optional. attempts to auto-detect whether the output supports colors.
-color = true
-
-# sets the default minimum log level.
-# optional. defaults to "warn", with "trace" for just the app itself.
-default = "warn"
-
-# may specify additional keys matching module names to filter their messages.
-# log levels may be "trace", "debug", "info", "warn", or "error".
 ```
+
+Also, you can customize the logging by via the "log" section. This corresponds to the configuration of [log4rs](https://docs.rs/log4rs/latest/log4rs/).
 
 Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`.
 
