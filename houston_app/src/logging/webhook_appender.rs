@@ -1,29 +1,45 @@
+use std::io::{self, Write};
 use std::sync::Arc;
+use std::time::Duration;
 
-use log::{Level, Record};
+use arrayvec::ArrayVec;
+use log::Record;
 use log4rs::append::Append;
 use log4rs::config::{Deserialize, Deserializers};
+use log4rs::encode::{self, Encode, EncoderConfig, Style};
 use serenity::http::Http;
 use serenity::secrets::SecretString;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use utils::text::truncate;
-
-use crate::fmt::written_or;
 use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct WebhookAppender {
-    inner: Arc<WebhookAppenderInner>,
+    sender: Sender<LogData>,
+    encoder: Box<dyn Encode>,
+}
+
+impl Append for WebhookAppender {
+    fn append(&self, record: &Record<'_>) -> Result {
+        let mut buf = LogData::default();
+        self.encoder.encode(&mut buf, record)?;
+
+        // just swallow messages if we hit the limit
+        _ = self.sender.try_send(buf);
+        Ok(())
+    }
+
+    fn flush(&self) {}
 }
 
 #[derive(Debug)]
-struct WebhookAppenderInner {
+struct WebhookClient {
     http: Http,
     id: WebhookId,
     token: SecretString,
 }
 
-impl WebhookAppender {
+impl WebhookClient {
     fn new(url: &str) -> Result<Self> {
         let url = url::Url::parse(url)?;
         let (id, token) = serenity::utils::parse_webhook(&url).context("cannot parse webhook url")?;
@@ -32,78 +48,127 @@ impl WebhookAppender {
         let token = SecretString::new(Arc::from(token));
 
         Ok(Self {
-            inner: Arc::new(WebhookAppenderInner {
-                http,
-                id,
-                token,
-            }),
+            http,
+            id,
+            token,
         })
     }
 }
 
-impl Append for WebhookAppender {
-    fn append(&self, record: &Record<'_>) -> Result {
-        let display = LevelInfo::for_level(record.level());
-        let target = truncate(record.target(), 250).into_owned();
-        let message = truncate(record.args().to_string(), 4000);
+#[derive(Debug, Default)]
+struct LogData {
+    buf: ArrayVec<u8, 252>,
+}
 
-        let embed = CreateEmbed::new()
-            .title(display.label)
-            .color(display.color)
-            .author(CreateEmbedAuthor::new(target))
-            .description(written_or(message, "<empty log message>"))
-            .timestamp(Timestamp::now());
+impl io::Write for LogData {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.write_all(buf)?;
+        Ok(buf.len())
+    }
 
-        let this = Arc::clone(&self.inner);
-        tokio::spawn(async move {
-            let res = this.http.execute_webhook(
-                this.id,
-                None,
-                this.token.expose_secret(),
-                false,
-                Vec::new(),
-                &ExecuteWebhook::new().embed(embed),
-            ).await;
+    fn write_all(&mut self, mut buf: &[u8]) -> io::Result<()> {
+        let rem = self.buf.remaining_capacity();
+        if rem == 0 {
+            return Ok(());
+        }
 
-            if let Err(why) = res {
-                eprintln!("webhook logger error: {why:?}");
-            }
-        });
+        if rem < buf.len() {
+            buf = &buf[..rem];
+        }
 
+        let res = self.buf.try_extend_from_slice(buf);
+        debug_assert!(res.is_ok(), "must be okay since we trimmed it");
         Ok(())
     }
 
-    fn flush(&self) {}
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
-struct LevelInfo {
-    label: &'static str,
-    color: Color,
+impl encode::Write for LogData {
+    fn set_style(&mut self, style: &Style) -> io::Result<()> {
+        use log4rs::encode::Color;
+
+        self.write_all(b"\x1b[0m")?;
+
+        if let Some(text) = style.text {
+            self.write_all(if style.intense == Some(true) {
+                b"\x1b[1;"
+            } else {
+                b"\x1b[0;"
+            })?;
+
+            match text {
+                Color::Black => self.write_all(b"30m"),
+                Color::Red => self.write_all(b"31m"),
+                Color::Green => self.write_all(b"32m"),
+                Color::Yellow => self.write_all(b"33m"),
+                Color::Blue => self.write_all(b"34m"),
+                Color::Magenta => self.write_all(b"35m"),
+                Color::Cyan => self.write_all(b"36m"),
+                Color::White => self.write_all(b"37m"),
+            }?;
+        }
+
+        Ok(())
+    }
 }
 
-impl LevelInfo {
-    const fn for_level(level: Level) -> Self {
-        match level {
-            Level::Error => Self {
-                label: "🚨 Error",
-                color: Colour(0xEA3333),
-            },
-            Level::Warn => Self {
-                label: "⚠️ Warning",
-                color: Colour(0xEFDD10),
-            },
-            Level::Info => Self {
-                label: "ℹ️ Info",
-                color: Colour(0x0DB265),
-            },
-            Level::Debug => Self {
-                label: "🧩 Debug",
-                color: Colour(0xCCCCCC),
-            },
-            Level::Trace => Self {
-                label: "Trace",
-                color: Colour(0x119FB7),
-            },
+async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>) {
+    while let Some(data) = receiver.recv().await {
+        let mut text = String::with_capacity(data.buf.len() + 16);
+        text.push_str("```ansi\n");
+
+        push_str_lossy(&mut text, &data.buf);
+
+        if text.len() < 1500 {
+            let mut count = 0usize;
+            'batch: while let Some(data) = try_recv_timeout(&mut receiver).await {
+                count += 1;
+                push_str_lossy(&mut text, &data.buf);
+
+                if text.len() >= 1500 || count >= 10 {
+                    break 'batch;
+                }
+            }
+        }
+
+        text.push_str("```");
+
+        let res = webhook.http.execute_webhook(
+            webhook.id,
+            None,
+            webhook.token.expose_secret(),
+            false,
+            Vec::new(),
+            &ExecuteWebhook::new().content(text),
+        ).await;
+
+        if let Err(why) = res {
+            eprintln!("webhook appender failed: {why:?}");
+        }
+    }
+}
+
+async fn try_recv_timeout<T>(receiver: &mut Receiver<T>) -> Option<T> {
+    for _ in 0..10 {
+        if let Ok(data) = receiver.try_recv() {
+            return Some(data);
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    None
+}
+
+fn push_str_lossy(target: &mut String, buf: &[u8]) {
+    for chunk in buf.utf8_chunks() {
+        target.push_str(chunk.valid());
+
+        if !chunk.invalid().is_empty() {
+            target.push(char::REPLACEMENT_CHARACTER);
         }
     }
 }
@@ -111,6 +176,7 @@ impl LevelInfo {
 #[derive(Debug, serde::Deserialize)]
 pub struct WebhookAppenderConfig {
     url: SecretString,
+    encoder: EncoderConfig,
 }
 
 pub struct WebhookAppenderDeserializer;
@@ -122,9 +188,19 @@ impl Deserialize for WebhookAppenderDeserializer {
     fn deserialize(
         &self,
         config: Self::Config,
-        _deserializers: &Deserializers,
+        deserializers: &Deserializers,
     ) -> Result<Box<Self::Trait>> {
-        let appender = WebhookAppender::new(config.url.expose_secret())?;
+        let client = WebhookClient::new(config.url.expose_secret())?;
+
+        let (sender, receiver) = channel(32);
+        let encoder = deserializers.deserialize(&config.encoder.kind, config.encoder.config)?;
+
+        let appender = WebhookAppender {
+            sender,
+            encoder,
+        };
+
+        tokio::spawn(worker(client, receiver));
         Ok(Box::new(appender))
     }
 }

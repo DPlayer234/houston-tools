@@ -29,7 +29,7 @@ azur_lane_data = "azur_lane_data"
 embed_color = 0xDDA0DD
 ```
 
-Also, you can customize the logging by via the "log" section. This corresponds to the configuration of [log4rs](https://docs.rs/log4rs/latest/log4rs/).
+To configure logging, see the Logging section further down.
 
 Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`.
 
@@ -232,6 +232,40 @@ The following commands are supported in context menus:
 | Command        | Description |
 |:-------------- |:----------- |
 | Server Profile | (User) Equivalent to `/profile`. |
+
+## Logging
+
+Logging can be configured via the configuration file. Broadly, this is done via the "log" section, which corresponds to a [log4rs](https://docs.rs/log4rs/1.3.0/log4rs/) configuration. The configuration isn't reloaded at runtime.
+
+By default, it adds an appender with the name "default" and an encoder of kind "default". The "default" appender kind is a console logger. The "default" encoder kind provides the standard logging format for this application.
+
+The only standard appender available is ["rolling_file"](https://docs.rs/log4rs/1.3.0/log4rs/append/rolling_file/struct.RollingFileAppenderDeserializer.html).
+
+For the application specific loggers, the following things are available:
+
+```toml
+[log.root]
+# if you want to add loggers, you need to specify
+# the default explicitly, if you want to keep it.
+appenders = ["default", "webhook"]
+# the level defaults to "warn"
+# for app modules, it defaults to "trace"
+level = "warn"
+
+# this section is optional and the "default" appender is always present
+[log.appenders.default]
+# color detection is performed, but you may override that
+color = true
+# the `encoder` field is also supported
+
+[log.appenders.webhook]
+# the "webhook" kind logs batched messages to a discord webhook
+kind = "webhook"
+# you must specify an encoder - we use the default format here
+encoder.kind = "default"
+# you must also specify the webhook url
+url = "https://discord.com/api/webhooks/<snip>/<snip>"
+```
 
 # Azur Lane Data Collector
 
