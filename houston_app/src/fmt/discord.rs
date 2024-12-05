@@ -120,3 +120,37 @@ fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> Re
         _ => f.write_str("<unknown>"),
     }
 }
+
+/// Implements [`Display`] to format the full command name.
+#[must_use]
+pub struct DisplayCommandName<'a> {
+    name: &'a str,
+    options: &'a [CommandDataOption],
+}
+
+impl<'a> From<&'a CommandData> for DisplayCommandName<'a> {
+    fn from(value: &'a CommandData) -> Self {
+        Self {
+            name: &value.name,
+            options: &value.options,
+        }
+    }
+}
+
+impl Display for DisplayCommandName<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_str(self.name)?;
+        let mut options = self.options;
+        while let Some(CommandDataOption {
+            name,
+            value: CommandDataOptionValue::SubCommand(next_options) | CommandDataOptionValue::SubCommandGroup(next_options),
+            ..
+        }) = options.first() {
+            f.write_str(" ")?;
+            f.write_str(name)?;
+            options = next_options;
+        }
+
+        Ok(())
+    }
+}

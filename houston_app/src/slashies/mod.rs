@@ -1,9 +1,7 @@
-use std::fmt;
-
 use houston_cmd::Context;
 
 use crate::data::IntoEphemeral;
-use crate::fmt::discord::DisplayResolvedArgs;
+use crate::fmt::discord::{DisplayCommandName, DisplayResolvedArgs};
 use crate::prelude::*;
 
 use args::SlashMember;
@@ -23,6 +21,8 @@ pub mod prelude {
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: Context<'_>) {
+    let name = DisplayCommandName::from(&ctx.interaction.data);
+
     let options = ctx
         .interaction
         .data.target()
@@ -31,26 +31,7 @@ pub async fn pre_command(ctx: Context<'_>) {
             DisplayResolvedArgs::Target,
         );
 
-    struct Tree<'a>(&'a CommandInteraction);
-    impl fmt::Display for Tree<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.write_str(&self.0.data.name)?;
-            let mut options = &self.0.data.options;
-            while let Some(CommandDataOption {
-                name,
-                value: CommandDataOptionValue::SubCommand(next_options) | CommandDataOptionValue::SubCommandGroup(next_options),
-                ..
-            }) = options.first() {
-                f.write_str(" ")?;
-                f.write_str(name)?;
-                options = next_options;
-            }
-
-            Ok(())
-        }
-    }
-
-    log::info!("{}: /{} {options}", ctx.user().name, Tree(ctx.interaction))
+    log::info!("{}: /{name} {options}", ctx.user().name)
 }
 
 /// Command execution error handler.
