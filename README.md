@@ -265,6 +265,10 @@ kind = "webhook"
 encoder.kind = "default"
 # you must also specify the webhook url
 url = "https://discord.com/api/webhooks/<snip>/<snip>"
+# optional (32). specifies the limit of queued-up records before discarding new ones
+buffer_size = 32
+# optional (10). specifies the maximum amount of records combined into one message
+batch_size = 10
 ```
 
 # Azur Lane Data Collector

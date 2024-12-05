@@ -42,7 +42,8 @@ struct WebhookClient {
 impl WebhookClient {
     fn new(url: &str) -> Result<Self> {
         let url = url::Url::parse(url)?;
-        let (id, token) = serenity::utils::parse_webhook(&url).context("cannot parse webhook url")?;
+        let (id, token) = serenity::utils::parse_webhook(&url)
+            .context("cannot parse webhook url")?;
 
         let http = Http::without_token();
         let token = SecretString::new(Arc::from(token));
@@ -55,9 +56,11 @@ impl WebhookClient {
     }
 }
 
+const LOG_DATA_SIZE: usize = 252;
+
 #[derive(Debug, Default)]
 struct LogData {
-    buf: ArrayVec<u8, 252>,
+    buf: ArrayVec<u8, LOG_DATA_SIZE>,
 }
 
 impl io::Write for LogData {
@@ -115,20 +118,23 @@ impl encode::Write for LogData {
     }
 }
 
-async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>) {
+async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config: InnerConfig) {
+    const SIZE_CAP: usize = 1984 - LOG_DATA_SIZE;
+
+    let mut text = String::new();
     while let Some(data) = receiver.recv().await {
-        let mut text = String::with_capacity(data.buf.len() + 16);
+        text.reserve(data.buf.len() + 16);
         text.push_str("```ansi\n");
 
         push_str_lossy(&mut text, &data.buf);
 
-        if text.len() < 1500 {
+        if config.batch_size > 1 {
             let mut count = 0usize;
-            'batch: while let Some(data) = try_recv_timeout(&mut receiver).await {
+            'batch: while let Some(data) = try_recv_timeout(&mut receiver, config.batch_time).await {
                 count += 1;
                 push_str_lossy(&mut text, &data.buf);
 
-                if text.len() >= 1500 || count >= 10 {
+                if text.len() > SIZE_CAP || count >= config.batch_size {
                     break 'batch;
                 }
             }
@@ -140,10 +146,11 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>) {
             webhook.id,
             None,
             webhook.token.expose_secret(),
-            false,
+            config.wait,
             Vec::new(),
-            &ExecuteWebhook::new().content(text),
+            &ExecuteWebhook::new().content(&text),
         ).await;
+        text.clear();
 
         if let Err(why) = res {
             eprintln!("webhook appender failed: {why:?}");
@@ -151,16 +158,9 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>) {
     }
 }
 
-async fn try_recv_timeout<T>(receiver: &mut Receiver<T>) -> Option<T> {
-    for _ in 0..10 {
-        if let Ok(data) = receiver.try_recv() {
-            return Some(data);
-        }
-
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-
-    None
+async fn try_recv_timeout<T>(receiver: &mut Receiver<T>, timeout: Duration) -> Option<T> {
+    tokio::time::timeout(timeout, receiver.recv())
+        .await.ok().flatten()
 }
 
 fn push_str_lossy(target: &mut String, buf: &[u8]) {
@@ -177,6 +177,32 @@ fn push_str_lossy(target: &mut String, buf: &[u8]) {
 pub struct WebhookAppenderConfig {
     url: SecretString,
     encoder: EncoderConfig,
+    #[serde(flatten)]
+    inner: InnerConfig,
+}
+
+fn default_buffer_size() -> usize {
+    32
+}
+
+fn default_batch_size() -> usize {
+    10
+}
+
+fn default_batch_time() -> Duration {
+    Duration::from_millis(500)
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct InnerConfig {
+    #[serde(default = "default_buffer_size")]
+    buffer_size: usize,
+    #[serde(default = "default_batch_size")]
+    batch_size: usize,
+    #[serde(default = "default_batch_time")]
+    batch_time: Duration,
+    #[serde(default)]
+    wait: bool,
 }
 
 pub struct WebhookAppenderDeserializer;
@@ -192,7 +218,7 @@ impl Deserialize for WebhookAppenderDeserializer {
     ) -> Result<Box<Self::Trait>> {
         let client = WebhookClient::new(config.url.expose_secret())?;
 
-        let (sender, receiver) = channel(32);
+        let (sender, receiver) = channel(config.inner.buffer_size);
         let encoder = deserializers.deserialize(&config.encoder.kind, config.encoder.config)?;
 
         let appender = WebhookAppender {
@@ -200,7 +226,7 @@ impl Deserialize for WebhookAppenderDeserializer {
             encoder,
         };
 
-        tokio::spawn(worker(client, receiver));
+        tokio::spawn(worker(client, receiver, config.inner));
         Ok(Box::new(appender))
     }
 }
