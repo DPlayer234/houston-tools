@@ -1,3 +1,14 @@
+//! An appender that logs to a Discord webhook.
+//!
+//! The actual appender pushes buffers to a sender, which is then handled by a
+//! worker task. The size of individual _formatted_ messages is limited
+//! to avoid having to allocate additional memory on every logging call.
+//!
+//! The worker task tries to batch messages that arrive close in time to reduce
+//! the amount of calls to the webhook, but this is limited by the maximum
+//! message size. This probably shouldn't be used for all logging messages but
+//! just a subset, i.e. filtered to just warnings and errors.
+
 use std::io::{self, Write};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,9 +34,7 @@ impl Append for WebhookAppender {
     fn append(&self, record: &Record<'_>) -> Result {
         let mut buf = LogData::default();
         self.encoder.encode(&mut buf, record)?;
-
-        // just swallow messages if we hit the limit
-        _ = self.sender.try_send(buf);
+        self.sender.try_send(buf)?;
         Ok(())
     }
 
@@ -62,6 +71,11 @@ const LOG_DATA_SIZE: usize = 252;
 struct LogData {
     buf: ArrayVec<u8, LOG_DATA_SIZE>,
 }
+
+const _: () = assert!(
+    size_of::<LogData>() <= 256,
+    "LogData should be at most 256 bytes in size",
+);
 
 impl io::Write for LogData {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -119,15 +133,24 @@ impl encode::Write for LogData {
 }
 
 async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config: InnerConfig) {
+    // Discord messages are limited to 2000 characters.
+    // to avoid hitting this limit, don't batch more if we can't guarantee
+    // that the next log message can still fit. we use 1984 instead of 2000
+    // to also consider a little bit of extra space we use for formatting.
     const SIZE_CAP: usize = 1984 - LOG_DATA_SIZE;
 
+    // we will reuse this buffer for _every_ posted message
     let mut text = String::new();
+
+    // this loop will exit when the sender is dropped
     while let Some(data) = receiver.recv().await {
+        // make sure there's enough space for at least the first message in the batch
         text.reserve(data.buf.len() + 16);
         text.push_str("```ansi\n");
 
         push_str_lossy(&mut text, &data.buf);
 
+        // push additional messages into the buffer if allowed & possible
         if config.batch_size > 1 {
             let mut count = 0usize;
             'batch: while let Some(data) = try_recv_timeout(&mut receiver, config.batch_time).await {
@@ -140,7 +163,10 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
             }
         }
 
-        text.push_str("```");
+        // include a new-line here also
+        // if it didn't, this will ensure the formatting is correct
+        // if the last message ended with a new-line, it won't render twice
+        text.push_str("\n```");
 
         let res = webhook.http.execute_webhook(
             webhook.id,
@@ -150,6 +176,8 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
             Vec::new(),
             &ExecuteWebhook::new().content(&text),
         ).await;
+
+        // clear the buffer for the next batch
         text.clear();
 
         if let Err(why) = res {
@@ -158,11 +186,15 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
     }
 }
 
-async fn try_recv_timeout<T>(receiver: &mut Receiver<T>, timeout: Duration) -> Option<T> {
+/// Equivalent to `receiver.recv()` but using a timeout.
+async fn try_recv_timeout(receiver: &mut Receiver<LogData>, timeout: Duration) -> Option<LogData> {
     tokio::time::timeout(timeout, receiver.recv())
         .await.ok().flatten()
 }
 
+/// Lossy-decodes `buf` and appends it to `target` as one operation.
+///
+/// Invalid sequences are replaced by [`char::REPLACEMENT_CHARACTER`].
 fn push_str_lossy(target: &mut String, buf: &[u8]) {
     for chunk in buf.utf8_chunks() {
         target.push_str(chunk.valid());
@@ -216,10 +248,10 @@ impl Deserialize for WebhookAppenderDeserializer {
         config: Self::Config,
         deserializers: &Deserializers,
     ) -> Result<Box<Self::Trait>> {
-        let client = WebhookClient::new(config.url.expose_secret())?;
-
-        let (sender, receiver) = channel(config.inner.buffer_size);
         let encoder = deserializers.deserialize(&config.encoder.kind, config.encoder.config)?;
+
+        let client = WebhookClient::new(config.url.expose_secret())?;
+        let (sender, receiver) = channel(config.inner.buffer_size);
 
         let appender = WebhookAppender {
             sender,
