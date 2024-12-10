@@ -29,6 +29,10 @@
 //! This could, for instance, happen if one were to search for `"egg"` when the
 //! search contains `"Eggs and Bacon"` and `"Egg (raw)"`.
 //!
+//! Matches with the same score will be sorted by the length of their original,
+//! normalized text, and, if that still ties, then sorted by their insertion
+//! order.
+//!
 //! # Text Normalization
 //!
 //! The normalization lowercases the entire text, and non-alphanumeric sequences
@@ -43,7 +47,7 @@
 use std::cmp;
 use std::collections::HashMap;
 use std::ptr::{self, NonNull};
-use std::vec::IntoIter as BoxIter;
+use std::vec::IntoIter as VecIntoIter;
 
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
@@ -84,7 +88,20 @@ pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
     // Safety invariant: Every value in the vectors within `match_map`
     // _must_ be a valid index into `values`. Unsafe code may rely on this.
     match_map: HashMap<Segment<MAX>, SmallVec<[MatchIndex; MATCH_INLINE]>>,
-    values: Vec<T>,
+    values: Vec<ValueMetadata<T>>,
+}
+
+/// Struct to hold metadata about a value and the user's data.
+///
+/// The original string is never stored.
+#[derive(Debug, Clone)]
+struct ValueMetadata<T> {
+    /// The length of the original, normalized input.
+    ///
+    /// Used as a tie-breaker when sorting matches with equal counts.
+    len: MatchIndex,
+    /// The attached userdata.
+    userdata: T,
 }
 
 impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
@@ -140,7 +157,10 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
             .expect("cannot add more than u32::MAX elements to Search");
 
         // add the data first so safety invariants aren't violated if a panic occurs.
-        self.values.push(data);
+        self.values.push(ValueMetadata {
+            len: norm.len().try_into().unwrap_or(MatchIndex::MAX),
+            userdata: data,
+        });
 
         if norm.len() >= MIN {
             let upper = MAX.min(norm.len());
@@ -209,7 +229,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     fn find_with_segment_size<'st>(&'st self, norm: &[u16], size: usize) -> MatchIter<'st, T> {
         const MAX_MATCHES: usize = 32;
 
-        let mut results = <ArrayVec<MatchInfo, MAX_MATCHES>>::new();
+        let mut results = <ArrayVec<MatchInfoLen, MAX_MATCHES>>::new();
         let mut total = 0usize;
 
         for segment in iter_segments(norm, size) {
@@ -228,7 +248,14 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
                 match results.iter_mut().find(|m| m.index == index) {
                     Some(res) => res.count += 1,
                     // discard results past the max capacity
-                    None => _ = results.try_push(MatchInfo { count: 1, index }),
+                    None => {
+                        _ = results.try_push(MatchInfoLen {
+                            count: 1,
+                            index,
+                            // SAFETY: entry index must be valid into `self.values`
+                            len: unsafe { self.values.get_unchecked(index as usize).len },
+                        })
+                    },
                 }
             }
         }
@@ -239,11 +266,9 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         results.retain(|r| f64::from(r.count) >= match_count);
         results.sort_unstable();
 
-        // box the results so we don't copy the data around too much.
-        // this isn't _massive_ (only about 260 bytes), but since every
-        // iterator adapter is another potential full copy, let's just
-        // put it on the heap.
-        let results = Box::from(results.as_slice());
+        // copy as MatchInfo; TrustedLen should avoid redundant allocations
+        // original code here already allocated, and it's fine perf-wise
+        let results = results.iter().map(|m| m.discard()).collect();
 
         // SAFETY: every index in `results` is a valid index into `values`
         // as guaranteed by the type invariants; indices come from `match_map`.
@@ -285,24 +310,52 @@ impl<T> Clone for Match<'_, T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Info stored for each [`Match`] in the [`MatchIter`].
+///
+/// Constructed from [`MatchInfoLen`], usually.
+#[derive(Debug, Clone, Copy)]
 struct MatchInfo {
     count: MatchIndex,
     index: MatchIndex,
 }
 
-impl Ord for MatchInfo {
+/// A sortable [`MatchInfo`], with an additional `len` field.
+///
+/// Used during search so the results can be
+/// - sorted by `count` desc,
+/// - then by `len` asc,
+/// - then by `index` asc.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MatchInfoLen {
+    count: MatchIndex,
+    index: MatchIndex,
+    len: MatchIndex,
+}
+
+impl MatchInfoLen {
+    /// Discards the `len` and creates a [`MatchInfo`].
+    fn discard(self) -> MatchInfo {
+        MatchInfo {
+            index: self.index,
+            count: self.count,
+        }
+    }
+}
+
+impl Ord for MatchInfoLen {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         // sort by count desc
+        // then by len asc
         // then by index asc
         self.count
             .cmp(&other.count)
             .reverse()
+            .then_with(|| self.len.cmp(&other.len))
             .then_with(|| self.index.cmp(&other.index))
     }
 }
 
-impl PartialOrd for MatchInfo {
+impl PartialOrd for MatchInfoLen {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -314,7 +367,7 @@ impl PartialOrd for MatchInfo {
 pub struct MatchIter<'st, T> {
     // Safety invariant: Every index within here must be a valid index into
     // the memory pointed to by `state.search_values`.
-    inner: BoxIter<MatchInfo>,
+    inner: VecIntoIter<MatchInfo>,
     state: MatchIterState<'st, T>,
 }
 
@@ -326,7 +379,7 @@ struct MatchIterState<'st, T> {
     total: f64,
 
     // This could be implemented with safe code but this saves a usize in memory.
-    search_values: RawRef<'st, T>,
+    search_values: RawRef<'st, ValueMetadata<T>>,
 }
 
 impl<'st, T> MatchIter<'st, T> {
@@ -336,7 +389,11 @@ impl<'st, T> MatchIter<'st, T> {
     ///
     /// The `search_values` must come the same [`Search`] as the `inner`'s
     /// indices.
-    unsafe fn new(total: f64, inner: Box<[MatchInfo]>, search_values: &'st [T]) -> Self {
+    unsafe fn new(
+        total: f64,
+        inner: Vec<MatchInfo>,
+        search_values: &'st [ValueMetadata<T>],
+    ) -> Self {
         debug_assert!(
             inner
                 .iter()
@@ -345,10 +402,10 @@ impl<'st, T> MatchIter<'st, T> {
         );
 
         Self {
-            inner: IntoIterator::into_iter(inner),
+            inner: inner.into_iter(),
             state: MatchIterState {
                 total,
-                search_values: RawRef::from(search_values).cast(),
+                search_values: RawRef::from(search_values).cast_element(),
             },
         }
     }
@@ -368,9 +425,15 @@ impl<'st, T> MatchIterState<'st, T> {
         Match {
             score: f64::from(info.count) / self.total,
             index: info.index as usize,
-            // SAFETY: caller guarantees the match info comes from the inner iterator
+            // SAFETY: caller guarantees the match info comes from the inner iterator,
             // `new` requires that the indices are valid for the search values
-            data: unsafe { self.search_values.add(info.index as usize).as_ref() },
+            data: unsafe {
+                &self
+                    .search_values
+                    .add(info.index as usize)
+                    .as_ref()
+                    .userdata
+            },
         }
     }
 }
@@ -395,7 +458,7 @@ impl<T> Default for MatchIter<'_, T> {
     /// Creates an empty iterator with no matches.
     fn default() -> Self {
         Self {
-            inner: BoxIter::default(),
+            inner: VecIntoIter::default(),
             state: MatchIterState {
                 total: 0.0,
                 // no sound code would be able to index this anyways
@@ -536,15 +599,35 @@ mod test {
             search
         };
 
-        assert_eq!(&just_data(search.search("ello")), &[1, 2]);
-        assert_eq!(&just_data(search.search("world")), &[1, 3]);
-        assert_eq!(&just_data(search.search("el e")), &[1, 2, 3]);
-        assert_eq!(&just_data(search.search("non")), &[4]);
+        assert_eq!(&sorted_data(search.search("ello")), &[1, 2]);
+        assert_eq!(&sorted_data(search.search("world")), &[1, 3]);
+        assert_eq!(&sorted_data(search.search("el e")), &[1, 2, 3]);
+        assert_eq!(&sorted_data(search.search("non")), &[4]);
+
+        fn sorted_data(v: MatchIter<'_, u8>) -> Vec<u8> {
+            let mut v: Vec<u8> = v.map(|p| *p.data).collect();
+            v.sort_unstable();
+            v
+        }
     }
 
-    fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
-        let mut v: Vec<u8> = v.map(|p| *p.data).collect();
-        v.sort_unstable();
-        v
+    #[test]
+    fn search_order() {
+        let search = {
+            let mut search = TSearch::new().with_min_match_score(f64::EPSILON);
+            search.insert("Houston II", 4);
+            search.insert("Ho", 1u8);
+            search.insert("Houston", 3);
+            search.insert("Hous", 2);
+            search
+        };
+
+        // 1 isn't matched because the 4-segment check already succeeds
+        assert_eq!(&just_data(search.search("Hous")), &[2, 3, 4]);
+        assert_eq!(&just_data(search.search("Houston")), &[3, 4, 2]);
+
+        fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
+            v.map(|p| *p.data).collect()
+        }
     }
 }

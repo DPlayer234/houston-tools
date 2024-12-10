@@ -27,6 +27,7 @@ impl<T: ?Sized> Clone for RawRef<'_, T> {
 }
 
 impl<'a, T: ?Sized> RawRef<'a, T> {
+    /// Casts a pointer to a different type.
     pub fn cast<U>(self) -> RawRef<'a, U> {
         RawRef::from(self.ptr.cast())
     }
@@ -36,6 +37,13 @@ impl<'a, T: ?Sized> RawRef<'a, T> {
     /// See documentation for [`NonNull::as_ref`].
     pub unsafe fn as_ref(self) -> &'a T {
         unsafe { self.ptr.as_ref() }
+    }
+}
+
+impl<'a, T> RawRef<'a, [T]> {
+    /// Casts a slice pointer to a pointer to where its first element would be.
+    pub fn cast_element(self) -> RawRef<'a, T> {
+        self.cast()
     }
 }
 
