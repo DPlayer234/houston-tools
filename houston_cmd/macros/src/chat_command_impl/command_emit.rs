@@ -98,7 +98,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
         };
 
         ensure_spanned!(input, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
-        ensure_spanned!(input, (1..=100).contains(&args.description.chars().count()) => "the description must be 1 to 100 characters long");
+        ensure_spanned!(input, (1..=100).contains(&args.doc.chars().count()) => "the description must be 1 to 100 characters long");
 
         parameters.push(Parameter {
             name,
@@ -112,7 +112,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
 
 fn to_command_parameter(p: &Parameter) -> TokenStream {
     let name = &p.name;
-    let description = &p.args.description;
+    let description = &p.args.doc;
     let ty = &*p.ty;
     let autocomplete = quote_map_option(
         p.args.autocomplete.as_ref(),

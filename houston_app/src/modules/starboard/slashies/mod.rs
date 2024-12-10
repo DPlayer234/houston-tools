@@ -10,10 +10,11 @@ pub mod starboard {
     #[sub_command]
     async fn top(
         ctx: Context<'_>,
-        #[description = "What board to look for."]
+        /// What board to look for.
         #[autocomplete = "autocomplete_board"]
         board: u64,
-        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+        /// Whether to show the response only to yourself.
+        ephemeral: Option<bool>,
     ) -> Result {
         use super::buttons::top::View;
 
@@ -30,10 +31,11 @@ pub mod starboard {
     #[sub_command(name = "top-posts")]
     async fn top_posts(
         ctx: Context<'_>,
-        #[description = "What board to look for."]
+        /// What board to look for.
         #[autocomplete = "autocomplete_board"]
         board: u64,
-        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+        /// Whether to show the response only to yourself.
+        ephemeral: Option<bool>,
     ) -> Result {
         use super::buttons::top_posts::View;
 
@@ -50,7 +52,8 @@ pub mod starboard {
     #[sub_command]
     async fn overview(
         ctx: Context<'_>,
-        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+        /// Whether to show the response only to yourself.
+        ephemeral: Option<bool>,
     ) -> Result {
         overview::overview(ctx, ephemeral).await
     }

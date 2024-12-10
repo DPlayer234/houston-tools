@@ -31,7 +31,7 @@ pub struct AnyCommandArgs {
 #[derive(Debug, darling::FromMeta)]
 pub struct ParameterArgs {
     pub name: Option<String>,
-    pub description: String,
+    pub doc: String,
     pub autocomplete: Option<Path>,
     pub min: Option<Lit>,
     pub max: Option<Lit>,

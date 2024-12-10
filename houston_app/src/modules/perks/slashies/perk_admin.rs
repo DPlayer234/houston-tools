@@ -21,9 +21,12 @@ pub mod perk_admin {
     #[sub_command]
     async fn enable(
         ctx: Context<'_>,
-        #[description = "The member to enable the perk for."] member: SlashMember<'_>,
-        #[description = "The perk to enable."] perk: Effect,
-        #[description = "How long to enable it for, in hours."] duration: u32,
+        /// The member to enable the perk for.
+        member: SlashMember<'_>,
+        /// The perk to enable.
+        perk: Effect,
+        /// How long to enable it for, in hours.
+        duration: u32,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -63,8 +66,10 @@ pub mod perk_admin {
     #[sub_command]
     async fn disable(
         ctx: Context<'_>,
-        #[description = "The member to disable the perk for."] member: SlashMember<'_>,
-        #[description = "The perk to disable."] perk: Effect,
+        /// The member to disable the perk for.
+        member: SlashMember<'_>,
+        /// The perk to disable.
+        perk: Effect,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -97,7 +102,8 @@ pub mod perk_admin {
     #[sub_command]
     async fn list(
         ctx: Context<'_>,
-        #[description = "The member to check."] member: SlashMember<'_>,
+        /// The member to check.
+        member: SlashMember<'_>,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -140,9 +146,12 @@ pub mod perk_admin {
     #[sub_command]
     async fn give(
         ctx: Context<'_>,
-        #[description = "The member to give items to."] member: SlashMember<'_>,
-        #[description = "The item to hand out."] item: Item,
-        #[description = "How many items to give. Negative to remove."] amount: i32,
+        /// The member to give items to.
+        member: SlashMember<'_>,
+        /// The item to hand out.
+        item: Item,
+        /// How many items to give. Negative to remove.
+        amount: i32,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -173,8 +182,10 @@ pub mod perk_admin {
     #[sub_command(name = "unique-role")]
     async fn unique_role(
         ctx: Context<'_>,
-        #[description = "The member to give items to."] member: SlashMember<'_>,
-        #[description = "The role to set as being unique to them."] role: Option<&Role>,
+        /// The member to give items to.
+        member: SlashMember<'_>,
+        /// The role to set as being unique to them.
+        role: Option<&Role>,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;

@@ -1,6 +1,5 @@
 use std::sync::{LazyLock, OnceLock};
 
-pub use app_emojis::HAppEmojis;
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
@@ -9,6 +8,8 @@ use crate::modules::perks::PerkState;
 use crate::prelude::*;
 
 mod app_emojis;
+
+pub use app_emojis::HAppEmojis;
 
 /// A general color that can be used for embeds indicating errors.
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);

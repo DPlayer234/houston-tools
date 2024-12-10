@@ -10,7 +10,8 @@ use crate::slashies::prelude::*;
 #[chat_command(contexts = "Guild", integration_types = "Guild")]
 pub async fn wallet(
     ctx: Context<'_>,
-    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
 ) -> Result {
     let data = ctx.data_ref();
     let guild_id = ctx.require_guild_id()?;

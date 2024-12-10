@@ -12,7 +12,7 @@
 //! #[chat_command]
 //! async fn echo(
 //!     ctx: Context<'_>,
-//!     #[description = "The message to return."]
+//!     /// "The message to return."
 //!     text: &str,
 //! ) -> Result<(), serenity::Error> {
 //!     let reply = CreateReply::new()
@@ -72,7 +72,7 @@
 //!     #[sub_command]
 //!     async fn ban(
 //!         ctx: Context<'_>,
-//!         #[description = "The member to ban."]
+//!         /// "The member to ban."
 //!         user: &PartialMember,
 //!     ) -> Result<(), serenity::Error> {
 //!         todo!()
@@ -82,7 +82,7 @@
 //!     #[sub_command]
 //!     async fn kick(
 //!         ctx: Context<'_>,
-//!         #[description = "The member to kick."]
+//!         /// "The member to kick."
 //!         user: &PartialMember,
 //!     ) -> Result<(), serenity::Error> {
 //!         todo!()

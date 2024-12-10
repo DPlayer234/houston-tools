@@ -12,11 +12,11 @@ use crate::slashies::prelude::*;
 #[chat_command(name = "role-edit", contexts = "Guild", integration_types = "Guild")]
 pub async fn role_edit(
     ctx: Context<'_>,
-    #[description = "The new role name."]
+    /// The new role name.
     #[min_length = 2]
     #[max_length = 100]
     name: &str,
-    #[description = "The new role color as an RGB hex code."]
+    /// The new role color as an RGB hex code.
     #[min_length = 6]
     #[max_length = 6]
     color: Option<HexColor>,

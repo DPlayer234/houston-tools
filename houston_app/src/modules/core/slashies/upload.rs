@@ -10,7 +10,8 @@ use crate::slashies::prelude::*;
 )]
 pub async fn upload(
     ctx: Context<'_>,
-    #[description = "The file to upload."] attachment: &Attachment,
+    /// The file to upload.
+    attachment: &Attachment,
 ) -> Result {
     let description = format!(
         "**{}**\n> {}",

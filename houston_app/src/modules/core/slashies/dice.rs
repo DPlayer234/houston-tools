@@ -15,8 +15,10 @@ use crate::slashies::prelude::*;
 )]
 pub async fn dice(
     ctx: Context<'_>,
-    #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."] sets: DiceSetVec,
-    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+    /// The sets of dice to roll, in a format like '2d6', separated by spaces.
+    sets: DiceSetVec,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
 ) -> Result {
     let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();

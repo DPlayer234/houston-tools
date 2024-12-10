@@ -9,7 +9,8 @@ use crate::slashies::prelude::*;
 )]
 pub async fn coin(
     ctx: Context<'_>,
-    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
 ) -> Result {
     const EDGE_TOSS_CHANCE: f64 = 1f64 / 6000f64;
     let content = {

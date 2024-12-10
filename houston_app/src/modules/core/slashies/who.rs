@@ -23,8 +23,10 @@ pub async fn who_context(ctx: Context<'_>, user: SlashUser<'_>) -> Result {
 )]
 pub async fn who(
     ctx: Context<'_>,
-    #[description = "The user to get info about."] user: SlashUser<'_>,
-    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+    /// The user to get info about.
+    user: SlashUser<'_>,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
 ) -> Result {
     who_core(ctx, user, ephemeral).await
 }

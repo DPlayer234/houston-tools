@@ -12,10 +12,11 @@ mod parse;
 )]
 pub async fn calc(
     ctx: Context<'_>,
-    #[description = "The expression to evaluate."]
+    /// The expression to evaluate.
     #[max_length = 3000]
     expression: &str,
-    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
 ) -> anyhow::Result<()> {
     let expression = expression.to_ascii_lowercase();
 
