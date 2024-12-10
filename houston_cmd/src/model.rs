@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use derivative::Derivative;
 use serenity::builder::*;
 use serenity::model::prelude::*;
 
@@ -16,19 +15,17 @@ pub type AutocompleteFn = for<'i> fn(Context<'i>, &'i str) -> BoxFuture<'i, Crea
 /// Represents a top-level command, as understood by Discord.
 ///
 /// This holds information only relevant to the "root" of a command and the immediate first node.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub struct Command {
-	pub contexts: Option<Cow<'static, [InteractionContext]>>,
-	pub integration_types: Option<Cow<'static, [InstallationContext]>>,
+    pub contexts: Option<Cow<'static, [InteractionContext]>>,
+    pub integration_types: Option<Cow<'static, [InstallationContext]>>,
     pub default_member_permissions: Option<Permissions>,
     pub nsfw: bool,
     pub data: CommandOption,
 }
 
 /// Contains the data for a command or command-group.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub struct CommandOption {
 	pub name: Cow<'static, str>,
 	pub description: Cow<'static, str>,
@@ -36,32 +33,28 @@ pub struct CommandOption {
 }
 
 /// This represents a command option, that is either a command group or an invokable command.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub enum CommandOptionData {
 	Group(GroupData),
 	Command(SubCommandData),
 }
 
 /// A group of commands.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub struct GroupData {
 	pub sub_commands: Cow<'static, [CommandOption]>,
 }
 
 /// A sub-command that may be nested in a group.
 /// Also used to represent the invokable information about a root command.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub struct SubCommandData {
 	pub invoke: Invoke,
 	pub parameters: Cow<'static, [Parameter]>,
 }
 
 /// How the command can be invoked.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""), Copy(bound=""))]
+#[derive(Debug, Clone, Copy)]
 pub enum Invoke {
     ChatInput(ChatInputFn),
     User(UserFn),
@@ -69,8 +62,7 @@ pub enum Invoke {
 }
 
 /// A command parameter.
-#[derive(Derivative)]
-#[derivative(Debug(bound=""), Clone(bound=""))]
+#[derive(Debug, Clone)]
 pub struct Parameter {
 	pub name: Cow<'static, str>,
 	pub description: Cow<'static, str>,

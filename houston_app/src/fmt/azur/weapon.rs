@@ -3,8 +3,6 @@ use std::fmt::{Display, Formatter, Result};
 use azur_lane::equip::*;
 
 /// Implements [`Display`] to nicely format a weapon.
-///
-/// Alternate formatting (`{:#}`) omits the weapon kind.
 #[must_use]
 pub struct Details<'a> {
     weapon: &'a Weapon,
