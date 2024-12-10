@@ -8,15 +8,14 @@ mod parse;
 /// Evaluates a mathematical equation. Warning: Floating point math.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub async fn calc(
     ctx: Context<'_>,
     #[description = "The expression to evaluate."]
     #[max_length = 3000]
     expression: &str,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
+    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
 ) -> anyhow::Result<()> {
     let expression = expression.to_ascii_lowercase();
 
@@ -33,32 +32,47 @@ pub async fn calc(
             .description(format!("{expression} = **{result}**"))
             .color(ctx.data_ref().config().embed_color),
 
-        Err(MathError::ExprExpected(Some(at)))
-            => error_embed!("Expected expression at `{at}`.{}", at.error_fmt()),
+        Err(MathError::ExprExpected(Some(at))) => {
+            error_embed!("Expected expression at `{at}`.{}", at.error_fmt())
+        },
 
-        Err(MathError::ExprExpected(None))
-            => error_embed!("Unexpected empty expression."),
+        Err(MathError::ExprExpected(None)) => error_embed!("Unexpected empty expression."),
 
-        Err(MathError::InvalidNumber(num))
-            => error_embed!("`{num}` is not a valid number.{}", num.error_fmt()),
+        Err(MathError::InvalidNumber(num)) => {
+            error_embed!("`{num}` is not a valid number.{}", num.error_fmt())
+        },
 
-        Err(MathError::InvalidUnaryOperator(op))
-            => error_embed!("`{op}` is not a unary operator.{}", op.error_fmt()),
+        Err(MathError::InvalidUnaryOperator(op)) => {
+            error_embed!("`{op}` is not a unary operator.{}", op.error_fmt())
+        },
 
-        Err(MathError::InvalidBinaryOperator(op))
-            => error_embed!("`{op}` is not a binary operator.{}", op.error_fmt()),
+        Err(MathError::InvalidBinaryOperator(op)) => {
+            error_embed!("`{op}` is not a binary operator.{}", op.error_fmt())
+        },
 
-        Err(MathError::InvalidFunction(function))
-            => error_embed!("The function `{function}` is unknown.{}", function.error_fmt()),
+        Err(MathError::InvalidFunction(function)) => {
+            error_embed!(
+                "The function `{function}` is unknown.{}",
+                function.error_fmt(),
+            )
+        },
 
-        Err(MathError::InvalidParameterCount { function, count: 1 })
-            => error_embed!("The function `{function}` takes 1 parameter.{}", function.error_fmt()),
+        Err(MathError::InvalidParameterCount { function, count: 1 }) => {
+            error_embed!(
+                "The function `{function}` takes 1 parameter.{}",
+                function.error_fmt(),
+            )
+        },
 
-        Err(MathError::InvalidParameterCount { function, count })
-            => error_embed!("The function `{function}` takes {count} parameters.{}", function.error_fmt()),
+        Err(MathError::InvalidParameterCount { function, count }) => error_embed!(
+            "The function `{function}` takes {count} parameters.{}",
+            function.error_fmt(),
+        ),
 
-        Err(MathError::FunctionCallExpected(function))
-            => error_embed!("`{function}` is a function and requires `(...)` after it.{}", function.error_fmt()),
+        Err(MathError::FunctionCallExpected(function)) => error_embed!(
+            "`{function}` is a function and requires `(...)` after it.{}",
+            function.error_fmt(),
+        ),
     };
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;
@@ -68,7 +82,8 @@ pub async fn calc(
 /// A result for math evaluation.
 type Result<'a, T> = std::result::Result<T, MathError<'a>>;
 
-/// The kinds of errors that may occur when evaluating a mathematical expression.
+/// The kinds of errors that may occur when evaluating a mathematical
+/// expression.
 #[derive(Debug)]
 enum MathError<'a> {
     /// A sub-expression was expected but not found.
@@ -114,7 +129,10 @@ mod test {
             const MAX: f64 = $result + 0.001;
             let text = $math;
             let res = eval_text(text);
-            assert!(matches!(res, Ok(MIN..=MAX)), "`{text:?}` not in `{MIN}..={MAX}`, was {res:?}");
+            assert!(
+                matches!(res, Ok(MIN..=MAX)),
+                "`{text:?}` not in `{MIN}..={MAX}`, was {res:?}"
+            );
         }};
     }
 

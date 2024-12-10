@@ -22,7 +22,7 @@ define_unity_class! {
 #[derive(Debug, Clone)]
 pub struct Texture2DData<'t> {
     texture: &'t Texture2D,
-    data: &'t [u8]
+    data: &'t [u8],
 }
 
 impl Texture2D {
@@ -32,10 +32,15 @@ impl Texture2D {
     }
 
     /// Reads the texture data.
-    pub fn read_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> crate::Result<Texture2DData<'t>> {
+    pub fn read_data<'t, 'fs: 't>(
+        &'t self,
+        fs: &'fs UnityFsFile<'fs>,
+    ) -> crate::Result<Texture2DData<'t>> {
         Ok(Texture2DData {
             texture: self,
-            data: self.stream_data.load_data_or_else(fs, || &self.image_data)?
+            data: self
+                .stream_data
+                .load_data_or_else(fs, || &self.image_data)?,
         })
     }
 }
@@ -69,9 +74,10 @@ impl Texture2DData<'_> {
                 texture2ddecoder::decode_astc_6_6(self.data, args.width, args.height, buf)
                     .map_err(Error::InvalidData)
             }),
-            _ => Err(Error::Unsupported(
-                format!("texture format not implemented: {:?}", self.texture.format())
-            ))?,
+            _ => Err(Error::Unsupported(format!(
+                "texture format not implemented: {:?}",
+                self.texture.format()
+            )))?,
         }
     }
 }
@@ -88,12 +94,17 @@ impl Args {
     fn new(width: u32, height: u32) -> crate::Result<Self> {
         let width = usize::from_int(width)?;
         let height = usize::from_int(height)?;
-        let size = width.checked_mul(height)
+        let size = width
+            .checked_mul(height)
             .and_then(|s| s.checked_mul(size_of::<u32>()))
             .filter(|s| isize::try_from(*s).is_ok())
             .ok_or(Error::InvalidData("image size overflows address space"))?;
 
-        Ok(Self { width, height, size })
+        Ok(Self {
+            width,
+            height,
+            size,
+        })
     }
 
     /// Decodes the image with a given decoder function.

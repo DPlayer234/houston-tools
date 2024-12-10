@@ -22,7 +22,9 @@ pub struct EffectPrice {
     pub duration: u32,
 }
 
-fn one() -> u32 { 1 }
+fn one() -> u32 {
+    1
+}
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct ItemPrice {

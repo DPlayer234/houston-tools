@@ -9,7 +9,7 @@ use crate::modules::core::buttons::ToPage;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
-    filter: Filter
+    filter: Filter,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -36,14 +36,13 @@ impl View {
         let mut options = Vec::new();
 
         for augment in iter.by_ref().take(PAGE_SIZE) {
-            writeln_str!(
-                desc,
-                "- **{}** [{}]",
-                augment.name, augment.rarity.name(),
-            );
+            writeln_str!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
 
             let view = super::augment::View::new(augment.augment_id).back(self.to_custom_data());
-            options.push(CreateSelectMenuOption::new(&augment.name, view.to_custom_id()));
+            options.push(CreateSelectMenuOption::new(
+                &augment.name,
+                view.to_custom_id(),
+            ));
         }
 
         super::pagination!(rows => self, options, iter);
@@ -66,7 +65,8 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let filtered = self.filter
+        let filtered = self
+            .filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
@@ -99,26 +99,48 @@ impl Filter {
     where
         I: Iterator<Item = &'a Augment> + 'a,
     {
-        fn next_hull_type<'a>(f: &Filter, data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a> {
+        fn next_hull_type<'a>(
+            f: &Filter,
+            data: &'a HAzurLane,
+            iter: impl Iterator<Item = &'a Augment> + 'a,
+        ) -> FIter<'a> {
             match f.hull_type {
-                Some(filter) => next_rarity(f, data, iter.filter(move |s| match &s.usability {
-                    AugmentUsability::HullTypes(h) => h.contains(&filter),
-                    AugmentUsability::UniqueShipId(id) => data.ship_by_id(*id).is_some_and(|s| s.hull_type == filter),
-                })),
+                Some(filter) => next_rarity(
+                    f,
+                    data,
+                    iter.filter(move |s| match &s.usability {
+                        AugmentUsability::HullTypes(h) => h.contains(&filter),
+                        AugmentUsability::UniqueShipId(id) => {
+                            data.ship_by_id(*id).is_some_and(|s| s.hull_type == filter)
+                        },
+                    }),
+                ),
                 None => next_rarity(f, data, iter),
             }
         }
 
-        fn next_rarity<'a>(f: &Filter, data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a> {
+        fn next_rarity<'a>(
+            f: &Filter,
+            data: &'a HAzurLane,
+            iter: impl Iterator<Item = &'a Augment> + 'a,
+        ) -> FIter<'a> {
             match f.rarity {
-                Some(filter) => next_unique_ship_id(f, data, iter.filter(move |s| s.rarity == filter)),
+                Some(filter) => {
+                    next_unique_ship_id(f, data, iter.filter(move |s| s.rarity == filter))
+                },
                 None => next_unique_ship_id(f, data, iter),
             }
         }
 
-        fn next_unique_ship_id<'a>(f: &Filter, _data: &'a HAzurLane, iter: impl Iterator<Item = &'a Augment> + 'a) -> FIter<'a>{
+        fn next_unique_ship_id<'a>(
+            f: &Filter,
+            _data: &'a HAzurLane,
+            iter: impl Iterator<Item = &'a Augment> + 'a,
+        ) -> FIter<'a> {
             match f.unique_ship_id {
-                Some(filter) => Box::new(iter.filter(move |s| s.usability.unique_ship_id() == Some(filter))),
+                Some(filter) => {
+                    Box::new(iter.filter(move |s| s.usability.unique_ship_id() == Some(filter)))
+                },
                 None => Box::new(iter),
             }
         }

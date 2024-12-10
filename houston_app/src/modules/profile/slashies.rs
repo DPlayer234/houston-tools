@@ -1,5 +1,4 @@
 use bson::doc;
-
 use utils::text::write_str::*;
 
 use crate::helper::bson::bson_id;
@@ -11,26 +10,18 @@ use crate::slashies::prelude::*;
     user,
     name = "Server Profile",
     contexts = "Guild",
-    integration_types = "Guild",
+    integration_types = "Guild"
 )]
-pub async fn profile_context(
-    ctx: Context<'_>,
-    member: SlashMember<'_>,
-) -> Result {
+pub async fn profile_context(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     profile_core(ctx, member, None).await
 }
 
 /// View a member's server profile.
-#[chat_command(
-    contexts = "Guild",
-    integration_types = "Guild",
-)]
+#[chat_command(contexts = "Guild", integration_types = "Guild")]
 pub async fn profile(
     ctx: Context<'_>,
-    #[description = "The member to view the profile of."]
-    member: Option<SlashMember<'_>>,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
+    #[description = "The member to view the profile of."] member: Option<SlashMember<'_>>,
+    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
 ) -> Result {
     let member = member.or_invoking(ctx)?;
     profile_core(ctx, member, ephemeral).await
@@ -67,17 +58,13 @@ async fn profile_core(
         }
     }
 
-    let reply = CreateReply::new()
-        .embed(embed);
+    let reply = CreateReply::new().embed(embed);
 
     ctx.send(reply).await?;
     Ok(())
 }
 
-async fn perks_unique_role(
-    ctx: Context<'_>,
-    member: SlashMember<'_>,
-) -> Result<Option<RoleId>> {
+async fn perks_unique_role(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Option<RoleId>> {
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
@@ -89,9 +76,7 @@ async fn perks_unique_role(
         "user": bson_id!(member.user.id),
     };
 
-    let unique_role = model::UniqueRole::collection(db)
-        .find_one(filter)
-        .await?;
+    let unique_role = model::UniqueRole::collection(db).find_one(filter).await?;
 
     let Some(unique_role) = unique_role else {
         return Ok(None);
@@ -104,8 +89,7 @@ async fn perks_collectible_info(
     ctx: Context<'_>,
     member: SlashMember<'_>,
 ) -> Result<Option<String>> {
-    use crate::modules::perks::model;
-    use crate::modules::perks::Item;
+    use crate::modules::perks::{model, Item};
 
     let data = ctx.data_ref();
     let db = data.database()?;
@@ -128,7 +112,8 @@ async fn perks_collectible_info(
 
     let mut content = format!(
         "-# **{}:** x{}",
-        Item::Collectible.info(perks).name, wallet.crab,
+        Item::Collectible.info(perks).name,
+        wallet.crab,
     );
 
     if let Some(guild_config) = collectible.guilds.get(&guild_id) {
@@ -144,19 +129,14 @@ async fn perks_collectible_info(
     Ok(Some(content))
 }
 
-async fn starboard_info(
-    ctx: Context<'_>,
-    member: SlashMember<'_>,
-) -> Result<Option<String>> {
+async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Option<String>> {
     use crate::modules::starboard::model;
 
     let data = ctx.data_ref();
     let db = data.database()?;
     let guild_id = ctx.require_guild_id()?;
 
-    let guild_config = data.config()
-        .starboard
-        .get(&guild_id);
+    let guild_config = data.config().starboard.get(&guild_id);
 
     let Some(guild_config) = guild_config else {
         return Ok(None);
@@ -169,9 +149,7 @@ async fn starboard_info(
         },
     };
 
-    let mut query = model::Score::collection(db)
-        .find(filter)
-        .await?;
+    let mut query = model::Score::collection(db).find(filter).await?;
 
     let mut description = String::new();
 
@@ -184,7 +162,9 @@ async fn starboard_info(
         writeln_str!(
             description,
             "- {} {} from {} post(s)",
-            entry.score, board.emoji, entry.post_count,
+            entry.score,
+            board.emoji,
+            entry.post_count,
         );
     }
 

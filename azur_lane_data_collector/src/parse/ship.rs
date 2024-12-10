@@ -1,19 +1,17 @@
+use azur_lane::ship::*;
 use mlua::prelude::*;
 
-use azur_lane::ship::*;
-
-use crate::context;
-use crate::convert_al;
-use crate::enhance;
 use crate::model::*;
-use crate::parse;
+use crate::{context, convert_al, enhance, parse};
 
 /// Constructs ship data from this set.
 pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     /// Reads a single value; target-typed.
     macro_rules! read {
         ($table:expr, $field:expr) => {
-            $table.get($field).with_context(context!("{} of ship with id {}", $field, set.id))?
+            $table
+                .get($field)
+                .with_context(context!("{} of ship with id {}", $field, set.id))?
         };
     }
 
@@ -34,20 +32,25 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     let preload_count: LuaTable = read!(set.statistics, "preload_count");
     let equipment_proficiency: LuaTable = read!(set.statistics, "equipment_proficiency");
 
-    // Intersect the actual and display buff lists so we only include the reasonable ones.
-    // This really only matters for Odin currently, whose torpedo adjustment is a separate hidden skill.
-    // Usually, hidden buffs end up in `hide_buff_list`.
+    // Intersect the actual and display buff lists so we only include the reasonable
+    // ones. This really only matters for Odin currently, whose torpedo
+    // adjustment is a separate hidden skill. Usually, hidden buffs end up in
+    // `hide_buff_list`.
     let mut buff_list: Vec<u32> = read!(set.template, "buff_list");
     let buff_list_display: Vec<u32> = read!(set.template, "buff_list_display");
     let hide_buff_list: Vec<u32> = read!(set.template, "hide_buff_list");
     buff_list.retain(|i| buff_list_display.contains(i));
 
-    // Speaking of, skill 1 is BB MGM+1 and skill 2 is BB MGM+2, so let's just hard-code this.
-    // The actual skill data re-fires the weapon, so it would work as a multiplier.
-    let main_mount_mult: u8 =
-        if hide_buff_list.contains(&1) { 2 }
-        else if hide_buff_list.contains(&2) { 3 }
-        else { 1 };
+    // Speaking of, skill 1 is BB MGM+1 and skill 2 is BB MGM+2, so let's just
+    // hard-code this. The actual skill data re-fires the weapon, so it would
+    // work as a multiplier.
+    let main_mount_mult: u8 = if hide_buff_list.contains(&2) {
+        3
+    } else if hide_buff_list.contains(&1) {
+        2
+    } else {
+        1
+    };
 
     /// Makes an equip slot. The first one specifies the template data.
     /// The second one optionally specifies which index the mount data uses.
@@ -101,7 +104,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             lck: attrs.get(11)?,
             cost: read!(set.template, "oil_at_end"),
             oxy: read!(set.statistics, "oxy_max"),
-            amo: read!(set.statistics, "ammo")
+            amo: read!(set.statistics, "ammo"),
         },
         default_skin_id: read!(set.statistics, "skin_id"),
         equip_slots: vec![
@@ -109,20 +112,26 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             make_equip_slot!("equip_2", 2),
             make_equip_slot!("equip_3", 3),
             make_equip_slot!("equip_4"),
-            make_equip_slot!("equip_5")
+            make_equip_slot!("equip_5"),
         ],
-        shadow_equip: parse::skill::load_equips(lua, read!(set.statistics, "fix_equip_list"))?.into_iter()
+        shadow_equip: parse::skill::load_equips(lua, read!(set.statistics, "fix_equip_list"))?
+            .into_iter()
             .enumerate()
-            .map(|(index, equip)| Ok(ShadowEquip {
-                name: equip.name,
-                efficiency: { let e: Option<f64> = equipment_proficiency.get(4 + index)?; e.unwrap_or(1f64) },
-                weapons: equip.weapons
-            }))
+            .map(|(index, equip)| {
+                Ok(ShadowEquip {
+                    name: equip.name,
+                    efficiency: {
+                        let e: Option<f64> = equipment_proficiency.get(4 + index)?;
+                        e.unwrap_or(1f64)
+                    },
+                    weapons: equip.weapons,
+                })
+            })
             .collect::<LuaResult<Vec<_>>>()?,
         depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?,
         skills: parse::skill::load_skills(lua, buff_list)?,
         retrofits: Vec::new(), // Added by caller.
-        skins: Vec::new() // Added by caller.
+        skins: Vec::new(),     // Added by caller.
     };
 
     if ship.hull_type.team_type() == TeamType::Submarine {
@@ -136,7 +145,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             // ship_data_strengthen
             ship.enhance_kind = EnhanceKind::Normal;
 
-            fn b(n: f64) -> ShipStat { ShipStat::new().with_base(n) }
+            fn b(n: f64) -> ShipStat {
+                ShipStat::new().with_base(n)
+            }
 
             // Up the base value. This makes stat calc below level 100 inaccurate
             // but I don't really care about that.
@@ -146,7 +157,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             ship.stats.aa += b(extra.get(3)?);
             ship.stats.avi += b(extra.get(4)?);
             ship.stats.rld += b(extra.get(5)?);
-        }
+        },
         Strengthen::Blueprint(ex) => {
             // ship_data_blueprint
             ship.enhance_kind = EnhanceKind::Research;
@@ -155,14 +166,23 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             effects.append(&mut read!(ex.data, "fate_strengthen"));
 
             for id in effects {
-                enhance::blueprint::add_blueprint_effect(lua, &mut ship, &read!(ex.effect_lookup, id))?;
+                enhance::blueprint::add_blueprint_effect(
+                    lua,
+                    &mut ship,
+                    &read!(ex.effect_lookup, id),
+                )?;
             }
-        }
+        },
         Strengthen::Meta(ex) => {
             // ship_strengthen_meta
             ship.enhance_kind = EnhanceKind::Meta;
 
-            for repair_part in ["repair_cannon", "repair_torpedo", "repair_air", "repair_reload"] {
+            for repair_part in [
+                "repair_cannon",
+                "repair_torpedo",
+                "repair_air",
+                "repair_reload",
+            ] {
                 let parts: Vec<u32> = read!(ex.data, repair_part);
                 for id in parts {
                     enhance::meta::add_repair(&mut ship, &read!(ex.repair_lookup, id))?;
@@ -176,10 +196,11 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             }
 
             // META ships have a definition for "buff_list_task" but this seems to go unused
-            // and at least Fusou META doesn't even have the right data here. Just use the display list.
-            // The skill list will have been mostly empty, so we don't repeat a lot of work here.
+            // and at least Fusou META doesn't even have the right data here. Just use the
+            // display list. The skill list will have been mostly empty, so we
+            // don't repeat a lot of work here.
             ship.skills = parse::skill::load_skills(lua, buff_list_display)?;
-        }
+        },
     }
 
     Ok(ship)

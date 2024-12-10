@@ -1,7 +1,8 @@
 use super::parse::Token;
 use super::{MathError, Result};
 
-/// Helper macro to deduplicate code between different and within operator kinds.
+/// Helper macro to deduplicate code between different and within operator
+/// kinds.
 macro_rules! define_op_kind {
     {
         $(#[$attr:meta])*
@@ -138,19 +139,12 @@ fn read_args<'v, 'n, const N: usize>(
     values: &'v [f64],
     fn_name: Token<'n>,
 ) -> Result<'n, &'v [f64; N]> {
-    <&[f64; N]>::try_from(values)
-        .map_err(|_| MathError::InvalidParameterCount {
-            function: fn_name,
-            count: N
-        })
+    <&[f64; N]>::try_from(values).map_err(|_| MathError::InvalidParameterCount {
+        function: fn_name,
+        count: N,
+    })
 }
 
-fn fold_values(
-    values: &[f64],
-    f: impl FnMut(f64, f64) -> f64,
-) -> f64 {
-    values.iter()
-        .copied()
-        .reduce(f)
-        .unwrap_or(0.0)
+fn fold_values(values: &[f64], f: impl FnMut(f64, f64) -> f64) -> f64 {
+    values.iter().copied().reduce(f).unwrap_or(0.0)
 }

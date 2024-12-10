@@ -36,7 +36,7 @@ pub fn to_faction(num: u32) -> Faction {
         109 => Faction::CollabAtelierRyza,
         110 => Faction::CollabSenranKagura,
         111 => Faction::CollabToLoveRu,
-        _ => Faction::Unknown
+        _ => Faction::Unknown,
     }
 }
 
@@ -48,7 +48,7 @@ pub fn to_rarity(num: u32) -> ShipRarity {
         4 => ShipRarity::E,
         5 => ShipRarity::SR,
         6 => ShipRarity::UR,
-        _ => ShipRarity::N
+        _ => ShipRarity::N,
     }
 }
 
@@ -76,7 +76,7 @@ pub fn to_hull_type(num: u32) -> HullType {
         22 => HullType::FrigateS,
         23 => HullType::FrigateV,
         24 => HullType::FrigateM,
-        _ => HullType::Unknown
+        _ => HullType::Unknown,
     }
 }
 
@@ -94,7 +94,7 @@ pub fn to_armor_type(num: u32) -> ShipArmor {
         1 => ShipArmor::Light,
         2 => ShipArmor::Medium,
         3 => ShipArmor::Heavy,
-        _ => ShipArmor::Light
+        _ => ShipArmor::Light,
     }
 }
 
@@ -158,7 +158,7 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
         "speed" => StatKind::SPD,
         "luck" => StatKind::LCK,
         "antisub" => StatKind::ASW,
-        _ => StatKind::EVA
+        _ => StatKind::EVA,
     }
 }
 
@@ -170,7 +170,7 @@ pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
         3 => StatKind::AA,
         4 => StatKind::AVI,
         5 => StatKind::ASW,
-        _ => StatKind::LCK
+        _ => StatKind::LCK,
     }
 }
 
@@ -181,7 +181,7 @@ pub fn to_skill_target(text: &str) -> SkillAttackTarget {
         "TargetHarmRandomByWeight" => SkillAttackTarget::PriorityTarget,
         "TargetHarmNearest" => SkillAttackTarget::Nearest,
         "TargetHarmFarthest" => SkillAttackTarget::Farthest,
-        "TargetNil" | _ => SkillAttackTarget::Fixed
+        "TargetNil" | _ => SkillAttackTarget::Fixed,
     }
 }
 
@@ -190,7 +190,7 @@ pub fn to_skill_category(num: u32) -> SkillCategory {
     match num {
         1 => SkillCategory::Offense,
         2 => SkillCategory::Defense,
-        _ => SkillCategory::Support
+        _ => SkillCategory::Support,
     }
 }
 
@@ -213,7 +213,7 @@ pub fn to_bullet_kind(num: u32) -> BulletKind {
         15 => BulletKind::Scale,
         16 => BulletKind::TriggerBomb,
         17 => BulletKind::AAMissile,
-        _ => BulletKind::Cannon
+        _ => BulletKind::Cannon,
     }
 }
 
@@ -267,7 +267,7 @@ pub fn to_ammo_kind(num: u32) -> AmmoKind {
         7 => AmmoKind::SAP,
         8 => AmmoKind::Unknown8,
         9 => AmmoKind::Unknown9,
-        _ => AmmoKind::Normal
+        _ => AmmoKind::Normal,
     }
 }
 

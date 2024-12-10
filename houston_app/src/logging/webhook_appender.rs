@@ -51,17 +51,13 @@ struct WebhookClient {
 impl WebhookClient {
     fn new(url: &str) -> Result<Self> {
         let url = url::Url::parse(url)?;
-        let (id, token) = serenity::utils::parse_webhook(&url)
-            .context("cannot parse webhook url")?;
+        let (id, token) =
+            serenity::utils::parse_webhook(&url).context("cannot parse webhook url")?;
 
         let http = Http::without_token();
         let token = SecretString::new(Arc::from(token));
 
-        Ok(Self {
-            http,
-            id,
-            token,
-        })
+        Ok(Self { http, id, token })
     }
 }
 
@@ -153,12 +149,12 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
         // push additional messages into the buffer if allowed & possible
         if config.batch_size > 1 {
             let mut count = 0usize;
-            'batch: while let Some(data) = try_recv_timeout(&mut receiver, config.batch_time).await {
+            while let Some(data) = try_recv_timeout(&mut receiver, config.batch_time).await {
                 count += 1;
                 push_str_lossy(&mut text, &data.buf);
 
                 if text.len() > SIZE_CAP || count >= config.batch_size {
-                    break 'batch;
+                    break;
                 }
             }
         }
@@ -168,14 +164,17 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
         // if the last message ended with a new-line, it won't render twice
         text.push_str("\n```");
 
-        let res = webhook.http.execute_webhook(
-            webhook.id,
-            None,
-            webhook.token.expose_secret(),
-            config.wait,
-            Vec::new(),
-            &ExecuteWebhook::new().content(&text),
-        ).await;
+        let res = webhook
+            .http
+            .execute_webhook(
+                webhook.id,
+                None,
+                webhook.token.expose_secret(),
+                config.wait,
+                Vec::new(),
+                &ExecuteWebhook::new().content(&text),
+            )
+            .await;
 
         // clear the buffer for the next batch
         text.clear();
@@ -189,7 +188,9 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
 /// Equivalent to `receiver.recv()` but using a timeout.
 async fn try_recv_timeout(receiver: &mut Receiver<LogData>, timeout: Duration) -> Option<LogData> {
     tokio::time::timeout(timeout, receiver.recv())
-        .await.ok().flatten()
+        .await
+        .ok()
+        .flatten()
 }
 
 /// Lossy-decodes `buf` and appends it to `target` as one operation.
@@ -253,10 +254,7 @@ impl Deserialize for WebhookAppenderDeserializer {
         let client = WebhookClient::new(config.url.expose_secret())?;
         let (sender, receiver) = channel(config.inner.buffer_size);
 
-        let appender = WebhookAppender {
-            sender,
-            encoder,
-        };
+        let appender = WebhookAppender { sender, encoder };
 
         tokio::spawn(worker(client, receiver, config.inner));
         Ok(Box::new(appender))

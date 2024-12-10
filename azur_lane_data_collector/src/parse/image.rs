@@ -17,13 +17,14 @@ pub fn load_chibi_image(action: &Action, dir: &str, name: &str) -> anyhow::Resul
     let name = name.to_ascii_lowercase();
     let Ok(mut file) = fs::File::open(utils::join_path!(dir, "shipmodels", &name)) else {
         action.print_info(format_args!("Skin shipmodels file {name} not found."));
-        return Ok(None)
+        return Ok(None);
     };
 
     let unity_fs = UnityFsFile::open(&mut file)?;
     for entry in unity_fs.entries() {
         if let UnityFsData::SerializedFile(ser_file) = entry.read()? {
-            let texture = ser_file.objects()
+            let texture = ser_file
+                .objects()
                 .filter_map(Result::ok)
                 .filter(|o| o.class_id() == ClassID::Texture2D)
                 .filter_map(|o| o.try_into_class::<Texture2D>().ok())
@@ -35,7 +36,7 @@ pub fn load_chibi_image(action: &Action, dir: &str, name: &str) -> anyhow::Resul
 
                 let mut writer = Cursor::new(Vec::new());
                 image.write_to(&mut writer, ImageFormat::WebP)?;
-                return Ok(Some(writer.into_inner()))
+                return Ok(Some(writer.into_inner()));
             }
         }
     }

@@ -46,27 +46,21 @@ impl View {
                 embed = embed.field(
                     format!("**`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name),
                     value,
-                    true
+                    true,
                 );
             }
         }
 
         for equip in &ship.depth_charges {
             if let Some(value) = format_weapons(&equip.weapons) {
-                embed = embed.field(
-                    format!("**`ASW:`** {}", equip.name),
-                    value,
-                    true
-                );
+                embed = embed.field(format!("**`ASW:`** {}", equip.name), value, true);
             }
         }
 
-        let components = vec![
-            CreateActionRow::buttons(vec![{
-                let back = self.inner.to_custom_id();
-                CreateButton::new(back).emoji('⏪').label("Back")
-            }])
-        ];
+        let components = vec![CreateActionRow::buttons(vec![{
+            let back = self.inner.to_custom_id();
+            CreateButton::new(back).emoji('⏪').label("Back")
+        }])];
 
         CreateReply::new().embed(embed).components(components)
     }
@@ -74,10 +68,20 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.inner.ship_id).ok_or(AzurParseError::Ship)?;
-        Ok(match self.inner.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.create_with_ship(ship, None).into(),
-            Some(retrofit) => self.create_with_ship(retrofit, Some(ship)).into()
-        })
+        let ship = ctx
+            .data
+            .azur_lane()
+            .ship_by_id(self.inner.ship_id)
+            .ok_or(AzurParseError::Ship)?;
+        Ok(
+            match self
+                .inner
+                .retrofit
+                .and_then(|index| ship.retrofits.get(usize::from(index)))
+            {
+                None => self.create_with_ship(ship, None).into(),
+                Some(retrofit) => self.create_with_ship(retrofit, Some(ship)).into(),
+            },
+        )
     }
 }

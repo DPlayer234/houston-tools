@@ -18,7 +18,8 @@ pub trait FieldMut<S: ?Sized, F: ?Sized>: Field<S, F> {
     fn get_mut<'r>(&self, obj: &'r mut S) -> &'r mut F;
 }
 
-// Provide blanket implementations so any `&impl Field{Mut}<S, F>` is also `impl Field{Mut}<S, F>`.
+// Provide blanket implementations so any `&impl Field{Mut}<S, F>` is also `impl
+// Field{Mut}<S, F>`.
 impl<T, S: ?Sized, F: ?Sized> Field<S, F> for &T
 where
     T: Field<S, F> + ?Sized,
@@ -41,7 +42,8 @@ where
 ///
 /// This type isn't publicly available and hidden via `impl` in return position.
 ///
-/// Note that the trait bounds for this type's generic parameters are only present for its impl blocks.
+/// Note that the trait bounds for this type's generic parameters are only
+/// present for its impl blocks.
 //
 // The reason this type even exists rather than providing implementations in the macros
 // is that it allows inferring the field type. Sadly, there isn't a good way to also
@@ -89,10 +91,7 @@ where
     F: ?Sized,
     Get: Fn(&S) -> &F,
 {
-    LambdaField {
-        get,
-        get_mut: (),
-    }
+    LambdaField { get, get_mut: () }
 }
 
 /// Creates a new [`FieldMut`] from lambdas.
@@ -107,10 +106,7 @@ where
     Get: Fn(&S) -> &F,
     GetMut: Fn(&mut S) -> &mut F,
 {
-    LambdaField {
-        get,
-        get_mut,
-    }
+    LambdaField { get, get_mut }
 }
 
 /// Gets a [`Field`] that refers to the provided info.

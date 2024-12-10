@@ -44,12 +44,19 @@ impl From<ShipViewSource> for ViewSource {
 type EmbedFieldCreate<'a> = (String, Cow<'a, str>, bool);
 
 impl View {
-    /// Creates a new instance including a button to go back with some custom ID.
+    /// Creates a new instance including a button to go back with some custom
+    /// ID.
     pub fn with_back(source: ViewSource, back: CustomData) -> Self {
-        Self { source, skill_index: None, back, augment_index: None }
+        Self {
+            source,
+            skill_index: None,
+            back,
+            augment_index: None,
+        }
     }
 
-    /// Modifies the create-reply with a preresolved list of skills and a base embed.
+    /// Modifies the create-reply with a preresolved list of skills and a base
+    /// embed.
     fn edit_with_skills<'a>(
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
@@ -62,14 +69,16 @@ impl View {
             let t_index = Some(t_index as u8);
 
             if t_index == self.skill_index {
-                embed = embed.color(skill.category.color_rgb())
+                embed = embed
+                    .color(skill.category.color_rgb())
                     .fields(self.create_ex_skill_fields(skill));
             } else {
                 embed = embed.fields(self.create_skill_field(skill));
             }
 
             if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
-                let button = self.button_with_skill(t_index)
+                let button = self
+                    .button_with_skill(t_index)
                     .label(utils::text::truncate(&skill.name, 25))
                     .style(ButtonStyle::Secondary);
 
@@ -94,29 +103,34 @@ impl View {
             .color(ship.rarity.color_rgb())
             .author(super::get_ship_wiki_url(base_ship));
 
-        let mut components = vec![
-            CreateButton::new(self.back.to_custom_id()).emoji('⏪').label("Back"),
-        ];
+        let components = CreateButton::new(self.back.to_custom_id())
+            .emoji('⏪')
+            .label("Back");
+        let mut components = vec![components];
 
-        for (a_index, augment) in data.azur_lane().augments_by_ship_id(ship.group_id).enumerate().take(4) {
+        for (a_index, augment) in data
+            .azur_lane()
+            .augments_by_ship_id(ship.group_id)
+            .enumerate()
+            .take(4)
+        {
             if a_index == 0 {
-                components.push(
-                    self.button_with_augment(None)
-                        .label("Default")
-                );
+                components.push(self.button_with_augment(None).label("Default"));
             }
 
             #[allow(clippy::cast_possible_truncation)]
             let a_index = Some(a_index as u8);
             components.push(
                 self.button_with_augment(a_index)
-                    .label(utils::text::truncate(&augment.name, 25))
+                    .label(utils::text::truncate(&augment.name, 25)),
             );
 
             if a_index == self.augment_index {
                 // replace upgraded skill
                 if let Some(upgrade) = &augment.skill_upgrade {
-                    if let Some(skill) = skills.iter_mut().find(|s| s.buff_id == upgrade.original_id) {
+                    if let Some(skill) =
+                        skills.iter_mut().find(|s| s.buff_id == upgrade.original_id)
+                    {
                         *skill = &upgrade.skill;
                     }
                 }
@@ -129,13 +143,18 @@ impl View {
                 embed = embed.field(
                     format!("'{}' Bonus Stats", augment.name),
                     format!("{}", crate::fmt::azur::AugmentStats::new(augment)),
-                    false
+                    false,
                 );
             }
         }
 
         let (embed, row) = self.edit_with_skills(skills.into_iter(), embed);
-        EditReply::clear().embed(embed).components(rows_without_empty([CreateActionRow::buttons(components), row]))
+        EditReply::clear()
+            .embed(embed)
+            .components(rows_without_empty([
+                CreateActionRow::buttons(components),
+                row,
+            ]))
     }
 
     /// Modifies the create-reply with preresolved augment data.
@@ -144,15 +163,19 @@ impl View {
             .color(augment.rarity.color_rgb())
             .author(CreateEmbedAuthor::new(&augment.name));
 
-        let skills = augment.effect.iter()
+        let skills = augment
+            .effect
+            .iter()
             .chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
 
-        let nav_row = CreateActionRow::buttons(vec![
-            CreateButton::new(self.back.to_custom_id()).emoji('⏪').label("Back"),
-        ]);
+        let nav_row = CreateActionRow::buttons(vec![CreateButton::new(self.back.to_custom_id())
+            .emoji('⏪')
+            .label("Back")]);
 
         let (embed, row) = self.edit_with_skills(skills, embed);
-        EditReply::clear().embed(embed).components(rows_without_empty([nav_row, row]))
+        EditReply::clear()
+            .embed(embed)
+            .components(rows_without_empty([nav_row, row]))
     }
 
     /// Creates a button that redirects to a skill index.
@@ -166,7 +189,11 @@ impl View {
     }
 
     /// Shared logic for buttons that use a `Option<u8>` field.
-    fn button_with_u8<'a>(&mut self, field: impl FieldMut<Self, Option<u8>>, index: Option<u8>) -> CreateButton<'a> {
+    fn button_with_u8<'a>(
+        &mut self,
+        field: impl FieldMut<Self, Option<u8>>,
+        index: Option<u8>,
+    ) -> CreateButton<'a> {
         self.new_button(field, index, |u| u.map_or(u16::MAX, u16::from))
     }
 
@@ -184,7 +211,7 @@ impl View {
         let mut fields = vec![(
             format!("{} __{}__", skill.category.emoji(), skill.name),
             utils::text::truncate(&skill.description, 1000),
-            false
+            false,
         )];
 
         if !skill.barrages.is_empty() {
@@ -192,21 +219,29 @@ impl View {
                 "__Barrage__".to_owned(),
                 {
                     let m = get_skills_extra_summary(skill);
-                    if m.len() <= 1024 { m.into() } else { log::warn!("barrage:\n{m}"); "<barrage data too long>".into() }
+                    if m.len() <= 1024 {
+                        m.into()
+                    } else {
+                        log::warn!("barrage:\n{m}");
+                        "<barrage data too long>".into()
+                    }
                 },
-                false
+                false,
             ));
         }
 
         for buff in &skill.new_weapons {
             let fmt = crate::fmt::azur::Details::new(&buff.weapon);
             fields.push((
-                format!("__{}__", buff.weapon.name.as_deref().unwrap_or("Special Weapon")),
+                format!(
+                    "__{}__",
+                    buff.weapon.name.as_deref().unwrap_or("Special Weapon")
+                ),
                 match buff.duration {
                     Some(_) => fmt.no_fire_rate().to_string().into(),
                     None => fmt.to_string().into(),
                 },
-                true
+                true,
             ))
         }
 
@@ -227,14 +262,25 @@ impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
         match &self.source {
             ViewSource::Ship(source) => {
-                let base_ship = ctx.data.azur_lane().ship_by_id(source.ship_id).ok_or(AzurParseError::Ship)?;
-                let ship = source.retrofit.and_then(|i| base_ship.retrofits.get(usize::from(i))).unwrap_or(base_ship);
+                let base_ship = ctx
+                    .data
+                    .azur_lane()
+                    .ship_by_id(source.ship_id)
+                    .ok_or(AzurParseError::Ship)?;
+                let ship = source
+                    .retrofit
+                    .and_then(|i| base_ship.retrofits.get(usize::from(i)))
+                    .unwrap_or(base_ship);
                 Ok(self.edit_with_ship(ctx.data, ship, Some(base_ship)))
-            }
+            },
             ViewSource::Augment(augment_id) => {
-                let augment = ctx.data.azur_lane().augment_by_id(*augment_id).ok_or(AzurParseError::Augment)?;
+                let augment = ctx
+                    .data
+                    .azur_lane()
+                    .augment_by_id(*augment_id)
+                    .ok_or(AzurParseError::Augment)?;
                 Ok(self.edit_with_augment(augment))
-            }
+            },
         }
     }
 }
@@ -245,7 +291,12 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
     use utils::text::InlineStr;
 
     let mut buf = String::new();
-    write_join_map(&mut buf, "\n\n", &skill.barrages, write_skill_barrage_summary);
+    write_join_map(
+        &mut buf,
+        "\n\n",
+        &skill.barrages,
+        write_skill_barrage_summary,
+    );
 
     if buf.is_empty() {
         // this happens if the barrage were to be entirely
@@ -297,29 +348,34 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
 
     fn write_skill_attack_summary(buf: &mut String, attack: &SkillAttack) -> bool {
         match &attack.weapon.data {
-            WeaponData::Bullets(bullets) => write_barrage_summary(buf, bullets, Some(attack.target)),
+            WeaponData::Bullets(bullets) => {
+                write_barrage_summary(buf, bullets, Some(attack.target))
+            },
             WeaponData::Aircraft(aircraft) => try_write_or_undo(buf, |buf| {
                 writeln_str!(
                     buf,
                     "`{: >5} |{: >3} x Aircraft                             |    `",
-                    attack.target.short_name(), aircraft.amount
+                    attack.target.short_name(),
+                    aircraft.amount
                 );
                 write_aircraft_summary(buf, aircraft)
             }),
-            _ => false
+            _ => false,
         }
     }
 
-    fn write_barrage_summary(buf: &mut String, barrage: &Barrage, target: Option<SkillAttackTarget>) -> bool {
+    fn write_barrage_summary(
+        buf: &mut String,
+        barrage: &Barrage,
+        target: Option<SkillAttackTarget>,
+    ) -> bool {
         struct Value<'a> {
             amount: u32,
             bullet: &'a Bullet,
         }
 
         fn match_key(a: &Bullet, b: &Bullet) -> bool {
-            a.kind == b.kind &&
-            a.ammo == b.ammo &&
-            a.modifiers == b.modifiers
+            a.kind == b.kind && a.ammo == b.ammo && a.modifiers == b.modifiers
         }
 
         let mut sets: Vec<Value<'_>> = Vec::new();
@@ -327,13 +383,20 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             // find & modify, or insert
             match sets.iter_mut().find(|i| match_key(i.bullet, bullet)) {
                 Some(entry) => entry.amount += bullet.amount,
-                None => sets.push(Value { amount: bullet.amount, bullet }),
+                None => sets.push(Value {
+                    amount: bullet.amount,
+                    bullet,
+                }),
             }
         }
 
         write_join_map(buf, "\n", sets, |buf, Value { amount, bullet }| {
             let ArmorModifiers(l, m, h) = bullet.modifiers;
-            let shrapnel_mark = if bullet.kind == BulletKind::Shrapnel { "*" } else { " " };
+            let shrapnel_mark = if bullet.kind == BulletKind::Shrapnel {
+                "*"
+            } else {
+                " "
+            };
             write_str!(
                 buf,
                 // damage with coeff |
@@ -347,9 +410,15 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 {: >4.0}% {: <3} | \
                 {}`",
                 target.map_or("", |t| t.short_name()),
-                amount, barrage.damage * barrage.coefficient, shrapnel_mark,
-                bullet.ammo.short_name(), l * 100f64, m * 100f64, h * 100f64,
-                barrage.scaling * 100f64, barrage.scaling_stat.name(),
+                amount,
+                barrage.damage * barrage.coefficient,
+                shrapnel_mark,
+                bullet.ammo.short_name(),
+                l * 100f64,
+                m * 100f64,
+                h * 100f64,
+                barrage.scaling * 100f64,
+                barrage.scaling_stat.name(),
                 get_bullet_flags(bullet),
             );
             true
@@ -357,17 +426,25 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
     }
 
     fn write_aircraft_summary(buf: &mut String, aircraft: &Aircraft) -> bool {
-        write_join_map(buf, "\n", &aircraft.weapons, |buf, weapon| match &weapon.data {
-            WeaponData::Bullets(barrage) => write_barrage_summary(buf, barrage, None),
-            _ => false,
+        write_join_map(buf, "\n", &aircraft.weapons, |buf, weapon| {
+            match &weapon.data {
+                WeaponData::Bullets(barrage) => write_barrage_summary(buf, barrage, None),
+                _ => false,
+            }
         })
     }
 
     fn get_bullet_flags(bullet: &Bullet) -> InlineStr<3> {
         let mut res = [b'-'; 3];
-        if bullet.pierce != 0 { res[0] = b'P'; }
-        if bullet.flags.contains(BulletFlags::IGNORE_SHIELD) { res[1] = b'I'; }
-        if bullet.flags.dive_filter().is_empty() { res[2] = b'D'; }
+        if bullet.pierce != 0 {
+            res[0] = b'P';
+        }
+        if bullet.flags.contains(BulletFlags::IGNORE_SHIELD) {
+            res[1] = b'I';
+        }
+        if bullet.flags.dive_filter().is_empty() {
+            res[2] = b'D';
+        }
 
         // SAFETY: Always ASCII here.
         unsafe { InlineStr::from_utf8_unchecked(res) }

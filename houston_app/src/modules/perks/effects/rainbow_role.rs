@@ -18,23 +18,29 @@ impl Shape for RainbowRole {
     async fn enable(&self, args: Args<'_>, _state: Option<Bson>) -> Result {
         let role = find_rainbow_role(&args)?;
 
-        args.ctx.http.add_member_role(
-            args.guild_id,
-            args.user_id,
-            role.role,
-            Some("enabled rainbow role perk"),
-        ).await?;
+        args.ctx
+            .http
+            .add_member_role(
+                args.guild_id,
+                args.user_id,
+                role.role,
+                Some("enabled rainbow role perk"),
+            )
+            .await?;
         Ok(())
     }
 
     async fn disable(&self, args: Args<'_>) -> Result {
         if let Ok(role) = find_rainbow_role(&args) {
-            args.ctx.http.remove_member_role(
-                args.guild_id,
-                args.user_id,
-                role.role,
-                Some("disabled rainbow role perk"),
-            ).await?;
+            args.ctx
+                .http
+                .remove_member_role(
+                    args.guild_id,
+                    args.user_id,
+                    role.role,
+                    Some("disabled rainbow role perk"),
+                )
+                .await?;
         }
 
         Ok(())
@@ -44,7 +50,7 @@ impl Shape for RainbowRole {
         const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {
-            return Ok(())
+            return Ok(());
         };
 
         let loop_sec = Utc::now()
@@ -73,7 +79,11 @@ impl Shape for RainbowRole {
                     .audit_log_reason("rainbow role cycle");
 
                 let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
-                log::trace!("Updated rainbow role {} to color #{:06X}", role.name, color.0);
+                log::trace!(
+                    "Updated rainbow role {} to color #{:06X}",
+                    role.name,
+                    color.0
+                );
             }
         }
 
@@ -88,15 +98,18 @@ struct NoRainbowRole;
 fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
     ctx.data_ref::<HContextData>()
         .config()
-        .perks.as_ref()
+        .perks
+        .as_ref()
         .ok_or(NoRainbowRole)?
-        .rainbow.as_ref()
+        .rainbow
+        .as_ref()
         .ok_or(NoRainbowRole)
 }
 
 fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry> {
     get_config(args.ctx)?
-        .guilds.get(&args.guild_id)
+        .guilds
+        .get(&args.guild_id)
         .context("rainbow role not configured for guild")
 }
 
@@ -108,10 +121,7 @@ async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> 
         "effect": bson::ser::to_bson(&Effect::RainbowRole)?,
     };
 
-    let exists = ActivePerk::collection(db)
-        .find_one(filter)
-        .await?
-        .is_some();
+    let exists = ActivePerk::collection(db).find_one(filter).await?.is_some();
 
     Ok(exists)
 }
@@ -129,12 +139,12 @@ fn rgb(r: f32, g: f32, b: f32) -> Color {
 fn hsv_to_color(mut h: f32, s: f32, v: f32) -> Color {
     h = h.rem_euclid(360.0);
 
-	let mut c = v * s;
-	let mut x = c * (1.0 - f32::abs((h / 60.0) % 2.0 - 1.0));
-	let m = v - c;
+    let mut c = v * s;
+    let mut x = c * (1.0 - f32::abs((h / 60.0) % 2.0 - 1.0));
+    let m = v - c;
 
-	c += m;
-	x += m;
+    c += m;
+    x += m;
 
     match h {
         ..60.0 => rgb(c, x, m),

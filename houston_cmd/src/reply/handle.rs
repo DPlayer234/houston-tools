@@ -1,9 +1,8 @@
 use serenity::http::Http;
 use serenity::model::prelude::*;
 
-use crate::context::Context;
-
 use super::EditReply;
+use crate::context::Context;
 
 /// Represents a handle to a sent interaction response or follow-up,
 /// allowing edits or deletion.
@@ -17,7 +16,7 @@ pub struct ReplyHandle<'a> {
 #[derive(Debug, Clone, Copy)]
 enum Target {
     Original,
-    Followup(MessageId)
+    Followup(MessageId),
 }
 
 impl<'a> ReplyHandle<'a> {
@@ -41,7 +40,11 @@ impl<'a> ReplyHandle<'a> {
     pub async fn delete(self) -> serenity::Result<()> {
         match self.target {
             Target::Original => self.interaction.delete_response(self.http).await?,
-            Target::Followup(message_id) => self.interaction.delete_followup(self.http, message_id).await?,
+            Target::Followup(message_id) => {
+                self.interaction
+                    .delete_followup(self.http, message_id)
+                    .await?
+            },
         }
 
         Ok(())
@@ -57,7 +60,9 @@ impl<'a> ReplyHandle<'a> {
                 self.interaction.edit_response(self.http, reply).await
             },
             Target::Followup(message_id) => {
-                reply.execute_as_followup_edit(self.http, &self.interaction.token, message_id).await
+                reply
+                    .execute_as_followup_edit(self.http, &self.interaction.token, message_id)
+                    .await
             },
         }
     }

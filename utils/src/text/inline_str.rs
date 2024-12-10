@@ -7,20 +7,22 @@ use std::ops::{Deref, DerefMut};
 /// Represents a [`str`] with a fixed length and ownership semantics.
 /// Essentially, it is to [`&str`](str) what `[T; LEN]` is to `&[T]`.
 ///
-/// `LEN` represents the size in bytes, using the same semantics as [`str::len`].
+/// `LEN` represents the size in bytes, using the same semantics as
+/// [`str::len`].
 ///
 /// Like [`str`], it may only contain valid UTF-8 bytes.
 ///
-/// Generally, [`String`] is more useful but this is can be useful
-/// for working with strings in a const context.
-///
+/// Generally, [`String`] is more useful but this is can be useful for working
+/// with strings in a const context.
 // Note: These derives are fine since `str` itself only delegates to `as_bytes` for `Eq` and `Ord`.
-// `Debug` and `Hash` are manually implemented to delegate to `as_str` to give the right `Borrow` semantics.
+// `Debug` and `Hash` are manually implemented to delegate to `as_str` to give the right `Borrow`
+// semantics.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct InlineStr<const LEN: usize>([u8; LEN]);
 
-/// Converting to [`InlineStr`] from [`str`] failed because of a length mismatch.
+/// Converting to [`InlineStr`] from [`str`] failed because of a length
+/// mismatch.
 #[derive(Debug, thiserror::Error)]
 #[error("length of input does not match result length")]
 pub struct FromStrError(());
@@ -35,11 +37,12 @@ impl<const LEN: usize> InlineStr<LEN> {
                 // SAFETY: from_utf8 checks validity
                 Self::from_utf8_unchecked(bytes)
             }),
-            Err(err) => Err(err)
+            Err(err) => Err(err),
         }
     }
 
-    /// Converts an array to an [`InlineStr`] without checking the string contains valid UTF-8.
+    /// Converts an array to an [`InlineStr`] without checking the string
+    /// contains valid UTF-8.
     ///
     /// Refer to [`std::str::from_utf8`] for exact semantics.
     ///
@@ -106,8 +109,8 @@ impl<const LEN: usize> InlineStr<LEN> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the contents of the array are valid UTF-8 before the borrow ends
-    /// and the underlying data is used as a [`str`].
+    /// The caller must ensure that the contents of the array are valid UTF-8
+    /// before the borrow ends and the underlying data is used as a [`str`].
     ///
     /// Also refer to [`str::as_bytes_mut`].
     #[must_use]
@@ -122,8 +125,16 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Panics if the FINAL length doesn't match the total length of the inputs.
     /// This will happen at compile time rather than runtime.
     #[must_use]
-    pub const fn join<const OTHER: usize, const FINAL: usize>(self, other: InlineStr<OTHER>) -> InlineStr<FINAL> {
-        const { assert!(LEN + OTHER == FINAL, "length of inputs doesn't match result length"); }
+    pub const fn join<const OTHER: usize, const FINAL: usize>(
+        self,
+        other: InlineStr<OTHER>,
+    ) -> InlineStr<FINAL> {
+        const {
+            assert!(
+                LEN + OTHER == FINAL,
+                "length of inputs doesn't match result length"
+            );
+        }
         super::__private::join_str_const(&[self.as_str(), other.as_str()])
     }
 }

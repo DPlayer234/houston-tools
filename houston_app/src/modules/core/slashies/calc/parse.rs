@@ -1,7 +1,5 @@
-use std::fmt;
-use std::iter;
-use std::slice;
 use std::str::FromStr;
+use std::{fmt, iter, slice};
 
 use super::ops::*;
 use super::{MathError, Result};
@@ -85,12 +83,16 @@ pub trait Tokenizer<'a> {
 /// Returns an kind-of iterator to the tokens.
 pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
     // - split by whitespace
-    // - split each fragment by special characters, including them at the end of the new fragments
+    // - split each fragment by special characters, including them at the end of the
+    //   new fragments
     // - split away the special characters also
 
     fn is_special_char(c: u8) -> bool {
         // Note: each of these must be an ASCII character
-        matches!(c, b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',' | b'!')
+        matches!(
+            c,
+            b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',' | b'!'
+        )
     }
 
     unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
@@ -101,11 +103,14 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
         Token { text, token_index }
     }
 
-    let iter = text.as_bytes()
+    let iter = text
+        .as_bytes()
         .split(|c| c.is_ascii_whitespace())
         .flat_map(|s| s.split_inclusive(|c| is_special_char(*c)))
         .flat_map(|s| match s {
-            [rest @ .., last] if is_special_char(*last) => iter::once(rest).chain(Some(slice::from_ref(last))),
+            [rest @ .., last] if is_special_char(*last) => {
+                iter::once(rest).chain(Some(slice::from_ref(last)))
+            },
             _ => iter::once(s).chain(None),
         })
         .filter(|s| !s.is_empty())
@@ -158,17 +163,18 @@ pub fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
     read_expr_with_terminator(tokens, |t| t.is_none()).map(|e| e.value)
 }
 
-/// Reads an expression. This will consume `tokens` until it matches `terminate_on`
-/// in a top-level binary-operator position.
+/// Reads an expression. This will consume `tokens` until it matches
+/// `terminate_on` in a top-level binary-operator position.
 ///
-/// If no more tokens are available before it finds the terminator, returns an error.
+/// If no more tokens are available before it finds the terminator, returns an
+/// error.
 fn read_expr_with_terminator<'a>(
     tokens: &mut impl Tokenizer<'a>,
     terminate_on: fn(Option<Token<'a>>) -> bool,
 ) -> Result<'a, ExprSuccess<'a>> {
     // this is the main place where this allocates. the other is function parameters
-    // the arrayvec crate could prevent that, but it might also need a lot of stack space
-    // do note that this function may be called recursively!
+    // the arrayvec crate could prevent that, but it might also need a lot of stack
+    // space do note that this function may be called recursively!
     let mut pairs = Vec::new();
     loop {
         // read sub expressions until out of tokens
@@ -178,7 +184,10 @@ fn read_expr_with_terminator<'a>(
         // if this a terminator, finish the expression and return it
         if terminate_on(token) {
             let value = if !pairs.is_empty() {
-                pairs.push(ValuePair { value, operator: None });
+                pairs.push(ValuePair {
+                    value,
+                    operator: None,
+                });
                 merge_expr_pairs(pairs)
             } else {
                 value
@@ -197,8 +206,8 @@ fn read_expr_with_terminator<'a>(
         };
 
         // expecting a binary operator here
-        let operator = BinaryOp::from_token(operator)
-            .ok_or(MathError::InvalidBinaryOperator(operator))?;
+        let operator =
+            BinaryOp::from_token(operator).ok_or(MathError::InvalidBinaryOperator(operator))?;
 
         pairs.push(ValuePair {
             value,
@@ -207,9 +216,9 @@ fn read_expr_with_terminator<'a>(
     }
 }
 
-/// Reads a "sub-expression", i.e. it gets the first expression without binary operators
-/// like `5` in `5 + 2`, an expression within parenthesis, unary operators with their operand,
-/// or an identifier.
+/// Reads a "sub-expression", i.e. it gets the first expression without binary
+/// operators like `5` in `5 + 2`, an expression within parenthesis, unary
+/// operators with their operand, or an identifier.
 ///
 /// If no more tokens are available, returns an error.
 fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
@@ -230,23 +239,27 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
         b"tau" => TAU,
 
         // anything starting with a digit is assumed to be a number
-        [b'0'..=b'9', ..] => f64::from_str(token.text).map_err(|_| MathError::InvalidNumber(token))?,
+        [b'0'..=b'9', ..] => {
+            f64::from_str(token.text).map_err(|_| MathError::InvalidNumber(token))?
+        },
 
         // these shouldn't show up here
         b"," | b")" => return Err(MathError::ExprExpected(Some(token))),
 
         // lastly, also check for unary operators and functions
-        _ => if let Some(op) = UnaryOp::from_token(token) {
-            op.apply(read_sub_expr(tokens)?)
-        } else if let Some(call) = CallOp::from_token(token) {
-            read_call(tokens, call, token)?
-        } else if matches_token!(tokens.peek(), "(") {
-            return Err(MathError::InvalidFunction(token));
-        } else if tokens.peek().is_some() {
-            return Err(MathError::InvalidUnaryOperator(token));
-        } else {
-            return Err(MathError::ExprExpected(tokens.last_token()));
-        }
+        _ => {
+            if let Some(op) = UnaryOp::from_token(token) {
+                op.apply(read_sub_expr(tokens)?)
+            } else if let Some(call) = CallOp::from_token(token) {
+                read_call(tokens, call, token)?
+            } else if matches_token!(tokens.peek(), "(") {
+                return Err(MathError::InvalidFunction(token));
+            } else if tokens.peek().is_some() {
+                return Err(MathError::InvalidUnaryOperator(token));
+            } else {
+                return Err(MathError::ExprExpected(tokens.last_token()));
+            }
+        },
     };
 
     if let Some(op) = tokens.peek().and_then(|t| PostUnaryOp::from_token(t)) {
@@ -260,7 +273,11 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
 /// Reads the parameters for a function call and evaluates it.
 ///
 /// This also checks that the next token is `(`.
-fn read_call<'a>(tokens: &mut impl Tokenizer<'a>, call_fn: CallOp, call_fn_token: Token<'a>) -> Result<'a, f64> {
+fn read_call<'a>(
+    tokens: &mut impl Tokenizer<'a>,
+    call_fn: CallOp,
+    call_fn_token: Token<'a>,
+) -> Result<'a, f64> {
     if !matches_token!(tokens.next(), "(") {
         return Err(MathError::FunctionCallExpected(call_fn_token));
     }
@@ -293,17 +310,22 @@ fn read_call<'a>(tokens: &mut impl Tokenizer<'a>, call_fn: CallOp, call_fn_token
 fn merge_expr_pairs(mut pairs: Vec<ValuePair>) -> f64 {
     while pairs.len() > 1 {
         // iterate over adjacent pairs (e.g. basically `pairs.windows(2)` but mutable).
-        // the cell trick documented for `windows` could work, but it's harder to deal with and not any less code.
+        // the cell trick documented for `windows` could work, but it's harder to deal
+        // with and not any less code.
         'merge_once: for index in 0..(pairs.len() - 1) {
-            let [lhs, rhs, ..] = &mut pairs[index..] else { unreachable!() };
+            let [lhs, rhs, ..] = &mut pairs[index..] else {
+                unreachable!()
+            };
 
             // None is only set for the last element
-            let kind = lhs.operator
-                .expect("only last operator must be empty");
+            let kind = lhs.operator.expect("only last operator must be empty");
 
             // merge cells if the left-hand priority is greater or equal than the right
             // or if the right hand operator is None
-            if rhs.operator.map_or(true, |r| kind.priority() >= r.priority()) {
+            if rhs
+                .operator
+                .map_or(true, |r| kind.priority() >= r.priority())
+            {
                 // copy the values out since we'll need to put them elsewhere
                 let lhs_value = lhs.value;
                 let rhs_value = rhs.value;
@@ -315,21 +337,22 @@ fn merge_expr_pairs(mut pairs: Vec<ValuePair>) -> f64 {
                 };
 
                 // remove `rhs` from the list entirely
-                // we can't do that earlier to get `rhs_value` because that would also invalidate `lhs`.
+                // we can't do that earlier to get `rhs_value` because that would also
+                // invalidate `lhs`.
                 pairs.remove(index + 1);
 
                 // restart the inner loop.
-                // this could start further in, but the logic for that is more difficult to get right.
+                // this could start further in, but the logic for that is more difficult to get
+                // right.
                 break 'merge_once;
             }
 
             // other cases continue searching
-            // this cannot lead to an infinite loop: if nothing else merges, the last 2 pairs get merged
+            // this cannot lead to an infinite loop: if nothing else merges, the
+            // last 2 pairs get merged
         }
     }
 
     // pairs must not be empty
-    pairs.pop()
-        .expect("the pairs must not be empty")
-        .value
+    pairs.pop().expect("the pairs must not be empty").value
 }

@@ -24,13 +24,15 @@ macro_rules! doc_object_id {
     };
 }
 
-pub(crate) use bson_id;
-pub(crate) use doc_object_id;
+pub(crate) use {bson_id, doc_object_id};
 
 /// Creates the specified indices.
 ///
 /// If there is a spec mismatch, drop and recreates the affected indices.
-pub async fn update_indices<T>(collection: Collection<T>, indices: Vec<IndexModel>) -> crate::prelude::Result
+pub async fn update_indices<T>(
+    collection: Collection<T>,
+    indices: Vec<IndexModel>,
+) -> crate::prelude::Result
 where
     T: Send + Sync,
 {
@@ -42,20 +44,29 @@ where
         matches!(*err.kind, ErrorKind::Command(CommandError { code: 86, .. }))
     }
 
-    async fn update_indices_inner(collection: Collection<Document>, indices: Vec<IndexModel>) -> crate::prelude::Result {
+    async fn update_indices_inner(
+        collection: Collection<Document>,
+        indices: Vec<IndexModel>,
+    ) -> crate::prelude::Result {
         for index in indices {
             match collection.create_index(index.clone()).await {
                 Ok(_) => {},
                 Err(err) if is_recreate(&err) => {
                     let name = match &index.options {
-                        Some(IndexOptions { name: Some(name), .. }) => name.as_str(),
+                        Some(IndexOptions {
+                            name: Some(name), ..
+                        }) => name.as_str(),
                         _ => return Err(err).context("must set index name to attempt re-create"),
                     };
 
                     log::trace!("Detected index {}/{} mismatch.", collection.name(), name);
                     collection.drop_index(name).await?;
                     let create = collection.create_index(index).await?;
-                    log::info!("Replaced index {}/{}.", collection.name(), create.index_name);
+                    log::info!(
+                        "Replaced index {}/{}.",
+                        collection.name(),
+                        create.index_name
+                    );
                 },
                 Err(err) => return Err(err.into()),
             }
@@ -69,7 +80,9 @@ where
     // if we can attempt a recreate, try the indices individually
     match collection.create_indexes(indices.iter().cloned()).await {
         Ok(_) => Ok(()),
-        Err(err) if is_recreate(&err) => update_indices_inner(collection.clone_with_type(), indices).await,
+        Err(err) if is_recreate(&err) => {
+            update_indices_inner(collection.clone_with_type(), indices).await
+        },
         Err(err) => Err(err).context("could not create indices"),
     }
 }

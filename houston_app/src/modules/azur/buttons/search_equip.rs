@@ -9,7 +9,7 @@ use crate::modules::core::buttons::ToPage;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
-    filter: Filter
+    filter: Filter,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -39,17 +39,23 @@ impl View {
             writeln_str!(
                 desc,
                 "- **{}** [{} {} {}]",
-                equip.name, equip.rarity.name(), equip.faction.prefix().unwrap_or("Col."), equip.kind.name(),
+                equip.name,
+                equip.rarity.name(),
+                equip.faction.prefix().unwrap_or("Col."),
+                equip.kind.name(),
             );
 
             let view_equip = super::equip::View::new(equip.equip_id).back(self.to_custom_data());
-            options.push(CreateSelectMenuOption::new(&equip.name, view_equip.to_custom_id()));
+            options.push(CreateSelectMenuOption::new(
+                &equip.name,
+                view_equip.to_custom_id(),
+            ));
         }
 
         super::pagination!(rows => self, options, iter);
 
-        let author = CreateEmbedAuthor::new("Equipments")
-            .url(config::azur_lane::EQUIPMENT_LIST_URL);
+        let author =
+            CreateEmbedAuthor::new("Equipments").url(config::azur_lane::EQUIPMENT_LIST_URL);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -66,7 +72,8 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let filtered = self.filter
+        let filtered = self
+            .filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
@@ -101,15 +108,14 @@ impl Filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
                 fn $fn_name<'a>(
                     f: &Filter,
-                    iter: impl Iterator<Item = &'a Equip> + 'a
-                ) -> Box<dyn Iterator<Item = &'a Equip> + 'a>
-                {
+                    iter: impl Iterator<Item = &'a Equip> + 'a,
+                ) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
                     match f.$field {
                         Some(filter) => $next(f, iter.filter(move |s| s.$field == filter)),
-                        None => $next(f, iter)
+                        None => $next(f, iter),
                     }
                 }
-            }
+            };
         }
 
         def_and_filter!(next_faction: faction => next_hull_type);
@@ -118,9 +124,8 @@ impl Filter {
 
         fn finish<'a>(
             _f: &Filter,
-            iter: impl Iterator<Item = &'a Equip> + 'a
-        ) -> Box<dyn Iterator<Item = &'a Equip> + 'a>
-        {
+            iter: impl Iterator<Item = &'a Equip> + 'a,
+        ) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
             Box::new(iter)
         }
 

@@ -78,7 +78,7 @@ pub struct JoinNatural<'a> {
 struct JoinBlock<'a> {
     mid: &'a str,
     last: &'a str,
-    once: &'a str
+    once: &'a str,
 }
 
 impl<'a> JoinNatural<'a> {
@@ -95,7 +95,7 @@ impl<'a> JoinNatural<'a> {
         static JOIN: JoinBlock<'static> = JoinBlock {
             mid: ", ",
             last: ", and ",
-            once: " and "
+            once: " and ",
         };
 
         Self::new(iter, &JOIN)
@@ -106,7 +106,7 @@ impl<'a> JoinNatural<'a> {
         static JOIN: JoinBlock<'static> = JoinBlock {
             mid: ", ",
             last: ", or ",
-            once: " or "
+            once: " or ",
         };
 
         Self::new(iter, &JOIN)
@@ -153,7 +153,7 @@ mod tests {
         let result = replace_holes(haystack, |out, n| match n {
             "user" => write_str!(out, "<@{user}>"),
             "role" => write_str!(out, "<@&{role}>"),
-            _ => {}
+            _ => {},
         });
 
         assert_eq!(result, "Look, look! <@12345> reached <@&67890>!");

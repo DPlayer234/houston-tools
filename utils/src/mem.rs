@@ -1,6 +1,7 @@
 //! Provides helper functions to work with blocks of memory.
 //!
-//! For example, this allows const-time conversion of slices into arrays via [`as_sized`].
+//! For example, this allows const-time conversion of slices into arrays via
+//! [`as_sized`].
 
 use std::slice;
 
@@ -24,8 +25,7 @@ use std::slice;
 #[inline]
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
-    try_as_sized(slice)
-        .expect("requested size must match exactly")
+    try_as_sized(slice).expect("requested size must match exactly")
 }
 
 /// Tries to convert a slice to an array reference of size `N`.
@@ -60,8 +60,8 @@ pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
 
 /// Transmutes a slice of some type into one of another.
 ///
-/// The length of the new slice is adjusted to cover the same memory region without
-/// going out of bounds of the original slice.
+/// The length of the new slice is adjusted to cover the same memory region
+/// without going out of bounds of the original slice.
 ///
 /// # Safety
 ///
@@ -71,10 +71,12 @@ pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
 /// The start of the new slice will be the same pointer as the original slice.
 ///
 /// The length will chosen as such:
-/// - If either of `Src` or `Dst`, but not both, are zero-sized types, the new slice will be empty.
-/// - If both are zero-sized types, the new slice will have the same length as the original.
-/// - Otherwise, the length will be `size_of::<Src>() * len / size_of::<Dst>()`, truncating away the
-///   end section that doesn't fit another `Dst`.
+/// - If either of `Src` or `Dst`, but not both, are zero-sized types, the new
+///   slice will be empty.
+/// - If both are zero-sized types, the new slice will have the same length as
+///   the original.
+/// - Otherwise, the length will be `size_of::<Src>() * len / size_of::<Dst>()`,
+///   truncating away the end section that doesn't fit another `Dst`.
 ///
 /// The memory of `slice` must be valid for every `Dst` produced.
 ///
@@ -100,7 +102,10 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 
     // SAFETY: Both pointers are to the slice, so the offset must be valid.
     let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
-    debug_assert!(byte_len >= 0, "sanity: end >= start, so byte_len must be positive");
+    debug_assert!(
+        byte_len >= 0,
+        "sanity: end >= start, so byte_len must be positive"
+    );
 
     let src_size = size_of::<Src>();
     let dst_size = size_of::<Dst>();
@@ -145,7 +150,5 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 #[inline]
 #[must_use = "transmuting has no effect if you don't use the return value"]
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
-    unsafe {
-        transmute_slice(slice)
-    }
+    unsafe { transmute_slice(slice) }
 }

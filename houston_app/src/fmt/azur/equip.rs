@@ -31,7 +31,11 @@ impl Display for EquipStats<'_> {
 
 impl Display for AugmentStats<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write_stats(&self.0.stat_bonuses, |i| (i.stat_kind, i.amount + i.random), f)
+        write_stats(
+            &self.0.stat_bonuses,
+            |i| (i.stat_kind, i.amount + i.random),
+            f,
+        )
     }
 }
 
@@ -46,10 +50,18 @@ where
 
         for (index, stat) in chunk.iter().enumerate() {
             let (kind, amount) = map(stat);
-            if index != 0 { f.write_str(" \u{2E31} ")?; }
+            if index != 0 {
+                f.write_str(" \u{2E31} ")?;
+            }
 
             let name = kind.name();
-            write!(f, "**`{}:`**`{: >len$}`", name, amount, len = 7 - name.len())?;
+            write!(
+                f,
+                "**`{}:`**`{: >len$}`",
+                name,
+                amount,
+                len = 7 - name.len()
+            )?;
         }
     }
 

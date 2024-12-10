@@ -1,4 +1,5 @@
-//! Module to allow writing to [`String`]s without having to handle the unreachable error case.
+//! Module to allow writing to [`String`]s without having to handle the
+//! unreachable error case.
 
 use std::fmt::{Arguments, Write};
 
@@ -10,7 +11,8 @@ pub trait WriteStr {
     /// Writes the arguments to the buffer.
     fn write_str_fmt(&mut self, args: Arguments<'_>);
 
-    /// Writes the arguments to the buffer, followed by a line-feed character (`\n`).
+    /// Writes the arguments to the buffer, followed by a line-feed character
+    /// (`\n`).
     fn writeln_str_fmt(&mut self, args: Arguments<'_>);
 }
 
@@ -37,7 +39,8 @@ impl WriteStr for String {
 /// Similar to [`write`], except it calls a method named `write_str_fmt`
 /// and is generally intended to be infallible.
 ///
-/// The buffer would generally be [`String`] and [`WriteStr`] should be imported.
+/// The buffer would generally be [`String`] and [`WriteStr`] should be
+/// imported.
 #[macro_export]
 macro_rules! write_str {
     ($buf:expr, $($t:tt)*) => {
@@ -48,7 +51,8 @@ macro_rules! write_str {
 /// Similar to [`writeln`], except it calls a method named `writeln_str_fmt`
 /// and is generally intended to be infallible.
 ///
-/// The buffer would generally be [`String`] and [`WriteStr`] should be imported.
+/// The buffer would generally be [`String`] and [`WriteStr`] should be
+/// imported.
 #[macro_export]
 macro_rules! writeln_str {
     ($buf:expr, $($t:tt)*) => {

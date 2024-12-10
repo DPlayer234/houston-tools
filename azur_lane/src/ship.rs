@@ -5,10 +5,9 @@ use std::ops::{Add, AddAssign};
 
 use serde::{Deserialize, Serialize};
 
-use crate::define_data_enum;
 use crate::equip::*;
 use crate::skill::*;
-use crate::Faction;
+use crate::{define_data_enum, Faction};
 
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +78,7 @@ pub struct ShipStatBlock {
     pub lck: f64,
     pub cost: u32,
     pub oxy: u32,
-    pub amo: u32
+    pub amo: u32,
 }
 
 /// Represents a single ship stat. Its value can be calculated on demand.
@@ -93,7 +92,7 @@ pub struct EquipSlot {
     pub allowed: Vec<EquipKind>,
     /// If a weapon slot, the data for the mount.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mount: Option<EquipWeaponMount>
+    pub mount: Option<EquipWeaponMount>,
 }
 
 /// Mount information for an [`EquipSlot`].
@@ -109,11 +108,13 @@ pub struct EquipWeaponMount {
     pub parallel: u8,
     /// How many preloads this slot has.
     ///
-    /// This is only meaningful for Battleship main guns, torpedoes, and missiles.
+    /// This is only meaningful for Battleship main guns, torpedoes, and
+    /// missiles.
     pub preload: u8,
 }
 
-/// Provides information about "shadow" equipment; inherent gear that is not displayed in-game.
+/// Provides information about "shadow" equipment; inherent gear that is not
+/// displayed in-game.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShadowEquip {
     /// The name of the associated equipment.
@@ -121,7 +122,7 @@ pub struct ShadowEquip {
     /// The mount efficiency. Same meaning as [`EquipWeaponMount::efficiency`].
     pub efficiency: f64,
     /// The weapons on that equipment.
-    pub weapons: Vec<Weapon>
+    pub weapons: Vec<Weapon>,
 }
 
 /// Data for a ship skin. This may represent the default skin.
@@ -131,7 +132,8 @@ pub struct ShipSkin {
     pub skin_id: u32,
     /// The image/asset key.
     ///
-    /// Asset bundles and chibi sprites from the collector will use this as their filename.
+    /// Asset bundles and chibi sprites from the collector will use this as
+    /// their filename.
     pub image_key: String,
     /// The skin's display name.
     pub name: String,
@@ -207,7 +209,7 @@ pub struct ShipSkinWords {
     pub oath: Option<String>,
     /// Voices lines that may be played when sortieing other specific ships.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub couple_encourage: Vec<ShipCoupleEncourage>
+    pub couple_encourage: Vec<ShipCoupleEncourage>,
 }
 
 /// Information about a ship line that may be displayed on the main screen.
@@ -216,7 +218,8 @@ pub struct ShipSkinWords {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipMainScreenLine(usize, String);
 
-/// Data for voices lines that may be played when sortieing other specific ships.
+/// Data for voices lines that may be played when sortieing other specific
+/// ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipCoupleEncourage {
     /// The line to be played.
@@ -224,7 +227,7 @@ pub struct ShipCoupleEncourage {
     /// The amount of allies that need to match the condition.
     pub amount: u32,
     /// The condition rule.
-    pub condition: ShipCouple
+    pub condition: ShipCouple,
 }
 
 /// Condition for [`ShipCoupleEncourage`].
@@ -241,8 +244,9 @@ pub enum ShipCouple {
     Faction(Vec<Faction>),
     /// Triggered when ships from the same illustrator are present.
     ///
-    /// Actual in-game data specifies which one, but it's only ever used to refer to the same one as the source ship's.
-    Illustrator
+    /// Actual in-game data specifies which one, but it's only ever used to
+    /// refer to the same one as the source ship's.
+    Illustrator,
 }
 
 define_data_enum! {
@@ -427,19 +431,26 @@ impl ShipStat {
     ///
     /// This isn't the level 1 value and includes various enhancements.
     /// See also: [`ShipStat::calc`]
-    pub const fn base(&self) -> f64 { self.0 }
+    pub const fn base(&self) -> f64 {
+        self.0
+    }
 
     /// The level growth value.
-    pub const fn growth(&self) -> f64 { self.1 }
+    pub const fn growth(&self) -> f64 {
+        self.1
+    }
 
     /// A fixed addition unaffected by affinity.
-    pub const fn fixed(&self) -> f64 { self.2 }
+    pub const fn fixed(&self) -> f64 {
+        self.2
+    }
 
     /// Calculates the actual value.
     ///
-    /// It should be noted that, due to the way this is generally stored, asking for levels
-    /// below 100 will lead to inaccurate results. In particular, stats from Limit Breaks,
-    /// Enhancement, Dev, Fate Simulation, and META Repair always represent the maxed state.
+    /// It should be noted that, due to the way this is generally stored, asking
+    /// for levels below 100 will lead to inaccurate results. In particular,
+    /// stats from Limit Breaks, Enhancement, Dev, Fate Simulation, and META
+    /// Repair always represent the maxed state.
     #[must_use]
     pub fn calc(&self, level: u32, affinity: f64) -> f64 {
         (self.base() + self.growth() * f64::from(level - 1) * 0.001) * affinity + self.fixed()

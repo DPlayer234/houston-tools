@@ -1,21 +1,17 @@
+use args::SlashMember;
 use houston_cmd::Context;
 
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::{DisplayCommandName, DisplayResolvedArgs};
 use crate::prelude::*;
 
-use args::SlashMember;
-
 pub mod args;
 
 pub mod prelude {
-    pub use houston_cmd::{chat_command, context_command};
-    pub use houston_cmd::Context;
+    pub use houston_cmd::{chat_command, context_command, Context};
 
     pub use super::args::*;
-    pub use super::create_reply;
-    pub use super::ContextExt as _;
-    pub use super::SlashUserExt as _;
+    pub use super::{create_reply, ContextExt as _, SlashUserExt as _};
     pub use crate::prelude::*;
 }
 
@@ -23,13 +19,10 @@ pub mod prelude {
 pub async fn pre_command(ctx: Context<'_>) {
     let name = DisplayCommandName::from(&ctx.interaction.data);
 
-    let options = ctx
-        .interaction
-        .data.target()
-        .map_or_else(
-            || DisplayResolvedArgs::Options(ctx.options()),
-            DisplayResolvedArgs::Target,
-        );
+    let options = ctx.interaction.data.target().map_or_else(
+        || DisplayResolvedArgs::Options(ctx.options()),
+        DisplayResolvedArgs::Target,
+    );
 
     log::info!("{}: /{name} {options}", ctx.user().name)
 }
@@ -38,9 +31,7 @@ pub async fn pre_command(ctx: Context<'_>) {
 #[cold]
 pub async fn error_handler(error: houston_cmd::Error<'_>) {
     match error {
-        houston_cmd::Error::Command { error, ctx } => {
-            command_error(ctx, error).await
-        },
+        houston_cmd::Error::Command { error, ctx } => command_error(ctx, error).await,
         houston_cmd::Error::ArgInvalid { message, ctx } => {
             let msg = format!("Argument invalid: {}", message);
             context_error(ctx, msg.into()).await
@@ -67,9 +58,8 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
                     log::error!("Error in command: {err:?}");
                 }
 
-                format!("Internal error: ```{err}```")
-                    .into()
-            }
+                format!("Internal error: ```{err}```").into()
+            },
         };
 
         context_error(ctx, message).await
@@ -88,8 +78,7 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
 }
 
 pub fn create_reply<'new>(ephemeral: impl IntoEphemeral) -> CreateReply<'new> {
-    CreateReply::new()
-        .ephemeral(ephemeral.into_ephemeral())
+    CreateReply::new().ephemeral(ephemeral.into_ephemeral())
 }
 
 /// Extension trait for the poise context.

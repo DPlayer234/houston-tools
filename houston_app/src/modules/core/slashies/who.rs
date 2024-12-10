@@ -1,5 +1,4 @@
 use bitflags::Flags;
-
 use utils::text::write_str::*;
 use utils::titlecase;
 
@@ -11,37 +10,27 @@ use crate::slashies::prelude::*;
     user,
     name = "User Info",
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
-pub async fn who_context(
-    ctx: Context<'_>,
-    user: SlashUser<'_>,
-) -> Result {
+pub async fn who_context(ctx: Context<'_>, user: SlashUser<'_>) -> Result {
     who_core(ctx, user, None).await
 }
 
 /// Returns basic information about the provided user.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub async fn who(
     ctx: Context<'_>,
-    #[description = "The user to get info about."]
-    user: SlashUser<'_>,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
+    #[description = "The user to get info about."] user: SlashUser<'_>,
+    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
 ) -> Result {
     who_core(ctx, user, ephemeral).await
 }
 
-async fn who_core(
-    ctx: Context<'_>,
-    user: SlashUser<'_>,
-    ephemeral: Option<bool>,
-) -> Result {
-    let mut embed = who_user_embed(user.user)
-        .color(ctx.data_ref().config().embed_color);
+async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>) -> Result {
+    let mut embed = who_user_embed(user.user).color(ctx.data_ref().config().embed_color);
 
     if let Some(member) = &user.member {
         embed = embed.field("Server Member Info", who_member_info(member), false);

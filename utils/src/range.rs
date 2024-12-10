@@ -3,8 +3,8 @@
 //!
 //! The primary intent is to allow easy parsing of user range inputs.
 
-use std::ops::{Bound, RangeBounds};
 use std::error::Error as StdError;
+use std::ops::{Bound, RangeBounds};
 
 /// An error that can occur when constructing bounded ranges.
 #[derive(Debug, thiserror::Error)]
@@ -30,17 +30,15 @@ pub enum OutOfRange<T: RangeNum> {
     /// The low value was above the high value.
     /// This variant stores the provided low and high values.
     #[error("low ({low}) is greater than high ({high})")]
-    LowAboveHigh {
-        low: T,
-        high: T,
-    },
+    LowAboveHigh { low: T, high: T },
 
     /// Parsing failed.
     #[error("expected range within limits [{min}..{max}]; {source}")]
     Parse {
         min: T,
         max: T,
-        #[source] source: T::FromStrError,
+        #[source]
+        source: T::FromStrError,
     },
 }
 
@@ -252,9 +250,21 @@ mod test {
                 let too_high = <$Type<1, 10>>::new(2, 11);
 
                 assert!(matches!(valid.map($Type::tuple), Ok((4, 6))));
-                assert!(matches!(inverse, Err(OutOfRange::LowAboveHigh { low: 5, high: 4 })));
-                assert!(matches!(too_low, Err(OutOfRange::BelowMin { actual: 0, min: 1 })));
-                assert!(matches!(too_high, Err(OutOfRange::AboveMax { actual: 11, max: 10 })));
+                assert!(matches!(
+                    inverse,
+                    Err(OutOfRange::LowAboveHigh { low: 5, high: 4 })
+                ));
+                assert!(matches!(
+                    too_low,
+                    Err(OutOfRange::BelowMin { actual: 0, min: 1 })
+                ));
+                assert!(matches!(
+                    too_high,
+                    Err(OutOfRange::AboveMax {
+                        actual: 11,
+                        max: 10
+                    })
+                ));
             }
         };
     }

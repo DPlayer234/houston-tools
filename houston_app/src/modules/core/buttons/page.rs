@@ -19,16 +19,14 @@ impl ToPage {
     }
 
     pub fn get_page(interaction: &ModalInteraction) -> Option<u16> {
-        let component = interaction
-            .data
-            .components.first()?
-            .components.first()?;
+        let component = interaction.data.components.first()?.components.first()?;
 
         let ActionRowComponent::InputText(InputText {
             value: Some(value),
             custom_id,
             ..
-        }) = component else {
+        }) = component
+        else {
             return None;
         };
 
@@ -40,10 +38,7 @@ impl ToPage {
         (1..=9999).contains(&page).then_some(page - 1)
     }
 
-    pub fn build_row<T, F>(
-        obj: &mut T,
-        page_field: F,
-    ) -> PageRowBuilder<'_, T, F>
+    pub fn build_row<T, F>(obj: &mut T, page_field: F) -> PageRowBuilder<'_, T, F>
     where
         T: ToCustomData,
         F: FieldMut<T, u16>,
@@ -106,26 +101,29 @@ where
             MaxPage::Minimum(_) => true,
         };
 
-        (page > 0 || has_more).then(move || CreateActionRow::buttons(vec![
-            if page > 0 {
-                self.obj.new_button(&self.page_field, page - 1, |_| 1)
-            } else {
-                CreateButton::new("#no-back").disabled(true)
-            }.emoji('◀'),
-
-            CreateButton::new(ToPage::new(self.obj.to_custom_data()).to_custom_id())
-                .label(match self.max_page {
-                    MaxPage::NoMore => format!("{0} / {0}", page + 1),
-                    MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
-                    MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
-                }),
-
-            if has_more {
-                self.obj.new_button(&self.page_field, page + 1, |_| 2)
-            } else {
-                CreateButton::new("#no-forward").disabled(true)
-            }.emoji('▶'),
-        ]))
+        (page > 0 || has_more).then(move || {
+            CreateActionRow::buttons(vec![
+                if page > 0 {
+                    self.obj.new_button(&self.page_field, page - 1, |_| 1)
+                } else {
+                    CreateButton::new("#no-back").disabled(true)
+                }
+                .emoji('◀'),
+                CreateButton::new(ToPage::new(self.obj.to_custom_data()).to_custom_id()).label(
+                    match self.max_page {
+                        MaxPage::NoMore => format!("{0} / {0}", page + 1),
+                        MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
+                        MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
+                    },
+                ),
+                if has_more {
+                    self.obj.new_button(&self.page_field, page + 1, |_| 2)
+                } else {
+                    CreateButton::new("#no-forward").disabled(true)
+                }
+                .emoji('▶'),
+            ])
+        })
     }
 }
 
@@ -137,13 +135,10 @@ impl ButtonArgsReply for ToPage {
             .placeholder("Enter page...")
             .required(true);
 
-        let components = vec![
-            CreateActionRow::input_text(input_text),
-        ];
+        let components = vec![CreateActionRow::input_text(input_text)];
 
         let custom_id = self.0.to_custom_id();
-        let modal = CreateModal::new(custom_id, "Go to page...")
-            .components(components);
+        let modal = CreateModal::new(custom_id, "Go to page...").components(components);
 
         ctx.modal(modal).await
     }

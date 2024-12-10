@@ -13,7 +13,10 @@ pub struct View {
 impl View {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
-        Self { equip_id, back: None }
+        Self {
+            equip_id,
+            back: None,
+        }
     }
 
     /// Sets the back button target.
@@ -23,10 +26,7 @@ impl View {
     }
 
     /// Modifies the create-reply with a preresolved equipment.
-    pub fn create_with_equip(
-        self,
-        equip: &Equip,
-    ) -> CreateReply<'_> {
+    pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
         let description = format!(
             "**{}**\n{}",
             equip.kind.name(),
@@ -37,22 +37,29 @@ impl View {
             .color(equip.rarity.color_rgb())
             .author(CreateEmbedAuthor::new(&equip.name))
             .description(description)
-            .fields(equip.weapons.iter().map(|weapon| (
-                weapon.kind.name(),
-                crate::fmt::azur::Details::new(weapon).no_kind().to_string(),
-                true,
-            )))
-            .fields(equip.skills.iter().map(|skill| (
-                format!("{} {}", skill.category.emoji(), skill.name),
-                utils::text::truncate(&skill.description, 1000),
-                false,
-            )))
+            .fields(equip.weapons.iter().map(|weapon| {
+                (
+                    weapon.kind.name(),
+                    crate::fmt::azur::Details::new(weapon).no_kind().to_string(),
+                    true,
+                )
+            }))
+            .fields(equip.skills.iter().map(|skill| {
+                (
+                    format!("{} {}", skill.category.emoji(), skill.name),
+                    utils::text::truncate(&skill.description, 1000),
+                    false,
+                )
+            }))
             .fields(self.get_disallowed_field(equip));
 
         let components = match &self.back {
-            Some(back) => vec![CreateActionRow::buttons(vec![
-                CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"),
-            ])],
+            Some(back) => {
+                let button = CreateButton::new(back.to_custom_id())
+                    .emoji('⏪')
+                    .label("Back");
+                vec![CreateActionRow::buttons(vec![button])]
+            },
             None => vec![],
         };
 
@@ -74,7 +81,11 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let equip = ctx.data.azur_lane().equip_by_id(self.equip_id).ok_or(AzurParseError::Equip)?;
+        let equip = ctx
+            .data
+            .azur_lane()
+            .equip_by_id(self.equip_id)
+            .ok_or(AzurParseError::Equip)?;
         Ok(self.create_with_equip(equip).into())
     }
 }

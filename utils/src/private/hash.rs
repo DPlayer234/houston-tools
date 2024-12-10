@@ -1,6 +1,7 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-/// Convenience method to calculate the hash of a value with the [`DefaultHasher`].
+/// Convenience method to calculate the hash of a value with the
+/// [`DefaultHasher`].
 #[must_use]
 #[inline]
 pub fn hash_default<T: Hash + ?Sized>(value: &T) -> u64 {

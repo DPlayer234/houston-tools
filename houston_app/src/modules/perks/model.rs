@@ -45,9 +45,7 @@ pub struct UniqueRole {
 }
 
 fn name(name: &str) -> IndexOptions {
-    IndexOptions::builder()
-        .name(name.to_owned())
-        .build()
+    IndexOptions::builder().name(name.to_owned()).build()
 }
 
 impl Wallet {
@@ -56,15 +54,13 @@ impl Wallet {
     }
 
     pub fn indices() -> Vec<IndexModel> {
-        vec![
-            IndexModel::builder()
-                .options(name("guild-user"))
-                .keys(doc! {
-                    "guild": 1,
-                    "user": 1,
-                })
-                .build(),
-        ]
+        vec![IndexModel::builder()
+            .options(name("guild-user"))
+            .keys(doc! {
+                "guild": 1,
+                "user": 1,
+            })
+            .build()]
     }
 }
 
@@ -106,21 +102,33 @@ impl UniqueRole {
     }
 
     pub fn indices() -> Vec<IndexModel> {
-        vec![
-            IndexModel::builder()
-                .options(name("guild-user"))
-                .keys(doc! {
-                    "guild": 1,
-                    "user": 1,
-                })
-                .build(),
-        ]
+        vec![IndexModel::builder()
+            .options(name("guild-user"))
+            .keys(doc! {
+                "guild": 1,
+                "user": 1,
+            })
+            .build()]
     }
 }
 
 pub trait WalletExt {
-    async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> Result<Wallet>;
-    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64, perks: &super::config::Config) -> Result<Wallet>;
+    async fn add_items(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        item: Item,
+        amount: i64,
+    ) -> Result<Wallet>;
+
+    async fn take_items(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        item: Item,
+        amount: i64,
+        perks: &super::config::Config,
+    ) -> Result<Wallet>;
 }
 
 macro_rules! make_item_accessors {
@@ -149,7 +157,13 @@ make_item_accessors!(
 );
 
 impl WalletExt for Collection<Wallet> {
-    async fn add_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64) -> Result<Wallet> {
+    async fn add_items(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        item: Item,
+        amount: i64,
+    ) -> Result<Wallet> {
         let key = item_to_key(item);
 
         let filter = doc! {
@@ -177,7 +191,14 @@ impl WalletExt for Collection<Wallet> {
         Ok(doc)
     }
 
-    async fn take_items(&self, guild_id: GuildId, user_id: UserId, item: Item, amount: i64, perks: &super::config::Config) -> Result<Wallet> {
+    async fn take_items(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        item: Item,
+        amount: i64,
+        perks: &super::config::Config,
+    ) -> Result<Wallet> {
         let key = item_to_key(item);
 
         let filter = doc! {
@@ -198,19 +219,35 @@ impl WalletExt for Collection<Wallet> {
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::Before)
             .await?
-            .ok_or_else(|| HArgError::new(format!(
-                "You need {} {} to do this.",
-                amount, item.info(perks).name,
-            )))?;
+            .ok_or_else(|| {
+                HArgError::new(format!(
+                    "You need {} {} to do this.",
+                    amount,
+                    item.info(perks).name,
+                ))
+            })?;
 
         Ok(doc)
     }
 }
 
 pub trait ActivePerkExt {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect, until: DateTime<Utc>) -> Result;
+    async fn set_enabled(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        effect: Effect,
+        until: DateTime<Utc>,
+    ) -> Result;
+
     async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result;
-    async fn find_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<Option<ActivePerk>>;
+
+    async fn find_enabled(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        effect: Effect,
+    ) -> Result<Option<ActivePerk>>;
 }
 
 fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<Document> {
@@ -222,7 +259,13 @@ fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: Effect) -> Res
 }
 
 impl ActivePerkExt for Collection<ActivePerk> {
-    async fn set_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect, until: DateTime<Utc>) -> Result {
+    async fn set_enabled(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        effect: Effect,
+        until: DateTime<Utc>,
+    ) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
         let update = doc! {
             "$setOnInsert": filter.clone(),
@@ -231,9 +274,7 @@ impl ActivePerkExt for Collection<ActivePerk> {
             },
         };
 
-        self.update_one(filter, update)
-            .upsert(true)
-            .await?;
+        self.update_one(filter, update).upsert(true).await?;
 
         Ok(())
     }
@@ -241,12 +282,16 @@ impl ActivePerkExt for Collection<ActivePerk> {
     async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
-        self.delete_one(filter)
-            .await?;
+        self.delete_one(filter).await?;
         Ok(())
     }
 
-    async fn find_enabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<Option<ActivePerk>> {
+    async fn find_enabled(
+        &self,
+        guild_id: GuildId,
+        user_id: UserId,
+        effect: Effect,
+    ) -> Result<Option<ActivePerk>> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         let doc = self.find_one(filter).await?;

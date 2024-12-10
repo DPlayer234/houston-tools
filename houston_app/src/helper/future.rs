@@ -2,7 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// A future type that will return [`Poll::Ready`] with the value of a closure on every poll.
+/// A future type that will return [`Poll::Ready`] with the value of a closure
+/// on every poll.
 #[derive(Debug, Clone, Copy)]
 pub struct Done<F: ?Sized>(F);
 
@@ -15,11 +16,18 @@ where
         Self(f)
     }
 
-    /// Constructs a new [`Done`], asserting that the value is a zero-sized type.
+    /// Constructs a new [`Done`], asserting that the value is a zero-sized
+    /// type.
     ///
-    /// This is useful to avoid actually allocating for boxed futures with fixed results.
+    /// This is useful to avoid actually allocating for boxed futures with fixed
+    /// results.
     pub const fn new_zst(f: F) -> Self {
-        const { debug_assert!(size_of::<Self>() == 0, "Done<F> was expected to be zero-sized"); }
+        const {
+            debug_assert!(
+                size_of::<Self>() == 0,
+                "Done<F> was expected to be zero-sized"
+            );
+        }
         Self::new(f)
     }
 }

@@ -1,18 +1,19 @@
+use azur_lane::equip::*;
 use mlua::prelude::*;
 
-use azur_lane::equip::*;
-
-use crate::context;
-use crate::convert_al;
 use crate::model::*;
-use crate::parse;
+use crate::{context, convert_al, parse};
 
 /// Construct augment data from this set.
 pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     /// Reads a value from the statistics; target-typed.
     macro_rules! read {
         ($field:expr) => {
-            set.statistics.get($field).with_context(context!("{} of augment with id {}", $field, set.id))?
+            set.statistics.get($field).with_context(context!(
+                "{} of augment with id {}",
+                $field,
+                set.id
+            ))?
         };
     }
 
@@ -29,7 +30,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     let effect: u32 = read!("effect_id");
     let effect = match effect {
         0 => None,
-        _ => Some(parse::skill::load_skill(lua, effect)?)
+        _ => Some(parse::skill::load_skill(lua, effect)?),
     };
 
     // For unique augments, there is a list of skill upgrades.
@@ -37,13 +38,17 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     let skill_upgrade: Vec<LuaTable> = read!("skill_upgrade");
     let skill_upgrade = match skill_upgrade.into_iter().next() {
         Some(skill_upgrade) => {
-            let original_id: u32 = skill_upgrade.get(1).with_context(context!("skill_upgrade original id for augment {}", set.id))?;
-            let skill_id: u32 = skill_upgrade.get(2).with_context(context!("skill_upgrade id for augment {}", set.id))?;
+            let original_id: u32 = skill_upgrade
+                .get(1)
+                .with_context(context!("skill_upgrade original id for augment {}", set.id))?;
+            let skill_id: u32 = skill_upgrade
+                .get(2)
+                .with_context(context!("skill_upgrade id for augment {}", set.id))?;
             Some(AugmentSkillUpgrade {
                 original_id,
                 skill: parse::skill::load_skill(lua, skill_id)?,
             })
-        }
+        },
         None => None,
     };
 
@@ -58,8 +63,16 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
         // otherwise, look up the allowed types via `pg.spweapon_type[kind].ship_type`
         // `usability` seems to only exist as a helper for the gear hull type overview
         let kind: LuaValue = read!("type");
-        let ship_types: Vec<u32> = lua.globals().call_function("get_augment_ship_types", kind)?;
-        AugmentUsability::HullTypes(ship_types.into_iter().filter_map(convert_al::to_known_hull_type).collect())
+        let ship_types: Vec<u32> = lua
+            .globals()
+            .call_function("get_augment_ship_types", kind)?;
+
+        AugmentUsability::HullTypes(
+            ship_types
+                .into_iter()
+                .filter_map(convert_al::to_known_hull_type)
+                .collect(),
+        )
     };
 
     Ok(Augment {
@@ -70,13 +83,13 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
             AugmentStatBonus {
                 stat_kind: read_stat!("attribute_1"),
                 amount: read!("value_1"),
-                random: read!("value_1_random")
+                random: read!("value_1_random"),
             },
             AugmentStatBonus {
                 stat_kind: read_stat!("attribute_2"),
                 amount: read!("value_2"),
-                random: read!("value_2_random")
-            }
+                random: read!("value_2_random"),
+            },
         ],
         usability,
         effect,

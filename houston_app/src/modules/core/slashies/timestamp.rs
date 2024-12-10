@@ -7,25 +7,23 @@ use crate::helper::time::parse_date_time;
 use crate::slashies::prelude::*;
 
 const DATE_TIME_INVALID: HArgError = HArgError::new_const("The time format is invalid.");
-const TIME_OUT_OF_RANGE: HArgError = HArgError::new_const("The values are outside the allowed range.");
+const TIME_OUT_OF_RANGE: HArgError =
+    HArgError::new_const("The values are outside the allowed range.");
 const SNOWFLAKE_INVALID: HArgError = HArgError::new_const("The Discord snowflake is invalid.");
 
 /// Provides methods for localized timestamps.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub mod timestamp {
     /// Gets a timestamp offset from the current time.
     #[sub_command]
     async fn r#in(
         ctx: Context<'_>,
-        #[description = "Days in the future."]
-        days: Option<i64>,
-        #[description = "Hours in the future."]
-        hours: Option<i64>,
-        #[description = "Minutes in the future."]
-        minutes: Option<i64>,
+        #[description = "Days in the future."] days: Option<i64>,
+        #[description = "Hours in the future."] hours: Option<i64>,
+        #[description = "Minutes in the future."] minutes: Option<i64>,
     ) -> Result {
         let mut delta = TimeDelta::zero();
 
@@ -53,11 +51,9 @@ pub mod timestamp {
     #[sub_command]
     async fn at(
         ctx: Context<'_>,
-        #[description = "Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'"]
-        date_time: &str,
+        #[description = "Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'"] date_time: &str,
     ) -> Result {
-        let timestamp = parse_date_time(date_time, Utc)
-            .ok_or(DATE_TIME_INVALID)?;
+        let timestamp = parse_date_time(date_time, Utc).ok_or(DATE_TIME_INVALID)?;
 
         show_timestamp(ctx, timestamp).await
     }
@@ -66,10 +62,10 @@ pub mod timestamp {
     #[sub_command]
     async fn of(
         ctx: Context<'_>,
-        #[description = "The Discord snowflake."]
-        snowflake: &str,
+        #[description = "The Discord snowflake."] snowflake: &str,
     ) -> Result {
-        let timestamp = UserId::from_str(snowflake).ok()
+        let timestamp = UserId::from_str(snowflake)
+            .ok()
             .map(|s| *s.created_at())
             .ok_or(SNOWFLAKE_INVALID)?;
 

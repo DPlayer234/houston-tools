@@ -9,11 +9,7 @@ use crate::slashies::prelude::*;
 
 // Note: The description is set by the loading code.
 /// Edit your unique role.
-#[chat_command(
-    name = "role-edit",
-    contexts = "Guild",
-    integration_types = "Guild",
-)]
+#[chat_command(name = "role-edit", contexts = "Guild", integration_types = "Guild")]
 pub async fn role_edit(
     ctx: Context<'_>,
     #[description = "The new role name."]
@@ -58,7 +54,8 @@ pub async fn role_edit(
         Ok(role) => {
             let description = format!(
                 "Your role is now: {}\n-# Used 1 {}.",
-                role.mention(), Item::RoleEdit.info(perks).name,
+                role.mention(),
+                Item::RoleEdit.info(perks).name,
             );
 
             let embed = CreateEmbed::new()
@@ -66,7 +63,7 @@ pub async fn role_edit(
                 .description(description);
 
             ctx.send(CreateReply::new().embed(embed)).await?;
-        }
+        },
         Err(_) => {
             Wallet::collection(db)
                 .add_items(guild_id, ctx.user().id, Item::RoleEdit, 1)
@@ -77,7 +74,7 @@ pub async fn role_edit(
                 .description("Can't edit the role.");
 
             ctx.send(CreateReply::new().embed(embed)).await?;
-        }
+        },
     }
 
     Ok(())

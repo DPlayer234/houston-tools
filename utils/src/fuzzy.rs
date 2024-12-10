@@ -3,35 +3,37 @@
 //! Build a [`Search`] to be able to search for things by a text value,
 //! and then [search](`Search::search`) it for [Matches](`Match`).
 //!
-//! Searches happen by normalized text fragments with sizes based on the `MIN` and `MAX`
-//! parameters to the [`Search`]. It first searches for the larger fragments, falling
-//! back to smaller ones if no matches are found.
+//! Searches happen by normalized text fragments with sizes based on the `MIN`
+//! and `MAX` parameters to the [`Search`]. It first searches for the larger
+//! fragments, falling back to smaller ones if no matches are found.
 //!
 //! # Fragmenting
 //!
-//! The normalized text is fragmented as moving windows of a given size, similar to the
-//! [`windows`](std::slice::Windows) method on slices.
+//! The normalized text is fragmented as moving windows of a given size, similar
+//! to the [`windows`](std::slice::Windows) method on slices.
 //!
-//! These fragments are compared to known fragments and the corresponding values are
-//! considered as match candidates.
+//! These fragments are compared to known fragments and the corresponding values
+//! are considered as match candidates.
 //!
 //! # Match Score
 //!
-//! The [`Match::score`] is based on how many of these fragments matched the original text.
-//! `1.0` indicates _every_ fragment of the input had a match, but this doesn't indicate
-//! an exact match with the original text.
+//! The [`Match::score`] is based on how many of these fragments matched the
+//! original text. `1.0` indicates _every_ fragment of the input had a match,
+//! but this doesn't indicate an exact match with the original text.
 //!
-//! The final set of matches will often contain vaguely similar texts, even if there is an
-//! exact match. Furthermore, since the [`Match::score`] cannot be used to check for exact
-//! matches, _multiple_ matches may have a score of `1.0` for the same search.
+//! The final set of matches will often contain vaguely similar texts, even if
+//! there is an exact match. Furthermore, since the [`Match::score`] cannot be
+//! used to check for exact matches, _multiple_ matches may have a score of
+//! `1.0` for the same search.
 //!
-//! This could, for instance, happen if one were to search for `"egg"` when the search
-//! contains `"Eggs and Bacon"` and `"Egg (raw)"`.
+//! This could, for instance, happen if one were to search for `"egg"` when the
+//! search contains `"Eggs and Bacon"` and `"Egg (raw)"`.
 //!
 //! # Text Normalization
 //!
-//! The normalization lowercases the entire text, and non-alphanumeric sequences are
-//! translated into "separators". A separator is added to the start and end also.
+//! The normalization lowercases the entire text, and non-alphanumeric sequences
+//! are translated into "separators". A separator is added to the start and end
+//! also.
 //!
 //! For instance, the following texts are equivalent after normalization:
 //! - `"Hello World!"`
@@ -49,15 +51,16 @@ use smallvec::SmallVec;
 use crate::private::ptr::RawRef;
 
 // exists to save some memory.
-// this only becomes an issue once more than 4 BILLION elements have been added to the Search.
-// at that point, the current behavior is to panic.
+// this only becomes an issue once more than 4 BILLION elements have been added
+// to the Search. at that point, the current behavior is to panic.
 // for 32- or 16-bit systems, allocating for the values Vec will panic first.
 #[cfg(not(target_pointer_width = "16"))]
 type MatchIndex = u32;
 #[cfg(target_pointer_width = "16")]
 type MatchIndex = u16;
 
-// amount of MatchIndex values that can be stored within a SmallVec without increasing its size.
+// amount of MatchIndex values that can be stored within a SmallVec without
+// increasing its size.
 #[cfg(target_pointer_width = "64")]
 const MATCH_INLINE: usize = 4;
 #[cfg(not(target_pointer_width = "64"))]
@@ -65,12 +68,15 @@ const MATCH_INLINE: usize = 2;
 
 /// Provides a fuzzy text searcher.
 ///
-/// [`Search::insert`] new elements with associated, then [`Search::search`] for the data by the key.
+/// [`Search::insert`] new elements with associated, then [`Search::search`] for
+/// the data by the key.
 ///
 /// The `T` generic parameter defines the associated data to store.
-/// You can use `()` (unit) to not store data and instead always just use entry's index.
+/// You can use `()` (unit) to not store data and instead always just use
+/// entry's index.
 ///
-/// The `MIN` and `MAX` generic parameters can be used to customize the fragment splitting.
+/// The `MIN` and `MAX` generic parameters can be used to customize the fragment
+/// splitting.
 #[derive(Debug, Clone)]
 pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
     min_match_score: f64,
@@ -119,14 +125,17 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
     /// Inserts a new value with associated data.
     ///
-    /// The return is the entry's index. This index is also returned on a search [`Match`]
-    /// and can be used in place of associated data if you wish to store the data elsewhere.
+    /// The return is the entry's index. This index is also returned on a search
+    /// [`Match`] and can be used in place of associated data if you wish to
+    /// store the data elsewhere.
     ///
     /// The indices are created ascendingly, with `0` being the first item.
     /// The second item would be `1`, the third `2`, and so on.
     pub fn insert(&mut self, value: &str, data: T) -> usize {
         let norm = norm_str(value);
-        let index: MatchIndex = self.values.len()
+        let index: MatchIndex = self
+            .values
+            .len()
             .try_into()
             .expect("cannot add more than u32::MAX elements to Search");
 
@@ -138,7 +147,9 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
             for s in (MIN..=upper).rev() {
                 // SAFETY: index is a valid index into values
-                unsafe { self.add_segments_of(index, &norm, s); }
+                unsafe {
+                    self.add_segments_of(index, &norm, s);
+                }
             }
         }
 
@@ -178,7 +189,9 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
         self.values.shrink_to_fit();
 
-        // println!("seg: {}, mem: ~{}", self.match_map.len(), self.match_map.len() * 60 + self.match_map.values().map(|v| v.len()).sum::<usize>() * size_of::<MatchIndex>());
+        // println!("seg: {}, mem: ~{}", self.match_map.len(),
+        // self.match_map.len() * 60 + self.match_map.values().map(|v|
+        // v.len()).sum::<usize>() * size_of::<MatchIndex>());
     }
 
     /// Adds the segments of the `norm` slice to [`Self::match_map`].
@@ -189,10 +202,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     #[inline]
     unsafe fn add_segments_of(&mut self, index: MatchIndex, norm: &[u16], size: usize) {
         for segment in iter_segments(norm, size) {
-            self.match_map
-                .entry(segment)
-                .or_default()
-                .push(index);
+            self.match_map.entry(segment).or_default().push(index);
         }
     }
 
@@ -204,7 +214,9 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
         for segment in iter_segments(norm, size) {
             total += 1;
-            let Some(match_entry) = self.match_map.get(&segment) else { continue };
+            let Some(match_entry) = self.match_map.get(&segment) else {
+                continue;
+            };
 
             for &index in match_entry {
                 debug_assert!(
@@ -251,13 +263,15 @@ impl<T, const MIN: usize, const MAX: usize> Default for Search<T, MIN, MAX> {
 pub struct Match<'st, T> {
     /// The match score.
     ///
-    /// The score is calculated based on how many segments of the input matched the found value.
-    /// `1.0` means _every_ input segment matched for this value. This doesn't necessarily indicate an exact match.
+    /// The score is calculated based on how many segments of the input matched
+    /// the found value. `1.0` means _every_ input segment matched for this
+    /// value. This doesn't necessarily indicate an exact match.
     pub score: f64,
 
     /// The search entry's index.
     ///
-    /// This index is returned by [`Search::insert`] and represents the insert position.
+    /// This index is returned by [`Search::insert`] and represents the insert
+    /// position.
     pub index: usize,
 
     /// The associated data.
@@ -281,7 +295,9 @@ impl Ord for MatchInfo {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         // sort by count desc
         // then by index asc
-        self.count.cmp(&other.count).reverse()
+        self.count
+            .cmp(&other.count)
+            .reverse()
             .then_with(|| self.index.cmp(&other.index))
     }
 }
@@ -302,8 +318,9 @@ pub struct MatchIter<'st, T> {
     state: MatchIterState<'st, T>,
 }
 
-/// Split data needed to construct [`Matches`](Match) from [`MatchIter`] to allow
-/// disjointed borrows when the iterator is already mutably borrowed or consumed.
+/// Split data needed to construct [`Matches`](Match) from [`MatchIter`] to
+/// allow disjointed borrows when the iterator is already mutably borrowed or
+/// consumed.
 #[derive(Debug)]
 struct MatchIterState<'st, T> {
     total: f64,
@@ -317,10 +334,13 @@ impl<'st, T> MatchIter<'st, T> {
     ///
     /// # Safety
     ///
-    /// The `search_values` must come the same [`Search`] as the `inner`'s indices.
+    /// The `search_values` must come the same [`Search`] as the `inner`'s
+    /// indices.
     unsafe fn new(total: f64, inner: Box<[MatchInfo]>, search_values: &'st [T]) -> Self {
         debug_assert!(
-            inner.iter().all(|m| (m.index as usize) < search_values.len()),
+            inner
+                .iter()
+                .all(|m| (m.index as usize) < search_values.len()),
             "MatchIter safety invariant not met"
         );
 
@@ -385,21 +405,28 @@ impl<T> Default for MatchIter<'_, T> {
     }
 }
 
-// to not repeat the same safety comment for every unsafe block wrapping make_match:
-// SAFETY: make_match is safe to call when used with a value coming from the inner iterator
+// to not repeat the same safety comment for every unsafe block wrapping
+// make_match: SAFETY: make_match is safe to call when used with a value coming
+// from the inner iterator
 impl<'st, T> Iterator for MatchIter<'st, T> {
     type Item = Match<'st, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|m| unsafe { self.state.make_match(m) })
+        self.inner
+            .next()
+            .map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner.nth(n).map(|m| unsafe { self.state.make_match(m) })
+        self.inner
+            .nth(n)
+            .map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn last(self) -> Option<Self::Item> {
-        self.inner.last().map(|m| unsafe { self.state.make_match(m) })
+        self.inner
+            .last()
+            .map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -408,17 +435,23 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
 
     fn collect<B: FromIterator<Self::Item>>(self) -> B {
         // this should optimize a bit better than a direct collect()
-        self.inner.map(|m| unsafe { self.state.make_match(m) }).collect()
+        self.inner
+            .map(|m| unsafe { self.state.make_match(m) })
+            .collect()
     }
 }
 
 impl<T> DoubleEndedIterator for MatchIter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(|m| unsafe { self.state.make_match(m) })
+        self.inner
+            .next_back()
+            .map(|m| unsafe { self.state.make_match(m) })
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner.nth_back(n).map(|m| unsafe { self.state.make_match(m) })
+        self.inner
+            .nth_back(n)
+            .map(|m| unsafe { self.state.make_match(m) })
     }
 }
 
@@ -435,22 +468,27 @@ unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
     let mut res = [0u16; N];
     debug_assert!(
         pts.len() <= N,
-        "safety: pts.len() must be at most {N} but is {}", pts.len()
+        "safety: pts.len() must be at most {N} but is {}",
+        pts.len()
     );
 
     // SAFETY: Caller passes segments with size N or less.
-    unsafe { ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len()); }
+    unsafe {
+        ptr::copy_nonoverlapping(pts.as_ptr(), res.as_mut_ptr(), pts.len());
+    }
     res
 }
 
-fn iter_segments<const N: usize>(slice: &[u16], size: usize) -> impl Iterator<Item = Segment<N>> + '_ {
+fn iter_segments<const N: usize>(
+    slice: &[u16],
+    size: usize,
+) -> impl Iterator<Item = Segment<N>> + '_ {
     assert!(
         (1..=N).contains(&size),
         "size must be within 1..={N}, but is {size}"
     );
 
-    slice.windows(size)
-        .map(|w| unsafe { new_segment(w) })
+    slice.windows(size).map(|w| unsafe { new_segment(w) })
 }
 
 fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
@@ -461,7 +499,8 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
     for c in str.chars() {
         if c.is_alphanumeric() {
-            let lowercase = c.to_lowercase()
+            let lowercase = c
+                .to_lowercase()
                 .filter(|c| c.is_alphanumeric())
                 .map(|c| c as u16);
 

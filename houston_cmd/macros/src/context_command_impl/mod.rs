@@ -18,34 +18,59 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStr
 
     let func: ItemFn = syn::parse2(item)?;
     if func.sig.asyncness.is_none() {
-        return Err(syn::Error::new_spanned(func.sig, "command function must be async"));
+        return Err(syn::Error::new_spanned(
+            func.sig,
+            "command function must be async",
+        ));
     }
 
     let kind = match (args.user, args.message) {
         (true, false) => ContextKind::User,
         (false, true) => ContextKind::Message,
-        _ => return Err(syn::Error::new(args_span, "must specify `user` or `message`")),
+        _ => {
+            return Err(syn::Error::new(
+                args_span,
+                "must specify `user` or `message`",
+            ))
+        },
     };
 
     let command_option = to_command_option_command(&func, args.name, kind)?;
     to_command_shared(&func.vis, &func.sig.ident, command_option, args.main)
 }
 
-fn to_command_option_command(func: &ItemFn, name: String, kind: ContextKind) -> syn::Result<TokenStream> {
+fn to_command_option_command(
+    func: &ItemFn,
+    name: String,
+    kind: ContextKind,
+) -> syn::Result<TokenStream> {
     let (kind_variant, kind_trait, kind_args) = match kind {
-        ContextKind::User => (quote::format_ident!("User"), quote::format_ident!("UserContextArg"), quote::quote! { user, member }),
-        ContextKind::Message => (quote::format_ident!("Message"), quote::format_ident!("MessageContextArg"), quote::quote! { message }),
+        ContextKind::User => (
+            quote::format_ident!("User"),
+            quote::format_ident!("UserContextArg"),
+            quote::quote! { user, member },
+        ),
+        ContextKind::Message => (
+            quote::format_ident!("Message"),
+            quote::format_ident!("MessageContextArg"),
+            quote::quote! { message },
+        ),
     };
 
     let func_ident = &func.sig.ident;
 
     let inputs: Vec<_> = func.sig.inputs.iter().collect();
     let &[_, arg] = inputs.as_slice() else {
-        return Err(syn::Error::new_spanned(&func.sig, "expected exacty 1 command argument"));
+        return Err(syn::Error::new_spanned(
+            &func.sig,
+            "expected exacty 1 command argument",
+        ));
     };
 
     let arg = match arg {
-        FnArg::Receiver(receiver) => return Err(syn::Error::new_spanned(receiver, "invalid self argument")),
+        FnArg::Receiver(receiver) => {
+            return Err(syn::Error::new_spanned(receiver, "invalid self argument"))
+        },
         FnArg::Typed(x) => x,
     };
 

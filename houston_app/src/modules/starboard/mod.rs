@@ -3,7 +3,6 @@ use std::char;
 use bson::doc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
-
 use utils::text::write_str::*;
 
 use super::prelude::*;
@@ -16,7 +15,7 @@ pub mod config;
 pub mod model;
 mod slashies;
 
-pub use config::{Config, BoardId};
+pub use config::{BoardId, Config};
 
 pub struct Module;
 
@@ -26,14 +25,11 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILD_MESSAGE_REACTIONS |
-        GatewayIntents::GUILD_MESSAGES
+        GatewayIntents::GUILD_MESSAGE_REACTIONS | GatewayIntents::GUILD_MESSAGES
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
-        [
-            slashies::starboard()
-        ]
+        [slashies::starboard()]
     }
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
@@ -62,8 +58,13 @@ impl super::Module for Module {
     }
 }
 
-fn get_board(config: &HBotConfig, guild: GuildId, board: BoardId) -> Result<&config::StarboardEntry> {
-    config.starboard
+fn get_board(
+    config: &HBotConfig,
+    guild: GuildId,
+    board: BoardId,
+) -> Result<&config::StarboardEntry> {
+    config
+        .starboard
         .get(&guild)
         .context("starboard not configured for this guild")?
         .boards
@@ -77,7 +78,12 @@ pub async fn reaction_add(ctx: Context, reaction: Reaction) {
     }
 }
 
-pub async fn message_delete(ctx: Context, channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
+pub async fn message_delete(
+    ctx: Context,
+    channel_id: ChannelId,
+    message_id: MessageId,
+    guild_id: Option<GuildId>,
+) {
     let Some(guild_id) = guild_id else {
         return;
     };
@@ -99,10 +105,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current guild
-    let guild_config = data.config()
-        .starboard
-        .get(&guild_id);
-
+    let guild_config = data.config().starboard.get(&guild_id);
     let Some(guild_config) = guild_config else {
         return Ok(());
     };
@@ -136,7 +139,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         return Ok(());
     }
 
-    let reaction = message.reactions
+    let reaction = message
+        .reactions
         .iter()
         .find(|r| board.emoji.equivalent_to(&r.reaction_type))
         .context("could not find message reaction data")?;
@@ -162,7 +166,15 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         // if the author of this message has reacted, we subtract 1 from the count
         // so their own reaction does not contribute score
         // if there are super reactions, also check there
-        let has_self_reaction = |burst| has_reaction_by_user(&ctx, &message, &reaction.reaction_type, message.author.id, burst);
+        let has_self_reaction = |burst| {
+            has_reaction_by_user(
+                &ctx,
+                &message,
+                &reaction.reaction_type,
+                message.author.id,
+                burst,
+            )
+        };
         let has_self_reaction = has_self_reaction(false).await?
             || (reaction.count_details.burst != 0 && has_self_reaction(true).await?);
 
@@ -197,11 +209,10 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             .return_document(ReturnDocument::Before)
             .await?;
 
-        let (pinned, old_reacts) = record
-            .map(|r| (r.pinned, r.max_reacts))
-            .unwrap_or_default();
+        let (pinned, old_reacts) = record.map(|r| (r.pinned, r.max_reacts)).unwrap_or_default();
 
-        // we already checked that we have the required reacts, but for sanity, keep it here
+        // we already checked that we have the required reacts,
+        // this just for my sanity
         if now_reacts >= required_reacts && !pinned {
             // update the record to be pinned
             let update = doc! {
@@ -220,7 +231,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             if !record.pinned {
                 new_post = true;
 
-                let notice = board.notices
+                let notice = board
+                    .notices
                     .choose(&mut thread_rng())
                     .map(String::as_str)
                     .unwrap_or("{user}, your post made it! Wow!");
@@ -230,20 +242,21 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                     _ => out.push(char::REPLACEMENT_CHARACTER),
                 });
 
-                let notice = CreateMessage::new()
-                    .content(notice);
+                let notice = CreateMessage::new().content(notice);
 
                 let pin_messages;
 
                 // unless it's nsfw-to-sfw, actually forward the message
                 // otherwise, generate an embed with a link
-                if is_forwarding_allowed(&ctx, &message, board).await.unwrap_or(false) {
+                if is_forwarding_allowed(&ctx, &message, board)
+                    .await
+                    .unwrap_or(false)
+                {
                     // CMBK: refactor when forwards are properly supported
                     let mut forward = MessageReference::from(&message);
                     forward.kind = MessageReferenceKind::Forward;
 
-                    let forward = CreateMessage::new()
-                        .reference_message(forward);
+                    let forward = CreateMessage::new().reference_message(forward);
 
                     let notice = board.channel.send_message(&ctx.http, notice).await?.id;
                     let forward = board.channel.send_message(&ctx.http, forward).await?.id;
@@ -261,12 +274,15 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                         .color(data.config().embed_color)
                         .timestamp(message.timestamp);
 
-                    let notice = notice
-                        .embed(forward);
+                    let notice = notice.embed(forward);
 
                     let notice = board.channel.send_message(&ctx.http, notice).await?.id;
                     pin_messages = vec![bson_id!(notice)];
-                    log::info!("Pinned message {} to {}. (Link)", message.id, board.emoji.name());
+                    log::info!(
+                        "Pinned message {} to {}. (Link)",
+                        message.id,
+                        board.emoji.name()
+                    );
                 }
 
                 // also associate what messages are the pins
@@ -310,7 +326,12 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             .upsert(true)
             .await?;
 
-        log::trace!("{} gained {} {}.", message.author.name, score_increase, board.emoji.name());
+        log::trace!(
+            "{} gained {} {}.",
+            message.author.name,
+            score_increase,
+            board.emoji.name()
+        );
 
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
             use super::perks::model::{Wallet, WalletExt};
@@ -318,7 +339,11 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
             let amount = score_increase
                 .saturating_mul(board.cash_gain.into())
-                .saturating_add(if new_post { board.cash_pin_gain.into() } else { 0 });
+                .saturating_add(if new_post {
+                    board.cash_pin_gain.into()
+                } else {
+                    0
+                });
 
             Wallet::collection(db)
                 .add_items(guild_id, message.author.id, Item::Cash, amount)
@@ -331,13 +356,16 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     Ok(())
 }
 
-async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: ChannelId, message_id: MessageId) -> Result {
+async fn message_delete_inner(
+    ctx: Context,
+    guild_id: GuildId,
+    _channel_id: ChannelId,
+    message_id: MessageId,
+) -> Result {
     let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current guild
-    let guild_config = data.config()
-        .starboard
-        .get(&guild_id);
+    let guild_config = data.config().starboard.get(&guild_id);
 
     let Some(guild_config) = guild_config else {
         return Ok(());
@@ -358,16 +386,11 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
         "message": bson_id!(message_id),
     };
 
-    let mut query = model::Message::collection(db)
-        .find(filter)
-        .await?;
+    let mut query = model::Message::collection(db).find(filter).await?;
 
     while let Some(item) = query.try_next().await? {
         // we need the board info, skip if we don't know it
-        let board = guild_config
-            .boards
-            .get(&item.board);
-
+        let board = guild_config.boards.get(&item.board);
         let Some(board) = board else {
             continue;
         };
@@ -400,8 +423,16 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
 
         // delete the associated pins
         for pin_id in item.pin_messages {
-            if let Err(why) = board.channel.delete_message(&ctx.http, pin_id, Some("pin source deleted")).await {
-                log::warn!("Failed to delete message {pin_id} in {}: {why:?}", board.emoji);
+            let res = board
+                .channel
+                .delete_message(&ctx.http, pin_id, Some("pin source deleted"))
+                .await;
+
+            if let Err(why) = res {
+                log::warn!(
+                    "Failed to delete message {pin_id} in {}: {why:?}",
+                    board.emoji
+                );
             }
         }
 
@@ -410,9 +441,14 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
             use super::perks::model::{Wallet, WalletExt};
             use super::perks::Item;
 
-            let amount = item.max_reacts
+            let amount = item
+                .max_reacts
                 .saturating_mul(board.cash_gain.into())
-                .saturating_add(if item.pinned { board.cash_pin_gain.into() } else { 0 });
+                .saturating_add(if item.pinned {
+                    board.cash_pin_gain.into()
+                } else {
+                    0
+                });
 
             Wallet::collection(db)
                 .add_items(guild_id, item.user, Item::Cash, -amount)
@@ -425,7 +461,13 @@ async fn message_delete_inner(ctx: Context, guild_id: GuildId, _channel_id: Chan
     Ok(())
 }
 
-async fn has_reaction_by_user(ctx: &Context, message: &Message, emoji: &ReactionType, user_id: UserId, burst: bool) -> Result<bool> {
+async fn has_reaction_by_user(
+    ctx: &Context,
+    message: &Message,
+    emoji: &ReactionType,
+    user_id: UserId,
+    burst: bool,
+) -> Result<bool> {
     use arrayvec::ArrayVec;
     use serenity::http::{LightMethod, Request, Route};
     use to_arraystring::ToArrayString;
@@ -453,10 +495,15 @@ async fn has_reaction_by_user(ctx: &Context, message: &Message, emoji: &Reaction
     Ok(reacted_users.first().is_some_and(|u| u.id == user_id))
 }
 
-async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config::StarboardEntry) -> Result<bool> {
+async fn is_forwarding_allowed(
+    ctx: &Context,
+    message: &Message,
+    board: &config::StarboardEntry,
+) -> Result<bool> {
     let source = message
         .channel_id
-        .to_guild_channel(ctx, message.guild_id).await?;
+        .to_guild_channel(ctx, message.guild_id)
+        .await?;
 
     if !source.nsfw {
         return Ok(true);
@@ -464,7 +511,8 @@ async fn is_forwarding_allowed(ctx: &Context, message: &Message, board: &config:
 
     let target = board
         .channel
-        .to_guild_channel(ctx, message.guild_id).await?;
+        .to_guild_channel(ctx, message.guild_id)
+        .await?;
 
     // at this point, the source channel is nsfw,
     // so to allow forwarding, the target must also be nsfw

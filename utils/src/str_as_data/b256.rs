@@ -1,5 +1,4 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
 use super::Error;
 
@@ -13,8 +12,7 @@ pub fn to_b256(bytes: &[u8]) -> String {
     let expected_size = 2 + bytes.len() + (bytes.len() >> 1);
     let mut result = String::with_capacity(expected_size);
 
-    encode_b256(&mut result, bytes)
-        .expect("write to String cannot fail");
+    encode_b256(&mut result, bytes).expect("write to String cannot fail");
 
     result
 }

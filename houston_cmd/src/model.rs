@@ -8,13 +8,19 @@ use crate::error::Error;
 use crate::BoxFuture;
 
 pub type ChatInputFn = for<'i> fn(Context<'i>) -> BoxFuture<'i, Result<(), Error<'i>>>;
-pub type UserFn = for<'i> fn(Context<'i>, &'i User, Option<&'i PartialMember>) -> BoxFuture<'i, Result<(), Error<'i>>>;
+pub type UserFn = for<'i> fn(
+    Context<'i>,
+    &'i User,
+    Option<&'i PartialMember>,
+) -> BoxFuture<'i, Result<(), Error<'i>>>;
 pub type MessageFn = for<'i> fn(Context<'i>, &'i Message) -> BoxFuture<'i, Result<(), Error<'i>>>;
-pub type AutocompleteFn = for<'i> fn(Context<'i>, &'i str) -> BoxFuture<'i, CreateAutocompleteResponse<'i>>;
+pub type AutocompleteFn =
+    for<'i> fn(Context<'i>, &'i str) -> BoxFuture<'i, CreateAutocompleteResponse<'i>>;
 
 /// Represents a top-level command, as understood by Discord.
 ///
-/// This holds information only relevant to the "root" of a command and the immediate first node.
+/// This holds information only relevant to the "root" of a command and the
+/// immediate first node.
 #[derive(Debug, Clone)]
 pub struct Command {
     pub contexts: Option<Cow<'static, [InteractionContext]>>,
@@ -27,30 +33,31 @@ pub struct Command {
 /// Contains the data for a command or command-group.
 #[derive(Debug, Clone)]
 pub struct CommandOption {
-	pub name: Cow<'static, str>,
-	pub description: Cow<'static, str>,
+    pub name: Cow<'static, str>,
+    pub description: Cow<'static, str>,
     pub data: CommandOptionData,
 }
 
-/// This represents a command option, that is either a command group or an invokable command.
+/// This represents a command option, that is either a command group or an
+/// invokable command.
 #[derive(Debug, Clone)]
 pub enum CommandOptionData {
-	Group(GroupData),
-	Command(SubCommandData),
+    Group(GroupData),
+    Command(SubCommandData),
 }
 
 /// A group of commands.
 #[derive(Debug, Clone)]
 pub struct GroupData {
-	pub sub_commands: Cow<'static, [CommandOption]>,
+    pub sub_commands: Cow<'static, [CommandOption]>,
 }
 
 /// A sub-command that may be nested in a group.
 /// Also used to represent the invokable information about a root command.
 #[derive(Debug, Clone)]
 pub struct SubCommandData {
-	pub invoke: Invoke,
-	pub parameters: Cow<'static, [Parameter]>,
+    pub invoke: Invoke,
+    pub parameters: Cow<'static, [Parameter]>,
 }
 
 /// How the command can be invoked.
@@ -64,18 +71,18 @@ pub enum Invoke {
 /// A command parameter.
 #[derive(Debug, Clone)]
 pub struct Parameter {
-	pub name: Cow<'static, str>,
-	pub description: Cow<'static, str>,
-	pub required: bool,
+    pub name: Cow<'static, str>,
+    pub description: Cow<'static, str>,
+    pub required: bool,
     pub autocomplete: Option<AutocompleteFn>,
-	pub choices: fn() -> Cow<'static, [Choice]>,
-	pub type_setter: fn(CreateCommandOption<'_>) -> CreateCommandOption<'_>,
+    pub choices: fn() -> Cow<'static, [Choice]>,
+    pub type_setter: fn(CreateCommandOption<'_>) -> CreateCommandOption<'_>,
 }
 
 /// A choice value for a command parameter.
 #[derive(Debug, Clone)]
 pub struct Choice {
-	pub name: Cow<'static, str>,
+    pub name: Cow<'static, str>,
 }
 
 impl From<GroupData> for CommandOptionData {
@@ -95,8 +102,7 @@ impl Command {
     ///
     /// Also see [`crate::to_create_command`] which allows bulk-converting them.
     pub fn to_create_command(&self) -> CreateCommand<'static> {
-        let mut command = CreateCommand::new(self.data.name.clone())
-            .nsfw(self.nsfw);
+        let mut command = CreateCommand::new(self.data.name.clone()).nsfw(self.nsfw);
 
         if let Some(contexts) = &self.contexts {
             command = command.contexts(contexts.to_vec());
@@ -119,7 +125,9 @@ impl Command {
             },
             CommandOptionData::Command(cmd) => {
                 command = match cmd.invoke {
-                    Invoke::ChatInput(_) => command.kind(CommandType::ChatInput).description(self.data.description.clone()),
+                    Invoke::ChatInput(_) => command
+                        .kind(CommandType::ChatInput)
+                        .description(self.data.description.clone()),
                     Invoke::User(_) => command.kind(CommandType::User),
                     Invoke::Message(_) => command.kind(CommandType::Message),
                 };
@@ -137,7 +145,11 @@ impl Command {
 impl CommandOption {
     /// Builds a [`CreateCommandOption`] instance from this value.
     fn to_create_command_option(&self) -> CreateCommandOption<'static> {
-        let mut command = CreateCommandOption::new(CommandOptionType::SubCommandGroup, self.name.clone(), self.description.clone());
+        let mut command = CreateCommandOption::new(
+            CommandOptionType::SubCommandGroup,
+            self.name.clone(),
+            self.description.clone(),
+        );
 
         match &self.data {
             CommandOptionData::Group(group) => {
@@ -161,9 +173,13 @@ impl CommandOption {
 impl Parameter {
     /// Builds a [`CreateCommandOption`] instance from this value.
     pub fn to_create_command_option(&self) -> CreateCommandOption<'static> {
-        let mut option = CreateCommandOption::new(CommandOptionType::String, self.name.clone(), self.description.clone())
-            .required(self.required)
-            .set_autocomplete(self.autocomplete.is_some());
+        let mut option = CreateCommandOption::new(
+            CommandOptionType::String,
+            self.name.clone(),
+            self.description.clone(),
+        )
+        .required(self.required)
+        .set_autocomplete(self.autocomplete.is_some());
 
         #[allow(clippy::cast_possible_wrap)]
         for (index, choice) in (self.choices)().iter().enumerate() {

@@ -2,7 +2,6 @@
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-
 use utils::fuzzy::Search;
 
 fn bench_search(c: &mut Criterion) {
@@ -10,17 +9,21 @@ fn bench_search(c: &mut Criterion) {
     let search = create_search(&names);
     let mut index = 0usize;
 
-    c.bench_function("search_exact", |b| b.iter(|| {
-        let name = names[index];
-        index = (index + 1) % names.len();
+    c.bench_function("search_exact", |b| {
+        b.iter(|| {
+            let name = names[index];
+            index = (index + 1) % names.len();
 
-        search.search(black_box(name))
-    }));
+            search.search(black_box(name))
+        })
+    });
 
-    c.bench_function("search_nonsense", |b| b.iter(|| {
-        let name = "dhbwuadsrasfdv";
-        search.search(black_box(name))
-    }));
+    c.bench_function("search_nonsense", |b| {
+        b.iter(|| {
+            let name = "dhbwuadsrasfdv";
+            search.search(black_box(name))
+        })
+    });
 }
 
 fn all_names() -> Vec<&'static str> {

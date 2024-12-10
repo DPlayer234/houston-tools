@@ -25,7 +25,10 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStr
 
 fn to_command(mut func: ItemFn, args: ChatCommandArgs) -> syn::Result<TokenStream> {
     if func.sig.asyncness.is_none() {
-        return Err(syn::Error::new_spanned(func.sig, "command function must be async"));
+        return Err(syn::Error::new_spanned(
+            func.sig,
+            "command function must be async",
+        ));
     }
 
     let command_option = to_command_option_command(&mut func, args.name)?;

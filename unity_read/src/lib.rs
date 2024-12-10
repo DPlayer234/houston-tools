@@ -1,7 +1,8 @@
 //! Allows reading in UnityFS archives, enumerating their files, and objects.
 //!
-//! Note that some functionality is not generally applicable, e.g. image decoding and meshes are only
-//! implemented for a small subset of the functionality required to work with Azur Lane's data.
+//! Note that some functionality is not generally applicable, e.g. image
+//! decoding and meshes are only implemented for a small subset of the
+//! functionality required to work with Azur Lane's data.
 //!
 //! Inspired and made by referencing <https://github.com/gameltb/io_unity> and <https://github.com/yuanyan3060/unity-rs> for file formats.
 #![allow(clippy::upper_case_acronyms)]
@@ -73,9 +74,13 @@ where
 {
     /// Casts from `T` to `U`. This cast is not expected to fail.
     fn from_int(value: T) -> Result<Self> {
-        U::try_from(value).map_err(|_| error::Error::Unsupported(format!(
-            "cast from value {} of type {} to {} failed",
-            value, type_name::<T>(), type_name::<U>(),
-        )))
+        U::try_from(value).map_err(|_| {
+            error::Error::Unsupported(format!(
+                "cast from value {} of type {} to {} failed",
+                value,
+                type_name::<T>(),
+                type_name::<U>(),
+            ))
+        })
     }
 }

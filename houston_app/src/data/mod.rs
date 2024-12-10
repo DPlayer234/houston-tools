@@ -1,8 +1,12 @@
 use std::sync::{LazyLock, OnceLock};
 
+pub use app_emojis::HAppEmojis;
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
+use crate::modules::azur::data::HAzurLane;
+use crate::modules::perks::PerkState;
+use crate::prelude::*;
 
 mod app_emojis;
 
@@ -11,11 +15,6 @@ pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
 
 /// Actual data type provided to serenity's user data.
 pub type HContextData = HBotData;
-
-pub use app_emojis::HAppEmojis;
-use crate::modules::azur::data::HAzurLane;
-use crate::modules::perks::PerkState;
-use crate::prelude::*;
 
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]
@@ -33,9 +32,7 @@ impl HArgError {
     }
 
     pub fn new(msg: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            msg: msg.into(),
-        }
+        Self { msg: msg.into() }
     }
 }
 
@@ -96,7 +93,9 @@ impl HBotData {
     /// This doesn't return them. Use [`Self::app_emojis`].
     pub async fn load_app_emojis(&self, ctx: &Http) -> Result {
         if self.app_emojis.get().is_none() {
-            _ = self.app_emojis.set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
+            _ = self
+                .app_emojis
+                .set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
             log::info!("Loaded App Emojis.");
         }
 

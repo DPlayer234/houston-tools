@@ -2,15 +2,15 @@ use std::fmt;
 
 use crate::slashies::prelude::*;
 
-/// Uploads a file to an ephemeral message. Allows sharing if you are logged into multiple devices.
+/// Uploads a file to an ephemeral message. Allows sharing if you are logged
+/// into multiple devices.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub async fn upload(
     ctx: Context<'_>,
-    #[description = "The file to upload."]
-    attachment: &Attachment,
+    #[description = "The file to upload."] attachment: &Attachment,
 ) -> Result {
     let description = format!(
         "**{}**\n> {}",
@@ -26,18 +26,11 @@ pub async fn upload(
         embed = embed.thumbnail(attachment.proxy_url.as_str());
     }
 
-    let buttons = [
-        CreateButton::new_link(attachment.url.as_str())
-            .label("Download")
-    ];
+    let buttons = [CreateButton::new_link(attachment.url.as_str()).label("Download")];
 
-    let components = [
-        CreateActionRow::buttons(&buttons)
-    ];
+    let components = [CreateActionRow::buttons(&buttons)];
 
-    let reply = create_reply(Ephemeral)
-        .embed(embed)
-        .components(&components);
+    let reply = create_reply(Ephemeral).embed(embed).components(&components);
 
     ctx.send(reply).await?;
     Ok(())

@@ -8,7 +8,9 @@ use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub struct BoardId(i64);
 
 impl BoardId {
@@ -54,10 +56,7 @@ impl StarboardGuild {
     ///
     /// This is intended to be used with an `$in` filter.
     pub fn board_db_keys(&self) -> Bson {
-        self.boards
-            .keys()
-            .map(|b| b.get())
-            .collect()
+        self.boards.keys().map(|b| b.get()).collect()
     }
 }
 
@@ -101,8 +100,13 @@ impl StarboardEmoji {
 
     pub fn equivalent_to(&self, reaction: &ReactionType) -> bool {
         match (self.as_emoji(), reaction) {
-            (ReactionType::Custom { id: self_id, .. }, ReactionType::Custom { id: other_id, .. }) => self_id == other_id,
-            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => self_name == other_name,
+            (
+                ReactionType::Custom { id: self_id, .. },
+                ReactionType::Custom { id: other_id, .. },
+            ) => self_id == other_id,
+            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => {
+                self_name == other_name
+            },
             _ => false,
         }
     }
@@ -139,7 +143,11 @@ impl<'de> serde::Deserialize<'de> for StarboardEmoji {
                 let emoji = if let Some((name, id)) = v.split_once(':') {
                     let id = id.parse().map_err(|_| E::custom("invalid emoji id"))?;
                     let name = Some(FixedString::from_str_trunc(name));
-                    ReactionType::Custom { animated: false, id, name }
+                    ReactionType::Custom {
+                        animated: false,
+                        id,
+                        name,
+                    }
                 } else {
                     ReactionType::Unicode(FixedString::from_str_trunc(v))
                 };

@@ -1,10 +1,10 @@
 mod buttons;
 mod config;
 mod data;
-mod logging;
-mod modules;
 mod fmt;
 mod helper;
+mod logging;
+mod modules;
 mod prelude;
 mod slashies;
 
@@ -13,15 +13,16 @@ async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
     use std::sync::{Arc, Mutex};
 
+    use houston_cmd::Framework;
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
-
-    use houston_cmd::Framework;
 
     use crate::prelude::*;
 
     // SAFETY: No other code running that accesses this yet.
-    unsafe { crate::helper::time::mark_startup_time(); }
+    unsafe {
+        crate::helper::time::mark_startup_time();
+    }
 
     let config = build_config()?;
     init_logging(config.log)?;
@@ -39,9 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let bot_data = Arc::new(HBotData::new(config.bot));
 
     bot_data.connect(&init).await?;
-    let loader = tokio::task::spawn(
-        load_azur_lane(Arc::clone(&bot_data))
-    );
+    let loader = tokio::task::spawn(load_azur_lane(Arc::clone(&bot_data)));
 
     let event_handler = HEventHandler {
         commands: Mutex::new(Some(houston_cmd::to_create_command(&init.commands))),
@@ -54,9 +53,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut client = Client::builder(config.discord.token, init.intents)
         .activity(ActivityData::custom(
-            config.discord.status
+            config
+                .discord
+                .status
                 .map(Cow::Owned)
-                .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION")))
+                .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION"))),
         ))
         .data(Arc::clone(&bot_data))
         .framework(framework)
@@ -64,7 +65,10 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("failed to build discord client")?;
 
-    client.start().await.context("failed to start discord client")?;
+    client
+        .start()
+        .await
+        .context("failed to start discord client")?;
     loader.await?;
 
     return Ok(());
@@ -101,7 +105,13 @@ async fn main() -> anyhow::Result<()> {
             modules::media_react::message(ctx, new_message).await;
         }
 
-        async fn message_delete(&self, ctx: Context, channel_id: ChannelId, message_id: MessageId, guild_id: Option<GuildId>) {
+        async fn message_delete(
+            &self,
+            ctx: Context,
+            channel_id: ChannelId,
+            message_id: MessageId,
+            guild_id: Option<GuildId>,
+        ) {
             modules::starboard::message_delete(ctx, channel_id, message_id, guild_id).await;
         }
 
@@ -122,7 +132,8 @@ async fn main() -> anyhow::Result<()> {
         data: &HBotData,
         commands: &[CreateCommand<'static>],
     ) -> Result {
-        let commands = ctx.http()
+        let commands = ctx
+            .http()
             .create_global_commands(&commands)
             .await
             .context("failed to create global commands")?;
@@ -143,7 +154,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     fn profile() -> Result<Cow<'static, str>> {
-        use std::env::{var, VarError::NotPresent};
+        use std::env::var;
+        use std::env::VarError::NotPresent;
 
         match var("HOUSTON_PROFILE") {
             Ok(value) => Ok(value.into()),
@@ -156,9 +168,11 @@ async fn main() -> anyhow::Result<()> {
         use config_rs::{Config, Environment, File, FileFormat};
 
         let profile = profile()?;
+        let profile_config = format!("houston_app.{profile}.toml");
+
         let config = Config::builder()
             .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
-            .add_source(File::new(&format!("houston_app.{profile}.toml"), FileFormat::Toml).required(false))
+            .add_source(File::new(&profile_config, FileFormat::Toml).required(false))
             .add_source(Environment::default().separator("__"))
             // defaults for logging
             .set_default("log.root.level", "warn")?
@@ -166,8 +180,10 @@ async fn main() -> anyhow::Result<()> {
             .set_default("log.appenders.default.kind", "default")?
             .set_default("log.appenders.default.encoder.kind", "default")?
             .set_default(concat!("log.loggers.", module_path!(), ".level"), "trace")?
-            .build().context("cannot build config")?
-            .try_deserialize().context("cannot deserialize config")?;
+            .build()
+            .context("cannot build config")?
+            .try_deserialize()
+            .context("cannot deserialize config")?;
 
         Ok(config)
     }

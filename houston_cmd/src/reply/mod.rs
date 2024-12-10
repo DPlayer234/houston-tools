@@ -1,10 +1,9 @@
 use std::sync::atomic::Ordering;
 
-use serenity::builder::*;
-
 pub use create::CreateReply;
 pub use edit::EditReply;
 pub use handle::ReplyHandle;
+use serenity::builder::*;
 
 use crate::context::Context;
 
@@ -12,16 +11,12 @@ mod create;
 mod edit;
 mod handle;
 
-pub async fn defer(
-    ctx: Context<'_>,
-    ephemeral: bool,
-) -> serenity::Result<()> {
+pub async fn defer(ctx: Context<'_>, ephemeral: bool) -> serenity::Result<()> {
     let has_sent = ctx.reply_state.load(Ordering::Relaxed);
 
     if !has_sent {
         let reply = CreateInteractionResponse::Defer(
-            CreateInteractionResponseMessage::new()
-                .ephemeral(ephemeral)
+            CreateInteractionResponseMessage::new().ephemeral(ephemeral),
         );
 
         ctx.interaction.create_response(ctx.http(), reply).await?;

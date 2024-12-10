@@ -20,9 +20,8 @@ macro_rules! info {
     };
 }
 
-pub(crate) use action;
-pub(crate) use info;
 pub(crate) use write::ActionWrite;
+pub(crate) use {action, info};
 
 /// When false, uses simplified output.
 static USE_ANSI: AtomicBool = AtomicBool::new(false);
@@ -197,7 +196,11 @@ impl ActionInner {
 
 impl fmt::Display for ActionInner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Self { start, progress, name } = self;
+        let Self {
+            start,
+            progress,
+            name,
+        } = self;
         write!(f, "{start} {progress}{name}")
     }
 }
@@ -239,9 +242,7 @@ struct Progress {
 enum ProgressKind {
     NotApplicable,
     Unbounded,
-    Bounded {
-        total: usize,
-    },
+    Bounded { total: usize },
 }
 
 impl Progress {
@@ -258,8 +259,16 @@ impl fmt::Display for Progress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             ProgressKind::NotApplicable => Ok(()),
-            ProgressKind::Unbounded => write!(f, "{PROGRESS_STYLE}[{}{}]{RESET} ", self.current, self.suffix),
-            ProgressKind::Bounded { total } => write!(f, "{PROGRESS_STYLE}[{}/{}{}]{RESET} ", self.current, total, self.suffix),
+            ProgressKind::Unbounded => write!(
+                f,
+                "{PROGRESS_STYLE}[{}{}]{RESET} ",
+                self.current, self.suffix
+            ),
+            ProgressKind::Bounded { total } => write!(
+                f,
+                "{PROGRESS_STYLE}[{}/{}{}]{RESET} ",
+                self.current, total, self.suffix
+            ),
         }
     }
 }

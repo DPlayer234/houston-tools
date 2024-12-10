@@ -19,11 +19,7 @@ pub fn get_unique_username(user: &User) -> Cow<'_, str> {
 /// Escapes markdown sequences.
 #[must_use]
 pub fn escape_markdown(input: &str) -> impl Display + '_ {
-    utils::text::escape_by_char(
-        input,
-        |c| matches!(c, '*' | '`' | '_' | '>'),
-        |c| ['\\', c]
-    )
+    utils::text::escape_by_char(input, |c| matches!(c, '*' | '`' | '_' | '>'), |c| ['\\', c])
 }
 
 /// Allows mentioning a timestamp in Discord messages.
@@ -33,19 +29,33 @@ pub trait TimeMentionable {
     fn mention(&self, format: &'static str) -> TimeMention;
 
     /// Formats a mention with the short time (t) format.
-    fn short_time(&self) -> TimeMention { self.mention("t") }
+    fn short_time(&self) -> TimeMention {
+        self.mention("t")
+    }
     /// Formats a mention with the long time (T) format.
-    fn long_time(&self) -> TimeMention { self.mention("T") }
+    fn long_time(&self) -> TimeMention {
+        self.mention("T")
+    }
     /// Formats a mention with the short date (d) format.
-    fn short_date(&self) -> TimeMention { self.mention("d") }
+    fn short_date(&self) -> TimeMention {
+        self.mention("d")
+    }
     /// Formats a mention with the long date (D) format.
-    fn long_date(&self) -> TimeMention { self.mention("D") }
+    fn long_date(&self) -> TimeMention {
+        self.mention("D")
+    }
     /// Formats a mention with the short date time (f) format.
-    fn short_date_time(&self) -> TimeMention { self.mention("f") }
+    fn short_date_time(&self) -> TimeMention {
+        self.mention("f")
+    }
     /// Formats a mention with the long date time (F) format.
-    fn long_date_time(&self) -> TimeMention { self.mention("F") }
+    fn long_date_time(&self) -> TimeMention {
+        self.mention("F")
+    }
     /// Formats a mention with the relative (R) format.
-    fn relative(&self) -> TimeMention { self.mention("R") }
+    fn relative(&self) -> TimeMention {
+        self.mention("R")
+    }
 }
 
 impl<Tz: TimeZone> TimeMentionable for DateTime<Tz> {
@@ -106,7 +116,10 @@ fn fmt_resolved_option(option: &ResolvedOption<'_>, f: &mut Formatter<'_>) -> Re
         ResolvedValue::Number(v) => v.fmt(f),
         ResolvedValue::String(v) => write!(f, "\"{v}\""),
         ResolvedValue::Attachment(v) => f.write_str(&v.filename),
-        ResolvedValue::Channel(v) => match &v.name { Some(name) => f.write_str(name), None => v.id.fmt(f) },
+        ResolvedValue::Channel(v) => match &v.name {
+            Some(name) => f.write_str(name),
+            None => v.id.fmt(f),
+        },
         ResolvedValue::Role(v) => f.write_str(&v.name),
         ResolvedValue::User(v, _) => f.write_str(&v.name),
         _ => f.write_str("<unknown>"),
@@ -143,9 +156,12 @@ impl Display for DisplayCommandName<'_> {
         let mut options = self.options;
         while let Some(CommandDataOption {
             name,
-            value: CommandDataOptionValue::SubCommand(next_options) | CommandDataOptionValue::SubCommandGroup(next_options),
+            value:
+                CommandDataOptionValue::SubCommand(next_options)
+                | CommandDataOptionValue::SubCommandGroup(next_options),
             ..
-        }) = options.first() {
+        }) = options.first()
+        {
             f.write_str(" ")?;
             f.write_str(name)?;
             options = next_options;

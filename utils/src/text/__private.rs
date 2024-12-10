@@ -5,16 +5,19 @@ use std::ptr;
 
 use super::InlineStr;
 
-/// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
+/// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string,
+/// converts it to title case (i.e. `Snake Case`).
 ///
-/// This function is generally not useful and exists primarily to support the [`titlecase`](crate::titlecase) macro.
+/// This function is generally not useful and exists primarily to support the
+/// [`titlecase`](crate::titlecase) macro.
 #[must_use]
 pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
     let mut is_start = true;
 
     let mut index = 0usize;
     while index < LEN {
-        (value[index], is_start) = super::titlecase_impl::titlecase_transform(value[index], is_start);
+        (value[index], is_start) =
+            super::titlecase_impl::titlecase_transform(value[index], is_start);
         index += 1;
     }
 
@@ -43,7 +46,8 @@ pub const fn count_str_const(slices: &[&str]) -> usize {
 
 /// Provides a way to join several [`str`] slices.
 ///
-/// This function is generally not useful and exists primarily to support the [`join`](crate::join) macro.
+/// This function is generally not useful and exists primarily to support the
+/// [`join`](crate::join) macro.
 ///
 /// # Panic
 ///
@@ -56,7 +60,10 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     let mut slice_index = 0usize;
     while slice_index < slices.len() {
         let slice = slices[slice_index].as_bytes();
-        assert!(offset + slice.len() <= N, "N was shorter than total input length");
+        assert!(
+            offset + slice.len() <= N,
+            "N was shorter than total input length"
+        );
 
         unsafe {
             // SAFETY: just checked that `slice` fits in `out`

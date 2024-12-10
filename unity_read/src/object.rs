@@ -22,7 +22,7 @@ pub(crate) struct ObjectInfo {
 pub struct ObjectRef<'a> {
     pub(crate) file: &'a SerializedFile<'a>,
     pub(crate) ser_type: &'a SerializedType,
-    pub(crate) object: ObjectInfo
+    pub(crate) object: ObjectInfo,
 }
 
 impl ObjectRef<'_> {
@@ -46,9 +46,13 @@ impl ObjectRef<'_> {
         let offset = usize::from_int(self.object.start + self.file.data_offset)?;
         let size = usize::from_int(self.object.size)?;
 
-        let data = self.file.buf
-            .get(offset..).ok_or(Error::InvalidData("object start out of file range"))?
-            .get(..size).ok_or(Error::InvalidData("object size out of file range"))?;
+        let data = self
+            .file
+            .buf
+            .get(offset..)
+            .ok_or(Error::InvalidData("object start out of file range"))?
+            .get(..size)
+            .ok_or(Error::InvalidData("object size out of file range"))?;
 
         Ok(data)
     }

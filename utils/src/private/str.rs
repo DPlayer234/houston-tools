@@ -5,13 +5,15 @@ use std::str::Chars;
 
 /// Provides just the indices of [`char`]s in a string.
 ///
-/// [`CharIndices`] does not specialize [`Iterator::nth`] even though [`Chars`] does.
-/// This makes it pretty slow for seeking to a specific character index.
+/// [`CharIndices`] does not specialize [`Iterator::nth`] even though [`Chars`]
+/// does. This makes it pretty slow for seeking to a specific character index.
 ///
 /// This iterator on the other hand properly delegates to [`Chars`].
-/// For the use in [`crate::text::truncate`], this reduces the time needed by up ~80%.
+/// For the use in [`crate::text::truncate`], this reduces the time needed by up
+/// ~80%.
 ///
-/// The [`char`]s are omitted from the iterator just because I don't need them for what I do.
+/// The [`char`]s are omitted from the iterator just because I don't need them
+/// for what I do.
 ///
 /// [`CharIndices`]: std::str::CharIndices
 #[derive(Debug)]

@@ -1,6 +1,7 @@
 //! Defines a `"default"` [`PatternEncoder`].
 //!
-//! This just serves to avoid repeating the pattern multiple times in the configuration.
+//! This just serves to avoid repeating the pattern multiple times in the
+//! configuration.
 
 use log4rs::config::Deserialize;
 use log4rs::encode::pattern::PatternEncoder;

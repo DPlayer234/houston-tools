@@ -5,9 +5,8 @@ use std::error::Error;
 use std::fmt;
 use std::sync::LazyLock;
 
-use mlua::prelude::*;
-
 use azur_lane::skill::*;
+use mlua::prelude::*;
 
 /// The config model.
 #[derive(Debug, serde::Deserialize)]
@@ -19,9 +18,8 @@ pub struct Config {
 }
 
 /// The app config. Statically embed as JSON.
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("../assets/config.json")).unwrap()
-});
+pub static CONFIG: LazyLock<Config> =
+    LazyLock::new(|| serde_json::from_str(include_str!("../assets/config.json")).unwrap());
 
 /// A group of ships.
 #[derive(Debug)]

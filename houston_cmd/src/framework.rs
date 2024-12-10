@@ -32,15 +32,11 @@ impl SerenityFramework for Framework {
     async fn dispatch(&self, ctx: &SerenityContext, event: &FullEvent) {
         match event {
             FullEvent::InteractionCreate {
-                interaction: Interaction::Command(interaction)
-            } => {
-                self.run_command(ctx, interaction).await
-            },
+                interaction: Interaction::Command(interaction),
+            } => self.run_command(ctx, interaction).await,
             FullEvent::InteractionCreate {
-                interaction: Interaction::Autocomplete(interaction)
-            } => {
-                self.run_autocomplete(ctx, interaction).await
-            },
+                interaction: Interaction::Autocomplete(interaction),
+            } => self.run_autocomplete(ctx, interaction).await,
             _ => {},
         }
     }
@@ -49,7 +45,8 @@ impl SerenityFramework for Framework {
 impl Framework {
     /// Constructs a new empty framework.
     ///
-    /// At minimum, you should call [`Self::commands`] to register the supported commands.
+    /// At minimum, you should call [`Self::commands`] to register the supported
+    /// commands.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -97,7 +94,7 @@ impl Framework {
             Err(why) => {
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
-            }
+            },
         };
 
         ctx.options = &options;
@@ -115,7 +112,7 @@ impl Framework {
             Err(why) => {
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
-            }
+            },
         };
 
         ctx.options = &options;
@@ -136,29 +133,45 @@ impl Framework {
         let data = &ctx.interaction.data;
         match data.kind {
             CommandType::ChatInput => {
-                let Invoke::ChatInput(invoke) = command.invoke
-                else { return Err(Error::structure_mismatch(ctx, "expected chat input command")); };
+                let Invoke::ChatInput(invoke) = command.invoke else {
+                    return Err(Error::structure_mismatch(
+                        ctx,
+                        "expected chat input command",
+                    ));
+                };
 
                 invoke(ctx).await
             },
             CommandType::User => {
                 let (Invoke::User(invoke), Some(target_id)) = (command.invoke, data.target_id)
-                else { return Err(Error::structure_mismatch(ctx, "expected user context command")); };
+                else {
+                    return Err(Error::structure_mismatch(
+                        ctx,
+                        "expected user context command",
+                    ));
+                };
 
                 let target_id = target_id.to_user_id();
-                let Some(user) = data.resolved.users.get(&target_id)
-                else { return Err(Error::structure_mismatch(ctx, "expected user target")); };
+                let Some(user) = data.resolved.users.get(&target_id) else {
+                    return Err(Error::structure_mismatch(ctx, "expected user target"));
+                };
 
                 let member = data.resolved.members.get(&target_id);
                 invoke(ctx, user, member).await
             },
             CommandType::Message => {
                 let (Invoke::Message(invoke), Some(target_id)) = (command.invoke, data.target_id)
-                else { return Err(Error::structure_mismatch(ctx, "expected message context command")); };
+                else {
+                    return Err(Error::structure_mismatch(
+                        ctx,
+                        "expected message context command",
+                    ));
+                };
 
                 let target_id = target_id.to_message_id();
-                let Some(message) = data.resolved.messages.get(&target_id)
-                else { return Err(Error::structure_mismatch(ctx, "expected message target")); };
+                let Some(message) = data.resolved.messages.get(&target_id) else {
+                    return Err(Error::structure_mismatch(ctx, "expected message target"));
+                };
 
                 invoke(ctx, message).await
             },
@@ -171,27 +184,26 @@ impl Framework {
         ctx: Context<'ctx>,
         command: &SubCommandData,
     ) -> Result<(), Error<'ctx>> {
-        let Some((name, value)) = ctx
-            .options()
-            .iter()
-            .find_map(|o| match o.value {
-                ResolvedValue::Autocomplete { value, .. } => Some((o.name, value)),
-                _ => None,
-            })
-        else {
+        let Some((name, value)) = ctx.options().iter().find_map(|o| match o.value {
+            ResolvedValue::Autocomplete { value, .. } => Some((o.name, value)),
+            _ => None,
+        }) else {
             return Ok(());
         };
 
-        let Some(parameter) = command
-            .parameters
-            .iter()
-            .find(|p| p.name == name)
-        else {
-            return Err(Error::structure_mismatch(ctx, "unknown command autocomplete parameter"));
+        let Some(parameter) = command.parameters.iter().find(|p| p.name == name) else {
+            return Err(Error::structure_mismatch(
+                ctx,
+                "unknown command autocomplete parameter",
+            ));
         };
 
-        let Some(autocomplete) = parameter.autocomplete
-        else { return Err(Error::structure_mismatch(ctx, "expected autocompletable parameter")); };
+        let Some(autocomplete) = parameter.autocomplete else {
+            return Err(Error::structure_mismatch(
+                ctx,
+                "expected autocompletable parameter",
+            ));
+        };
 
         let interaction = ctx.interaction;
         let http = ctx.http();
@@ -209,10 +221,7 @@ impl Framework {
     fn find_command<'ctx>(
         &self,
         interaction: &'ctx CommandInteraction,
-    ) -> Result<
-        (&SubCommandData, Vec<ResolvedOption<'ctx>>),
-        &'static str,
-    > {
+    ) -> Result<(&SubCommandData, Vec<ResolvedOption<'ctx>>), &'static str> {
         let data = &interaction.data;
         let name = data.name.as_str();
         let mut options = data.options();
@@ -224,18 +233,16 @@ impl Framework {
         let mut command = &root.data;
         while let Some(ResolvedOption {
             name,
-            value: ResolvedValue::SubCommand(next_options) | ResolvedValue::SubCommandGroup(next_options),
+            value:
+                ResolvedValue::SubCommand(next_options) | ResolvedValue::SubCommandGroup(next_options),
             ..
-        }) = options.first_mut() {
-            let CommandOptionData::Group(group) = &command.data
-            else {
+        }) = options.first_mut()
+        {
+            let CommandOptionData::Group(group) = &command.data else {
                 return Err("found arguments when command was expected");
             };
 
-            let Some(next_command) = group.sub_commands
-                .iter()
-                .find(|c| *c.name == **name)
-            else {
+            let Some(next_command) = group.sub_commands.iter().find(|c| *c.name == **name) else {
                 return Err("unknown sub-command");
             };
 
@@ -243,8 +250,7 @@ impl Framework {
             options = take(next_options).into_vec();
         }
 
-        let CommandOptionData::Command(command) = &command.data
-        else {
+        let CommandOptionData::Command(command) = &command.data else {
             return Err("found group where command was expected");
         };
 

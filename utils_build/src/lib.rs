@@ -20,8 +20,8 @@ pub fn embed_windows_resources() {
 
 /// Includes the git commit hash for the directory.
 ///
-/// This sets the `GIT_HASH` environment variable for the compilation of the crate itself.
-/// If this fails, it prints a warning.
+/// This sets the `GIT_HASH` environment variable for the compilation of the
+/// crate itself. If this fails, it prints a warning.
 ///
 /// Access it via [`option_env!`]:
 ///
@@ -37,12 +37,13 @@ pub fn include_git_commit_hash() {
     // Based on <https://stackoverflow.com/a/44407625>
     println!("cargo::rerun-if-changed=.git/HEAD");
 
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .output();
+    let output = Command::new("git").args(["rev-parse", "HEAD"]).output();
 
     let output = ensure::ok_or!(output, why => "cannot find git commit hash: {why}");
-    ensure::or!(output.status.success(), "`git rev-parse HEAD` exited with non-success error code");
+    ensure::or!(
+        output.status.success(),
+        "`git rev-parse HEAD` exited with non-success error code"
+    );
 
     let git_hash = String::from_utf8(output.stdout);
     let git_hash = ensure::ok_or!(git_hash, _ => "git commit hash is invalid utf-8");

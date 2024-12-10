@@ -18,36 +18,22 @@ static DATA: &[u8] = {
         result
     }
 
-    unsafe {
-        crate::mem::as_bytes(&create_data())
-    }
+    unsafe { crate::mem::as_bytes(&create_data()) }
 };
 
 #[test]
 fn round_trip_b256() {
-    round_trip_core(
-        DATA,
-        to_b256,
-        from_b256
-    );
+    round_trip_core(DATA, to_b256, from_b256);
 }
 
 #[test]
 fn round_trip_b65536_even() {
-    round_trip_core(
-        DATA,
-        to_b65536,
-        from_b65536
-    );
+    round_trip_core(DATA, to_b65536, from_b65536);
 }
 
 #[test]
 fn round_trip_b65536_odd() {
-    round_trip_core(
-        &DATA[1..],
-        to_b65536,
-        from_b65536
-    );
+    round_trip_core(&DATA[1..], to_b65536, from_b65536);
 }
 
 #[test]
@@ -78,7 +64,11 @@ fn invalid_char_b65536_fails() {
     from_b256(encoded).expect_err("U+256 is out of range");
 }
 
-fn round_trip_core<E: fmt::Debug>(bytes: &[u8], encode: impl FnOnce(&[u8]) -> String, decode: impl FnOnce(&str) -> Result<Vec<u8>, E>) {
+fn round_trip_core<E: fmt::Debug>(
+    bytes: &[u8],
+    encode: impl FnOnce(&[u8]) -> String,
+    decode: impl FnOnce(&str) -> Result<Vec<u8>, E>,
+) {
     let encoded = black_box(encode(bytes));
     println!("encoded[{}]", encoded.chars().count());
 

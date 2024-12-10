@@ -3,7 +3,6 @@ use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use smallvec::SmallVec;
-
 use utils::str_as_data::{decode_b65536, to_b65536};
 
 fn bench_to_b65536(c: &mut Criterion) {
@@ -19,11 +18,13 @@ fn bench_from_b65536(c: &mut Criterion) {
     fn bench(c: &mut Criterion, name: &str, data: &[u8]) {
         let data = to_b65536(data);
 
-        c.bench_function(name, |b| b.iter(|| {
-            let mut vec = <SmallVec<[u8; 16]>>::new();
-            black_box(decode_b65536(&mut vec, &data)).expect("data is valid");
-            vec
-        }));
+        c.bench_function(name, |b| {
+            b.iter(|| {
+                let mut vec = <SmallVec<[u8; 16]>>::new();
+                black_box(decode_b65536(&mut vec, &data)).expect("data is valid");
+                vec
+            })
+        });
     }
 
     bench(c, "from_b65536_small", &create_data::<16>());

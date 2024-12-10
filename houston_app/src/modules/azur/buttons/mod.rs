@@ -12,9 +12,12 @@ pub mod skill;
 
 #[derive(Debug, thiserror::Error)]
 enum AzurParseError {
-    #[error("unknown ship")] Ship,
-    #[error("unknown equip")] Equip,
-    #[error("unknown augment")] Augment,
+    #[error("unknown ship")]
+    Ship,
+    #[error("unknown equip")]
+    Equip,
+    #[error("unknown augment")]
+    Augment,
 }
 
 /// Gets the URL to a ship on the wiki.

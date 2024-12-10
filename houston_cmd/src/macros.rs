@@ -10,14 +10,20 @@ macro_rules! parse_slash_argument {
     ($ctx:expr, $name:literal, $ty:ty) => {{
         match $ctx.options().iter().find(|o| o.name == $name) {
             Some(value) => <$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?,
-            None => return Err($crate::Error::structure_mismatch($ctx, "a required parameter is missing")),
+            None => {
+                return Err($crate::Error::structure_mismatch(
+                    $ctx,
+                    "a required parameter is missing",
+                ))
+            },
         }
     }};
 }
 
 /// Creates the base data needed for a slash argument.
 ///
-/// This exists only to support the macro infrastructure and isn't considered public API.
+/// This exists only to support the macro infrastructure and isn't considered
+/// public API.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! create_slash_argument {
@@ -37,7 +43,8 @@ macro_rules! create_slash_argument {
     };
 }
 
-/// Implements [`SlashArg`](crate::SlashArg) via a type's [`FromStr`](std::str::FromStr) implementations.
+/// Implements [`SlashArg`](crate::SlashArg) via a type's
+/// [`FromStr`](std::str::FromStr) implementations.
 #[macro_export]
 macro_rules! impl_slash_arg_via_from_str {
     ($ty:ty) => {
@@ -47,9 +54,15 @@ macro_rules! impl_slash_arg_via_from_str {
                 resolved: &$crate::private::serenity::ResolvedValue<'ctx>,
             ) -> ::std::result::Result<Self, $crate::Error<'ctx>> {
                 match resolved {
-                    $crate::private::serenity::ResolvedValue::String(value) => ::std::str::FromStr::from_str(value)
-                        .map_err(|e| $crate::Error::argument_parse(*ctx, Some((*value).to_owned()), e)),
-                    _ => Err($crate::Error::structure_mismatch(*ctx, "expected string argument")),
+                    $crate::private::serenity::ResolvedValue::String(value) => {
+                        ::std::str::FromStr::from_str(value).map_err(|e| {
+                            $crate::Error::argument_parse(*ctx, Some((*value).to_owned()), e)
+                        })
+                    },
+                    _ => Err($crate::Error::structure_mismatch(
+                        *ctx,
+                        "expected string argument",
+                    )),
                 }
             }
 

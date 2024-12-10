@@ -1,9 +1,11 @@
 //! Buffered output writing.
 //!
-//! This is not necessary for _correctness_, however since this app updates already printed lines,
-//! including clearing them, the output can be quite flickery and slow.
+//! This is not necessary for _correctness_, however since this app updates
+//! already printed lines, including clearing them, the output can be quite
+//! flickery and slow.
 //!
-//! And while stdout is buffered by default, stderr seems like the more correct option.
+//! And while stdout is buffered by default, stderr seems like the more correct
+//! option.
 
 use std::fmt;
 use std::io::{stderr, IoSlice, LineWriter, Result, Stderr, Write};

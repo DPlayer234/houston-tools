@@ -16,7 +16,12 @@ pub fn add_to_stats_fixed(stats: &mut ShipStatBlock, stat: &str, amount: f64) ->
     add_to_stats_intl(stats, stat, amount, ShipStat::new().with_fixed(amount))
 }
 
-fn add_to_stats_intl(stats: &mut ShipStatBlock, stat: &str, amount: f64, amount_as_stat: ShipStat) -> bool {
+fn add_to_stats_intl(
+    stats: &mut ShipStatBlock,
+    stat: &str,
+    amount: f64,
+    amount_as_stat: ShipStat,
+) -> bool {
     match stat {
         "durability" => stats.hp += amount_as_stat,
         "cannon" => stats.fp += amount_as_stat,
@@ -29,7 +34,9 @@ fn add_to_stats_intl(stats: &mut ShipStatBlock, stat: &str, amount: f64, amount_
         "speed" => stats.spd += amount,
         "luck" => stats.lck += amount,
         "antisub" => stats.asw += amount_as_stat,
-        _ => { return false; }
+        _ => {
+            return false;
+        },
     };
 
     true

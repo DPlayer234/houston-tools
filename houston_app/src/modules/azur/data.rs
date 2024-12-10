@@ -1,14 +1,12 @@
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::io;
 use std::path::{Component, Path, PathBuf};
-
-use bytes::Bytes;
-use dashmap::DashMap;
-use smallvec::{smallvec, SmallVec};
+use std::{fs, io};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use bytes::Bytes;
+use dashmap::DashMap;
+use smallvec::{smallvec, SmallVec};
 use utils::fuzzy::Search;
 
 type IndexVec = SmallVec<[usize; 2]>;
@@ -40,24 +38,32 @@ impl HAzurLane {
         // the error is just a short description of the error
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
             use anyhow::Context as _;
-            let f = fs::File::open(data_path.join("main.json")).context("Failed to read Azur Lane data.")?;
+            let f = fs::File::open(data_path.join("main.json"))
+                .context("Failed to read Azur Lane data.")?;
             let f = io::BufReader::new(f);
             let data = serde_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
             Ok(data)
         }
 
-        // this function should ensure we don't deal with empty paths, absolute or rooted paths,
-        // or ones that refer to parent directories to detect potential path traversal attacks
-        // when loading untrusted data. note: we only log this, we don't abort.
+        // this function should ensure we don't deal with empty paths, absolute or
+        // rooted paths, or ones that refer to parent directories to detect
+        // potential path traversal attacks when loading untrusted data. note:
+        // we only log this, we don't abort.
         fn is_path_sus(path: &Path) -> bool {
-            path.components().any(|p| !matches!(p, Component::Normal(_))) ||
-            path.components().next().is_none()
+            path.components()
+                .any(|p| !matches!(p, Component::Normal(_)))
+                || path.components().next().is_none()
         }
 
         fn verify_ship(ship: &ShipData) {
             for skin in &ship.skins {
                 if is_path_sus(Path::new(&skin.image_key)) {
-                    log::warn!("image_key '{}' for ship skin {} ({}) may be part of path traversal attack", skin.image_key, skin.skin_id, skin.name);
+                    log::warn!(
+                        "image_key '{}' for ship skin {} ({}) may be part of path traversal attack",
+                        skin.image_key,
+                        skin.skin_id,
+                        skin.name,
+                    );
                 }
             }
         }
@@ -67,7 +73,7 @@ impl HAzurLane {
             Err(err) => {
                 log::error!("No Azur Lane data: {err:?}");
                 return Self::default();
-            }
+            },
         };
 
         let mut this = Self {
@@ -82,10 +88,14 @@ impl HAzurLane {
             ..Self::default()
         };
 
-        // we trim away "hull_disallowed" equip values that never matter in practice to give nicer outputs
-        // otherwise we'd have outputs that state that dive bombers cannot be equipped to frigates. like, duh.
+        // we trim away "hull_disallowed" equip values that never matter in practice to
+        // give nicer outputs otherwise we'd have outputs that state that dive
+        // bombers cannot be equipped to frigates. like, duh.
         let mut actual_equip_exist = HashSet::new();
-        fn insert_equip_exist(actual_equip_exist: &mut HashSet<(EquipKind, HullType)>, data: &ShipData) {
+        fn insert_equip_exist(
+            actual_equip_exist: &mut HashSet<(EquipKind, HullType)>,
+            data: &ShipData,
+        ) {
             for equip_kind in data.equip_slots.iter().flat_map(|h| &h.allowed) {
                 actual_equip_exist.insert((*equip_kind, data.hull_type));
             }
@@ -107,16 +117,21 @@ impl HAzurLane {
 
         for (index, data) in this.equips.iter_mut().enumerate() {
             this.equip_id_to_index.insert(data.equip_id, index);
-            this.equip_simsearch.insert(&format!(
-                "{} {} {} {} {}",
-                data.name,
-                data.faction.name(), data.faction.prefix().unwrap_or("EX"),
-                data.kind.name(),
-                data.rarity.name()
-            ), ());
+            this.equip_simsearch.insert(
+                &format!(
+                    "{} {} {} {} {}",
+                    data.name,
+                    data.faction.name(),
+                    data.faction.prefix().unwrap_or("EX"),
+                    data.kind.name(),
+                    data.rarity.name()
+                ),
+                (),
+            );
 
             // trim away irrelevant disallowed hulls
-            data.hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
+            data.hull_disallowed
+                .retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
         }
 
         for (index, data) in this.augments.iter().enumerate() {
@@ -161,7 +176,9 @@ impl HAzurLane {
 
     /// Gets all ships by a name prefix.
     pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> + use<'_> {
-        self.ship_simsearch.search(prefix).filter_map(|i| self.ships.get(i.index))
+        self.ship_simsearch
+            .search(prefix)
+            .filter_map(|i| self.ships.get(i.index))
     }
 
     /// Gets an equip by its ID.
@@ -173,7 +190,9 @@ impl HAzurLane {
 
     /// Gets all equips by a name prefix.
     pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> + use<'_> {
-        self.equip_simsearch.search(prefix).filter_map(|i| self.equips.get(i.index))
+        self.equip_simsearch
+            .search(prefix)
+            .filter_map(|i| self.equips.get(i.index))
     }
 
     /// Gets an augment by its ID.
@@ -185,19 +204,26 @@ impl HAzurLane {
 
     /// Gets all augments by a name prefix.
     pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> + use<'_> {
-        self.augment_simsearch.search(prefix).filter_map(|i| self.augments.get(i.index))
+        self.augment_simsearch
+            .search(prefix)
+            .filter_map(|i| self.augments.get(i.index))
     }
 
     /// Gets unique augments by their associated ship ID.
     pub fn augments_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Augment> {
-        self.ship_id_to_augment_indices.get(&ship_id).into_iter().flatten().filter_map(|i| self.augments.get(*i))
+        self.ship_id_to_augment_indices
+            .get(&ship_id)
+            .into_iter()
+            .flatten()
+            .filter_map(|i| self.augments.get(*i))
     }
 
     /// Gets a chibi's image data.
     #[must_use]
     pub fn get_chibi_image(&self, image_key: &str) -> Option<Bytes> {
-        // Consult the cache first. If the image has been seen already, it will be stored here.
-        // It may also have a None entry if the image was requested but not found.
+        // Consult the cache first. If the image has been seen already, it will be
+        // stored here. It may also have a None entry if the image was requested
+        // but not found.
         match self.chibi_sprite_cache.get(image_key) {
             Some(entry) => entry.clone(),
             None => self.load_and_cache_chibi_image(image_key),
@@ -206,9 +232,9 @@ impl HAzurLane {
 
     #[cold]
     fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<Bytes> {
-        // IMPORTANT: the right-hand side of join may be absolute or relative and can therefore read
-        // files outside of `data_path`. Currently, this doesn't take user-input, but this should
-        // be considered for the future.
+        // IMPORTANT: the right-hand side of join may be absolute or relative and can
+        // therefore read files outside of `data_path`. Currently, this doesn't
+        // take user-input, but this should be considered for the future.
         let path = utils::join_path!(&self.data_path, "chibi", image_key; "webp");
         match fs::read(path) {
             Ok(data) => {
@@ -216,7 +242,7 @@ impl HAzurLane {
                 use dashmap::mapref::entry::Entry;
 
                 match self.chibi_sprite_cache.entry(image_key.to_owned()) {
-                    // data race: loaded concurrently, someone else was faster. drop the newly read data.
+                    // data race: loaded concurrently, too slow here. drop the newly read data.
                     Entry::Occupied(entry) => entry.get().clone(),
                     // still empty: wrap the current data and return it
                     Entry::Vacant(entry) => (*entry.insert(Some(Bytes::from(data)))).clone(),
@@ -228,7 +254,8 @@ impl HAzurLane {
 
                 match err.kind() {
                     // Most errors aren't interesting and may be transient issues.
-                    // However, these ones imply permanent problems. Store None to prevent repeated attempts.
+                    // However, these ones imply permanent problems. Store None to prevent repeated
+                    // attempts at loading the file.
                     NotFound | PermissionDenied => {
                         // insert, but do not replace a present entry
                         self.chibi_sprite_cache
@@ -237,11 +264,11 @@ impl HAzurLane {
                     },
                     _ => {
                         log::warn!("Failed to load chibi sprite '{image_key}': {err:?}");
-                    }
+                    },
                 };
 
                 None
-            }
+            },
         }
     }
 }

@@ -11,7 +11,8 @@ macro_rules! make_find {
     ($fn_name:ident -> $T:ty, $by_id:ident, $by_prefix:ident, $error:literal) => {
         pub fn $fn_name<'a>(data: &'a HBotData, name: &str) -> Result<&'a $T> {
             let azur_lane = data.azur_lane();
-            parse_id_input(name).map(|id| azur_lane.$by_id(id))
+            parse_id_input(name)
+                .map(|id| azur_lane.$by_id(id))
                 .unwrap_or_else(|| azur_lane.$by_prefix(name).next())
                 .ok_or(HArgError::new_const($error).into())
         }

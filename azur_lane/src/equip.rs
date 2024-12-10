@@ -2,10 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::define_data_enum;
 use crate::ship::*;
 use crate::skill::*;
-use crate::Faction;
+use crate::{define_data_enum, Faction};
 
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,10 +15,12 @@ pub struct Equip {
     pub name: String,
     /// The equipment's description.
     ///
-    /// This is not the skill description. Instead, it is the description shown when attempting
-    /// to buy equipment from a shop. It is never seen for most gear, but often still contains flavor text.
+    /// This is not the skill description. Instead, it is the description shown
+    /// when attempting to buy equipment from a shop. It is never seen for most
+    /// gear, but often still contains flavor text.
     pub description: String,
-    /// The kind of equipment, determining whether it is allowed in a ship's slots.
+    /// The kind of equipment, determining whether it is allowed in a ship's
+    /// slots.
     pub kind: EquipKind,
     /// The equipment's rarity and star rating.
     pub rarity: EquipRarity,
@@ -38,9 +39,11 @@ pub struct Equip {
     /// The stat bonuses provided when equipped.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub stat_bonuses: Vec<EquipStatBonus>,
-    /// Hull types that this equipment cannot be equipped on, even if the [`Equip::kind`] would allow it.
+    /// Hull types that this equipment cannot be equipped on, even if the
+    /// [`Equip::kind`] would allow it.
     ///
-    /// Data on "allowed hull types" is excluded since it's purely informative, and not accurately at that.
+    /// Data on "allowed hull types" is excluded since it's purely informative,
+    /// and not accurately at that.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub hull_disallowed: Vec<HullType>,
 }
@@ -76,8 +79,8 @@ pub struct Barrage {
     pub coefficient: f64,
     /// How much of the [`Barrage::scaling_stat`] is considered for the damage.
     ///
-    /// F.e. `1.0` would mean you use 100% of the scaling stat for damage calculation,
-    /// whereas `0.8` would mean you only use 80% of it.
+    /// F.e. `1.0` would mean you use 100% of the scaling stat for damage
+    /// calculation, whereas `0.8` would mean you only use 80% of it.
     /// This leads to slightly different results than a damage multiplier.
     pub scaling: f64,
     /// The stat this barrage's damage scales with.
@@ -86,10 +89,11 @@ pub struct Barrage {
     pub range: f64,
     /// The potential firing and lock-on angle.
     pub firing_angle: f64,
-    /// The time it takes for the salvo to fire. This is another fixed delay between reloads.
+    /// The time it takes for the salvo to fire. This is another fixed delay
+    /// between reloads.
     pub salvo_time: f64,
     /// The bullets fired by this barrage.
-    pub bullets: Vec<Bullet>
+    pub bullets: Vec<Bullet>,
 }
 
 /// Bullet information for a [`Barrage`].
@@ -129,14 +133,16 @@ pub struct Bullet {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum BulletExtra {
     /// No extra data.
-    #[default] None,
+    #[default]
+    None,
     /// The bullet has hit spread and AOE.
     Spread(BulletSpread),
     /// The bullet is a beam attack.
     Beam(BulletBeam),
 }
 
-/// How far a bullet's hit spread and AOE is. Only applicable to main gun fire and bombs.
+/// How far a bullet's hit spread and AOE is. Only applicable to main gun fire
+/// and bombs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulletSpread {
     /// Horizontal spread.
@@ -242,7 +248,7 @@ pub struct AugmentStatBonus {
     /// How much the stat is increased by at minimum.
     pub amount: f64,
     /// The maximum additional random component.
-    pub random: f64
+    pub random: f64,
 }
 
 /// A skill upgraded by an augment module.
@@ -444,7 +450,8 @@ impl BulletFlags {
 }
 
 impl AugmentUsability {
-    /// If restricted by hull types, gets the hull types. Otherwise, returns [`None`].
+    /// If restricted by hull types, gets the hull types. Otherwise, returns
+    /// [`None`].
     pub fn hull_types(&self) -> Option<&[HullType]> {
         match self {
             Self::HullTypes(h) => Some(h.as_slice()),
@@ -452,7 +459,8 @@ impl AugmentUsability {
         }
     }
 
-    /// If restricted to a unique ship, gets its ID. Otherwise, returns [`None`].
+    /// If restricted to a unique ship, gets its ID. Otherwise, returns
+    /// [`None`].
     pub fn unique_ship_id(&self) -> Option<u32> {
         match self {
             Self::UniqueShipId(i) => Some(*i),

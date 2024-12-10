@@ -4,10 +4,7 @@ use crate::slashies::prelude::*;
 mod overview;
 
 /// Access starboard info.
-#[chat_command(
-    contexts = "Guild",
-    integration_types = "Guild",
-)]
+#[chat_command(contexts = "Guild", integration_types = "Guild")]
 pub mod starboard {
     /// Shows a board's top users.
     #[sub_command]
@@ -16,8 +13,7 @@ pub mod starboard {
         #[description = "What board to look for."]
         #[autocomplete = "autocomplete_board"]
         board: u64,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         use super::buttons::top::View;
 
@@ -37,8 +33,7 @@ pub mod starboard {
         #[description = "What board to look for."]
         #[autocomplete = "autocomplete_board"]
         board: u64,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         use super::buttons::top_posts::View;
 
@@ -55,16 +50,14 @@ pub mod starboard {
     #[sub_command]
     async fn overview(
         ctx: Context<'_>,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         overview::overview(ctx, ephemeral).await
     }
 }
 
 fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
-    let guild_id = ctx.guild_id()
-        .context("command only available in guilds")?;
+    let guild_id = ctx.guild_id().context("command only available in guilds")?;
 
     #[allow(clippy::cast_possible_wrap)]
     let board = BoardId::new(board as i64);
@@ -73,7 +66,9 @@ fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
         .config()
         .starboard
         .get(&guild_id)
-        .ok_or(HArgError::new_const("Starboard is not enabled for this server."))?
+        .ok_or(HArgError::new_const(
+            "Starboard is not enabled for this server.",
+        ))?
         .boards
         .get(&board)
         .ok_or(HArgError::new_const("Unknown Starboard."))?;
@@ -98,15 +93,16 @@ async fn autocomplete_board<'a>(
             // if the input is empty, that's all of them
             .filter(|(_, board)| board.name.contains(partial))
             // map it to an autocomplete choice with the board id as the value
-            .map(|(id, board)| AutocompleteChoice::new(
-                board.name.as_str(),
-                #[allow(clippy::cast_sign_loss)]
-                AutocompleteValue::Integer(id.get() as u64),
-            ))
+            .map(|(id, board)| {
+                AutocompleteChoice::new(
+                    board.name.as_str(),
+                    #[allow(clippy::cast_sign_loss)]
+                    AutocompleteValue::Integer(id.get() as u64),
+                )
+            })
             .collect();
 
-        CreateAutocompleteResponse::new()
-            .set_choices(choices)
+        CreateAutocompleteResponse::new().set_choices(choices)
     } else {
         CreateAutocompleteResponse::new()
     }

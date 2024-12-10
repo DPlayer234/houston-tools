@@ -71,8 +71,9 @@ impl<'a> Context<'a> {
 
     /// Sends a reply.
     ///
-    /// This automatically tracks whether this should be the initial response or a follow-up.
-    /// However, don't mix use of this function with manual use of the interaction.
+    /// This automatically tracks whether this should be the initial response or
+    /// a follow-up. However, don't mix use of this function with manual use
+    /// of the interaction.
     pub async fn send(self, reply: CreateReply<'_>) -> serenity::Result<ReplyHandle<'a>> {
         crate::reply::send_reply(self, reply).await
     }

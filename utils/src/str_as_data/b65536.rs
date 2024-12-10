@@ -1,13 +1,12 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
 use super::Error;
 
 /// Converts the bytes to "base 65535".
 ///
-/// Bytes will be paired. The combined value of each pair will mapped to UTF-8 characters
-/// and the sequence is then joined. A marker for whether the input sequence had an odd
-/// amount of bytes will be stored.
+/// Bytes will be paired. The combined value of each pair will mapped to UTF-8
+/// characters and the sequence is then joined. A marker for whether the input
+/// sequence had an odd amount of bytes will be stored.
 ///
 /// The sequence will be prefixed with a header character and ends with `&`.
 #[must_use]
@@ -17,8 +16,7 @@ pub fn to_b65536(bytes: &[u8]) -> String {
     let expected_size = 2 + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
-    encode_b65536(&mut result, bytes)
-        .expect("write to String cannot fail");
+    encode_b65536(&mut result, bytes).expect("write to String cannot fail");
 
     result
 }
@@ -88,19 +86,18 @@ pub fn decode_b65536<W: io::Write>(mut writer: W, input: &str) -> Result<(), Err
     Ok(())
 }
 
-/// Tries to strip a base 65536 input, returning `skip_last` and the stripped input.
-fn try_strip_b65536_input(str: &str) -> Result<(bool, &str), Error> {
-    str
-        // strip the end marker
-        .strip_suffix('&')
-        // strip the start marker
-        .and_then(|s| {
-            // the start marker is & if the last byte is included
-            s.strip_prefix('&').map(|s| (false, s))
-            // otherwise, % may be used to indicate the last byte is skipped
-            .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
-        })
-        .filter(|(skip_last, str)| !skip_last || !str.is_empty())
+/// Tries to strip a base 65536 input, returning `skip_last` and the stripped
+/// input.
+fn try_strip_b65536_input(s: &str) -> Result<(bool, &str), Error> {
+    // strip the end marker
+    let s = s.strip_suffix('&').ok_or(Error::Invalid)?;
+
+    // the start marker is & if the last byte is included
+    s.strip_prefix('&')
+        .map(|s| (false, s))
+        // otherwise, % may be used to indicate the last byte is skipped
+        .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
+        .filter(|(skip_last, s)| !skip_last || !s.is_empty())
         .ok_or(Error::Invalid)
 }
 
@@ -108,8 +105,8 @@ const OFFSET: u32 = 0xE000 - 0xD800;
 
 fn char_to_bytes(c: char) -> Result<[u8; 2], Error> {
     let int = match c {
-        '\0' ..= '\u{D7FF}' => u32::from(c),
-        '\u{E000}' ..= '\u{10FFFF}' => u32::from(c) - OFFSET,
+        '\0'..='\u{D7FF}' => u32::from(c),
+        '\u{E000}'..='\u{10FFFF}' => u32::from(c) - OFFSET,
     };
 
     // char codes greater than 0x107FF would wrap around
@@ -124,7 +121,7 @@ fn bytes_to_char(bytes: [u8; 2]) -> char {
     let int = u32::from(u16::from_le_bytes(bytes));
     match int {
         // SAFETY: Reverse of `char_to_bytes`.
-        0 ..= 0xD7FF => unsafe { char::from_u32_unchecked(int) },
+        0..=0xD7FF => unsafe { char::from_u32_unchecked(int) },
         _ => unsafe { char::from_u32_unchecked(int + OFFSET) },
     }
 }

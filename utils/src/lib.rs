@@ -1,4 +1,5 @@
-//! A variety of utility types and functions for use across the crates in this repo.
+//! A variety of utility types and functions for use across the crates in this
+//! repo.
 
 // for benchmarks
 #[cfg(test)]
@@ -18,16 +19,19 @@ pub use private::hash::{hash, hash_default};
 
 /// Joins multiple path segments into a [`PathBuf`].
 ///
-/// An extension may be specified at the end. If specified, it will override the extension of the last segment.
+/// An extension may be specified at the end. If specified, it will override the
+/// extension of the last segment.
 ///
-/// This is equivalent to creating a [`PathBuf`] from the first segment and then repeatedly
-/// calling [`push`], then finishing with [`set_extension`] if an extension is specified.
+/// This is equivalent to creating a [`PathBuf`] from the first segment and then
+/// repeatedly calling [`push`], then finishing with [`set_extension`] if an
+/// extension is specified.
 ///
 /// # Note
 ///
 /// The use of [`set_extension`] may lead to some unexpected behavior:
 ///
-/// - If the last component already has an extension, the extension will be replaced.
+/// - If the last component already has an extension, the extension will be
+///   replaced.
 /// - If the last component is `..`, no extension will be set.
 ///
 /// See the docs for [`set_extension`] for further details.
@@ -57,10 +61,12 @@ macro_rules! join_path {
     }};
 }
 
-/// Provides overloads for an operator given a `[Op]Assign<&Rhs>` implementation.
+/// Provides overloads for an operator given a `[Op]Assign<&Rhs>`
+/// implementation.
 ///
 /// In particular, this will provide both the by-value and by-ref overloads.
-/// The `&Lhs` versions are only provided if the type is [`Copy`] and the macro invocation prefixes the type with `copy`.
+/// The `&Lhs` versions are only provided if the type is [`Copy`] and the macro
+/// invocation prefixes the type with `copy`.
 ///
 /// Furthermore, it also provides the `[Op]Assign<Rhs>` (Rhs by-value) overload.
 ///
@@ -162,7 +168,7 @@ macro_rules! impl_op_via_assign {
 
 #[cfg(test)]
 mod test {
-    use std::ops::{AddAssign, Add, SubAssign, Sub};
+    use std::ops::{Add, AddAssign, Sub, SubAssign};
 
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct Num(i32);

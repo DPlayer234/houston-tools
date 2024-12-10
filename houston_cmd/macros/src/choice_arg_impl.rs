@@ -21,16 +21,22 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
 
     for variant in data.variants {
         if !matches!(variant.fields, Fields::Unit) {
-            return Err(syn::Error::new_spanned(variant, "choice arg variants cannot have fields"));
+            return Err(syn::Error::new_spanned(
+                variant,
+                "choice arg variants cannot have fields",
+            ));
         }
 
-        let attrs: Vec<_> = variant.attrs
+        let attrs: Vec<_> = variant
+            .attrs
             .into_iter()
             .map(|attr| NestedMeta::Meta(attr.meta))
             .collect();
         let attrs = VariantArgs::from_list(&attrs)?;
 
-        let name = attrs.name.unwrap_or_else(|| variant.ident.unraw().to_string());
+        let name = attrs
+            .name
+            .unwrap_or_else(|| variant.ident.unraw().to_string());
         ensure_spanned!(variant.ident, (1..=100).contains(&name.chars().count()) => "the name must be 1 to 100 characters long");
 
         names.push(name);

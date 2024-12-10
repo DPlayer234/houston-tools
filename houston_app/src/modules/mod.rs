@@ -12,17 +12,17 @@ pub mod starboard;
 mod prelude {
     pub use serenity::prelude::*;
 
-    pub use super::Module as _;
     pub(super) use super::HCommand;
-    pub use crate::prelude::*;
+    pub use super::Module as _;
     pub use crate::config::HBotConfig;
+    pub use crate::prelude::*;
 }
 
 mod model_prelude {
     pub use anyhow::Context as _;
-    pub use bson::{doc, Bson, Document};
     pub use bson::oid::ObjectId;
     pub use bson::serde_helpers::chrono_datetime_as_bson_datetime;
+    pub use bson::{doc, Bson, Document};
     pub use chrono::{DateTime, Utc};
     pub use mongodb::options::{IndexOptions, ReturnDocument};
     pub use mongodb::{Collection, Database, IndexModel};
@@ -90,9 +90,7 @@ pub trait Module {
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
         _ = db;
-        Box::pin(const {
-            crate::helper::future::Done::new_zst(|| Ok(()))
-        })
+        Box::pin(const { crate::helper::future::Done::new_zst(|| Ok(())) })
     }
 
     /// Applies the settings if enabled.

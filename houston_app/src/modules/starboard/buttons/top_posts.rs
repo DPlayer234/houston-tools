@@ -1,13 +1,10 @@
 use bson::doc;
-
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
-use crate::modules::starboard::get_board;
-use crate::modules::starboard::model;
-use crate::modules::starboard::BoardId;
+use crate::modules::starboard::{get_board, model, BoardId};
 
 // View the post leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -63,7 +60,13 @@ impl View {
             writeln_str!(
                 description,
                 "{}. https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
-                offset + index, self.guild, item.channel, item.message, item.user, item.max_reacts, board.emoji.as_emoji(),
+                offset + index,
+                self.guild,
+                item.channel,
+                item.message,
+                item.user,
+                item.max_reacts,
+                board.emoji.as_emoji(),
             );
         }
 
@@ -100,9 +103,7 @@ impl View {
             .as_slice()
             .to_vec();
 
-        let reply = CreateReply::new()
-            .embed(embed)
-            .components(components);
+        let reply = CreateReply::new().embed(embed).components(components);
 
         Ok(reply)
     }

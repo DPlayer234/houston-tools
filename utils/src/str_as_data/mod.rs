@@ -13,12 +13,14 @@
 //! ## Base 256
 //!
 //! Via [`to_b256`]/[`encode_b256`] and [`from_b256`]/[`decode_b256`]:
-//! Encodes each byte as one [`char`] of the output with the equivalent code point value.
+//! Encodes each byte as one [`char`] of the output with the equivalent code
+//! point value.
 //!
 //! ## Base 65536:
 //!
 //! Via [`to_b65536`]/[`encode_b65536`] and [`from_b65536`]/[`decode_b65536`]:
-//! Encodes pairs of bytes as one [`char`] of the output with a unique code point for each possible input.
+//! Encodes pairs of bytes as one [`char`] of the output with a unique code
+//! point for each possible input.
 
 mod b256;
 mod b65536;

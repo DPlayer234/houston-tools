@@ -1,4 +1,5 @@
-//! Defines a data model that a subset of Azur Lane's game data can be represented as.
+//! Defines a data model that a subset of Azur Lane's game data can be
+//! represented as.
 #![allow(clippy::upper_case_acronyms)]
 
 use serde::{Deserialize, Serialize};

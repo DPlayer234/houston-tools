@@ -11,7 +11,9 @@ fn bench_char_indices(c: &mut Criterion) {
     fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
         assert!(len >= 1, "cannot truncate to less than 1 character");
 
-        if s.len() <= len { return None; }
+        if s.len() <= len {
+            return None;
+        }
 
         let mut indices = s.char_indices();
         let (end_at, _) = indices.nth(len - 1)?;
@@ -42,7 +44,9 @@ fn bench_indices(c: &mut Criterion) {
     fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
         assert!(len >= 1, "cannot truncate to less than 1 character");
 
-        if s.len() <= len { return None; }
+        if s.len() <= len {
+            return None;
+        }
 
         let mut indices = internals::Indices::new(s);
         let end_at = indices.nth(len - 1)?;

@@ -4,7 +4,6 @@ use std::str::FromStr;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use smallvec::SmallVec;
-
 use utils::text::write_str::*;
 
 use crate::slashies::prelude::*;
@@ -12,14 +11,12 @@ use crate::slashies::prelude::*;
 /// Rolls some dice.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub async fn dice(
     ctx: Context<'_>,
-    #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."]
-    sets: DiceSetVec,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
+    #[description = "The sets of dice to roll, in a format like '2d6', separated by spaces."] sets: DiceSetVec,
+    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
 ) -> Result {
     let sets = sets.as_slice();
     let dice_count: u32 = sets.iter().map(|d| u32::from(d.count.get())).sum();
@@ -76,7 +73,7 @@ struct DiceParseError(());
 #[repr(align(4))]
 struct DiceSet {
     count: NonZero<u8>,
-    faces: NonZero<u16>
+    faces: NonZero<u16>,
 }
 
 impl FromStr for DiceSet {

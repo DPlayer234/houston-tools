@@ -1,15 +1,15 @@
+use azur_lane::ship::*;
 use mlua::prelude::*;
 
-use azur_lane::ship::*;
-
-use crate::context;
-use crate::parse;
+use crate::{context, parse};
 
 /// Modifies the ship data, adding a blueprint effect.
 ///
 /// This refers to a single enhance/fate simulation level.
 pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
-    fn b(n: f64) -> ShipStat { ShipStat::new().with_base(n * 0.01) }
+    fn b(n: f64) -> ShipStat {
+        ShipStat::new().with_base(n * 0.01)
+    }
 
     let effect: LuaTable = table.get("effect")?;
     ship.stats.fp += b(effect.get(1)?);
@@ -44,7 +44,10 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
 /// "effect_attr" adds a flat amount of base stats.
 fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
-        let attr: String = v.get(1).with_context(context!("effect_attr name for blueprint ship id {}", ship.group_id))?;
+        let attr: String = v.get(1).with_context(context!(
+            "effect_attr name for blueprint ship id {}",
+            ship.group_id
+        ))?;
         let value: f64 = v.get(2)?;
 
         super::add_to_stats_base(&mut ship.stats, &attr, value);
@@ -65,14 +68,26 @@ fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<
     Ok(())
 }
 
-/// "effect_base" and "effect_preload" *replace* components of the ship's equipment slots.
-fn replace_equip_slot_part(lua: &Lua, ship: &mut ShipData, effect: LuaTable, select: impl Fn(&mut EquipWeaponMount) -> &mut u8) -> LuaResult<()> {
+/// "effect_base" and "effect_preload" *replace* components of the ship's
+/// equipment slots.
+fn replace_equip_slot_part(
+    lua: &Lua,
+    ship: &mut ShipData,
+    effect: LuaTable,
+    select: impl Fn(&mut EquipWeaponMount) -> &mut u8,
+) -> LuaResult<()> {
     let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
     for (index, &new) in effect_base.iter().enumerate() {
-        if let Some(slot) = ship.equip_slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
+        if let Some(slot) = ship
+            .equip_slots
+            .get_mut(index)
+            .and_then(|s| s.mount.as_mut())
+        {
             let part = select(slot);
-            if *part < new { *part = new; }
+            if *part < new {
+                *part = new;
+            }
         }
     }
 
@@ -84,7 +99,11 @@ fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> 
     let index: usize = effect.get(1)?;
     let amount: f64 = effect.get(2)?;
 
-    if let Some(slot) = ship.equip_slots.get_mut(index - 1).and_then(|s| s.mount.as_mut()) {
+    if let Some(slot) = ship
+        .equip_slots
+        .get_mut(index - 1)
+        .and_then(|s| s.mount.as_mut())
+    {
         slot.efficiency += amount;
     }
 

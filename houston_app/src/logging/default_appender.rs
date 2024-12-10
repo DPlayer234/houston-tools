@@ -1,6 +1,7 @@
 //! Provides a simple console logger.
 //!
-//! While [`log4rs`] already provides something like this, it doesn't buffer `stderr` output.
+//! While [`log4rs`] already provides something like this, it doesn't buffer
+//! `stderr` output.
 //!
 //! This appender type is available as `"default"` in the configuration.
 
@@ -51,12 +52,11 @@ impl Deserialize for DefaultAppenderDeserializer {
         deserializers: &Deserializers,
     ) -> anyhow::Result<Box<Self::Trait>> {
         let encoder = deserializers.deserialize(&config.encoder.kind, config.encoder.config)?;
-        let color = config.color.unwrap_or_else(|| utils::term::supports_ansi_escapes(&io::stderr()));
+        let color = config
+            .color
+            .unwrap_or_else(|| utils::term::supports_ansi_escapes(&io::stderr()));
 
-        Ok(Box::new(DefaultAppender {
-            encoder,
-            color,
-        }))
+        Ok(Box::new(DefaultAppender { encoder, color }))
     }
 }
 
@@ -103,7 +103,6 @@ impl io::Write for ConsoleWriter {
 impl encode::Write for ConsoleWriter {
     fn set_style(&mut self, style: &Style) -> io::Result<()> {
         use log4rs::encode::Color;
-
         use utils::term::style::*;
 
         if self.color {

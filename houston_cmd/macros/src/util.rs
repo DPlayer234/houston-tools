@@ -19,12 +19,14 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<String> {
     for a in attrs {
         if let Meta::NameValue(MetaNameValue {
             path,
-            value: Expr::Lit(ExprLit {
-                lit: Lit::Str(literal),
-                ..
-            }),
+            value:
+                Expr::Lit(ExprLit {
+                    lit: Lit::Str(literal),
+                    ..
+                }),
             ..
-        }) = &a.meta {
+        }) = &a.meta
+        {
             if path.is_ident(&ident) {
                 if !desc.is_empty() {
                     desc.push(' ');

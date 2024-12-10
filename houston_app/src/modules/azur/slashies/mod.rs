@@ -10,7 +10,7 @@ use choices::*;
 /// Information about mobile game Azur Lane.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
 pub mod azur {
     /// Shows information about a ship.
@@ -20,14 +20,17 @@ pub mod azur {
         #[description = "The ship's name. This supports auto completion."]
         #[autocomplete = "autocomplete::ship_name"]
         name: &str,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
         let ship = find::ship(data, name)?;
 
         let view = buttons::ship::View::new(ship.group_id);
-        ctx.send(view.create_with_ship(data, ship, None).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(
+            view.create_with_ship(data, ship, None)
+                .ephemeral(ephemeral.into_ephemeral()),
+        )
+        .await?;
         Ok(())
     }
 
@@ -35,20 +38,16 @@ pub mod azur {
     #[sub_command(name = "search-ship")]
     async fn search_ship(
         ctx: Context<'_>,
-        #[description = "A name to search for."]
-        name: Option<&str>,
-        #[description = "The faction to select."]
-        faction: Option<EFaction>,
+        #[description = "A name to search for."] name: Option<&str>,
+        #[description = "The faction to select."] faction: Option<EFaction>,
         #[description = "The hull type to select."]
         #[name = "hull-type"]
         hull_type: Option<EHullType>,
-        #[description = "The rarity to select."]
-        rarity: Option<EShipRarity>,
+        #[description = "The rarity to select."] rarity: Option<EShipRarity>,
         #[description = "Whether the ships have a unique augment."]
         #[name = "has-augment"]
         has_augment: Option<bool>,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         use buttons::search_ship::*;
 
@@ -59,11 +58,12 @@ pub mod azur {
             faction: faction.map(EFaction::convert),
             hull_type: hull_type.map(EHullType::convert),
             rarity: rarity.map(EShipRarity::convert),
-            has_augment
+            has_augment,
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+            .await?;
 
         Ok(())
     }
@@ -75,14 +75,17 @@ pub mod azur {
         #[description = "The equipment name. This supports auto completion."]
         #[autocomplete = "autocomplete::equip_name"]
         name: &str,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
         let equip = find::equip(data, name)?;
 
         let view = buttons::equip::View::new(equip.equip_id);
-        ctx.send(view.create_with_equip(equip).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(
+            view.create_with_equip(equip)
+                .ephemeral(ephemeral.into_ephemeral()),
+        )
+        .await?;
         Ok(())
     }
 
@@ -90,16 +93,11 @@ pub mod azur {
     #[sub_command(name = "search-equip")]
     async fn search_equip(
         ctx: Context<'_>,
-        #[description = "A name to search for."]
-        name: Option<&str>,
-        #[description = "The faction to select."]
-        faction: Option<EFaction>,
-        #[description = "The kind to select."]
-        kind: Option<EEquipKind>,
-        #[description = "The rarity to select."]
-        rarity: Option<EEquipRarity>,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "A name to search for."] name: Option<&str>,
+        #[description = "The faction to select."] faction: Option<EFaction>,
+        #[description = "The kind to select."] kind: Option<EEquipKind>,
+        #[description = "The rarity to select."] rarity: Option<EEquipRarity>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         use buttons::search_equip::*;
 
@@ -113,7 +111,8 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+            .await?;
 
         Ok(())
     }
@@ -125,14 +124,17 @@ pub mod azur {
         #[description = "The equipment name. This supports auto completion."]
         #[autocomplete = "autocomplete::augment_name"]
         name: &str,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
         let augment = find::augment(data, name)?;
 
         let view = buttons::augment::View::new(augment.augment_id);
-        ctx.send(view.create_with_augment(data, augment).ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(
+            view.create_with_augment(data, augment)
+                .ephemeral(ephemeral.into_ephemeral()),
+        )
+        .await?;
         Ok(())
     }
 
@@ -140,19 +142,16 @@ pub mod azur {
     #[sub_command(name = "search-augment")]
     async fn search_augment(
         ctx: Context<'_>,
-        #[description = "A name to search for."]
-        name: Option<&str>,
+        #[description = "A name to search for."] name: Option<&str>,
         #[description = "The allowed hull type."]
         #[name = "hull-type"]
         hull_type: Option<EHullType>,
-        #[description = "The rarity to select."]
-        rarity: Option<EAugmentRarity>,
+        #[description = "The rarity to select."] rarity: Option<EAugmentRarity>,
         #[description = "The name of the ship it is uniquely for."]
         #[autocomplete = "autocomplete::ship_name"]
         #[name = "for-ship"]
         for_ship: Option<&str>,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         use buttons::search_augment::*;
 
@@ -171,7 +170,8 @@ pub mod azur {
         };
 
         let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral())).await?;
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+            .await?;
 
         Ok(())
     }
@@ -181,14 +181,15 @@ pub mod azur {
     async fn reload_time(
         ctx: Context<'_>,
         #[description = "The ship's RLD stat."]
-        #[min = 1] #[max = 999]
+        #[min = 1]
+        #[max = 999]
         rld: f64,
         #[description = "The weapon's base FR in seconds."]
-        #[min = 0.0] #[max = 60.0]
+        #[min = 0.0]
+        #[max = 60.0]
         #[name = "weapon-fr"]
         weapon_reload: f64,
-        #[description = "Whether to show the response only to yourself."]
-        ephemeral: Option<bool>,
+        #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
     ) -> Result {
         let reload_time = (200.0 / (100.0 + rld)).sqrt() * weapon_reload;
 

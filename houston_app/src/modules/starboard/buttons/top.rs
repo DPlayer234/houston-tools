@@ -1,13 +1,10 @@
 use bson::doc;
-
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
-use crate::modules::starboard::get_board;
-use crate::modules::starboard::model;
-use crate::modules::starboard::BoardId;
+use crate::modules::starboard::{get_board, model, BoardId};
 
 // View the leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -63,7 +60,11 @@ impl View {
             writeln_str!(
                 description,
                 "{}. <@{}>: {} {} from {} post(s)",
-                offset + index, item.user, item.score, board.emoji.as_emoji(), item.post_count,
+                offset + index,
+                item.user,
+                item.score,
+                board.emoji.as_emoji(),
+                item.post_count,
             );
         }
 
@@ -100,10 +101,7 @@ impl View {
             .as_slice()
             .to_vec();
 
-        let reply = CreateReply::new()
-            .embed(embed)
-            .components(components);
-
+        let reply = CreateReply::new().embed(embed).components(components);
         Ok(reply)
     }
 }

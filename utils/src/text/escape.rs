@@ -29,8 +29,8 @@ pub struct EscapeByChar<'a, P, F> {
 impl<'a, P, F> EscapeByChar<'a, P, F> {
     /// Produces an equivalent value with the `pat` and `escape_as` used by-ref.
     ///
-    /// This is only necessary when the original value is not [`Copy`] and
-    /// is consumed for some reason, f.e. by calling [`EscapeByChar::into_iter`].
+    /// This is only necessary when the original value is not [`Copy`] and is
+    /// consumed for some reason, f.e. by calling [`EscapeByChar::into_iter`].
     pub fn by_ref(&self) -> EscapeByChar<'a, &P, &F> {
         EscapeByChar {
             source: self.source,
@@ -55,7 +55,7 @@ where
                     for c in (self.escape_as)(sep) {
                         f.write_char(c)?;
                     }
-                }
+                },
                 _ => f.write_str(part)?,
             }
         }
@@ -146,7 +146,10 @@ mod test {
         let source = black_box("**hello world!** it is a _great_ day.");
         let escaped = escape_by_char(source, |c| matches!(c, '*' | '_'), |c| ['\\', c]);
 
-        assert_eq!(escaped.to_string(), r#"\*\*hello world!\*\* it is a \_great\_ day."#);
+        assert_eq!(
+            escaped.to_string(),
+            r#"\*\*hello world!\*\* it is a \_great\_ day."#
+        );
     }
 
     #[test]
@@ -154,6 +157,9 @@ mod test {
         let source = black_box("**hello world!** it is a _great_ day.");
         let escaped = escape_by_char(source, |c| matches!(c, '*' | '_'), |c| ['\\', c]).into_iter();
 
-        assert_eq!(escaped.collect::<String>(), r#"\*\*hello world!\*\* it is a \_great\_ day."#);
+        assert_eq!(
+            escaped.collect::<String>(),
+            r#"\*\*hello world!\*\* it is a \_great\_ day."#
+        );
     }
 }

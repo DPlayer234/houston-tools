@@ -6,11 +6,13 @@ use syn::ext::IdentExt;
 use syn::{Attribute, Item, ItemMod, Meta};
 
 use super::command_emit::to_command_option_command;
-
 use crate::args::SubCommandArgs;
 use crate::util::{ensure_spanned, extract_description};
 
-pub fn to_command_option_group(module: &mut ItemMod, name: Option<String>) -> syn::Result<TokenStream> {
+pub fn to_command_option_group(
+    module: &mut ItemMod,
+    name: Option<String>,
+) -> syn::Result<TokenStream> {
     let content_src = match module.content.as_mut() {
         Some(content) => &mut content.1,
         None => return Err(syn::Error::new_spanned(module, "command must have a body")),
@@ -22,32 +24,51 @@ pub fn to_command_option_group(module: &mut ItemMod, name: Option<String>) -> sy
 
     for item in content {
         match item {
-            Item::Fn(mut item) => if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                let args = parse_sub_command_args(&attr.meta)?;
-                let tokens = to_command_option_command(&mut item, args.name)?;
-                sub_commands.push(tokens);
-            } else {
-                return Err(syn::Error::new_spanned(item, "function must be attributed with #[sub_command]"));
+            Item::Fn(mut item) => {
+                if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
+                    let args = parse_sub_command_args(&attr.meta)?;
+                    let tokens = to_command_option_command(&mut item, args.name)?;
+                    sub_commands.push(tokens);
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        item,
+                        "function must be attributed with #[sub_command]",
+                    ));
+                }
             },
-            Item::Mod(mut item) => if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                let args = parse_sub_command_args(&attr.meta)?;
-                let tokens = to_command_option_group(&mut item, args.name)?;
-                sub_commands.push(tokens);
-            } else {
-                return Err(syn::Error::new_spanned(item, "group must be attributed with #[sub_command]"));
+            Item::Mod(mut item) => {
+                if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
+                    let args = parse_sub_command_args(&attr.meta)?;
+                    let tokens = to_command_option_group(&mut item, args.name)?;
+                    sub_commands.push(tokens);
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        item,
+                        "group must be attributed with #[sub_command]",
+                    ));
+                }
             },
             Item::Use(item) => use_items.push(item),
-            _ => return Err(syn::Error::new_spanned(item, "only `use`, `fn`, and `mod` items are allowed in a #[chat_command]")),
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    item,
+                    "only `use`, `fn`, and `mod` items are allowed in a #[chat_command]",
+                ))
+            },
         }
     }
 
     if sub_commands.is_empty() {
-        return Err(syn::Error::new_spanned(module, "command group must have at least one #[sub_command] function"));
+        return Err(syn::Error::new_spanned(
+            module,
+            "command group must have at least one #[sub_command] function",
+        ));
     }
 
     let name = name.unwrap_or_else(|| module.ident.unraw().to_string());
-    let description = extract_description(&module.attrs)
-        .ok_or_else(|| syn::Error::new_spanned(&module, "a description is required, add a doc comment"))?;
+    let description = extract_description(&module.attrs).ok_or_else(|| {
+        syn::Error::new_spanned(&module, "a description is required, add a doc comment")
+    })?;
 
     ensure_spanned!(module, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
     ensure_spanned!(module, (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");

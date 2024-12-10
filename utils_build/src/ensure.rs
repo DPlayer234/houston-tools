@@ -12,7 +12,8 @@ macro_rules! or {
 
 /// Ensures that the value is [`Ok`], and if so evaluates to its inner value.
 ///
-/// Otherwise, prints the specified warning and returns `()` from the current function.
+/// Otherwise, prints the specified warning and returns `()` from the current
+/// function.
 macro_rules! ok_or {
     ($value:expr, $why:pat => $($t:tt)*) => {
         match $value {
@@ -22,5 +23,4 @@ macro_rules! ok_or {
     };
 }
 
-pub(crate) use or;
-pub(crate) use ok_or;
+pub(crate) use {ok_or, or};

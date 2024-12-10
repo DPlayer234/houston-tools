@@ -33,10 +33,7 @@ impl<'a> CreateReply<'a> {
     }
 
     /// Set components for this message.
-    pub fn components(
-        mut self,
-        components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
-    ) -> Self {
+    pub fn components(mut self, components: impl Into<Cow<'a, [CreateActionRow<'a>]>>) -> Self {
         self.components = components.into();
         self
     }
@@ -63,7 +60,14 @@ impl<'a> CreateReply<'a> {
 
     /// Creates an interaction response message from the builder.
     pub fn into_interaction_response(self) -> CreateInteractionResponseMessage<'a> {
-        let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            ephemeral,
+            allowed_mentions,
+        } = self;
 
         let mut builder = CreateInteractionResponseMessage::new()
             .content(content)
@@ -83,7 +87,14 @@ impl<'a> CreateReply<'a> {
 
     /// Creates an interaction followup from the builder.
     pub fn into_interaction_followup(self) -> CreateInteractionResponseFollowup<'a> {
-        let Self { content, embeds, attachments, components, ephemeral, allowed_mentions } = self;
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            ephemeral,
+            allowed_mentions,
+        } = self;
 
         let mut builder = CreateInteractionResponseFollowup::new()
             .content(content)
@@ -103,7 +114,14 @@ impl<'a> CreateReply<'a> {
 
     /// Creates an interaction edit from the builder.
     pub fn into_interaction_edit(self) -> EditInteractionResponse<'a> {
-        let Self { content, embeds, attachments, components, ephemeral: _, allowed_mentions } = self;
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            ephemeral: _,
+            allowed_mentions,
+        } = self;
 
         let mut builder = EditInteractionResponse::new()
             .content(content)

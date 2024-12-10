@@ -5,8 +5,7 @@ use azur_lane::ship::*;
 use utils::join;
 use utils::text::write_str::*;
 
-use super::get_ship_preview_name;
-use super::AzurParseError;
+use super::{get_ship_preview_name, AzurParseError};
 use crate::buttons::prelude::*;
 
 /// View general ship details.
@@ -20,17 +19,25 @@ pub struct View {
 }
 
 /// The affinity used to calculate stat values.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum ViewAffinity {
     Neutral,
     Love,
-    Oath
+    Oath,
 }
 
 impl View {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
-        Self { ship_id, level: 120, affinity: ViewAffinity::Love, retrofit: None, back: None }
+        Self {
+            ship_id,
+            level: 120,
+            affinity: ViewAffinity::Love,
+            retrofit: None,
+            back: None,
+        }
     }
 
     /// Sets the back button target.
@@ -53,8 +60,9 @@ impl View {
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
-                create = create.attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
-                embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+                let filename = format!("{}.webp", skin.image_key);
+                embed = embed.thumbnail(format!("attachment://{}", filename));
+                create = create.attachment(CreateAttachment::bytes(image_data, filename));
             }
         }
 
@@ -82,7 +90,10 @@ impl View {
             embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
 
             if Some(skin.image_key.as_str()) != get_ship_preview_name(ctx) {
-                create = create.new_attachment(CreateAttachment::bytes(image_data, format!("{}.webp", skin.image_key)));
+                create = create.new_attachment(CreateAttachment::bytes(
+                    image_data,
+                    format!("{}.webp", skin.image_key),
+                ));
             }
         } else {
             create = create.clear_attachments();
@@ -99,8 +110,11 @@ impl View {
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
         let description = format!(
             "[{}] {:★<star_pad$}\n{} {} {}",
-            ship.rarity.name(), '★',
-            data.app_emojis().hull(ship.hull_type), ship.faction.name(), ship.hull_type.name(),
+            ship.rarity.name(),
+            '★',
+            data.app_emojis().hull(ship.hull_type),
+            ship.faction.name(),
+            ship.hull_type.name(),
             star_pad = usize::from(ship.stars)
         );
 
@@ -122,18 +136,23 @@ impl View {
 
     fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow<'_>>) {
         let mut row = vec![
-            self.button_with_level(120)
-                .label("Lv.120"),
-            self.button_with_level(125)
-                .label("Lv.125"),
+            self.button_with_level(120).label("Lv.120"),
+            self.button_with_level(125).label("Lv.125"),
             self.button_with_affinity(ViewAffinity::Love)
-                .emoji('❤').label("100"),
+                .emoji('❤')
+                .label("100"),
             self.button_with_affinity(ViewAffinity::Oath)
-                .emoji('💗').label("200"),
+                .emoji('💗')
+                .label("200"),
         ];
 
         if let Some(back) = &self.back {
-            row.insert(0, CreateButton::new(back.to_custom_id()).emoji('⏪').label("Back"));
+            row.insert(
+                0,
+                CreateButton::new(back.to_custom_id())
+                    .emoji('⏪')
+                    .label("Back"),
+            );
         }
 
         rows.push(CreateActionRow::buttons(row));
@@ -145,7 +164,7 @@ impl View {
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
-            use super::skill::{View, ShipViewSource};
+            use super::skill::{ShipViewSource, View};
 
             let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
             let view_skill = View::with_back(source, self_custom_data.clone());
@@ -180,33 +199,37 @@ impl View {
     }
 
     fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
-        let base_button = self.button_with_retrofit(None)
-            .label("Base");
+        let base_button = self.button_with_retrofit(None).label("Base");
 
         match base_ship.retrofits.len() {
             0 => {},
             1 => rows.push(CreateActionRow::buttons(vec![
                 base_button,
-                self.button_with_retrofit(Some(0))
-                    .label("Retrofit")
+                self.button_with_retrofit(Some(0)).label("Retrofit"),
             ])),
             _ => rows.push(CreateActionRow::buttons(
                 iter::once(base_button)
                     .chain(self.multi_retro_buttons(base_ship))
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>(),
             )),
         };
     }
 
-    fn multi_retro_buttons<'a, 'b>(&'a mut self, base_ship: &'a ShipData) -> impl Iterator<Item = CreateButton<'b>> + 'a {
-        base_ship.retrofits.iter()
+    fn multi_retro_buttons<'a, 'b>(
+        &'a mut self,
+        base_ship: &'a ShipData,
+    ) -> impl Iterator<Item = CreateButton<'b>> + 'a {
+        base_ship
+            .retrofits
+            .iter()
             .enumerate()
             .filter_map(|(index, retro)| {
                 let index = u8::try_from(index).ok()?;
 
                 // using team_type for the label since currently only DDGs have multiple
                 // retro states and their main identifier is what fleet they go in
-                let result = self.button_with_retrofit(Some(index))
+                let result = self
+                    .button_with_retrofit(Some(index))
                     .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
 
                 Some(result)
@@ -225,7 +248,9 @@ impl View {
 
     /// Creates a button that redirects to a retrofit state.
     fn button_with_retrofit<'a>(&mut self, retrofit: Option<u8>) -> CreateButton<'a> {
-        self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| u.map_or(u16::MAX, u16::from))
+        self.new_button(utils::field_mut!(Self: retrofit), retrofit, |u| {
+            u.map_or(u16::MAX, u16::from)
+        })
     }
 
     /// Creates the embed field that display the stats.
@@ -235,9 +260,13 @@ impl View {
 
         #[allow(clippy::cast_sign_loss)]
         #[allow(clippy::cast_possible_truncation)]
-        fn f(n: f64) -> u32 { n.floor() as u32 }
+        fn f(n: f64) -> u32 {
+            n.floor() as u32
+        }
         macro_rules! s {
-            ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
+            ($val:expr) => {{
+                f($val.calc(u32::from(self.level), affinity))
+            }};
         }
 
         let content = if ship.hull_type.team_type() != TeamType::Submarine {
@@ -247,11 +276,19 @@ impl View {
                  **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
                  **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
                  **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
-                s!(stats.hp), stats.armor.name(), s!(stats.rld),
-                s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                s!(stats.asw), f(stats.spd),
-                f(stats.lck), stats.cost
+                s!(stats.hp),
+                stats.armor.name(),
+                s!(stats.rld),
+                s!(stats.fp),
+                s!(stats.trp),
+                s!(stats.eva),
+                s!(stats.aa),
+                s!(stats.avi),
+                s!(stats.acc),
+                s!(stats.asw),
+                f(stats.spd),
+                f(stats.lck),
+                stats.cost
             )
         } else {
             format!(
@@ -260,11 +297,20 @@ impl View {
                  **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
                  **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
                  **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
-                s!(stats.hp), stats.armor.name(), s!(stats.rld),
-                s!(stats.fp), s!(stats.trp), s!(stats.eva),
-                s!(stats.aa), s!(stats.avi), s!(stats.acc),
-                stats.oxy, stats.amo, f(stats.spd),
-                f(stats.lck), stats.cost
+                s!(stats.hp),
+                stats.armor.name(),
+                s!(stats.rld),
+                s!(stats.fp),
+                s!(stats.trp),
+                s!(stats.eva),
+                s!(stats.aa),
+                s!(stats.avi),
+                s!(stats.acc),
+                stats.oxy,
+                stats.amo,
+                f(stats.spd),
+                f(stats.lck),
+                stats.cost
             )
         };
 
@@ -273,17 +319,28 @@ impl View {
 
     /// Creates the embed field that displays the weapon equipment slots.
     fn get_equip_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
-        let slots = ship.equip_slots.iter()
+        let slots = ship
+            .equip_slots
+            .iter()
             .filter_map(|e| e.mount.as_ref().map(|m| (&e.allowed, m)));
 
         let mut text = String::new();
         for (allowed, mount) in slots {
-            if !text.is_empty() { text.push('\n'); }
+            if !text.is_empty() {
+                text.push('\n');
+            }
 
-            write_str!(text, "**`{: >3.0}%`**`x{}` ", mount.efficiency * 100f64, mount.mounts);
+            write_str!(
+                text,
+                "**`{: >3.0}%`**`x{}` ",
+                mount.efficiency * 100f64,
+                mount.mounts
+            );
 
             for (index, &kind) in allowed.iter().enumerate() {
-                if index != 0 { text.push('/'); }
+                if index != 0 {
+                    text.push('/');
+                }
                 text.push_str(to_equip_slot_display(kind));
             }
 
@@ -297,12 +354,21 @@ impl View {
         }
 
         for mount in &ship.shadow_equip {
-            if !text.is_empty() { text.push('\n'); }
-            write_str!(text, "-# **`{: >3.0}%`** {}", mount.efficiency * 100f64, mount.name);
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            write_str!(
+                text,
+                "-# **`{: >3.0}%`** {}",
+                mount.efficiency * 100f64,
+                mount.name
+            );
         }
 
         for equip in &ship.depth_charges {
-            if !text.is_empty() { text.push('\n'); }
+            if !text.is_empty() {
+                text.push('\n');
+            }
             write_str!(text, "-# **`ASW:`** {}", equip.name);
         }
 
@@ -310,20 +376,28 @@ impl View {
     }
 
     /// Creates the embed field that display the skill summary.
-    fn get_skills_field<'a>(&self, data: &HBotData, ship: &ShipData) -> Option<SimpleEmbedFieldCreate<'a>> {
+    fn get_skills_field<'a>(
+        &self,
+        data: &HBotData,
+        ship: &ShipData,
+    ) -> Option<SimpleEmbedFieldCreate<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
         (!ship.skills.is_empty()).then(|| {
             let mut text = String::new();
             for s in &ship.skills {
-                if !text.is_empty() { text.push('\n'); }
+                if !text.is_empty() {
+                    text.push('\n');
+                }
                 write_str!(text, "{} **{}**", s.category.emoji(), s.name);
             }
 
             let augments = data.azur_lane().augments_by_ship_id(ship.group_id);
             for augment in augments {
-                if !text.is_empty() { text.push('\n'); }
+                if !text.is_empty() {
+                    text.push('\n');
+                }
                 write_str!(text, "-# UA: **{}**", augment.name);
             }
 
@@ -334,11 +408,20 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let ship = ctx.data.azur_lane().ship_by_id(self.ship_id).ok_or(AzurParseError::Ship)?;
-        Ok(match self.retrofit.and_then(|index| ship.retrofits.get(usize::from(index))) {
-            None => self.edit_with_ship(&ctx, ship, None),
-            Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship))
-        })
+        let ship = ctx
+            .data
+            .azur_lane()
+            .ship_by_id(self.ship_id)
+            .ok_or(AzurParseError::Ship)?;
+        Ok(
+            match self
+                .retrofit
+                .and_then(|index| ship.retrofits.get(usize::from(index)))
+            {
+                None => self.edit_with_ship(&ctx, ship, None),
+                Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship)),
+            },
+        )
     }
 }
 

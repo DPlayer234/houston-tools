@@ -6,8 +6,7 @@ use crate::modules::prelude::*;
 mod rainbow_role;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq,
-    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
+    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
 )]
 pub enum Effect {
     RainbowRole,
@@ -22,7 +21,11 @@ pub struct Args<'a> {
 
 impl<'a> Args<'a> {
     pub fn new(ctx: &'a Context, guild_id: GuildId, user_id: UserId) -> Self {
-        Self { ctx, guild_id, user_id }
+        Self {
+            ctx,
+            guild_id,
+            user_id,
+        }
     }
 }
 
@@ -72,16 +75,24 @@ impl Effect {
     impl_kind_fn!(update(args: &Context) -> Result);
 
     pub fn all() -> &'static [Self] {
-        &[
-            Self::RainbowRole,
-        ]
+        &[Self::RainbowRole]
     }
 
     pub fn info(self, perks: &Config) -> EffectInfo<'_> {
+        const UNSET: EffectInfo<'_> = EffectInfo {
+            name: "Unset Effect",
+            description: "Effect is not configured.",
+        };
+
         match self {
-            Self::RainbowRole => perks.rainbow.as_ref()
-                .map(|r| EffectInfo { name: &r.name, description: &r.description })
-                .unwrap_or(const { EffectInfo { name: "Rainbow Role", description: "A role with regularly changing color." } }),
+            Self::RainbowRole => perks
+                .rainbow
+                .as_ref()
+                .map(|r| EffectInfo {
+                    name: &r.name,
+                    description: &r.description,
+                })
+                .unwrap_or(UNSET),
         }
     }
 

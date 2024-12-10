@@ -1,7 +1,8 @@
 //! Support for styling terminal text via ANSI escape sequences.
 //!
-//! There isn't any magic here, just [`str`] constants with the escape sequences,
-//! so you will need to ensure support yourself or via [`super::supports_ansi_escapes`].
+//! There isn't any magic here, just [`str`] constants with the escape
+//! sequences, so you will need to ensure support yourself or via
+//! [`super::supports_ansi_escapes`].
 //!
 //! # Examples
 //!

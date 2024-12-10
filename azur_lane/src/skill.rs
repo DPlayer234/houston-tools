@@ -10,8 +10,8 @@ use crate::equip::Weapon;
 pub struct Skill {
     /// The skill's ID.
     ///
-    /// This is named `buff_id` since skills, as shown in-game, actually refer to buffs.
-    /// A buff stays attached, while a skill is an instant effect.
+    /// This is named `buff_id` since skills, as shown in-game, actually refer
+    /// to buffs. A buff stays attached, while a skill is an instant effect.
     pub buff_id: u32,
     /// The skill's name.
     pub name: String,

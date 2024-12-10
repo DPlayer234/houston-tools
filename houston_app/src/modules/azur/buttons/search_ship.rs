@@ -9,7 +9,7 @@ use crate::modules::core::buttons::ToPage;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
-    filter: Filter
+    filter: Filter,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -18,7 +18,7 @@ pub struct Filter {
     pub faction: Option<Faction>,
     pub hull_type: Option<HullType>,
     pub rarity: Option<ShipRarity>,
-    pub has_augment: Option<bool>
+    pub has_augment: Option<bool>,
 }
 
 const PAGE_SIZE: usize = 15;
@@ -42,17 +42,22 @@ impl View {
             writeln_str!(
                 desc,
                 "- {emoji} **{}** [{} {} {}]",
-                ship.name, ship.rarity.name(), ship.faction.prefix().unwrap_or("Col."), ship.hull_type.designation(),
+                ship.name,
+                ship.rarity.name(),
+                ship.faction.prefix().unwrap_or("Col."),
+                ship.hull_type.designation(),
             );
 
             let view_ship = super::ship::View::new(ship.group_id).back(self.to_custom_data());
-            options.push(CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id()).emoji(emoji.clone()));
+            options.push(
+                CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id())
+                    .emoji(emoji.clone()),
+            );
         }
 
         super::pagination!(rows => self, options, iter);
 
-        let author = CreateEmbedAuthor::new("Ships")
-            .url(config::azur_lane::SHIP_LIST_URL);
+        let author = CreateEmbedAuthor::new("Ships").url(config::azur_lane::SHIP_LIST_URL);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -69,7 +74,8 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let filtered = self.filter
+        let filtered = self
+            .filter
             .iterate(data.azur_lane())
             .skip(PAGE_SIZE * usize::from(self.page));
 
@@ -96,7 +102,11 @@ impl Filter {
         }
     }
 
-    fn apply_filter<'a, I>(&self, data: &'a HAzurLane, iter: I) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
+    fn apply_filter<'a, I>(
+        &self,
+        data: &'a HAzurLane,
+        iter: I,
+    ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
     where
         I: Iterator<Item = &'a ShipData> + 'a,
     {
@@ -105,15 +115,14 @@ impl Filter {
                 fn $fn_name<'a>(
                     f: &Filter,
                     data: &'a HAzurLane,
-                    iter: impl Iterator<Item = &'a ShipData> + 'a
-                ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
-                {
+                    iter: impl Iterator<Item = &'a ShipData> + 'a,
+                ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
                     match f.$field {
                         Some(filter) => $next(f, data, iter.filter(move |s| s.$field == filter)),
-                        None => $next(f, data, iter)
+                        None => $next(f, data, iter),
                     }
                 }
-            }
+            };
         }
 
         def_and_filter!(next_faction: faction => next_hull_type);
@@ -123,11 +132,12 @@ impl Filter {
         fn next_has_augment<'a>(
             f: &Filter,
             data: &'a HAzurLane,
-            iter: impl Iterator<Item = &'a ShipData> + 'a
-        ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
-        {
+            iter: impl Iterator<Item = &'a ShipData> + 'a,
+        ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
             match f.has_augment {
-                Some(filter) => Box::new(iter.filter(move |s| data.augments_by_ship_id(s.group_id).next().is_some() == filter)),
+                Some(filter) => Box::new(iter.filter(move |s| {
+                    data.augments_by_ship_id(s.group_id).next().is_some() == filter
+                })),
                 None => Box::new(iter),
             }
         }

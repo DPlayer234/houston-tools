@@ -15,7 +15,6 @@ pub enum Error {
         // here would be 'static so this would require introducing a lifetime on
         // the error and result types which would make it impossible to cast it to
         // an `anyhow::Error`.
-
         /// The name of the expected data type.
         expected: String,
         /// The name of the received data type.

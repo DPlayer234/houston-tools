@@ -1,6 +1,5 @@
 use bson::doc;
 use chrono::*;
-
 use utils::text::write_str::*;
 
 use crate::fmt::discord::TimeMentionable;
@@ -15,19 +14,16 @@ use crate::slashies::prelude::*;
     name = "perk-admin",
     default_member_permissions = "MANAGE_GUILD",
     contexts = "Guild",
-    integration_types = "Guild",
+    integration_types = "Guild"
 )]
 pub mod perk_admin {
     /// Enables a perk for a member.
     #[sub_command]
     async fn enable(
         ctx: Context<'_>,
-        #[description = "The member to enable the perk for."]
-        member: SlashMember<'_>,
-        #[description = "The perk to enable."]
-        perk: Effect,
-        #[description = "How long to enable it for, in hours."]
-        duration: u32,
+        #[description = "The member to enable the perk for."] member: SlashMember<'_>,
+        #[description = "The perk to enable."] perk: Effect,
+        #[description = "How long to enable it for, in hours."] duration: u32,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -35,8 +31,7 @@ pub mod perk_admin {
         let db = data.database()?;
         let args = Args::new(ctx.serenity, guild_id, member.user.id);
 
-        let duration = TimeDelta::try_hours(i64::from(duration))
-            .context("too many hours")?;
+        let duration = TimeDelta::try_hours(i64::from(duration)).context("too many hours")?;
 
         let until = Utc::now()
             .checked_add_signed(duration)
@@ -51,7 +46,9 @@ pub mod perk_admin {
 
         let description = format!(
             "Enabled **{}** for {} until {}.",
-            perk.info(perks).name, member.mention(), until.short_date_time(),
+            perk.info(perks).name,
+            member.mention(),
+            until.short_date_time(),
         );
 
         let embed = CreateEmbed::new()
@@ -66,10 +63,8 @@ pub mod perk_admin {
     #[sub_command]
     async fn disable(
         ctx: Context<'_>,
-        #[description = "The member to disable the perk for."]
-        member: SlashMember<'_>,
-        #[description = "The perk to disable."]
-        perk: Effect,
+        #[description = "The member to disable the perk for."] member: SlashMember<'_>,
+        #[description = "The perk to disable."] perk: Effect,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -86,7 +81,8 @@ pub mod perk_admin {
 
         let description = format!(
             "Disabled **{}** for {}.",
-            perk.info(perks).name, member.mention(),
+            perk.info(perks).name,
+            member.mention(),
         );
 
         let embed = CreateEmbed::new()
@@ -101,8 +97,7 @@ pub mod perk_admin {
     #[sub_command]
     async fn list(
         ctx: Context<'_>,
-        #[description = "The member to check."]
-        member: SlashMember<'_>,
+        #[description = "The member to check."] member: SlashMember<'_>,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -115,9 +110,7 @@ pub mod perk_admin {
             "user": bson_id!(member.user.id),
         };
 
-        let mut query = ActivePerk::collection(db)
-            .find(filter)
-            .await?;
+        let mut query = ActivePerk::collection(db).find(filter).await?;
 
         let mut description = String::new();
 
@@ -125,16 +118,14 @@ pub mod perk_admin {
             writeln_str!(
                 description,
                 "- **{}:** Ends {}",
-                perk.effect.info(perks).name, perk.until.short_date_time(),
+                perk.effect.info(perks).name,
+                perk.until.short_date_time(),
             );
         }
 
         let description = crate::fmt::written_or(description, "<None>");
 
-        let title = format!(
-            "{}'s Perks",
-            member.display_name(),
-        );
+        let title = format!("{}'s Perks", member.display_name());
 
         let embed = CreateEmbed::new()
             .title(title)
@@ -149,12 +140,9 @@ pub mod perk_admin {
     #[sub_command]
     async fn give(
         ctx: Context<'_>,
-        #[description = "The member to give items to."]
-        member: SlashMember<'_>,
-        #[description = "The item to hand out."]
-        item: Item,
-        #[description = "How many items to give. Negative to remove."]
-        amount: i32,
+        #[description = "The member to give items to."] member: SlashMember<'_>,
+        #[description = "The item to hand out."] item: Item,
+        #[description = "How many items to give. Negative to remove."] amount: i32,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -168,7 +156,9 @@ pub mod perk_admin {
 
         let description = format!(
             "Set **{}** to {} for {}.",
-            item.info(perks).name, wallet.item(item), member.mention(),
+            item.info(perks).name,
+            wallet.item(item),
+            member.mention(),
         );
 
         let embed = CreateEmbed::new()
@@ -183,10 +173,8 @@ pub mod perk_admin {
     #[sub_command(name = "unique-role")]
     async fn unique_role(
         ctx: Context<'_>,
-        #[description = "The member to give items to."]
-        member: SlashMember<'_>,
-        #[description = "The role to set as being unique to them."]
-        role: Option<&Role>,
+        #[description = "The member to give items to."] member: SlashMember<'_>,
+        #[description = "The role to set as being unique to them."] role: Option<&Role>,
     ) -> Result {
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
@@ -216,17 +204,13 @@ pub mod perk_admin {
 
             format!(
                 "Set {}'s unique role to be {}.",
-                member.mention(), role.mention(),
+                member.mention(),
+                role.mention(),
             )
         } else {
-            UniqueRole::collection(db)
-                .delete_one(filter)
-                .await?;
+            UniqueRole::collection(db).delete_one(filter).await?;
 
-            format!(
-                "Unset {}'s unique role.",
-                member.mention(),
-            )
+            format!("Unset {}'s unique role.", member.mention())
         };
 
         let embed = CreateEmbed::new()

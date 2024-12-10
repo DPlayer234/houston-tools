@@ -26,7 +26,9 @@ macro_rules! declare_context {
 
                 if !has_sent {
                     let reply = CreateInteractionResponse::Acknowledge;
-                    self.interaction.create_response(&self.serenity.http, reply).await?;
+                    self.interaction
+                        .create_response(&self.serenity.http, reply)
+                        .await?;
                     self.reply_state.store(true, Ordering::Relaxed);
                 }
 
@@ -40,9 +42,11 @@ macro_rules! declare_context {
                 if !has_sent {
                     let reply = CreateInteractionResponse::Defer(
                         CreateInteractionResponseMessage::new()
-                            .ephemeral(ephemeral.into_ephemeral())
+                            .ephemeral(ephemeral.into_ephemeral()),
                     );
-                    self.interaction.create_response(&self.serenity.http, reply).await?;
+                    self.interaction
+                        .create_response(&self.serenity.http, reply)
+                        .await?;
                     self.reply_state.store(true, Ordering::Relaxed);
                 }
 
@@ -55,11 +59,15 @@ macro_rules! declare_context {
 
                 if has_sent {
                     let reply = create.into_interaction_followup();
-                    self.interaction.create_followup(&self.serenity.http, reply).await?;
+                    self.interaction
+                        .create_followup(&self.serenity.http, reply)
+                        .await?;
                 } else {
                     let reply = create.into_interaction_response();
                     let reply = CreateInteractionResponse::Message(reply);
-                    self.interaction.create_response(&self.serenity.http, reply).await?;
+                    self.interaction
+                        .create_response(&self.serenity.http, reply)
+                        .await?;
                     self.reply_state.store(true, Ordering::Relaxed);
                 }
 
@@ -72,9 +80,16 @@ macro_rules! declare_context {
 
                 if has_sent {
                     let reply = edit.into_interaction_edit();
-                    self.interaction.edit_response(&self.serenity.http, reply).await?;
+                    self.interaction
+                        .edit_response(&self.serenity.http, reply)
+                        .await?;
                 } else {
-                    edit.execute_as_response(&self.serenity.http, self.interaction.id, &self.interaction.token).await?;
+                    edit.execute_as_response(
+                        &self.serenity.http,
+                        self.interaction.id,
+                        &self.interaction.token,
+                    )
+                    .await?;
                     self.reply_state.store(true, Ordering::Relaxed);
                 }
 
@@ -90,13 +105,16 @@ declare_context!(ModalContext, ModalInteraction);
 impl ButtonContext<'_> {
     /// Opens a modal for the user.
     ///
-    /// This must be the first response and you cannot defer or acknowledge before this.
+    /// This must be the first response and you cannot defer or acknowledge
+    /// before this.
     pub async fn modal(&self, modal: CreateModal<'_>) -> Result {
         let has_sent = self.reply_state.load(Ordering::Relaxed);
         anyhow::ensure!(!has_sent, "cannot send modals after initial response");
 
         let reply = CreateInteractionResponse::Modal(modal);
-        self.interaction.create_response(&self.serenity.http, reply).await?;
+        self.interaction
+            .create_response(&self.serenity.http, reply)
+            .await?;
         self.reply_state.store(true, Ordering::Relaxed);
         Ok(())
     }

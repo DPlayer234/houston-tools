@@ -1,5 +1,4 @@
 use bson::doc;
-
 use utils::text::write_str::*;
 
 use crate::helper::bson::bson_id;
@@ -8,14 +7,10 @@ use crate::modules::perks::Item;
 use crate::slashies::prelude::*;
 
 /// View your server wallet.
-#[chat_command(
-    contexts = "Guild",
-    integration_types = "Guild",
-)]
+#[chat_command(contexts = "Guild", integration_types = "Guild")]
 pub async fn wallet(
     ctx: Context<'_>,
-    #[description = "Whether to show the response only to yourself."]
-    ephemeral: Option<bool>,
+    #[description = "Whether to show the response only to yourself."] ephemeral: Option<bool>,
 ) -> Result {
     let data = ctx.data_ref();
     let guild_id = ctx.require_guild_id()?;
@@ -61,13 +56,7 @@ pub async fn wallet(
 
 fn get_display_info(ctx: Context<'_>) -> (&str, String) {
     match ctx.member() {
-        Some(member) => (
-            member.display_name(),
-            member.face(),
-        ),
-        _ => (
-            ctx.user().display_name(),
-            ctx.user().face(),
-        )
+        Some(member) => (member.display_name(), member.face()),
+        _ => (ctx.user().display_name(), ctx.user().face()),
     }
 }

@@ -10,11 +10,9 @@ use crate::slashies::prelude::*;
 #[chat_command(
     name = "bot-stats",
     contexts = "BotDm",
-    integration_types = "Guild | User",
+    integration_types = "Guild | User"
 )]
-pub async fn bot_stats(
-    ctx: Context<'_>,
-) -> Result {
+pub async fn bot_stats(ctx: Context<'_>) -> Result {
     let data = ctx.data_ref();
 
     let startup = get_startup_time().short_date_time();

@@ -5,8 +5,7 @@ use crate::modules::prelude::*;
 mod collectible;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq,
-    serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
+    Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, houston_cmd::ChoiceArg,
 )]
 pub enum Item {
     Cash,
@@ -44,25 +43,30 @@ impl Item {
     impl_kind_fn!(on_buy(args: Args<'_>, owned: i64) -> Result);
 
     pub fn all() -> &'static [Self] {
-        &[
-            Self::Cash,
-            Self::Pushpin,
-            Self::RoleEdit,
-            Self::Collectible,
-        ]
+        &[Self::Cash, Self::Pushpin, Self::RoleEdit, Self::Collectible]
     }
 
     pub fn info(self, perks: &Config) -> ItemInfo<'_> {
         macro_rules! extract_or {
             ($expr:expr, $name:literal) => {
-                $expr.as_ref()
-                    .map(|c| ItemInfo { name: &c.name, description: &c.description })
-                    .unwrap_or(ItemInfo { name: $name, description: "<Disabled>" })
+                $expr
+                    .as_ref()
+                    .map(|c| ItemInfo {
+                        name: &c.name,
+                        description: &c.description,
+                    })
+                    .unwrap_or(ItemInfo {
+                        name: $name,
+                        description: "<Disabled>",
+                    })
             };
         }
 
         match self {
-            Self::Cash => ItemInfo { name: &perks.cash_name, description: "Illegal tender." },
+            Self::Cash => ItemInfo {
+                name: &perks.cash_name,
+                description: "Illegal tender.",
+            },
             Self::Pushpin => extract_or!(perks.pushpin, "Pushpin"),
             Self::RoleEdit => extract_or!(perks.role_edit, "Role Edit"),
             Self::Collectible => extract_or!(perks.collectible, "Collectible"),

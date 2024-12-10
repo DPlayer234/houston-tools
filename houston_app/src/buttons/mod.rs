@@ -3,11 +3,10 @@ use std::ptr;
 
 use serenity::prelude::*;
 use smallvec::SmallVec;
-
 use utils::fields::FieldMut;
 
-use crate::prelude::*;
 use crate::modules::{azur, core as core_mod, perks, starboard};
+use crate::prelude::*;
 
 mod context;
 #[cfg(test)]
@@ -16,9 +15,12 @@ mod test;
 pub use context::{ButtonContext, ModalContext};
 
 pub mod prelude {
-    pub use crate::prelude::*;
     #[allow(unused_imports)]
-    pub use super::{ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ModalContext, ToCustomData};
+    pub use super::{
+        ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData,
+        ModalContext, ToCustomData,
+    };
+    pub use crate::prelude::*;
 }
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
@@ -142,6 +144,7 @@ impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
 /// Event handler for custom button menus.
 pub mod handler {
     use std::sync::atomic::AtomicBool;
+
     use super::*;
 
     /// To be called in [`EventHandler::interaction_create`].
@@ -156,12 +159,23 @@ pub mod handler {
     async fn dispatch_component(ctx: Context, interaction: ComponentInteraction) {
         let reply_state = AtomicBool::new(false);
         if let Err(err) = handle_component(&ctx, &interaction, &reply_state).await {
-            handle_dispatch_error(ctx, interaction.id, &interaction.token, reply_state.into_inner(), err).await
+            handle_dispatch_error(
+                ctx,
+                interaction.id,
+                &interaction.token,
+                reply_state.into_inner(),
+                err,
+            )
+            .await
         }
     }
 
     /// Handles the component interaction dispatch.
-    async fn handle_component(ctx: &Context, interaction: &ComponentInteraction, reply_state: &AtomicBool) -> Result {
+    async fn handle_component(
+        ctx: &Context,
+        interaction: &ComponentInteraction,
+        reply_state: &AtomicBool,
+    ) -> Result {
         use ComponentInteractionDataKind as Kind;
 
         let custom_id: &str = match &interaction.data.kind {
@@ -178,18 +192,30 @@ pub mod handler {
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
-        }).await
+        })
+        .await
     }
 
     async fn dispatch_modal(ctx: Context, interaction: ModalInteraction) {
         let reply_state = AtomicBool::new(false);
         if let Err(err) = handle_modal(&ctx, &interaction, &reply_state).await {
-            handle_dispatch_error(ctx, interaction.id, &interaction.token, reply_state.into_inner(), err).await
+            handle_dispatch_error(
+                ctx,
+                interaction.id,
+                &interaction.token,
+                reply_state.into_inner(),
+                err,
+            )
+            .await
         }
     }
 
     /// Handles the modal interaction dispatch.
-    async fn handle_modal(ctx: &Context, interaction: &ModalInteraction, reply_state: &AtomicBool) -> Result {
+    async fn handle_modal(
+        ctx: &Context,
+        interaction: &ModalInteraction,
+        reply_state: &AtomicBool,
+    ) -> Result {
         let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
         log::trace!("{}: {:?}", interaction.user.name, args);
 
@@ -198,11 +224,18 @@ pub mod handler {
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
-        }).await
+        })
+        .await
     }
 
     #[cold]
-    async fn handle_dispatch_error(ctx: Context, interaction_id: InteractionId, interaction_token: &str, reply_state: bool, err: anyhow::Error) {
+    async fn handle_dispatch_error(
+        ctx: Context,
+        interaction_id: InteractionId,
+        interaction_token: &str,
+        reply_state: bool,
+        err: anyhow::Error,
+    ) {
         if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
             // print both errors to preserve the stack trace, if present
             log::warn!("Discord interaction error: {ser_err:?} / {err:?}");
@@ -210,9 +243,7 @@ pub mod handler {
         }
 
         let err_text = match err.downcast::<HArgError>() {
-            Ok(err) => {
-                err.msg
-            },
+            Ok(err) => err.msg,
             Err(err) => {
                 log::warn!("Component error: {err:?}");
                 format!("Button error: ```{err}```").into()
@@ -223,17 +254,20 @@ pub mod handler {
             .description(err_text)
             .color(ERROR_EMBED_COLOR);
 
-        let reply = CreateReply::new()
-            .ephemeral(true)
-            .embed(embed);
+        let reply = CreateReply::new().ephemeral(true).embed(embed);
 
         let res = if reply_state {
             let response = reply.into_interaction_followup();
-            response.execute(&ctx.http, None, interaction_token).await.map(|_| ())
+            response
+                .execute(&ctx.http, None, interaction_token)
+                .await
+                .map(|_| ())
         } else {
             let response = reply.into_interaction_response();
             let response = CreateInteractionResponse::Message(response);
-            response.execute(&ctx.http, interaction_id, interaction_token).await
+            response
+                .execute(&ctx.http, interaction_id, interaction_token)
+                .await
         };
 
         if let Err(res) = res {
@@ -256,10 +290,17 @@ pub trait ToCustomData {
     #[must_use]
     fn to_custom_data(&self) -> CustomData;
 
-    /// Creates a new button that would switch to a state where one field is changed.
+    /// Creates a new button that would switch to a state where one field is
+    /// changed.
     ///
-    /// If the field value is the same, instead returns a disabled button with the sentinel value.
-    fn new_button<'a, T: PartialEq>(&mut self, field: impl FieldMut<Self, T>, value: T, sentinel: impl FnOnce(T) -> u16) -> CreateButton<'a> {
+    /// If the field value is the same, instead returns a disabled button with
+    /// the sentinel value.
+    fn new_button<'a, T: PartialEq>(
+        &mut self,
+        field: impl FieldMut<Self, T>,
+        value: T,
+        sentinel: impl FnOnce(T) -> u16,
+    ) -> CreateButton<'a> {
         let disabled = *field.get(self) == value;
         if disabled {
             // This value is intended to be unique for a given object.
@@ -275,13 +316,18 @@ pub trait ToCustomData {
         }
     }
 
-    /// Creates a new select option that would switch to a state where one field is changed.
-    fn new_select_option<'a, T: PartialEq>(&mut self, label: impl Into<Cow<'a, str>>, field: impl FieldMut<Self, T>, value: T) -> CreateSelectMenuOption<'a> {
+    /// Creates a new select option that would switch to a state where one field
+    /// is changed.
+    fn new_select_option<'a, T: PartialEq>(
+        &mut self,
+        label: impl Into<Cow<'a, str>>,
+        field: impl FieldMut<Self, T>,
+        value: T,
+    ) -> CreateSelectMenuOption<'a> {
         let default = *field.get(self) == value;
         let custom_id = self.to_custom_id_with(field, value);
 
-        CreateSelectMenuOption::new(label, custom_id)
-            .default_selection(default)
+        CreateSelectMenuOption::new(label, custom_id).default_selection(default)
     }
 
     /// Creates a custom ID with one field replaced.
@@ -334,13 +380,25 @@ pub trait ButtonMessage: Sized {
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let reply = self.edit_reply(ctx.clone())?;
-        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
+        reply
+            .execute_as_response(
+                &ctx.serenity.http,
+                ctx.interaction.id,
+                &ctx.interaction.token,
+            )
+            .await?;
         Ok(())
     }
 
     async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
         let reply = self.edit_modal_reply(ctx.clone())?;
-        reply.execute_as_response(&ctx.serenity.http, ctx.interaction.id, &ctx.interaction.token).await?;
+        reply
+            .execute_as_response(
+                &ctx.serenity.http,
+                ctx.interaction.id,
+                &ctx.interaction.token,
+            )
+            .await?;
         Ok(())
     }
 }
@@ -373,7 +431,7 @@ impl CustomData {
             Err(err) => {
                 log::error!("Error [{err:?}] serializing: {args:?}");
                 Self::EMPTY
-            }
+            },
         }
     }
 }

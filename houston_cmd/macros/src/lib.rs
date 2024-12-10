@@ -1,8 +1,8 @@
 use proc_macro::TokenStream as StdTokenStream;
 use syn::DeriveInput;
 
-mod args;
 mod any_command_impl;
+mod args;
 mod chat_command_impl;
 mod choice_arg_impl;
 mod context_command_impl;

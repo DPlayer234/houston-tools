@@ -28,10 +28,12 @@
 //!     .commands([echo()]);
 //! ```
 //!
-//! The magic that's happening here is that it transforms the function you've written into
-//! one that simply returns the command tree. This function is guaranteed to be `const`.
+//! The magic that's happening here is that it transforms the function you've
+//! written into one that simply returns the command tree. This function is
+//! guaranteed to be `const`.
 //!
-//! The doc-string on the `#[chat_command]` is required and is used as the description.
+//! The doc-string on the `#[chat_command]` is required and is used as the
+//! description.
 //!
 //! Context menu commands can be created similarly:
 //!
@@ -50,9 +52,10 @@
 //! }
 //! ```
 //!
-//! You must specify either `user` or `message` in the attribute, specifying which context
-//! to register the command to. The `name` is required for context menu commands, but the
-//! doc-string isn't since context menu commands cannot have descriptions.
+//! You must specify either `user` or `message` in the attribute, specifying
+//! which context to register the command to. The `name` is required for context
+//! menu commands, but the doc-string isn't since context menu commands cannot
+//! have descriptions.
 //!
 //! Chat commands can also be used to create groups:
 //!
@@ -91,9 +94,9 @@
 //! returns the command tree. As such, this `mod` actually inherits its `super`
 //! scope, as if it contained `use super::*`.
 //!
-//! Sub-commands have to be attributed with `#[sub_command]` and may also be nested
-//! groups. Items other than sub-commands and `use` items are not allowed directly
-//! inside a group.
+//! Sub-commands have to be attributed with `#[sub_command]` and may also be
+//! nested groups. Items other than sub-commands and `use` items are not allowed
+//! directly inside a group.
 //!
 //! Additionally, as the last example showed, you may specify additional values
 //! in `#[chat_command]` and `#[context_command]`:
@@ -112,7 +115,8 @@
 //! |:---------------------------- |:------- |
 //! | `name`                       | Replaces the display name. |
 //!
-//! Further, parameters to `#[chat_command]` functions can have the following attributes applied:
+//! Further, parameters to `#[chat_command]` functions can have the following
+//! attributes applied:
 //!
 //! | Name                      | Meaning |
 //! |:------------------------- |:------- |
@@ -134,19 +138,22 @@ pub mod model;
 pub mod private;
 mod reply;
 
-pub use args::{SlashArg, ChoiceArg, UserContextArg, MessageContextArg};
+pub use ::houston_cmd_macros::{chat_command, context_command};
+pub use args::{ChoiceArg, MessageContextArg, SlashArg, UserContextArg};
 pub use context::Context;
 pub use error::Error;
 pub use framework::Framework;
 pub use reply::{CreateReply, EditReply, ReplyHandle};
 
-pub use ::houston_cmd_macros::{chat_command, context_command};
-
 pub type BoxFuture<'a, T> = serenity::futures::future::BoxFuture<'a, T>;
 
-/// Converts an iterator of commands into create-command payloads to be registered to Discord.
+/// Converts an iterator of commands into create-command payloads to be
+/// registered to Discord.
 pub fn to_create_command<'a>(
     commands: impl IntoIterator<Item = &'a model::Command>,
 ) -> Vec<serenity::builder::CreateCommand<'static>> {
-    commands.into_iter().map(|c| c.to_create_command()).collect()
+    commands
+        .into_iter()
+        .map(|c| c.to_create_command())
+        .collect()
 }

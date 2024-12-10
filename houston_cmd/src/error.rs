@@ -6,7 +6,8 @@ pub enum Error<'a> {
     /// The user-defined command function returned an error.
     #[error("command error: {error}")]
     Command {
-        #[source] error: anyhow::Error,
+        #[source]
+        error: anyhow::Error,
         ctx: Context<'a>,
     },
     /// The in-memory structure did not match the received interaction.
@@ -24,7 +25,8 @@ pub enum Error<'a> {
     /// Parsing the argument failed.
     #[error("argument parse error: {error}")]
     ArgumentParse {
-        #[source] error: anyhow::Error,
+        #[source]
+        error: anyhow::Error,
         input: Option<String>,
         ctx: Context<'a>,
     },
@@ -33,7 +35,10 @@ pub enum Error<'a> {
 impl<'a> Error<'a> {
     /// Constructs a new [`Error::Command`] variant.
     pub fn command(ctx: Context<'a>, error: impl Into<anyhow::Error>) -> Self {
-        Self::Command { error: error.into(), ctx }
+        Self::Command {
+            error: error.into(),
+            ctx,
+        }
     }
 
     /// Constructs a new [`Error::StructureMismatch`] variant.
@@ -47,7 +52,15 @@ impl<'a> Error<'a> {
     }
 
     /// Constructs a new [`Error::ArgumentParse`] variant.
-    pub fn argument_parse(ctx: Context<'a>, input: Option<String>, error: impl Into<anyhow::Error>) -> Self {
-        Self::ArgumentParse { error: error.into(), input, ctx }
+    pub fn argument_parse(
+        ctx: Context<'a>,
+        input: Option<String>,
+        error: impl Into<anyhow::Error>,
+    ) -> Self {
+        Self::ArgumentParse {
+            error: error.into(),
+            input,
+            ctx,
+        }
     }
 }

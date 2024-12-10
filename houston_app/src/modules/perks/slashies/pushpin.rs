@@ -7,12 +7,9 @@ use crate::slashies::prelude::*;
     message,
     name = "[pin/overridden]",
     contexts = "Guild",
-    integration_types = "Guild",
+    integration_types = "Guild"
 )]
-pub async fn pushpin_pin(
-    ctx: Context<'_>,
-    message: &Message,
-) -> Result {
+pub async fn pushpin_pin(ctx: Context<'_>, message: &Message) -> Result {
     let data = ctx.data_ref();
     let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
@@ -23,7 +20,8 @@ pub async fn pushpin_pin(
             .color(ERROR_EMBED_COLOR)
             .description("This message is already pinned.");
 
-        ctx.send(CreateReply::new().embed(embed).ephemeral(true)).await?;
+        ctx.send(CreateReply::new().embed(embed).ephemeral(true))
+            .await?;
     } else {
         ctx.defer_as(Ephemeral).await?;
 
@@ -31,22 +29,23 @@ pub async fn pushpin_pin(
             .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
-        match message.pin(
-            ctx.http(),
-            Some(&format!("pushpin used by {}", ctx.user().name)),
-        ).await {
+        match message
+            .pin(
+                ctx.http(),
+                Some(&format!("pushpin used by {}", ctx.user().name)),
+            )
+            .await
+        {
             Ok(()) => {
-                let description = format!(
-                    "Pinned!\n-# Used 1 {}.",
-                    Item::Pushpin.info(perks).name,
-                );
+                let name = Item::Pushpin.info(perks).name;
+                let description = format!("Pinned!\n-# Used 1 {name}.");
 
                 let embed = CreateEmbed::new()
                     .color(data.config().embed_color)
                     .description(description);
 
                 ctx.send(CreateReply::new().embed(embed)).await?;
-            }
+            },
             Err(_) => {
                 Wallet::collection(db)
                     .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
@@ -57,7 +56,7 @@ pub async fn pushpin_pin(
                     .description("Can't pin this.");
 
                 ctx.send(CreateReply::new().embed(embed)).await?;
-            }
+            },
         }
     }
 
@@ -69,12 +68,9 @@ pub async fn pushpin_pin(
     message,
     name = "[unpin/overridden]",
     contexts = "Guild",
-    integration_types = "Guild",
+    integration_types = "Guild"
 )]
-pub async fn pushpin_unpin(
-    ctx: Context<'_>,
-    message: &Message,
-) -> Result {
+pub async fn pushpin_unpin(ctx: Context<'_>, message: &Message) -> Result {
     let data = ctx.data_ref();
     let guild_id = ctx.require_guild_id()?;
     let perks = data.config().perks()?;
@@ -85,7 +81,8 @@ pub async fn pushpin_unpin(
             .color(ERROR_EMBED_COLOR)
             .description("This message isn't pinned.");
 
-        ctx.send(CreateReply::new().embed(embed).ephemeral(true)).await?;
+        ctx.send(CreateReply::new().embed(embed).ephemeral(true))
+            .await?;
     } else {
         ctx.defer_as(Ephemeral).await?;
 
@@ -93,22 +90,23 @@ pub async fn pushpin_unpin(
             .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
             .await?;
 
-        match message.unpin(
-            ctx.http(),
-            Some(&format!("pushpin used by {}", ctx.user().name)),
-        ).await {
+        match message
+            .unpin(
+                ctx.http(),
+                Some(&format!("pushpin used by {}", ctx.user().name)),
+            )
+            .await
+        {
             Ok(()) => {
-                let description = format!(
-                    "Unpinned!\n-# Used 1 {}.",
-                    Item::Pushpin.info(perks).name,
-                );
+                let name = Item::Pushpin.info(perks).name;
+                let description = format!("Unpinned!\n-# Used 1 {name}.");
 
                 let embed = CreateEmbed::new()
                     .color(data.config().embed_color)
                     .description(description);
 
                 ctx.send(CreateReply::new().embed(embed)).await?;
-            }
+            },
             Err(_) => {
                 Wallet::collection(db)
                     .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
@@ -119,7 +117,7 @@ pub async fn pushpin_unpin(
                     .description("Can't unpin this.");
 
                 ctx.send(CreateReply::new().embed(embed)).await?;
-            }
+            },
         }
     }
 

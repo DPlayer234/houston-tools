@@ -1,10 +1,8 @@
 use bson::doc;
-
 use utils::text::write_str::*;
 
 use crate::helper::bson::id_as_i64;
-use crate::modules::starboard::model;
-use crate::modules::starboard::BoardId;
+use crate::modules::starboard::{model, BoardId};
 use crate::slashies::prelude::*;
 
 #[derive(Debug, serde::Deserialize)]
@@ -33,17 +31,17 @@ struct TopMessage {
     pub max_reacts: i64,
 }
 
-pub async fn overview(
-    ctx: Context<'_>,
-    ephemeral: Option<bool>,
-) -> Result {
+pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
     let guild = ctx.require_guild_id()?;
     let data = ctx.data_ref();
     let db = data.database()?;
-    let guild_config = data.config()
+    let guild_config = data
+        .config()
         .starboard
         .get(&guild)
-        .ok_or(HArgError::new_const("Starboard is not enabled for this server."))?;
+        .ok_or(HArgError::new_const(
+            "Starboard is not enabled for this server.",
+        ))?;
 
     ctx.defer_as(ephemeral).await?;
 
@@ -116,7 +114,12 @@ pub async fn overview(
             Some(top_post) => writeln_str!(
                 value,
                 "https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
-                guild, top_post.channel, top_post.message, top_post.user, top_post.max_reacts, board.emoji,
+                guild,
+                top_post.channel,
+                top_post.message,
+                top_post.user,
+                top_post.max_reacts,
+                board.emoji,
             ),
             None => value.push_str("<None>\n"),
         }
@@ -126,16 +129,15 @@ pub async fn overview(
             Some(top_user) => write_str!(
                 value,
                 "<@{}>: {} {} from {} post(s)",
-                top_user.user, top_user.score, board.emoji, top_user.post_count,
+                top_user.user,
+                top_user.score,
+                board.emoji,
+                top_user.post_count,
             ),
             None => value.push_str("<None>"),
         }
 
-        embed = embed.field(
-            format!("{} {}", board.emoji, board.name),
-            value,
-            false,
-        );
+        embed = embed.field(format!("{} {}", board.emoji, board.name), value, false);
     }
 
     ctx.send(CreateReply::new().embed(embed)).await?;

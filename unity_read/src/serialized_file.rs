@@ -23,7 +23,7 @@ pub struct SerializedFile<'a> {
     /// This must only be [`Some`] for a `version` where it's expected.
     big_id_enabled: Option<bool>,
     types: Vec<SerializedType>,
-    objects: Vec<ObjectInfo>
+    objects: Vec<ObjectInfo>,
 }
 
 /// Information about a serialized type.
@@ -52,14 +52,17 @@ pub struct TypeTreeNode {
 impl<'a> SerializedFile<'a> {
     /// Enumerates the objects listed within this file.
     pub fn objects(&'a self) -> impl Iterator<Item = crate::Result<ObjectRef<'a>>> {
-        self.objects.iter().map(|obj| Ok(ObjectRef {
-            file: self,
-            ser_type: obj.class_id
-                .and_then(|c| self.types.iter().find(|t| t.class_id == i32::from(c)))
-                .or_else(|| self.types.get(usize::try_from(obj.type_id).ok()?))
-                .ok_or(Error::InvalidData("object data references invalid type"))?,
-            object: obj.clone()
-        }))
+        self.objects.iter().map(|obj| {
+            Ok(ObjectRef {
+                file: self,
+                ser_type: obj
+                    .class_id
+                    .and_then(|c| self.types.iter().find(|t| t.class_id == i32::from(c)))
+                    .or_else(|| self.types.get(usize::try_from(obj.type_id).ok()?))
+                    .ok_or(Error::InvalidData("object data references invalid type"))?,
+                object: obj.clone(),
+            })
+        })
     }
 
     /// Gets the serialized types.
@@ -71,22 +74,40 @@ impl<'a> SerializedFile<'a> {
     #[must_use]
     pub(crate) fn is_serialized_file(buf: &[u8]) -> bool {
         let cursor = &mut Cursor::new(buf);
-        let Ok(main) = HeaderMain::read(cursor) else { return false };
-        if main.file_size < main.metadata_size { return false }
+        let Ok(main) = HeaderMain::read(cursor) else {
+            return false;
+        };
+
+        if main.file_size < main.metadata_size {
+            return false;
+        }
 
         if main.version >= 9 {
-            if HeaderV9Ext::read(cursor).is_err() { return false }
+            if HeaderV9Ext::read(cursor).is_err() {
+                return false;
+            }
         } else {
             cursor.set_position(u64::from(main.file_size - main.metadata_size));
-            if u8::read(cursor).is_err() { return false }
+            if u8::read(cursor).is_err() {
+                return false;
+            }
         }
 
         if main.version >= 22 {
-            let Ok(v22ext) = HeaderV22Ext::read(cursor) else { return false };
-            let Ok(size) = usize::try_from(v22ext.file_size) else { return false };
+            let Ok(v22ext) = HeaderV22Ext::read(cursor) else {
+                return false;
+            };
+
+            let Ok(size) = usize::try_from(v22ext.file_size) else {
+                return false;
+            };
+
             buf.len() == size && v22ext.data_offset <= v22ext.file_size
         } else {
-            let Ok(size) = usize::try_from(main.file_size) else { return false };
+            let Ok(size) = usize::try_from(main.file_size) else {
+                return false;
+            };
+
             buf.len() == size && main.data_offset <= main.file_size
         }
     }
@@ -133,8 +154,10 @@ impl<'a> SerializedFile<'a> {
         }
 
         let type_count = u32::read_endian(cursor, result.is_big_endian)?;
-        for _ in 0 .. type_count {
-            result.types.push(result.read_serialized_type(cursor, false)?);
+        for _ in 0..type_count {
+            result
+                .types
+                .push(result.read_serialized_type(cursor, false)?);
         }
 
         // big id doesn't exist before v7 and is forced after v14
@@ -144,21 +167,26 @@ impl<'a> SerializedFile<'a> {
         }
 
         let object_count = u32::read_endian(cursor, result.is_big_endian)?;
-        for _ in 0 .. object_count {
+        for _ in 0..object_count {
             result.objects.push(result.read_object_info(cursor)?);
         }
 
-        // Skipping trying to read script file refs, external file refs, ref types, and user info for now
+        // Skipping trying to read script file refs, external file refs, ref types, and
+        // user info for now
 
         // Also move the buffer in.
         result.buf = buf;
         Ok(result)
     }
 
-    fn read_serialized_type(&self, cursor: &mut Cursor<&[u8]>, is_ref_type: bool) -> crate::Result<SerializedType> {
+    fn read_serialized_type(
+        &self,
+        cursor: &mut Cursor<&[u8]>,
+        is_ref_type: bool,
+    ) -> crate::Result<SerializedType> {
         let mut result = SerializedType {
             class_id: i32::read_endian(cursor, self.is_big_endian)?,
-            .. SerializedType::default()
+            ..SerializedType::default()
         };
 
         if self.version >= 16 {
@@ -171,8 +199,9 @@ impl<'a> SerializedFile<'a> {
 
         if self.version >= 13 {
             if (is_ref_type && result.script_type_index.is_some())
-            || (self.version < 16 && result.class_id < 0)
-            || (self.version >= 16 && result.class_id == 114 /* Script */) {
+                || (self.version < 16 && result.class_id < 0)
+                || (self.version >= 16 && result.class_id == 114/* Script */)
+            {
                 result.script_id = Some(BinRead::read(cursor)?);
             }
 
@@ -208,7 +237,7 @@ impl<'a> SerializedFile<'a> {
 
         let mut raw_nodes = Vec::new();
 
-        for _ in 0 .. node_count {
+        for _ in 0..node_count {
             let raw_node = TypeTreeNodeBlob::read_endian(cursor, self.is_big_endian)?;
 
             if self.version >= 19 {
@@ -232,7 +261,9 @@ impl<'a> SerializedFile<'a> {
             } else {
                 super::unity_fs_common_str::index_to_common_string(offset & 0x7FFF_FFFF)
                     .map(String::from)
-                    .ok_or_else(|| Error::Unsupported(format!("unknown common str key: {offset}")))?
+                    .ok_or_else(|| {
+                        Error::Unsupported(format!("unknown common str key: {offset}"))
+                    })?
             })
         }
 
@@ -241,28 +272,35 @@ impl<'a> SerializedFile<'a> {
         // - following are children
         // - "level" indicates whether they are further nested
         let str_cursor = &mut Cursor::new(str_buf.as_slice());
-        raw_nodes.iter()
-            .map(|raw_node| Ok(TypeTreeNode {
-                type_name: read_str(str_cursor, raw_node.type_str_offset)?,
-                name: read_str(str_cursor, raw_node.name_str_offset)?,
-                size: raw_node.size,
-                index: raw_node.index,
-                type_flags: u32::from(raw_node.type_flags),
-                version: u32::from(raw_node.version),
-                meta_flags: raw_node.meta_flags,
-                level: raw_node.level,
-            }))
+        raw_nodes
+            .iter()
+            .map(|raw_node| {
+                Ok(TypeTreeNode {
+                    type_name: read_str(str_cursor, raw_node.type_str_offset)?,
+                    name: read_str(str_cursor, raw_node.name_str_offset)?,
+                    size: raw_node.size,
+                    index: raw_node.index,
+                    type_flags: u32::from(raw_node.type_flags),
+                    version: u32::from(raw_node.version),
+                    meta_flags: raw_node.meta_flags,
+                    level: raw_node.level,
+                })
+            })
             .collect::<crate::Result<Vec<_>>>()
     }
 
-    fn read_type_tree_old(&self, cursor: &mut Cursor<&[u8]>, level: u8) -> crate::Result<Vec<TypeTreeNode>> {
+    fn read_type_tree_old(
+        &self,
+        cursor: &mut Cursor<&[u8]>,
+        level: u8,
+    ) -> crate::Result<Vec<TypeTreeNode>> {
         // this format is dogshit
         let mut node = TypeTreeNode {
             level,
             type_name: NullString::read(cursor)?.try_into()?,
             name: NullString::read(cursor)?.try_into()?,
             size: i32::read_endian(cursor, self.is_big_endian)?,
-            .. TypeTreeNode::default()
+            ..TypeTreeNode::default()
         };
 
         if self.version > 1 {
@@ -282,7 +320,7 @@ impl<'a> SerializedFile<'a> {
         // flatten the data to match the new "blob" structure
         // hydrate it with a "level" so we can read it the same way later
         let child_count = u32::read_endian(cursor, self.is_big_endian)?;
-        for _ in 0 .. child_count {
+        for _ in 0..child_count {
             nodes.extend(self.read_type_tree_old(cursor, level + 1)?);
         }
 
@@ -292,24 +330,34 @@ impl<'a> SerializedFile<'a> {
     fn read_object_info(&self, cursor: &mut Cursor<&[u8]>) -> crate::Result<ObjectInfo> {
         let mut object: ObjectInfo = match (self.version, self.big_id_enabled) {
             // Big ID flag only exists from v7 to v13
-            (7..=13, Some(false)) | (..=6, None) => ObjectBlob::read_endian(cursor, self.is_big_endian)?.into(),
-            (7..=13, Some(true)) => ObjectBlobBigId::read_endian(cursor, self.is_big_endian)?.into(),
+            (7..=13, Some(false)) | (..=6, None) => {
+                ObjectBlob::read_endian(cursor, self.is_big_endian)?.into()
+            },
+            (7..=13, Some(true)) => {
+                ObjectBlobBigId::read_endian(cursor, self.is_big_endian)?.into()
+            },
 
             // Starting with v14, big ID is the default, and it is aligned.
             (14..=21, None) => {
                 cursor.align_to(4)?;
                 ObjectBlobBigId::read_endian(cursor, self.is_big_endian)?.into()
-            }
+            },
 
             // With v22, the blob start changes to 64-bit
             (22.., None) => {
                 cursor.align_to(4)?;
                 ObjectBlobV22::read_endian(cursor, self.is_big_endian)?.into()
-            }
+            },
 
             // Invalid states. These aren't data errors, but bugs in this code.
-            (7..=13, None) => unreachable!("did not read big id flag for serialized file version {} in 7..=13", self.version),
-            (..=6, Some(_)) | (14.., Some(_)) => unreachable!("read big id flag for serialized file version {} in ..=6 or 14..", self.version),
+            (7..=13, None) => unreachable!(
+                "did not read big id flag for serialized file version {} in 7..=13",
+                self.version
+            ),
+            (..=6, Some(_)) | (14.., Some(_)) => unreachable!(
+                "read big id flag for serialized file version {} in ..=6 or 14..",
+                self.version
+            ),
         };
 
         // Up to v16, class_id maps the the type's type_id.
@@ -351,7 +399,7 @@ struct HeaderMain {
     metadata_size: u32,
     file_size: u32,
     version: u32,
-    data_offset: u32
+    data_offset: u32,
 }
 
 #[binread]
@@ -360,7 +408,7 @@ struct HeaderMain {
 struct HeaderV9Ext {
     endian: u8,
     #[allow(dead_code)]
-    reserved: [u8; 3]
+    reserved: [u8; 3],
 }
 
 #[binread]
@@ -371,7 +419,7 @@ struct HeaderV22Ext {
     file_size: u64,
     data_offset: u64,
     #[allow(dead_code)]
-    reserved: u64
+    reserved: u64,
 }
 
 #[allow(dead_code)]
@@ -390,7 +438,7 @@ struct SerializedTypeDeps {
     #[br(temp)]
     count: u32,
     #[br(count = count)]
-    vec: Vec<u32>
+    vec: Vec<u32>,
 }
 
 #[binread]
@@ -412,7 +460,7 @@ struct ObjectBlob {
     path_id: i32,
     start: u32,
     size: u32,
-    type_id: u32
+    type_id: u32,
 }
 
 #[binread]
@@ -421,7 +469,7 @@ struct ObjectBlobBigId {
     path_id: i64,
     start: u32,
     size: u32,
-    type_id: u32
+    type_id: u32,
 }
 
 #[binread]
@@ -430,7 +478,7 @@ struct ObjectBlobV22 {
     path_id: i64,
     start: u64,
     size: u32,
-    type_id: u32
+    type_id: u32,
 }
 
 macro_rules! impl_obj_blob_to_info {
@@ -442,7 +490,7 @@ macro_rules! impl_obj_blob_to_info {
                     start: u64::from(value.start),
                     size: value.size,
                     type_id: value.type_id,
-                    class_id: None
+                    class_id: None,
                 }
             }
         }

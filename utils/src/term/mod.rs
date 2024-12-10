@@ -16,7 +16,6 @@ pub fn supports_ansi_escapes<T: io::IsTerminal>(stream: &T) -> bool {
     } else if clicolor == Some(false) {
         false
     } else {
-        stream.is_terminal() &&
-        (term_supports_color() || clicolor == Some(true) || is_ci())
+        stream.is_terminal() && (term_supports_color() || clicolor == Some(true) || is_ci())
     }
 }

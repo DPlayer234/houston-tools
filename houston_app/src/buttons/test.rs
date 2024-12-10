@@ -6,7 +6,9 @@ macro_rules! round_trip_test {
         fn $test_name() {
             let args = $make;
             let custom_data = args.to_custom_data();
-            let re_args = custom_data.to_button_args().expect("just constructed from valid data");
+            let re_args = custom_data
+                .to_button_args()
+                .expect("just constructed from valid data");
 
             assert_eq!(re_args, ButtonArgs::$variant(args));
             assert_eq!(custom_data, re_args.to_custom_data());

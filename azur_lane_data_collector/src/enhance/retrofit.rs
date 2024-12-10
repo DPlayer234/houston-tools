@@ -1,11 +1,9 @@
 use std::borrow::Borrow;
 
+use azur_lane::ship::*;
 use mlua::prelude::*;
 
-use azur_lane::ship::*;
-
-use crate::parse;
-use crate::Retrofit;
+use crate::{parse, Retrofit};
 
 /// Applies the full retrofit template to the ship data.
 pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -> LuaResult<()> {
@@ -32,7 +30,8 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
                 // Stats added by retrofits are NOT affected by affinity.
                 if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
                     match k.borrow() {
-                        "skill_id" => {
+                        "skill_id" =>
+                        {
                             #[allow(clippy::cast_sign_loss)]
                             #[allow(clippy::cast_possible_truncation)]
                             new_skills.push(parse::skill::load_skill(lua, v as u32)?)
@@ -40,7 +39,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,
                         "equipment_proficiency_2" => add_equip_efficiency(ship, 1, v)?,
                         "equipment_proficiency_3" => add_equip_efficiency(ship, 2, v)?,
-                        _ => ()
+                        _ => (),
                     }
                 }
 
@@ -57,7 +56,11 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
 }
 
 fn add_equip_efficiency(ship: &mut ShipData, index: usize, amount: f64) -> LuaResult<()> {
-    if let Some(slot) = ship.equip_slots.get_mut(index).and_then(|s| s.mount.as_mut()) {
+    if let Some(slot) = ship
+        .equip_slots
+        .get_mut(index)
+        .and_then(|s| s.mount.as_mut())
+    {
         slot.efficiency += amount;
     }
 

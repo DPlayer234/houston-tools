@@ -32,9 +32,7 @@ pub struct Score {
 }
 
 fn name(name: &str) -> IndexOptions {
-    IndexOptions::builder()
-        .name(name.to_owned())
-        .build()
+    IndexOptions::builder().name(name.to_owned()).build()
 }
 
 impl Message {
@@ -84,7 +82,7 @@ impl Score {
                     "score": 1,
                     "post_count": 1,
                 })
-                .build()
+                .build(),
         ]
     }
 }

@@ -19,15 +19,16 @@ use crate::serialized_file::SerializedFile;
 use crate::{FromInt, SeekRead};
 
 // Since UnityFsFile stores a `dyn SeekRead`, it cannot be `Send` and `Sync`.
-// While that would be nice, short of requiring it for *every* reader there is no nice way around it.
-// Subsequently, none of the code here bothers to support synchronization.
+// While that would be nice, short of requiring it for *every* reader there is
+// no nice way around it. Subsequently, none of the code here bothers to support
+// synchronization.
 
 /// A UnityFS file.
 #[derive(Debug)]
 pub struct UnityFsFile<'a> {
     buf: DebugIgnore<Cell<Option<&'a mut dyn SeekRead>>>,
     blocks_info: BlocksInfo,
-    data_offset: u64
+    data_offset: u64,
 }
 
 /// A node within a UnityFS file.
@@ -35,14 +36,14 @@ pub struct UnityFsFile<'a> {
 #[derive(Debug, Clone)]
 pub struct UnityFsNode<'a> {
     file: &'a UnityFsFile<'a>,
-    node: &'a Node
+    node: &'a Node,
 }
 
 /// Data for UnityFS node.
 #[derive(Debug, Clone)]
 pub enum UnityFsData<'a> {
     SerializedFile(SerializedFile<'a>),
-    RawData(&'a [u8])
+    RawData(&'a [u8]),
 }
 
 #[binread]
@@ -73,7 +74,7 @@ struct ArchiveFlags {
     blocks_info_need_start_pad: bool,
     #[allow(dead_code)]
     #[doc(hidden)]
-    pad: B22
+    pad: B22,
 }
 
 #[binread]
@@ -88,7 +89,7 @@ struct BlocksInfo {
     #[br(temp)]
     nodes_count: u32,
     #[br(count = nodes_count)]
-    nodes: Vec<Node>
+    nodes: Vec<Node>,
 }
 
 #[binread]
@@ -140,14 +141,14 @@ enum Compression {
     Lzma,
     Lz4,
     Lz4Hc,
-    _Lzham
+    _Lzham,
 }
 
 #[derive(Debug, Clone)]
 struct BlockOffset {
     index: usize,
     compressed_offset: u64,
-    uncompressed_offset: u64
+    uncompressed_offset: u64,
 }
 
 impl<'a> UnityFsFile<'a> {
@@ -158,15 +159,18 @@ impl<'a> UnityFsFile<'a> {
         // Load blocks info
         let blocks_info = {
             if header.version >= 7 {
-                // Starting with version 7, the blocks info is aligned to the next 16-byte boundary.
+                // Starting with version 7, the blocks info is aligned to the next 16-byte
+                // boundary.
                 buf.align_to(16)?;
             }
 
-            let mut compressed_data = vec![0u8; usize::from_int(header.compressed_blocks_info_size)?];
+            let mut compressed_data =
+                vec![0u8; usize::from_int(header.compressed_blocks_info_size)?];
 
             if header.flags.blocks_info_at_end() {
                 let pos = buf.stream_position()?;
-                buf.seek(SeekFrom::End(-i64::from(header.compressed_blocks_info_size)))?;
+                let end = i64::from(header.compressed_blocks_info_size);
+                buf.seek(SeekFrom::End(-end))?;
                 buf.read_exact(&mut compressed_data)?;
                 buf.seek(SeekFrom::Start(pos))?;
             } else {
@@ -180,7 +184,7 @@ impl<'a> UnityFsFile<'a> {
             let decompressed_data = decompress_data(
                 &compressed_data,
                 header.flags.compression(),
-                header.uncompressed_blocks_info_size
+                header.uncompressed_blocks_info_size,
             )?;
 
             let mut reader = Cursor::new(&*decompressed_data);
@@ -192,7 +196,7 @@ impl<'a> UnityFsFile<'a> {
         Ok(UnityFsFile {
             buf: DebugIgnore(Cell::new(Some(buf))),
             blocks_info,
-            data_offset
+            data_offset,
         })
     }
 
@@ -200,7 +204,7 @@ impl<'a> UnityFsFile<'a> {
     pub fn entries(&'a self) -> impl Iterator<Item = UnityFsNode<'a>> {
         self.blocks_info.nodes.iter().map(|n| UnityFsNode {
             file: self,
-            node: n
+            node: n,
         })
     }
 
@@ -212,7 +216,11 @@ impl<'a> UnityFsFile<'a> {
             let next_uncompressed_offset = uncompressed_offset + u64::from(block.uncompressed_size);
 
             if offset >= uncompressed_offset && offset < next_uncompressed_offset {
-                return Some(BlockOffset { index, compressed_offset, uncompressed_offset });
+                return Some(BlockOffset {
+                    index,
+                    compressed_offset,
+                    uncompressed_offset,
+                });
             }
 
             compressed_offset = next_compressed_offset;
@@ -229,20 +237,24 @@ impl<'a> UnityFsNode<'a> {
         let BlockOffset {
             index,
             mut compressed_offset,
-            mut uncompressed_offset
-        } = self.file.get_block_index_by_offset(uncompressed_start).ok_or(Error::InvalidData("compressed data position out of bounds"))?;
+            mut uncompressed_offset,
+        } = self
+            .file
+            .get_block_index_by_offset(uncompressed_start)
+            .ok_or(Error::InvalidData("compressed data position out of bounds"))?;
 
         let mut result = Vec::new();
 
         // in any reasonable scenario, this expect should be impossible to hit.
-        // however, it's not impossible to construct a scenario where `UnityFsFile -> reader -> UnityFsFile` holds true,
-        // in which case this would trigger. if that wasn't possible, an `UnsafeCell` might be appropriate.
+        // however, it's not impossible to construct a scenario where `UnityFsFile ->
+        // reader -> UnityFsFile` holds true, in which case this would trigger.
+        // if that wasn't possible, an `UnsafeCell` might be appropriate.
         //
         // `buf` is returned after the loop or when this function returns early.
         let mut guard = BufGuard::take(self.file);
         let buf = guard.buf();
 
-        for block in &self.file.blocks_info.blocks[index ..] {
+        for block in &self.file.blocks_info.blocks[index..] {
             // Read and decompress the entire block
             let start = compressed_offset + self.file.data_offset;
             let mut compressed_data = vec![0u8; usize::from_int(block.compressed_size)?];
@@ -253,20 +265,21 @@ impl<'a> UnityFsNode<'a> {
             let uncompressed_data = decompress_data(
                 &compressed_data,
                 block.flags.compression(),
-                block.uncompressed_size
+                block.uncompressed_size,
             )?;
 
             // Determine the relative offsets for this file into this block
-            let sub_start = usize::from_int(uncompressed_start.saturating_sub(uncompressed_offset))?;
+            let sub_start =
+                usize::from_int(uncompressed_start.saturating_sub(uncompressed_offset))?;
             let missing_size = usize::from_int(self.node.size - u64::from_int(result.len())?)?;
             let sub_end = sub_start + missing_size;
 
             if sub_end <= uncompressed_data.len() {
-                result.extend(&uncompressed_data[sub_start .. sub_end]);
-                break
+                result.extend(&uncompressed_data[sub_start..sub_end]);
+                break;
             }
 
-            result.extend(&uncompressed_data[sub_start ..]);
+            result.extend(&uncompressed_data[sub_start..]);
 
             compressed_offset += u64::from(block.compressed_size);
             uncompressed_offset += u64::from(block.uncompressed_size);
@@ -277,18 +290,23 @@ impl<'a> UnityFsNode<'a> {
 
         debug_assert!(
             u64::from_int(result.len())? == self.node.size,
-            "sanity: result len is {}, but the node specified {}", result.len(), self.node.size
+            "sanity: result len is {}, but the node specified {}",
+            result.len(),
+            self.node.size
         );
         Ok(result)
     }
 
     /// Reads the raw binary data for this node.
     pub fn read_raw(&self) -> crate::Result<&'a [u8]> {
-        Ok(self.node.uncompressed_cache.get_or_try_init(|| self.decompress())?)
+        Ok(self
+            .node
+            .uncompressed_cache
+            .get_or_try_init(|| self.decompress())?)
     }
 
     /// Reads the data for this node.
-    pub fn read(&self) -> crate::Result<UnityFsData<'a>>{
+    pub fn read(&self) -> crate::Result<UnityFsData<'a>> {
         let buf = self.read_raw()?;
         if SerializedFile::is_serialized_file(buf) {
             Ok(UnityFsData::SerializedFile(SerializedFile::read(buf)?))
@@ -299,8 +317,9 @@ impl<'a> UnityFsNode<'a> {
 
     /// Gets the path name for this node.
     ///
-    /// This will allocate a UTF-8 string with escape sequences for invalid characters in the underlying data.
-    /// If you don't care about that or want to avoid the allocation, use [`Self::path_raw`] instead.
+    /// This will allocate a UTF-8 string with escape sequences for invalid
+    /// characters in the underlying data. If you don't care about that or
+    /// want to avoid the allocation, use [`Self::path_raw`] instead.
     #[must_use]
     pub fn path(&self) -> String {
         String::from_utf8_lossy(&self.node.path.0).into_owned()
@@ -308,31 +327,43 @@ impl<'a> UnityFsNode<'a> {
 
     /// Gets the path name for this node as raw bytes.
     ///
-    /// This is the raw data as it appears in the file and doesn't necessarily represent valid UTF-8.
+    /// This is the raw data as it appears in the file and doesn't necessarily
+    /// represent valid UTF-8.
     #[must_use]
     pub fn path_raw(&self) -> &[u8] {
         &self.node.path.0
     }
 }
 
-fn decompress_data(compressed_data: &[u8], compression: Compression, size: u32) -> crate::Result<Cow<'_, [u8]>> {
+fn decompress_data(
+    compressed_data: &[u8],
+    compression: Compression,
+    size: u32,
+) -> crate::Result<Cow<'_, [u8]>> {
     match compression {
         Compression::None => Ok(Cow::Borrowed(compressed_data)),
-        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(compressed_data, Some(i32::from_int(size)?))?)),
+        Compression::Lz4 | Compression::Lz4Hc => Ok(Cow::Owned(lz4::block::decompress(
+            compressed_data,
+            Some(i32::from_int(size)?),
+        )?)),
         Compression::Lzma => {
             use lzma_rs::decompress::*;
 
             let mut output = Cursor::new(Vec::with_capacity(usize::from_int(size)?));
             let mut reader = Cursor::new(compressed_data);
-            lzma_rs::lzma_decompress_with_options(&mut reader, &mut output, &Options {
-                unpacked_size: UnpackedSize::UseProvided(Some(u64::from(size))),
-                ..Default::default()
-            })?;
+            lzma_rs::lzma_decompress_with_options(
+                &mut reader,
+                &mut output,
+                &Options {
+                    unpacked_size: UnpackedSize::UseProvided(Some(u64::from(size))),
+                    ..Default::default()
+                },
+            )?;
             Ok(Cow::Owned(output.into_inner()))
-        }
-        _ => Err(Error::Unsupported(
-            format!("unsupported compression method: {compression:?}")
-        ))
+        },
+        _ => Err(Error::Unsupported(format!(
+            "unsupported compression method: {compression:?}"
+        ))),
     }
 }
 
@@ -368,16 +399,22 @@ struct BufGuard<'a> {
 impl<'a> BufGuard<'a> {
     /// Takes the buffer. Panics if it isn't available.
     fn take(file: &'a UnityFsFile<'a>) -> Self {
-        let buf = file.buf.take()
+        let buf = file
+            .buf
+            .take()
             .expect("reader passed to UnityFsFile should not access the same UnityFsFile instance");
 
-        Self { file, buf: Some(buf) }
+        Self {
+            file,
+            buf: Some(buf),
+        }
     }
 
     /// Gets the buffer.
     fn buf(&mut self) -> &mut dyn SeekRead {
         // `as_mut` is required to get the reborrow to work correctly
-        self.buf.as_mut()
+        self.buf
+            .as_mut()
             .expect("buf cannot be accessed after drop")
     }
 }

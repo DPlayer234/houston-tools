@@ -2,17 +2,21 @@ use crate::slashies::prelude::*;
 
 macro_rules! make_autocomplete {
     ($fn_name:ident, $by_prefix:ident, $id:ident) => {
-        pub async fn $fn_name<'a>(ctx: Context<'a>, partial: &'a str) -> CreateAutocompleteResponse<'a> {
+        pub async fn $fn_name<'a>(
+            ctx: Context<'a>,
+            partial: &'a str,
+        ) -> CreateAutocompleteResponse<'a> {
             let choices: Vec<_> = ctx
                 .data_ref()
                 .azur_lane()
                 .$by_prefix(partial)
                 .take(25)
-                .map(|e| AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.$id))))
+                .map(|e| {
+                    AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.$id)))
+                })
                 .collect();
 
-            CreateAutocompleteResponse::new()
-                .set_choices(choices)
+            CreateAutocompleteResponse::new().set_choices(choices)
         }
     };
 }

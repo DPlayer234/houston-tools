@@ -23,7 +23,8 @@ impl<'a> EditReply<'a> {
         Self::default()
     }
 
-    /// Creates a new empty builder, which has all fields set to empty rather than absent.
+    /// Creates a new empty builder, which has all fields set to empty rather
+    /// than absent.
     pub fn clear() -> Self {
         Self {
             content: Some(Cow::Borrowed("")),
@@ -47,10 +48,7 @@ impl<'a> EditReply<'a> {
     }
 
     /// Set components for this message.
-    pub fn components(
-        mut self,
-        components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
-    ) -> Self {
+    pub fn components(mut self, components: impl Into<Cow<'a, [CreateActionRow<'a>]>>) -> Self {
         self.components = Some(components.into());
         self
     }
@@ -63,7 +61,7 @@ impl<'a> EditReply<'a> {
     /// Keeps an existing attachment with the given ID.
     pub fn keep_existing_attachment(self, attachment_id: AttachmentId) -> Self {
         self.attachment(Attachment::Existing(ExistingAttachment {
-            id: attachment_id
+            id: attachment_id,
         }))
     }
 
@@ -89,7 +87,13 @@ impl<'a> EditReply<'a> {
 
     /// Creates an interaction edit from the builder.
     pub fn into_interaction_edit(self) -> EditInteractionResponse<'a> {
-        let Self { content, embeds, attachments, components, allowed_mentions } = self;
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+        } = self;
 
         let mut builder = EditInteractionResponse::new();
 
@@ -126,12 +130,16 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
     /// This means, that unless specified as non-empty in the source value,
     /// the resulting will clear content, embeds, components, and attachments.
     fn from(value: CreateReply<'a>) -> Self {
-        let CreateReply { content, embeds, attachments, components, ephemeral: _, allowed_mentions } = value;
+        let CreateReply {
+            content,
+            embeds,
+            attachments,
+            components,
+            ephemeral: _,
+            allowed_mentions,
+        } = value;
 
-        let attachments = attachments
-            .into_iter()
-            .map(Attachment::New)
-            .collect();
+        let attachments = attachments.into_iter().map(Attachment::New).collect();
 
         Self {
             content: Some(content),
@@ -147,7 +155,8 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
 // Custom support for complete interaction message edit.
 // Serenity currently doesn't support a couple things when editing interaction
 // responses and follow-ups, most notable keeping existing attachments.
-// This may be incomplete in other ways, but is sufficient for houston-app purposes.
+// This may be incomplete in other ways, but is sufficient for houston-app
+// purposes.
 
 /// This type replicates logic that is performed by [`EditAttachments`].
 /// However i want to avoid cloning the data here, and we can't use that
@@ -183,7 +192,7 @@ impl<'a> InEditAttachments<'a> {
 impl Serialize for InEditAttachments<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer
+        S: serde::Serializer,
     {
         use serde::ser::SerializeSeq;
 
@@ -233,9 +242,11 @@ struct EditData<'a> {
 }
 
 impl EditReply<'_> {
-    /// Invokes [`create_interaction_response`] with the correct information for an edit.
+    /// Invokes [`create_interaction_response`] with the correct information for
+    /// an edit.
     ///
-    /// Hidden because I don't want this in the public API but I do need it in `houston_app`.
+    /// Hidden because I don't want this in the public API but I do need it in
+    /// `houston_app`.
     ///
     /// [`create_interaction_response`]: serenity::http::Http::create_interaction_response
     #[doc(hidden)]
@@ -251,19 +262,38 @@ impl EditReply<'_> {
             data: EditData<'a>,
         }
 
-        let Self { content, embeds, attachments, components, allowed_mentions } = self;
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+        } = self;
         let payload = Payload {
             r#type: 7, // UPDATE_MESSAGE
-            data: EditData { content, embeds, attachments, components, allowed_mentions },
+            data: EditData {
+                content,
+                embeds,
+                attachments,
+                components,
+                allowed_mentions,
+            },
         };
-        let files = payload.data.attachments.as_ref().map_or_else(Vec::new, InEditAttachments::get_files);
+        let files = payload
+            .data
+            .attachments
+            .as_ref()
+            .map_or_else(Vec::new, InEditAttachments::get_files);
 
-        http.create_interaction_response(interaction_id, interaction_token, &payload, files).await
+        http.create_interaction_response(interaction_id, interaction_token, &payload, files)
+            .await
     }
 
-    /// Invokes [`edit_followup_message`] with the correct information for an edit.
+    /// Invokes [`edit_followup_message`] with the correct information for an
+    /// edit.
     ///
-    /// Hidden because I don't want this in the public API but I do need it in `houston_app`.
+    /// Hidden because I don't want this in the public API but I do need it in
+    /// `houston_app`.
     ///
     /// [`edit_followup_message`]: serenity::http::Http::edit_followup_message
     #[doc(hidden)]
@@ -273,10 +303,26 @@ impl EditReply<'_> {
         interaction_token: &str,
         message_id: MessageId,
     ) -> serenity::Result<Message> {
-        let Self { content, embeds, attachments, components, allowed_mentions } = self;
-        let payload = EditData { content, embeds, attachments, components, allowed_mentions };
-        let files = payload.attachments.as_ref().map_or_else(Vec::new, InEditAttachments::get_files);
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+        } = self;
+        let payload = EditData {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+        };
+        let files = payload
+            .attachments
+            .as_ref()
+            .map_or_else(Vec::new, InEditAttachments::get_files);
 
-        http.edit_followup_message(interaction_token, message_id, &payload, files).await
+        http.edit_followup_message(interaction_token, message_id, &payload, files)
+            .await
     }
 }

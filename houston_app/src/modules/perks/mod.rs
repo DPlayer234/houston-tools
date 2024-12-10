@@ -50,7 +50,8 @@ impl super::Module for Module {
 
         if let Some(role_edit) = &perks.role_edit {
             let mut edit = slashies::role_edit::role_edit();
-            edit.data.description = format!("Use {}: Edit your unique role.", role_edit.name).into();
+            edit.data.description =
+                format!("Use {}: Edit your unique role.", role_edit.name).into();
 
             c.push(edit);
         }
@@ -62,17 +63,22 @@ impl super::Module for Module {
         use crate::helper::bson::update_indices;
         Box::pin(async move {
             update_indices(model::Wallet::collection(db), model::Wallet::indices()).await?;
-            update_indices(model::ActivePerk::collection(db), model::ActivePerk::indices()).await?;
-            update_indices(model::UniqueRole::collection(db), model::UniqueRole::indices()).await?;
+            update_indices(
+                model::ActivePerk::collection(db),
+                model::ActivePerk::indices(),
+            )
+            .await?;
+            update_indices(
+                model::UniqueRole::collection(db),
+                model::UniqueRole::indices(),
+            )
+            .await?;
             Ok(())
         })
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
-        anyhow::ensure!(
-            config.mongodb_uri.is_some(),
-            "perks requires a mongodb_uri",
-        );
+        anyhow::ensure!(config.mongodb_uri.is_some(), "perks requires a mongodb_uri",);
 
         let perks = config.perks().unwrap();
         log::info!("Perks are enabled.");
@@ -143,9 +149,7 @@ async fn check_perks_core(ctx: Context) -> Result {
         },
     };
 
-    let mut query = model::ActivePerk::collection(db)
-        .find(filter)
-        .await?;
+    let mut query = model::ActivePerk::collection(db).find(filter).await?;
 
     while let Some(perk) = query.try_next().await? {
         let args = effects::Args::new(&ctx, perk.guild, perk.user);

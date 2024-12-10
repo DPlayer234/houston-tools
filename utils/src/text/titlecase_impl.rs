@@ -25,8 +25,9 @@ pub fn to_titlecase<S: MutStrLike + ?Sized>(value: &mut S) {
     }
 }
 
-/// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
-/// The slice is mutated in-place.
+/// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string,
+/// converts it to title case (i.e. `Snake Case`). The slice is mutated
+/// in-place.
 fn to_titlecase_u8(slice: &mut [u8]) {
     let mut is_start = true;
 
@@ -46,8 +47,8 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
     }
 }
 
-/// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version (i.e. `Snake Case`).
-/// The resulting value is still const.
+/// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version
+/// (i.e. `Snake Case`). The resulting value is still const.
 ///
 /// # Examples
 ///
@@ -69,24 +70,28 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 /// ```
 #[macro_export]
 macro_rules! titlecase {
-    ($input:expr) => { const {
-        // Ensure input is a `&'static str`
-        const INPUT_STR: &str = $input;
+    ($input:expr) => {
+        const {
+            // Ensure input is a `&'static str`
+            const INPUT_STR: &str = $input;
 
-        // Transmute result back to a str.
-        const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
-        unsafe { ::std::str::from_utf8_unchecked(BYTES) }
-    }};
-    (b: $input:expr) => { const {
-        // Ensure input is a `&'static [u8]`
-        const INPUT: &[u8] = $input;
+            // Transmute result back to a str.
+    const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
+            unsafe { ::std::str::from_utf8_unchecked(BYTES) }
+        }
+    };
+    (b: $input:expr) => {
+        const {
+            // Ensure input is a `&'static [u8]`
+            const INPUT: &[u8] = $input;
 
-        // Reusable const for byte length
-        const N: usize = INPUT.len();
+            // Reusable const for byte length
+            const N: usize = INPUT.len();
 
-        // Include length in constant for next call.
-        const CLONE: [u8; N] = *$crate::mem::as_sized(INPUT);
-        const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
-        &RESULT as &[u8]
-    }};
+            // Include length in constant for next call.
+            const CLONE: [u8; N] = *$crate::mem::as_sized(INPUT);
+            const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
+            &RESULT as &[u8]
+        }
+    };
 }

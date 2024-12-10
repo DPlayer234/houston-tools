@@ -10,13 +10,10 @@ pub struct SlashUser<'a> {
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
-    fn extract(
-        ctx: &Context<'ctx>,
-        resolved: &ResolvedValue<'ctx>,
-    ) -> Result<Self, Error<'ctx>> {
+    fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
             ResolvedValue::User(user, member) => Ok(Self { user, member }),
-            _ => Err(Error::structure_mismatch(*ctx, "expected User"))
+            _ => Err(Error::structure_mismatch(*ctx, "expected User")),
         }
     }
 
@@ -43,14 +40,16 @@ pub struct SlashMember<'a> {
 
 #[serenity::async_trait]
 impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
-    fn extract(
-        ctx: &Context<'ctx>,
-        resolved: &ResolvedValue<'ctx>,
-    ) -> Result<Self, Error<'ctx>> {
+    fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
-            ResolvedValue::User(user, Some(member)) => return Ok(Self { user, member: PartialRef::Partial(member) }),
+            ResolvedValue::User(user, Some(member)) => {
+                return Ok(Self {
+                    user,
+                    member: PartialRef::Partial(member),
+                })
+            },
             // delegate to this method to get the correct error
-            _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?)
+            _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?),
         }
 
         // this is functionally unreachable
@@ -69,7 +68,10 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
         let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
-        Ok(Self { user, member: PartialRef::Partial(member) })
+        Ok(Self {
+            user,
+            member: PartialRef::Partial(member),
+        })
     }
 }
 
@@ -89,7 +91,10 @@ impl SlashUser<'_> {
 impl<'a> SlashMember<'a> {
     pub fn from_ctx(ctx: Context<'a>) -> Result<Self> {
         let member = ctx.member().context("member must be present")?;
-        Ok(Self { user: ctx.user(), member: PartialRef::Full(member) })
+        Ok(Self {
+            user: ctx.user(),
+            member: PartialRef::Full(member),
+        })
     }
 
     pub fn nick(&self) -> Option<&str> {
@@ -100,8 +105,7 @@ impl<'a> SlashMember<'a> {
     }
 
     pub fn display_name(&self) -> &str {
-        self.nick()
-            .unwrap_or_else(|| self.user.display_name())
+        self.nick().unwrap_or_else(|| self.user.display_name())
     }
 
     pub fn face(&self) -> String {

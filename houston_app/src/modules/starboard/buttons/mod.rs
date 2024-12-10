@@ -1,2 +1,2 @@
-pub mod top_posts;
 pub mod top;
+pub mod top_posts;

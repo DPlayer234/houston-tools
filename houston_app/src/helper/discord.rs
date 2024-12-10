@@ -9,10 +9,8 @@ pub fn create_string_select_menu_row<'a>(
         options: options.into(),
     };
 
-    CreateActionRow::SelectMenu(
-        CreateSelectMenu::new(custom_id, kind)
-            .placeholder(placeholder)
-    )
+    let select = CreateSelectMenu::new(custom_id, kind).placeholder(placeholder);
+    CreateActionRow::SelectMenu(select)
 }
 
 pub trait WithPartial {

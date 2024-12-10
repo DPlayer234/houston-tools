@@ -1,8 +1,7 @@
 use std::sync::LazyLock;
 
-use serenity::http::Http;
-
 use azur_lane::ship::HullType;
+use serenity::http::Http;
 
 use super::HBotConfig;
 use crate::modules::Module;
@@ -123,7 +122,7 @@ impl<'a> HAppEmojis<'a> {
     #[must_use]
     pub fn hull(self, hull_type: HullType) -> &'a ReactionType {
         let Some(s) = self.0 else {
-            return &FALLBACK_EMOJI
+            return &FALLBACK_EMOJI;
         };
 
         match hull_type {

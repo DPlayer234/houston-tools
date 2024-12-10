@@ -61,15 +61,23 @@ impl Display for Details<'_> {
 fn format_fire_rate(weapon: &Weapon, f: &mut Formatter<'_>) -> Result {
     let salvo_time = match &weapon.data {
         WeaponData::Bullets(b) => b.salvo_time,
-        _ => 0.0
+        _ => 0.0,
     };
 
-    let reload_time = weapon.reload_time * if weapon.kind == WeaponKind::StrikeAircraft { 2.2 } else { 1.0 };
+    let weapon_kind_reload_mult = if weapon.kind == WeaponKind::StrikeAircraft {
+        2.2
+    } else {
+        1.0
+    };
+
+    let reload_time = weapon.reload_time * weapon_kind_reload_mult;
     let fixed_delay = weapon.fixed_delay + salvo_time;
     writeln!(
         f,
         "**FR:** {:.2} +{:.2}s (~{:.1}/min)",
-        reload_time, fixed_delay, 60.0 / (reload_time + fixed_delay)
+        reload_time,
+        fixed_delay,
+        60.0 / (reload_time + fixed_delay),
     )
 }
 
@@ -87,13 +95,20 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Res
         BulletExtra::Beam(beam) => writeln!(
             f,
             "{indent}**Dmg:** ~{:.0} x {} x {:.1} @ {:.0}% {}",
-            beam.duration / beam.tick_delay, amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+            beam.duration / beam.tick_delay,
+            amount,
+            barrage.damage * barrage.coefficient,
+            barrage.scaling * 100f64,
+            barrage.scaling_stat.name(),
         )?,
         // amount x damage
         _ => writeln!(
             f,
             "{indent}**Dmg:** {} x {:.1} @ {:.0}% {}",
-            amount, barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
+            amount,
+            barrage.damage * barrage.coefficient,
+            barrage.scaling * 100f64,
+            barrage.scaling_stat.name(),
         )?,
     }
 
@@ -116,7 +131,10 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Res
     write!(
         f,
         "{indent}**{: >4}:** {:.0}/{:.0}/{:.0}",
-        bullet.ammo.name(), l * 100f64, m * 100f64, h * 100f64
+        bullet.ammo.name(),
+        l * 100f64,
+        m * 100f64,
+        h * 100f64,
     )?;
 
     // hits both surface and subs
@@ -135,8 +153,11 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Re
         f,
         "{indent}**Dmg:** {:.1} @ {:.0}% {}\n\
          {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}\n",
-        barrage.damage * barrage.coefficient, barrage.scaling * 100f64, barrage.scaling_stat.name(),
-        barrage.range, barrage.firing_angle,
+        barrage.damage * barrage.coefficient,
+        barrage.scaling * 100f64,
+        barrage.scaling_stat.name(),
+        barrage.range,
+        barrage.firing_angle,
     )
 }
 
@@ -146,24 +167,30 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
     writeln!(
         f,
         "**Speed:** {:.0} \u{2E31} **HP:** {:.0} \u{2E31} {}",
-        aircraft.speed, aircraft.health.calc(120, 1.0), aircraft.dodge_limit
+        aircraft.speed,
+        aircraft.health.calc(120, 1.0),
+        aircraft.dodge_limit,
     )?;
 
     for weapon in &aircraft.weapons {
-        writeln!(f, "__**{}:**__", weapon.name.as_deref().unwrap_or_else(|| weapon.kind.name()))?;
+        writeln!(
+            f,
+            "__**{}:**__",
+            weapon.name.as_deref().unwrap_or_else(|| weapon.kind.name())
+        )?;
 
         match &weapon.data {
             WeaponData::Bullets(barrage) => {
                 format_barrage(barrage, f, PAD)?;
-            }
+            },
             WeaponData::AntiAir(barrage) => {
                 f.write_str(PAD)?;
                 format_fire_rate(weapon, f)?;
                 format_anti_air(barrage, f, PAD)?;
-            }
+            },
             WeaponData::Aircraft(..) => {
                 f.write_str("<matryoshka aircraft>\n")?;
-            }
+            },
         }
     }
 

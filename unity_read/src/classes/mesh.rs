@@ -92,15 +92,20 @@ pub struct ResolvedMesh {
 #[derive(Debug, Clone)]
 pub struct MeshVertexData<'t> {
     mesh: &'t Mesh,
-    data: &'t [u8]
+    data: &'t [u8],
 }
 
 impl Mesh {
     /// Reads the mesh's vertex data.
-    pub fn read_vertex_data<'t, 'fs: 't>(&'t self, fs: &'fs UnityFsFile<'fs>) -> crate::Result<MeshVertexData<'t>> {
+    pub fn read_vertex_data<'t, 'fs: 't>(
+        &'t self,
+        fs: &'fs UnityFsFile<'fs>,
+    ) -> crate::Result<MeshVertexData<'t>> {
         Ok(MeshVertexData {
             mesh: self,
-            data: self.stream_data.load_data_or_else(fs, || &self.vertex_data.data_size)?
+            data: self
+                .stream_data
+                .load_data_or_else(fs, || &self.vertex_data.data_size)?,
         })
     }
 }
@@ -122,51 +127,64 @@ impl MeshVertexData<'_> {
 
             for (index, channel) in self.mesh.vertex_data.channels.iter().enumerate() {
                 #[allow(clippy::manual_range_patterns)]
-                if !matches!(channel.dimension, 1 | 2 | 3) { continue }
+                if !matches!(channel.dimension, 1 | 2 | 3) {
+                    continue;
+                }
 
                 // CMBK: currently only supporting some channels
-                if !matches!(index, 0 | 3 | 4) { continue }
+                if !matches!(index, 0 | 3 | 4) {
+                    continue;
+                }
 
-                let Some(stream) = streams.get(usize::from(channel.stream)) else { continue };
+                let Some(stream) = streams.get(usize::from(channel.stream)) else {
+                    continue;
+                };
 
                 let channel_size = channel.stride();
-                let stream_size = u64::from(stream.stride)
-                    * u64::from(sub_mesh.vertex_count)
+                let stream_size = u64::from(stream.stride) * u64::from(sub_mesh.vertex_count)
                     + u64::from(stream.offset);
 
-                if channel_size > stream.stride || stream_size > u64::from_int(self.data.len())? { continue }
+                if channel_size > stream.stride || stream_size > u64::from_int(self.data.len())? {
+                    continue;
+                }
 
                 // assert that the loops below can always cast `i as usize`
                 _ = usize::from_int(sub_mesh.vertex_count)?;
 
                 match index {
-                    0 => { // pos
-                        if channel.dimension != 3 { continue }
-                        for i in 0 .. sub_mesh.vertex_count {
-                            let cursor = &mut make_cursor(self.data, i, sub_mesh, stream, channel);
-                            result.vertices[i as usize].pos = read_f32_vector::<3>(cursor, channel.format)?.into();
+                    0 => {
+                        // pos
+                        if channel.dimension != 3 {
+                            continue;
                         }
-                    }
-                    3 | 4 => { // uv1/2
-                        for i in 0 .. sub_mesh.vertex_count {
+                        for i in 0..sub_mesh.vertex_count {
+                            let cursor = &mut make_cursor(self.data, i, sub_mesh, stream, channel);
+                            result.vertices[i as usize].pos =
+                                read_f32_vector::<3>(cursor, channel.format)?.into();
+                        }
+                    },
+                    3 | 4 => {
+                        // uv1/2
+                        for i in 0..sub_mesh.vertex_count {
                             let cursor = &mut make_cursor(self.data, i, sub_mesh, stream, channel);
                             let uv = &mut result.vertices[i as usize].uv;
                             match channel.dimension {
                                 1 => *uv = read_f32_vector::<1>(cursor, channel.format)?.into(),
                                 2 => *uv = read_f32_vector::<2>(cursor, channel.format)?.into(),
                                 3 => *uv = read_f32_vector::<3>(cursor, channel.format)?.into(),
-                                _ => unreachable!()
+                                _ => unreachable!(),
                             }
                         }
-                    }
-                    _ => unreachable!()
+                    },
+                    _ => unreachable!(),
                 }
             }
 
             // Revisit if x of vertices/normals needs to be inverted
 
             let index_offset = sub_mesh.first_byte / index_size;
-            let mut index_iter = index_buffer.iter()
+            let mut index_iter = index_buffer
+                .iter()
                 .skip(usize::from_int(index_offset)?)
                 .take(usize::from_int(sub_mesh.index_count)?);
 
@@ -174,8 +192,13 @@ impl MeshVertexData<'_> {
             let mut topology_offset = index_offset % 2u32;
 
             while let Some(&vertex_index_0) = index_iter.next() {
-                let Some(&vertex_index_1) = index_iter.next() else { break };
-                let Some(&vertex_index_2) = index_iter.next() else { break };
+                let Some(&vertex_index_1) = index_iter.next() else {
+                    break;
+                };
+
+                let Some(&vertex_index_2) = index_iter.next() else {
+                    break;
+                };
 
                 let mut triangle = (
                     usize::from_int(vertex_index_0 + sub_mesh.base_vertex - sub_mesh.first_vertex)?,
@@ -196,7 +219,13 @@ impl MeshVertexData<'_> {
 
         return Ok(result_meshes);
 
-        fn make_cursor<'a>(data: &'a [u8], k: u32, sub_mesh: &SubMesh, stream: &StreamInfo, channel: &ChannelInfo) -> Cursor<&'a [u8]> {
+        fn make_cursor<'a>(
+            data: &'a [u8],
+            k: u32,
+            sub_mesh: &SubMesh,
+            stream: &StreamInfo,
+            channel: &ChannelInfo,
+        ) -> Cursor<&'a [u8]> {
             let data_offset = u64::from(stream.offset)
                 + u64::from(sub_mesh.first_vertex + k) * u64::from(stream.stride)
                 + u64::from(channel.offset);
@@ -206,7 +235,10 @@ impl MeshVertexData<'_> {
             cursor
         }
 
-        fn read_f32_vector<const N: usize>(cursor: &mut Cursor<&[u8]>, t: u8) -> crate::Result<[f32; N]> {
+        fn read_f32_vector<const N: usize>(
+            cursor: &mut Cursor<&[u8]>,
+            t: u8,
+        ) -> crate::Result<[f32; N]> {
             match t {
                 0 => read_vector_of::<f32, N>(cursor),
                 1 => read_vector_of::<ReadF16, N>(cursor).map(NormFloat::to_f32_array),
@@ -214,7 +246,9 @@ impl MeshVertexData<'_> {
                 4 => read_vector_of::<Norm<i8>, N>(cursor).map(NormFloat::to_f32_array),
                 5 => read_vector_of::<Norm<u16>, N>(cursor).map(NormFloat::to_f32_array),
                 6 => read_vector_of::<Norm<i16>, N>(cursor).map(NormFloat::to_f32_array),
-                _ => Err(Error::Unsupported(format!("unsupported mesh data type: {t}")))?
+                _ => Err(Error::Unsupported(format!(
+                    "unsupported mesh data type: {t}"
+                )))?,
             }
         }
 
@@ -236,7 +270,9 @@ impl MeshVertexData<'_> {
         macro_rules! map_buffer {
             ($Ty:ty) => {{
                 const N: usize = size_of::<$Ty>();
-                let vec = self.mesh.index_buffer
+                let vec = self
+                    .mesh
+                    .index_buffer
                     .chunks_exact(N)
                     .map(|chunk| {
                         // cannot fail since chunk size == N
@@ -261,12 +297,13 @@ impl MeshVertexData<'_> {
         let data_size = u32::from_int(self.data.len())?;
         let vertex_data = &self.mesh.vertex_data;
 
-        let mut streams = vertex_data.streams
-            .clone()
-            .unwrap_or_default();
+        let mut streams = vertex_data.streams.clone().unwrap_or_default();
 
-        let max_stream = vertex_data.channels.iter()
-            .map(|c| c.stream).max()
+        let max_stream = vertex_data
+            .channels
+            .iter()
+            .map(|c| c.stream)
+            .max()
             .unwrap_or_default();
         let max_stream = usize::from(max_stream);
 
@@ -293,7 +330,9 @@ impl MeshVertexData<'_> {
             }
 
             if cur_offset > data_size {
-                Err(Error::InvalidData("mesh channel info specified too much stream data"))?;
+                Err(Error::InvalidData(
+                    "mesh channel info specified too much stream data",
+                ))?;
             }
 
             if streams.len() == 2 {
@@ -317,7 +356,10 @@ impl ChannelInfo {
         */
         const FORMATS: [u8; 13] = [4, 2, 1, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
-        FORMATS.get(usize::from(self.format)).copied().unwrap_or_default()
+        FORMATS
+            .get(usize::from(self.format))
+            .copied()
+            .unwrap_or_default()
     }
 }
 
@@ -327,11 +369,13 @@ impl ResolvedMesh {
     }
 
     pub fn triangles(&self) -> impl ExactSizeIterator<Item = (&Vertex, &Vertex, &Vertex)> {
-        self.triangle_data.iter().map(|t| (
-            &self.vertices[t.0],
-            &self.vertices[t.1],
-            &self.vertices[t.2]
-        ))
+        self.triangle_data.iter().map(|t| {
+            (
+                &self.vertices[t.0],
+                &self.vertices[t.1],
+                &self.vertices[t.2],
+            )
+        })
     }
 }
 
@@ -413,18 +457,30 @@ impl BinRead for ReadF16 {
 
 impl From<[f32; 1]> for Vector3f {
     fn from(value: [f32; 1]) -> Self {
-        Self { x: value[0], y: 0f32, z: 0f32 }
+        Self {
+            x: value[0],
+            y: 0f32,
+            z: 0f32,
+        }
     }
 }
 
 impl From<[f32; 2]> for Vector3f {
     fn from(value: [f32; 2]) -> Self {
-        Self { x: value[0], y: value[1], z: 0f32 }
+        Self {
+            x: value[0],
+            y: value[1],
+            z: 0f32,
+        }
     }
 }
 
 impl From<[f32; 3]> for Vector3f {
     fn from(value: [f32; 3]) -> Self {
-        Self { x: value[0], y: value[1], z: value[2] }
+        Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+        }
     }
 }
