@@ -32,7 +32,9 @@ const ELLIPSIS: char = '\u{2026}';
 /// Type annotations in the examples are optional and provided only for clarity.
 ///
 /// `&T` where `T`: [`AsRef<str>`], i.e. by immutable reference, here with
-/// [`&str`](str): ```
+/// [`&str`](str):
+///
+/// ```
 /// // by-ref may clone the value if needed and returns a `Cow<str>`
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
@@ -42,8 +44,9 @@ const ELLIPSIS: char = '\u{2026}';
 /// assert!(matches!(long, Cow::Borrowed(text)));
 /// assert!(short == "hello…");
 /// ```
-/// 
+///
 /// By value, here with [`String`]:
+///
 /// ```
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
@@ -53,8 +56,9 @@ const ELLIPSIS: char = '\u{2026}';
 /// let short: String = truncate(long, 6);
 /// assert!(short == "hello…");
 /// ```
-/// 
+///
 /// By mutable reference, here with [`&mut String`](String):
+///
 /// ```
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
