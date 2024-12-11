@@ -48,7 +48,10 @@ async fn main() -> anyhow::Result<()> {
         // register the custom panic handler after logging is set up
         panic::set_hook(Box::new(on_panic));
 
-        log::info!("Houston Tools v{VERSION} - {GIT_HASH}");
+        log::info!(
+            target: "houston_app::version",
+            "Houston Tools v{VERSION} - {GIT_HASH}",
+        );
 
         let mut init = modules::Info::new();
         init.load(&config.bot)?;
@@ -204,7 +207,7 @@ async fn main() -> anyhow::Result<()> {
             .set_default("log.root.appenders[0]", "default")?
             .set_default("log.appenders.default.kind", "default")?
             .set_default("log.appenders.default.encoder.kind", "default")?
-            .set_default(concat!("log.loggers.", module_path!(), ".level"), "trace")?
+            .set_default("log.loggers.houston_app.level", "trace")?
             .build()
             .context("cannot build config")?
             .try_deserialize()

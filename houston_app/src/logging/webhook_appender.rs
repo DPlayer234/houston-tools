@@ -48,38 +48,7 @@ impl Append for WebhookAppender {
     }
 
     fn flush(&self) {
-        // we're not _too_ concerned about the efficiency of this code
-        // it really only runs on exit, so the only concern is really
-        // "doesn't block other threads"
-
-        // async-over-sync from an async context is... great
-        let res: Result = tokio::task::block_in_place(move || {
-            tokio::runtime::Handle::current().block_on(async {
-                let semaphore = Arc::new(Semaphore::new(1));
-                let notify = Arc::clone(&semaphore).acquire_owned().await?;
-
-                let msg = LogData {
-                    buf: ArrayVec::new(),
-                    notify: Some(notify),
-                };
-
-                // we essentially wait until the semaphore lets us grab another permit
-                // this should happen when `notify` of the `msg` is dropped,
-                // which happens after the final batch send
-                let task = async move {
-                    self.sender.send(msg).await?;
-                    _ = semaphore.acquire().await?;
-                    Ok(())
-                };
-
-                // use the time limit here to not block forever
-                tokio::time::timeout(FLUSH_TIME_LIMIT, task).await?
-            })
-        });
-
-        if let Err(why) = res {
-            eprintln!("could not flush webhook appender: {why:?}");
-        }
+        try_flush(&self.sender);
     }
 }
 
@@ -259,6 +228,41 @@ fn push_str_lossy(target: &mut String, buf: &[u8]) {
         if !chunk.invalid().is_empty() {
             target.push(char::REPLACEMENT_CHARACTER);
         }
+    }
+}
+
+fn try_flush(sender: &Sender<LogData>) {
+    // we're not _too_ concerned about the efficiency of this code
+    // it really only runs on exit, so the only concern is really
+    // "doesn't block other threads"
+
+    // async-over-sync from an async context is... great
+    let res: Result = tokio::task::block_in_place(move || {
+        tokio::runtime::Handle::current().block_on(async {
+            let semaphore = Arc::new(Semaphore::new(1));
+            let notify = Arc::clone(&semaphore).acquire_owned().await?;
+
+            let msg = LogData {
+                buf: ArrayVec::new(),
+                notify: Some(notify),
+            };
+
+            // we essentially wait until the semaphore lets us grab another permit
+            // this should happen when `notify` of the `msg` is dropped,
+            // which happens after the final batch send
+            let task = async move {
+                sender.send(msg).await?;
+                _ = semaphore.acquire().await?;
+                Ok(())
+            };
+
+            // use the time limit here to not block forever
+            tokio::time::timeout(FLUSH_TIME_LIMIT, task).await?
+        })
+    });
+
+    if let Err(why) = res {
+        eprintln!("could not flush webhook appender: {why:?}");
     }
 }
 
