@@ -11,6 +11,7 @@ mod slashies;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
+    use std::panic;
     use std::sync::{Arc, Mutex};
 
     use houston_cmd::Framework;
@@ -19,59 +20,83 @@ async fn main() -> anyhow::Result<()> {
 
     use crate::prelude::*;
 
-    // SAFETY: No other code running that accesses this yet.
-    unsafe {
-        crate::helper::time::mark_startup_time();
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    const GIT_HASH: &str = match option_env!("GIT_HASH") {
+        Some(git_hash) => git_hash,
+        None => "<unknown>",
+    };
+
+    // run the program and clean up
+    let res = run().await;
+    if let Err(why) = &res {
+        log::error!("Exiting due to error: {why:?}");
     }
 
-    let config = build_config()?;
-    init_logging(config.log)?;
+    log::logger().flush();
+    return res;
 
-    match option_env!("GIT_HASH") {
-        Some(git_hash) => log::info!("Houston Tools [Commit: {git_hash}]"),
-        None => log::info!("Houston Tools [Unknown Commit]"),
-    };
+    // actual main logic
+    async fn run() -> Result {
+        // SAFETY: No other code running that accesses this yet.
+        unsafe {
+            crate::helper::time::mark_startup_time();
+        }
 
-    log::info!("Starting...");
+        let config = build_config()?;
+        init_logging(config.log)?;
 
-    let mut init = modules::Info::new();
-    init.load(&config.bot)?;
+        // register the custom panic handler after logging is set up
+        panic::set_hook(Box::new(on_panic));
 
-    let bot_data = Arc::new(HBotData::new(config.bot));
+        log::info!("Houston Tools v{VERSION} - {GIT_HASH}");
 
-    bot_data.connect(&init).await?;
-    let loader = tokio::task::spawn(load_azur_lane(Arc::clone(&bot_data)));
+        let mut init = modules::Info::new();
+        init.load(&config.bot)?;
 
-    let event_handler = HEventHandler {
-        commands: Mutex::new(Some(houston_cmd::to_create_command(&init.commands))),
-    };
+        let bot_data = Arc::new(HBotData::new(config.bot));
 
-    let framework = Framework::new()
-        .commands(init.commands)
-        .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
-        .on_error(|err| Box::pin(slashies::error_handler(err)));
+        bot_data.connect(&init).await?;
+        tokio::task::spawn(load_azur_lane(Arc::clone(&bot_data)));
 
-    let mut client = Client::builder(config.discord.token, init.intents)
-        .activity(ActivityData::custom(
-            config
-                .discord
-                .status
-                .map(Cow::Owned)
-                .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION"))),
-        ))
-        .data(Arc::clone(&bot_data))
-        .framework(framework)
-        .event_handler(event_handler)
-        .await
-        .context("failed to build discord client")?;
+        let event_handler = HEventHandler {
+            commands: Mutex::new(Some(houston_cmd::to_create_command(&init.commands))),
+        };
 
-    client
-        .start()
-        .await
-        .context("failed to start discord client")?;
-    loader.await?;
+        let framework = Framework::new()
+            .commands(init.commands)
+            .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
+            .on_error(|err| Box::pin(slashies::error_handler(err)));
 
-    return Ok(());
+        let mut client = Client::builder(config.discord.token, init.intents)
+            .activity(ActivityData::custom(
+                config
+                    .discord
+                    .status
+                    .map(Cow::Owned)
+                    .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION"))),
+            ))
+            .data(Arc::clone(&bot_data))
+            .framework(framework)
+            .event_handler(event_handler)
+            .await
+            .context("failed to build discord client")?;
+
+        client
+            .start()
+            .await
+            .context("discord client shut down unexpectedly")
+    }
+
+    /// Custom panic handler that writes the panic to the logger and flushes it.
+    ///
+    /// This _could_ be a problem if the logger is the cause of the panic, but
+    /// at that stage error reporting is already screwed so this doesn't make it
+    /// any worse.
+    fn on_panic(info: &panic::PanicHookInfo<'_>) {
+        eprintln!("{info}"); // just in case the loggers fail or are empty
+        log::error!("Uncaught panic: {}", info);
+        log::logger().flush();
+    }
 
     /// Type to handle various Discord events.
     struct HEventHandler {

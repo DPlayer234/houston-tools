@@ -21,8 +21,17 @@ use log4rs::encode::{self, Encode, EncoderConfig, Style};
 use serenity::http::Http;
 use serenity::secrets::SecretString;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use crate::prelude::*;
+
+// set a time limit for flushing so we don't block the app unnecessarily.
+// generally, flushing only happens on exit, so blocking is fine, however,
+// since this may prevent a shutdown-and-restart, this time may inhibit a
+// restart. furthermore, because the expected use for this appender are
+// _warnings and errors only_, chances are if we exceed this time budget,
+// things are already really bad
+const FLUSH_TIME_LIMIT: Duration = Duration::from_secs(5);
 
 #[derive(Debug)]
 pub struct WebhookAppender {
@@ -38,7 +47,40 @@ impl Append for WebhookAppender {
         Ok(())
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        // we're not _too_ concerned about the efficiency of this code
+        // it really only runs on exit, so the only concern is really
+        // "doesn't block other threads"
+
+        // async-over-sync from an async context is... great
+        let res: Result = tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async {
+                let semaphore = Arc::new(Semaphore::new(1));
+                let notify = Arc::clone(&semaphore).acquire_owned().await?;
+
+                let msg = LogData {
+                    buf: ArrayVec::new(),
+                    notify: Some(notify),
+                };
+
+                // we essentially wait until the semaphore lets us grab another permit
+                // this should happen when `notify` of the `msg` is dropped,
+                // which happens after the final batch send
+                let task = async move {
+                    self.sender.send(msg).await?;
+                    _ = semaphore.acquire().await?;
+                    Ok(())
+                };
+
+                // use the time limit here to not block forever
+                tokio::time::timeout(FLUSH_TIME_LIMIT, task).await?
+            })
+        });
+
+        if let Err(why) = res {
+            eprintln!("could not flush webhook appender: {why:?}");
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -61,17 +103,16 @@ impl WebhookClient {
     }
 }
 
-const LOG_DATA_SIZE: usize = 252;
+const LOG_DATA_SIZE: usize = 256;
 
+/// Represents a single log message to be written to the webhook.
 #[derive(Debug, Default)]
 struct LogData {
+    /// The buffer of data to write to the webhook.
     buf: ArrayVec<u8, LOG_DATA_SIZE>,
+    /// A semaphore permit to release after the message is written.
+    notify: Option<OwnedSemaphorePermit>,
 }
-
-const _: () = assert!(
-    size_of::<LogData>() <= 256,
-    "LogData should be at most 256 bytes in size",
-);
 
 impl io::Write for LogData {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -138,8 +179,18 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
     // we will reuse this buffer for _every_ posted message
     let mut text = String::new();
 
+    // holds the semaphore permits to notify after the current batch.
+    // notified by clearing the vec and thus dropping the permits. buffer is reused.
+    #[allow(clippy::collection_is_never_read, reason = "used to delay drop")]
+    let mut flush = Vec::new();
+
     // this loop will exit when the sender is dropped
     while let Some(data) = receiver.recv().await {
+        // the permit of `data` is implicitly dropped
+        if data.buf.is_empty() {
+            continue;
+        }
+
         // make sure there's enough space for at least the first message in the batch
         text.reserve(data.buf.len() + 16);
         text.push_str("```ansi\n");
@@ -148,8 +199,13 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
 
         // push additional messages into the buffer if allowed & possible
         if config.batch_size > 1 {
-            let mut count = 0usize;
-            while let Some(data) = try_recv_timeout(&mut receiver, config.batch_time).await {
+            let mut count = 1usize;
+            while let Some(mut data) = try_recv_timeout(&mut receiver, config.batch_time).await {
+                // take out the permit to drop it later
+                if let Some(sem) = data.notify.take() {
+                    flush.push(sem);
+                }
+
                 count += 1;
                 push_str_lossy(&mut text, &data.buf);
 
@@ -182,15 +238,15 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
         if let Err(why) = res {
             eprintln!("webhook appender failed: {why:?}");
         }
+
+        flush.clear();
     }
 }
 
 /// Equivalent to `receiver.recv()` but using a timeout.
 async fn try_recv_timeout(receiver: &mut Receiver<LogData>, timeout: Duration) -> Option<LogData> {
-    tokio::time::timeout(timeout, receiver.recv())
-        .await
-        .ok()
-        .flatten()
+    let task = receiver.recv();
+    tokio::time::timeout(timeout, task).await.ok().flatten()
 }
 
 /// Lossy-decodes `buf` and appends it to `target` as one operation.
