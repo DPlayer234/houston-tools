@@ -43,15 +43,14 @@ async fn main() -> anyhow::Result<()> {
         }
 
         let config = build_config()?;
-        init_logging(config.log)?;
+        init_logging(config.log.log4rs)?;
 
-        // register the custom panic handler after logging is set up
-        panic::set_hook(Box::new(on_panic));
+        if config.log.panic {
+            // register the custom panic handler after logging is set up
+            panic::set_hook(Box::new(on_panic));
+        }
 
-        log::info!(
-            target: "houston_app::version",
-            "Houston Tools v{VERSION} - {GIT_HASH}",
-        );
+        log::info!(target: "houston_app::version", "Houston Tools v{VERSION} - {GIT_HASH}");
 
         let mut init = modules::Info::new();
         init.load(&config.bot)?;
@@ -96,8 +95,13 @@ async fn main() -> anyhow::Result<()> {
     /// at that stage error reporting is already screwed so this doesn't make it
     /// any worse.
     fn on_panic(info: &panic::PanicHookInfo<'_>) {
-        eprintln!("{info}"); // just in case the loggers fail or are empty
-        log::error!("Uncaught panic: {}", info);
+        let backtrace = backtrace::Backtrace::new();
+        let thread = std::thread::current();
+        let name = thread.name().unwrap_or("<unnamed>");
+
+        // just in case the loggers fail or are empty
+        eprintln!("thread '{name}' {info}");
+        log::error!("thread '{name}' {info}\n{backtrace:?}");
         log::logger().flush();
     }
 

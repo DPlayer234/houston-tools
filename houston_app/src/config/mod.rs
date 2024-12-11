@@ -13,7 +13,7 @@ pub struct HConfig {
     pub discord: HDiscordConfig,
     pub bot: HBotConfig,
     #[serde(default)]
-    pub log: log4rs::config::RawConfig,
+    pub log: HLogConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,4 +45,12 @@ impl HBotConfig {
         use anyhow::Context as _;
         self.perks.as_ref().context("perks must be enabled")
     }
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct HLogConfig {
+    #[serde(flatten)]
+    pub log4rs: log4rs::config::RawConfig,
+    #[serde(default)]
+    pub panic: bool,
 }
