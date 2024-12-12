@@ -109,8 +109,9 @@ impl HBotData {
     }
 
     /// Sets the current bot user.
-    pub fn set_current_user(&self, user: CurrentUser) {
-        _ = self.current_user.set(user);
+    pub fn set_current_user(&self, user: CurrentUser) -> Result {
+        let res = self.current_user.set(user);
+        res.ok().context("current user already set")
     }
 
     /// Gets the Azur Lane game data.

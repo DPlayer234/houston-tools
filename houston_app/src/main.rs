@@ -71,11 +71,8 @@ async fn main() -> anyhow::Result<()> {
 
         let mut client = Client::builder(config.discord.token, init.intents)
             .activity(ActivityData::custom(
-                config
-                    .discord
-                    .status
-                    .map(Cow::Owned)
-                    .unwrap_or(Cow::Borrowed(env!("CARGO_PKG_VERSION"))),
+                // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
+                config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
             ))
             .data(Arc::clone(&bot_data))
             .framework(framework)
@@ -95,12 +92,14 @@ async fn main() -> anyhow::Result<()> {
     /// at that stage error reporting is already screwed so this doesn't make it
     /// any worse.
     fn on_panic(info: &panic::PanicHookInfo<'_>) {
+        use std::io::{stdout, Write};
+
         let backtrace = backtrace::Backtrace::new();
         let thread = std::thread::current();
         let name = thread.name().unwrap_or("<unnamed>");
 
         // just in case the loggers fail or are empty
-        eprintln!("thread '{name}' {info}");
+        _ = writeln!(stdout(), "thread '{name}' {info}");
         log::error!("thread '{name}' {info}\n{backtrace:?}");
         log::logger().flush();
     }
@@ -116,11 +115,12 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
-            let data = ctx.data::<HContextData>();
-            data.set_current_user(ready.user);
+            let data = ctx.data_ref::<HContextData>();
+            _ = data.set_current_user(ready.user);
 
-            if let Some(commands) = self.take_commands() {
-                if let Err(why) = ready_setup(ctx, &data, &commands).await {
+            let commands = { self.commands.lock().unwrap().take() };
+            if let Some(commands) = commands {
+                if let Err(why) = ready_setup(&ctx, data, &commands).await {
                     log::error!("Failure in ready: {why:?}");
                     *self.commands.lock().unwrap() = Some(commands);
                 }
@@ -153,14 +153,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    impl HEventHandler {
-        fn take_commands(&self) -> Option<Vec<CreateCommand<'static>>> {
-            self.commands.lock().unwrap().take()
-        }
-    }
-
     async fn ready_setup(
-        ctx: Context,
+        ctx: &Context,
         data: &HBotData,
         commands: &[CreateCommand<'static>],
     ) -> Result {
