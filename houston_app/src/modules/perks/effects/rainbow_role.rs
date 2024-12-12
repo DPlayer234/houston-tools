@@ -46,7 +46,7 @@ impl Shape for RainbowRole {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context) -> Result {
+    async fn update(&self, ctx: &Context, _now: DateTime<Utc>) -> Result {
         const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {

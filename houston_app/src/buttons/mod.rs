@@ -124,6 +124,8 @@ define_button_args! {
     StarboardTopPosts(starboard::buttons::top_posts::View),
     /// Open the "go to page" modal.
     ToPage(core_mod::buttons::ToPage),
+    Delete(core_mod::buttons::Delete),
+    PerksBirthdaySet(perks::buttons::birthday::Set),
 }
 
 impl ButtonArgs {

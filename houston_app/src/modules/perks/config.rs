@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use indexmap::IndexMap;
+
+use super::Item;
 use crate::prelude::*;
 
 fn default_cash_name() -> String {
@@ -14,6 +17,8 @@ pub struct Config {
     pub pushpin: Option<PushpinConfig>,
     pub role_edit: Option<RoleEditConfig>,
     pub collectible: Option<CollectibleConfig>,
+    #[serde(default)]
+    pub birthday: IndexMap<GuildId, BirthdayConfig>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
@@ -50,7 +55,7 @@ pub struct RainbowConfig {
     #[serde(flatten)]
     pub price: EffectPrice,
     #[serde(flatten)]
-    pub guilds: HashMap<GuildId, RainbowRoleEntry>,
+    pub guilds: IndexMap<GuildId, RainbowRoleEntry>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -112,6 +117,20 @@ pub struct CollectibleGuildEntry {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleNotice {
+    pub channel: ChannelId,
+    pub text: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct BirthdayConfig {
+    pub role: Option<RoleId>,
+    pub notice: Option<BirthdayNotice>,
+    #[serde(default)]
+    pub gifts: Vec<(Item, u32)>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct BirthdayNotice {
     pub channel: ChannelId,
     pub text: String,
 }

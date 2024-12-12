@@ -12,6 +12,7 @@ const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(3);
 
 pub mod buttons;
 pub mod config;
+mod day_of_year;
 mod effects;
 mod items;
 pub mod model;
@@ -56,6 +57,10 @@ impl super::Module for Module {
             c.push(edit);
         }
 
+        if !perks.birthday.is_empty() {
+            c.push(slashies::birthday::birthday());
+        }
+
         c
     }
 
@@ -66,6 +71,7 @@ impl super::Module for Module {
             update_indices(Wallet::collection(db), Wallet::indices()).await?;
             update_indices(ActivePerk::collection(db), ActivePerk::indices()).await?;
             update_indices(UniqueRole::collection(db), UniqueRole::indices()).await?;
+            update_indices(Birthday::collection(db), Birthday::indices()).await?;
             Ok(())
         })
     }
@@ -87,6 +93,7 @@ impl super::Module for Module {
 #[derive(Debug, Default)]
 pub struct PerkState {
     last_check: RwLock<DateTime<Utc>>,
+    last_birthday_check: RwLock<NaiveDate>,
 }
 
 pub fn dispatch_check_perks(ctx: &Context) {
@@ -110,7 +117,7 @@ async fn check_perks_core(ctx: Context) -> Result {
         .checked_add_signed(CHECK_INTERVAL)
         .context("time has broken")?;
 
-    let now = Utc::now();
+    let now = "2025-01-08T12:15:00Z".parse::<DateTime<Utc>>()?; // Utc::now();
     if now < next {
         // no need to check yet
         return Ok(());
@@ -126,7 +133,7 @@ async fn check_perks_core(ctx: Context) -> Result {
         let ctx = ctx.clone();
         async move {
             for kind in effects::Effect::all() {
-                if let Err(why) = kind.update(&ctx).await {
+                if let Err(why) = kind.update(&ctx, now).await {
                     log::error!("Failed update for perk effect {kind:?}: {why:?}");
                 }
             }

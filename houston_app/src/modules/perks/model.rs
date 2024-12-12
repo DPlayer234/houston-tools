@@ -1,3 +1,4 @@
+use super::day_of_year::DayOfYear;
 use super::effects::Effect;
 use super::items::Item;
 use crate::data::HArgError;
@@ -10,6 +11,7 @@ pub struct Wallet {
     pub guild: GuildId,
     #[serde(with = "id_as_i64")]
     pub user: UserId,
+    pub birthday: Option<DayOfYear>,
     #[serde(default)]
     pub cash: i64,
     #[serde(default)]
@@ -42,6 +44,14 @@ pub struct UniqueRole {
     pub user: UserId,
     #[serde(with = "id_as_i64")]
     pub role: RoleId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Birthday {
+    pub _id: ObjectId,
+    #[serde(with = "id_as_i64")]
+    pub user: UserId,
+    pub day_of_year: DayOfYear,
 }
 
 fn name(name: &str) -> IndexOptions {
@@ -109,6 +119,27 @@ impl UniqueRole {
                 "user": 1,
             })
             .build()]
+    }
+}
+
+impl Birthday {
+    pub fn collection(db: &Database) -> Collection<Self> {
+        db.collection("perks.birthday")
+    }
+
+    pub fn indices() -> Vec<IndexModel> {
+        vec![
+            IndexModel::builder()
+                .options(name("user"))
+                .keys(doc! {
+                    "user": 1,
+                })
+                .build(),
+            IndexModel::builder()
+                .options(name("day_of_year"))
+                .keys(doc! { "day_of_year": 1 })
+                .build(),
+        ]
     }
 }
 

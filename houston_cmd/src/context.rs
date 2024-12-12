@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 
 use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
@@ -10,7 +10,7 @@ use crate::ReplyHandle;
 /// The context for a command invocation.
 #[derive(Debug, Clone, Copy)]
 pub struct Context<'a> {
-    pub(crate) reply_state: &'a AtomicBool,
+    pub(crate) reply_state: &'a AtomicUsize,
     /// The serenity context that triggered this command.
     pub serenity: &'a SerenityContext,
     /// The command interaction that this context corresponds to.
@@ -20,7 +20,7 @@ pub struct Context<'a> {
 
 impl<'a> Context<'a> {
     pub(crate) fn new(
-        reply_state: &'a AtomicBool,
+        reply_state: &'a AtomicUsize,
         serenity: &'a SerenityContext,
         interaction: &'a CommandInteraction,
     ) -> Self {

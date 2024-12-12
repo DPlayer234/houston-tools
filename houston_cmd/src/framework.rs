@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::mem::take;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 
 use serenity::async_trait;
 use serenity::builder::CreateInteractionResponse;
@@ -86,7 +86,7 @@ impl Framework {
     }
 
     async fn run_command(&self, ctx: &SerenityContext, interaction: &CommandInteraction) {
-        let reply_state = AtomicBool::new(false);
+        let reply_state = AtomicUsize::new(0);
         let mut ctx = Context::new(&reply_state, ctx, interaction);
 
         let (command, options) = match self.find_command(interaction) {
@@ -104,7 +104,7 @@ impl Framework {
     }
 
     async fn run_autocomplete(&self, ctx: &SerenityContext, interaction: &CommandInteraction) {
-        let reply_state = AtomicBool::new(false);
+        let reply_state = AtomicUsize::new(0);
         let mut ctx = Context::new(&reply_state, ctx, interaction);
 
         let (command, options) = match self.find_command(interaction) {

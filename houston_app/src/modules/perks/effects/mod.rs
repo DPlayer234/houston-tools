@@ -1,8 +1,10 @@
 use bson::Bson;
+use chrono::{DateTime, Utc};
 
 use super::config::{Config, EffectPrice};
 use crate::modules::prelude::*;
 
+mod birthday;
 mod rainbow_role;
 
 #[derive(
@@ -10,6 +12,7 @@ mod rainbow_role;
 )]
 pub enum Effect {
     RainbowRole,
+    Birthday,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -46,8 +49,9 @@ trait Shape {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context) -> Result {
+    async fn update(&self, ctx: &Context, now: DateTime<Utc>) -> Result {
         _ = ctx;
+        _ = now;
         Ok(())
     }
 }
@@ -63,6 +67,7 @@ macro_rules! impl_kind_fn {
         pub async fn $name(self, $($args: $args_ty),*) -> $ret {
             match self {
                 Self::RainbowRole => rainbow_role::RainbowRole.$name($($args),*).await,
+                Self::Birthday => birthday::Birthday.$name($($args),*).await,
             }
         }
     };
@@ -72,10 +77,10 @@ impl Effect {
     impl_kind_fn!(supported(args: Args<'_>) -> Result<bool>);
     impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> Result);
     impl_kind_fn!(disable(args: Args<'_>) -> Result);
-    impl_kind_fn!(update(args: &Context) -> Result);
+    impl_kind_fn!(update(args: &Context, now: DateTime<Utc>) -> Result);
 
     pub fn all() -> &'static [Self] {
-        &[Self::RainbowRole]
+        &[Self::RainbowRole, Self::Birthday]
     }
 
     pub fn info(self, perks: &Config) -> EffectInfo<'_> {
@@ -93,12 +98,17 @@ impl Effect {
                     description: &r.description,
                 })
                 .unwrap_or(UNSET),
+            Self::Birthday => EffectInfo {
+                name: "Birthday Haver",
+                description: "Party time.",
+            },
         }
     }
 
     pub fn price(self, perks: &Config) -> Option<EffectPrice> {
         match self {
             Self::RainbowRole => perks.rainbow.as_ref().map(|r| r.price),
+            Self::Birthday => None,
         }
     }
 }
