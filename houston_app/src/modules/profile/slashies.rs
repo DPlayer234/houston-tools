@@ -2,6 +2,7 @@ use bson::doc;
 use utils::text::write_str::*;
 
 use crate::helper::bson::bson_id;
+use crate::modules::perks::DayOfYear;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
 
@@ -44,6 +45,16 @@ async fn profile_core(
         .author(author)
         .color(data.config().embed_color);
 
+    if crate::modules::perks::Module.enabled(data.config()) {
+        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
+            embed = embed.description(format!("-# <@&{unique_role}>"));
+        }
+
+        if let Some(birthday) = perks_birthday(ctx, member).await? {
+            embed = embed.field("Birthday", format!("> {}", birthday), false);
+        }
+    }
+
     if crate::modules::starboard::Module.enabled(data.config()) {
         if let Some(starboard) = starboard_info(ctx, member).await? {
             embed = embed.field("Starboard", starboard, false);
@@ -51,10 +62,6 @@ async fn profile_core(
     }
 
     if crate::modules::perks::Module.enabled(data.config()) {
-        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
-            embed = embed.description(format!("-# <@&{unique_role}>"));
-        }
-
         if let Some(info) = perks_collectible_info(ctx, member).await? {
             embed = embed.field("Collection", info, false);
         }
@@ -85,6 +92,20 @@ async fn perks_unique_role(ctx: Context<'_>, member: SlashMember<'_>) -> Result<
     };
 
     Ok(Some(unique_role.role))
+}
+
+async fn perks_birthday(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Option<DayOfYear>> {
+    use crate::modules::perks::model;
+
+    let data = ctx.data_ref();
+    let db = data.database()?;
+
+    let filter = doc! {
+        "user": bson_id!(member.user.id),
+    };
+
+    let birthday = model::Birthday::collection(db).find_one(filter).await?;
+    Ok(birthday.map(|b| b.day_of_year))
 }
 
 async fn perks_collectible_info(

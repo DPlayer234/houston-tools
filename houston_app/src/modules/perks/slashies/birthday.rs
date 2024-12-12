@@ -3,8 +3,8 @@ use chrono::*;
 
 use crate::buttons::ToCustomData;
 use crate::helper::bson::bson_id;
-use crate::modules::perks::day_of_year::DayOfYear;
 use crate::modules::perks::model::*;
+use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;
 
 /// Sets your birthday.

@@ -19,6 +19,7 @@ pub mod model;
 mod slashies;
 
 pub use config::Config;
+pub use day_of_year::DayOfYear;
 pub use items::Item;
 
 pub struct Module;
@@ -117,7 +118,7 @@ async fn check_perks_core(ctx: Context) -> Result {
         .checked_add_signed(CHECK_INTERVAL)
         .context("time has broken")?;
 
-    let now = "2025-01-08T12:15:00Z".parse::<DateTime<Utc>>()?; // Utc::now();
+    let now = Utc::now();
     if now < next {
         // no need to check yet
         return Ok(());

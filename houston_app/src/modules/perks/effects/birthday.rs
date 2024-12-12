@@ -9,8 +9,8 @@ use utils::text::write_str::*;
 use super::*;
 use crate::fmt::replace_holes;
 use crate::modules::perks::config::BirthdayConfig;
-use crate::modules::perks::day_of_year::DayOfYear;
 use crate::modules::perks::model::{self, *};
+use crate::modules::perks::DayOfYear;
 
 pub struct Birthday;
 
