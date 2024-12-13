@@ -193,12 +193,47 @@ cost = 40
 name = "Orb of Change"
 description = "Allows editing your unique role color and/or name."
 cost = 10
+
+# birthday enables birthday reminders and "gifts"
+# when someone's birthday begins, in every configured guild, they will get
+# the birthday role and the configured gift, as well a message from the bot.
+[bot.perks.birthday]
+# optional. defaults to 24 hours. should always be at least 24 h.
+duration = "24:00:00"
+
+# define some regions here. the first is considered the default.
+# this allows users to pick when they want their birthday to start.
+[[bot.perks.birthday.regions]]
+name = "Europe/Africa (UTC+0)"
+time_offset = "0:00:00"
+
+[[bot.perks.birthday.regions]]
+name = "Americas (UTC-8)"
+time_offset = "-8:00:00"
+
+[[bot.perks.birthday.regions]]
+name = "SEA (UTC+7)"
+time_offset = "7:00:00"
+
+# also configure a server
+[bot.perks.birthday.1293210831923974204]
+role = 1316802158070595725
+notice.channel = 1293210831923974207
+notice.text = "Happy birthday, {user}!"
+# the gifts are pairs of (Item, amount).
+# valid items are: Cash, Pushpin, RoleEdit, Collectible
+gifts = [
+    ["Cash", 500],
+]
 ```
 
 The following commands will be enabled:
 
 | Command                | Description |
 |:---------------------- |:----------- |
+| birthday add           | Add your birthday. |
+| birthday check         | Checks your set birthday. |
+| birthday time-zone     | Sets your birthday time zone. |
 | perk-admin enable      | Enables a perk for a member. |
 | perk-admin disable     | Disables a perk for a member. |
 | perk-admin list        | List active perks of a member. |
