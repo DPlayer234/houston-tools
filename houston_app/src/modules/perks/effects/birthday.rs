@@ -3,7 +3,6 @@ use std::slice;
 use anyhow::Context as _;
 use bson::doc;
 use chrono::prelude::*;
-use serenity::http::StatusCode;
 use utils::text::write_str::*;
 
 use super::*;
@@ -23,14 +22,6 @@ impl Shape for Birthday {
     async fn enable(&self, args: Args<'_>, _state: Option<Bson>) -> Result {
         let config = get_guild_config(&args)?;
         let db = args.ctx.data_ref::<HContextData>().database()?;
-
-        match args.guild_id.member(&args.ctx.http, args.user_id).await {
-            Err(serenity::Error::Http(err)) if err.status_code() == Some(StatusCode::NOT_FOUND) => {
-                log::trace!("User {} not in {}", args.user_id, args.guild_id);
-                return Ok(());
-            },
-            other => _ = other?,
-        }
 
         log::info!("Start birthday of {} in {}.", args.user_id, args.guild_id);
 
@@ -142,9 +133,11 @@ impl Shape for Birthday {
             // for all users with a birthday, try to enable the perk per guild
             let mut user_entries = model::Birthday::collection(db).find(filter).await?;
             while let Some(user_entry) = user_entries.try_next().await? {
+                let user = user_entry.user;
+
                 'guild: for &guild in birthday.guilds.keys() {
                     let has_perk = ActivePerk::collection(db)
-                        .find_enabled(guild, user_entry.user, Effect::Birthday)
+                        .find_enabled(guild, user, Effect::Birthday)
                         .await?
                         .is_some();
 
@@ -152,12 +145,14 @@ impl Shape for Birthday {
                         continue 'guild;
                     }
 
-                    let args = Args::new(ctx, guild, user_entry.user);
-                    self.enable(args, None).await?;
-
-                    ActivePerk::collection(db)
-                        .set_enabled(guild, user_entry.user, Effect::Birthday, tomorrow)
-                        .await?;
+                    let args = Args::new(ctx, guild, user);
+                    if is_known_member(self.enable(args, None).await)? {
+                        ActivePerk::collection(db)
+                            .set_enabled(guild, user, Effect::Birthday, tomorrow)
+                            .await?;
+                    } else {
+                        log::trace!("User {user} not in {guild}");
+                    }
                 }
             }
 
@@ -166,6 +161,21 @@ impl Shape for Birthday {
 
         Ok(())
     }
+}
+
+fn is_known_member(result: Result) -> Result<bool> {
+    use serenity::http::{HttpError, JsonErrorCode};
+
+    if let Err(why) = &result {
+        let why = why.downcast_ref();
+        if let Some(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = why {
+            if why.error.code == JsonErrorCode::UnknownMember {
+                return Ok(false);
+            }
+        }
+    }
+
+    result.map(|_| true)
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

@@ -144,7 +144,7 @@ pub mod serde_time_delta {
         type Value = TimeDelta;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("expected duration string in hh:mm:ss format")
+            formatter.write_str("duration string in hh:mm:ss format")
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
