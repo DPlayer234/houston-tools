@@ -9,11 +9,15 @@ use crate::modules::perks::DayOfYear;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Set {
     day_of_year: DayOfYear,
+    region: u16,
 }
 
 impl Set {
-    pub fn new(day_of_year: DayOfYear) -> Self {
-        Self { day_of_year }
+    pub fn new(day_of_year: DayOfYear, region: u16) -> Self {
+        Self {
+            day_of_year,
+            region,
+        }
     }
 }
 
@@ -32,6 +36,7 @@ impl ButtonArgsReply for Set {
         let update = doc! {
             "$setOnInsert": {
                 "user": bson_id!(user_id),
+                "region": i32::from(self.region),
                 "day_of_year": bson::ser::to_bson(&self.day_of_year)?,
             },
         };

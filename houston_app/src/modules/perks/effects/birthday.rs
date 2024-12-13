@@ -91,63 +91,70 @@ impl Shape for Birthday {
             return Ok(());
         };
 
-        // calculate the correct date with the current time and offset
-        let today = now
-            .checked_add_signed(birthday.time_offset)
-            .context("birthday time offset breaks start time")?
-            .naive_utc()
-            .date();
+        'regions: for (region_id, region) in birthday.regions.iter().enumerate() {
+            #[allow(clippy::cast_possible_wrap)]
+            #[allow(clippy::cast_possible_truncation)]
+            let region_id = region_id as i32;
 
-        // don't repeat the check if we checked that day already
-        let perk_state = data.perk_state();
-        let mut check = perk_state.last_birthday_check.write().await;
-        if *check == today {
-            return Ok(());
-        }
+            // calculate the correct date with the current time and offset
+            let today = now
+                .checked_add_signed(region.time_offset)
+                .context("birthday time offset breaks start time")?
+                .naive_utc()
+                .date();
 
-        // from the current date, consider the offset and calculate the end time
-        let tomorrow = today
-            .and_time(NaiveTime::MIN)
-            .and_utc()
-            .checked_sub_signed(birthday.time_offset)
-            .context("birthday time offset breaks end time")?
-            .checked_add_signed(birthday.duration)
-            .context("tomorrow does not exist")?;
-
-        let db = data.database()?;
-
-        let days = DayOfYear::search_days(today);
-        log::trace!("Checking birthdays for {today} as {days:?}");
-
-        let filter = doc! {
-            "day_of_year": {
-                "$in": bson::ser::to_bson(&days)?,
-            },
-        };
-
-        // for all users with a birthday, try to enable the perk per guild
-        let mut users = model::Birthday::collection(db).find(filter).await?;
-        while let Some(user) = users.try_next().await? {
-            for &guild in birthday.guilds.keys() {
-                let has_perk = ActivePerk::collection(db)
-                    .find_enabled(guild, user.user, Effect::Birthday)
-                    .await?
-                    .is_some();
-
-                if has_perk {
-                    continue;
-                }
-
-                let args = Args::new(ctx, guild, user.user);
-                self.enable(args, None).await?;
-
-                ActivePerk::collection(db)
-                    .set_enabled(guild, user.user, Effect::Birthday, tomorrow)
-                    .await?;
+            // don't repeat the check if we checked that day already
+            let mut check = region.last_check.write().await;
+            if *check == today {
+                continue 'regions;
             }
+
+            // from the current date, consider the offset and calculate the end time
+            let tomorrow = today
+                .and_time(NaiveTime::MIN)
+                .and_utc()
+                .checked_sub_signed(region.time_offset)
+                .context("birthday time offset breaks end time")?
+                .checked_add_signed(birthday.duration)
+                .context("tomorrow does not exist")?;
+
+            let db = data.database()?;
+
+            let days = DayOfYear::search_days(today);
+            log::trace!("Check: {} on {today} as {days:?}", region.name);
+
+            let filter = doc! {
+                "region": region_id,
+                "day_of_year": {
+                    "$in": bson::ser::to_bson(&days)?,
+                },
+            };
+
+            // for all users with a birthday, try to enable the perk per guild
+            let mut users = model::Birthday::collection(db).find(filter).await?;
+            while let Some(user) = users.try_next().await? {
+                'guild: for &guild in birthday.guilds.keys() {
+                    let has_perk = ActivePerk::collection(db)
+                        .find_enabled(guild, user.user, Effect::Birthday)
+                        .await?
+                        .is_some();
+
+                    if has_perk {
+                        continue 'guild;
+                    }
+
+                    let args = Args::new(ctx, guild, user.user);
+                    self.enable(args, None).await?;
+
+                    ActivePerk::collection(db)
+                        .set_enabled(guild, user.user, Effect::Birthday, tomorrow)
+                        .await?;
+                }
+            }
+
+            *check = today;
         }
 
-        *check = today;
         Ok(())
     }
 }

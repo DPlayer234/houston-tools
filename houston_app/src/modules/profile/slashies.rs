@@ -95,7 +95,10 @@ async fn perks_unique_role(ctx: Context<'_>, member: SlashMember<'_>) -> Result<
     Ok(Some(unique_role.role))
 }
 
-async fn perks_birthday(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Option<DayOfYear>> {
+async fn perks_birthday<'a>(
+    ctx: Context<'a>,
+    member: SlashMember<'_>,
+) -> Result<Option<DayOfYear>> {
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
@@ -106,6 +109,7 @@ async fn perks_birthday(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
     };
 
     let birthday = model::Birthday::collection(db).find_one(filter).await?;
+
     Ok(birthday.map(|b| b.day_of_year))
 }
 

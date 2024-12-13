@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use chrono::TimeDelta;
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use indexmap::IndexMap;
+use tokio::sync::RwLock;
 
 use super::Item;
 use crate::helper::time::serde_time_delta;
@@ -20,6 +21,9 @@ pub struct Config {
     pub role_edit: Option<RoleEditConfig>,
     pub collectible: Option<CollectibleConfig>,
     pub birthday: Option<BirthdayConfig>,
+
+    #[serde(skip, default)]
+    pub last_check: RwLock<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
@@ -129,12 +133,21 @@ fn default_birthday_duration() -> TimeDelta {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
-    #[serde(with = "serde_time_delta", default)]
-    pub time_offset: TimeDelta,
     #[serde(with = "serde_time_delta", default = "default_birthday_duration")]
     pub duration: TimeDelta,
+    pub regions: Vec<BirthdayRegionConfig>,
     #[serde(default, flatten)]
     pub guilds: IndexMap<GuildId, BirthdayGuildConfig>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct BirthdayRegionConfig {
+    pub name: String,
+    #[serde(with = "serde_time_delta", default)]
+    pub time_offset: TimeDelta,
+
+    #[serde(skip, default)]
+    pub last_check: RwLock<NaiveDate>,
 }
 
 #[derive(Debug, serde::Deserialize)]

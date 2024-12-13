@@ -8,12 +8,15 @@ use crate::error::Error;
 use crate::BoxFuture;
 
 pub type ChatInputFn = for<'i> fn(Context<'i>) -> BoxFuture<'i, Result<(), Error<'i>>>;
+
 pub type UserFn = for<'i> fn(
     Context<'i>,
     &'i User,
     Option<&'i PartialMember>,
 ) -> BoxFuture<'i, Result<(), Error<'i>>>;
+
 pub type MessageFn = for<'i> fn(Context<'i>, &'i Message) -> BoxFuture<'i, Result<(), Error<'i>>>;
+
 pub type AutocompleteFn =
     for<'i> fn(Context<'i>, &'i str) -> BoxFuture<'i, CreateAutocompleteResponse<'i>>;
 

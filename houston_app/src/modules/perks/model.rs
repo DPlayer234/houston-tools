@@ -51,6 +51,7 @@ pub struct Birthday {
     pub _id: ObjectId,
     #[serde(with = "id_as_i64")]
     pub user: UserId,
+    pub region: u16,
     pub day_of_year: DayOfYear,
 }
 
@@ -136,8 +137,11 @@ impl Birthday {
                 })
                 .build(),
             IndexModel::builder()
-                .options(name("day_of_year"))
-                .keys(doc! { "day_of_year": 1 })
+                .options(name("region-day_of_year"))
+                .keys(doc! {
+                    "region": 1,
+                    "day_of_year": 1,
+                })
                 .build(),
         ]
     }

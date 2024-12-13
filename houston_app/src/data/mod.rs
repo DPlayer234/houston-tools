@@ -4,7 +4,6 @@ use serenity::http::Http;
 
 use crate::config::HBotConfig;
 use crate::modules::azur::data::HAzurLane;
-use crate::modules::perks::PerkState;
 use crate::prelude::*;
 
 mod app_emojis;
@@ -48,8 +47,6 @@ pub struct HBotData {
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
     /// Lazily initialized Azur Lane data.
     azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
-    /// State of the perk module.
-    perk_state: PerkState,
     /// Database connection.
     database: OnceLock<mongodb::Database>,
 }
@@ -67,7 +64,6 @@ impl HBotData {
                 Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
                 None => Box::new(HAzurLane::default),
             }),
-            perk_state: PerkState::default(),
             database: OnceLock::new(),
         }
     }
@@ -118,12 +114,6 @@ impl HBotData {
     #[must_use]
     pub fn azur_lane(&self) -> &HAzurLane {
         &self.azur_lane
-    }
-
-    /// Gets the transient perk state.
-    #[must_use]
-    pub fn perk_state(&self) -> &PerkState {
-        &self.perk_state
     }
 
     /// Connects to the database and other needed services.

@@ -1,7 +1,6 @@
 use bson::{doc, Bson};
 use chrono::prelude::*;
 use chrono::TimeDelta;
-use tokio::sync::RwLock;
 
 use super::prelude::*;
 use crate::helper::bson::doc_object_id;
@@ -91,12 +90,6 @@ impl super::Module for Module {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct PerkState {
-    last_check: RwLock<DateTime<Utc>>,
-    last_birthday_check: RwLock<NaiveDate>,
-}
-
 pub fn dispatch_check_perks(ctx: &Context) {
     let data = ctx.data_ref::<HContextData>();
     if Module.enabled(data.config()) {
@@ -112,8 +105,8 @@ async fn check_perks_impl(ctx: Context) {
 
 async fn check_perks_core(ctx: Context) -> Result {
     let data = ctx.data_ref::<HContextData>();
-    let state = data.perk_state();
-    let last = *state.last_check.read().await;
+    let perks = data.config().perks()?;
+    let last = *perks.last_check.read().await;
     let next = last
         .checked_add_signed(CHECK_INTERVAL)
         .context("time has broken")?;
@@ -126,7 +119,7 @@ async fn check_perks_core(ctx: Context) -> Result {
 
     // we hold this lock for the entire process
     // so we can avoid others racing within this method
-    let mut last_check = state.last_check.try_write()?;
+    let mut last_check = perks.last_check.try_write()?;
     *last_check = now;
 
     // handle updates to the effects in parallel
