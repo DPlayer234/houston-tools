@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
+use chrono::TimeDelta;
 use indexmap::IndexMap;
 
 use super::Item;
+use crate::helper::time::serde_time_delta;
 use crate::prelude::*;
 
 fn default_cash_name() -> String {
@@ -17,14 +19,14 @@ pub struct Config {
     pub pushpin: Option<PushpinConfig>,
     pub role_edit: Option<RoleEditConfig>,
     pub collectible: Option<CollectibleConfig>,
-    #[serde(default)]
-    pub birthday: IndexMap<GuildId, BirthdayConfig>,
+    pub birthday: Option<BirthdayConfig>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct EffectPrice {
     pub cost: u32,
-    pub duration: u32,
+    #[serde(with = "serde_time_delta")]
+    pub duration: TimeDelta,
 }
 
 fn one() -> u32 {
@@ -121,8 +123,22 @@ pub struct CollectibleNotice {
     pub text: String,
 }
 
+fn default_birthday_duration() -> TimeDelta {
+    const { TimeDelta::hours(24) }
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
+    #[serde(with = "serde_time_delta", default)]
+    pub time_offset: TimeDelta,
+    #[serde(with = "serde_time_delta", default = "default_birthday_duration")]
+    pub duration: TimeDelta,
+    #[serde(default, flatten)]
+    pub guilds: IndexMap<GuildId, BirthdayGuildConfig>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct BirthdayGuildConfig {
     pub role: Option<RoleId>,
     pub notice: Option<BirthdayNotice>,
     #[serde(default)]

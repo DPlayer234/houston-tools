@@ -169,10 +169,10 @@ prize_roles = [
 
 # rainbow enables rainbow roles.
 # the color will only cycle when an event is received, at most once every 5 minutes.
-# duration is specified in hours (only integers).
 [bot.perks.rainbow]
 cost = 20
-duration = 24
+# duration is specified as HH:MM:SS.
+duration = "24:00:00"
 
 # configures a role for a server.
 # the bot must have "Manage Roles" and have its role placed above it for this to work correctly.

@@ -45,28 +45,29 @@ async fn profile_core(
         .author(author)
         .color(data.config().embed_color);
 
-    if crate::modules::perks::Module.enabled(data.config()) {
-        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
-            embed = embed.description(format!("-# <@&{unique_role}>"));
-        }
-
-        if let Some(birthday) = perks_birthday(ctx, member).await? {
-            embed = embed.field("Birthday", format!("> {}", birthday), false);
-        }
-    }
+    let mut description = String::new();
 
     if crate::modules::starboard::Module.enabled(data.config()) {
         if let Some(starboard) = starboard_info(ctx, member).await? {
-            embed = embed.field("Starboard", starboard, false);
+            embed = embed.field("Starboard", starboard, true);
         }
     }
 
     if crate::modules::perks::Module.enabled(data.config()) {
+        if let Some(unique_role) = perks_unique_role(ctx, member).await? {
+            writeln_str!(description, "-# <@&{unique_role}>");
+        }
+
+        if let Some(birthday) = perks_birthday(ctx, member).await? {
+            writeln_str!(description, "-# **Birthday:** {birthday}");
+        }
+
         if let Some(info) = perks_collectible_info(ctx, member).await? {
-            embed = embed.field("Collection", info, false);
+            embed = embed.field("Collection", info, true);
         }
     }
 
+    embed = embed.description(description);
     let reply = CreateReply::new().embed(embed);
 
     ctx.send(reply).await?;

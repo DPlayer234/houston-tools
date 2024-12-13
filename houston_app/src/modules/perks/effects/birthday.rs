@@ -3,12 +3,11 @@ use std::slice;
 use anyhow::Context as _;
 use bson::doc;
 use chrono::prelude::*;
-use chrono::Days;
 use utils::text::write_str::*;
 
 use super::*;
 use crate::fmt::replace_holes;
-use crate::modules::perks::config::BirthdayConfig;
+use crate::modules::perks::config::BirthdayGuildConfig;
 use crate::modules::perks::model::{self, *};
 use crate::modules::perks::DayOfYear;
 
@@ -87,34 +86,49 @@ impl Shape for Birthday {
 
     async fn update(&self, ctx: &Context, now: DateTime<Utc>) -> Result {
         let data = ctx.data::<HContextData>();
-        let perk_state = data.perk_state();
-        let today = now.naive_utc().date();
+        let perks = data.config().perks()?;
+        let Some(birthday) = &perks.birthday else {
+            return Ok(());
+        };
 
+        // calculate the correct date with the current time and offset
+        let today = now
+            .checked_add_signed(birthday.time_offset)
+            .context("birthday time offset breaks start time")?
+            .naive_utc()
+            .date();
+
+        // don't repeat the check if we checked that day already
+        let perk_state = data.perk_state();
         let mut check = perk_state.last_birthday_check.write().await;
         if *check == today {
             return Ok(());
         }
 
+        // from the current date, consider the offset and calculate the end time
         let tomorrow = today
-            .checked_add_days(Days::new(1))
-            .context("tomorrow does not exist")?
             .and_time(NaiveTime::MIN)
-            .and_utc();
+            .and_utc()
+            .checked_sub_signed(birthday.time_offset)
+            .context("birthday time offset breaks end time")?
+            .checked_add_signed(birthday.duration)
+            .context("tomorrow does not exist")?;
 
-        let perks = data.config().perks()?;
         let db = data.database()?;
 
         let days = DayOfYear::search_days(today);
+        log::trace!("Checking birthdays for {today} as {days:?}");
+
         let filter = doc! {
             "day_of_year": {
                 "$in": bson::ser::to_bson(&days)?,
             },
         };
 
+        // for all users with a birthday, try to enable the perk per guild
         let mut users = model::Birthday::collection(db).find(filter).await?;
-
         while let Some(user) = users.try_next().await? {
-            for &guild in perks.birthday.keys() {
+            for &guild in birthday.guilds.keys() {
                 let has_perk = ActivePerk::collection(db)
                     .find_enabled(guild, user.user, Effect::Birthday)
                     .await?
@@ -142,7 +156,7 @@ impl Shape for Birthday {
 #[error("birthday rewards not configured for this guild")]
 struct NoBirthday;
 
-fn get_guild_config<'a>(args: &Args<'a>) -> Result<&'a BirthdayConfig, NoBirthday> {
+fn get_guild_config<'a>(args: &Args<'a>) -> Result<&'a BirthdayGuildConfig, NoBirthday> {
     args.ctx
         .data_ref::<HContextData>()
         .config()
@@ -150,6 +164,9 @@ fn get_guild_config<'a>(args: &Args<'a>) -> Result<&'a BirthdayConfig, NoBirthda
         .as_ref()
         .ok_or(NoBirthday)?
         .birthday
+        .as_ref()
+        .ok_or(NoBirthday)?
+        .guilds
         .get(&args.guild_id)
         .ok_or(NoBirthday)
 }

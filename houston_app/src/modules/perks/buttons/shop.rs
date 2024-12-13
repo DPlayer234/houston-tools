@@ -1,10 +1,11 @@
 use bson::{doc, Document};
-use chrono::{TimeDelta, Utc};
+use chrono::Utc;
 use serenity::prelude::*;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::fmt::discord::TimeMentionable;
+use crate::fmt::time::HumanDuration;
 use crate::helper::bson::bson_id;
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
@@ -113,11 +114,11 @@ impl View {
             } else {
                 writeln_str!(
                     description,
-                    "- **{}:** {}{} for {}h",
+                    "- **{}:** {}{} for {}",
                     info.name,
                     perks.cash_name,
                     st.cost,
-                    st.duration,
+                    HumanDuration::new(st.duration),
                 );
             }
         }
@@ -198,19 +199,19 @@ impl View {
         if let Some(active) = &active {
             write_str!(
                 description,
-                "~~Cost: {}{} for {}h~~\n✅ until {}",
+                "~~Cost: {}{} for {}~~\n✅ until {}",
                 perks.cash_name,
                 st.cost,
-                st.duration,
+                HumanDuration::new(st.duration),
                 active.until.short_date_time(),
             );
         } else {
             write_str!(
                 description,
-                "Cost: {}{} for {}h",
+                "Cost: {}{} for {}",
                 perks.cash_name,
                 st.cost,
-                st.duration,
+                HumanDuration::new(st.duration),
             );
         }
 
@@ -334,11 +335,8 @@ impl View {
             .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
             .await?;
 
-        let duration =
-            TimeDelta::try_hours(st.duration.into()).context("invalid time configuration")?;
-
         let until = Utc::now()
-            .checked_add_signed(duration)
+            .checked_add_signed(st.duration)
             .context("duration beyond the end of time")?;
 
         ActivePerk::collection(db)

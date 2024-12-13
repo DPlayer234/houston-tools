@@ -58,7 +58,7 @@ impl super::Module for Module {
             c.push(edit);
         }
 
-        if !perks.birthday.is_empty() {
+        if perks.birthday.is_some() {
             c.push(slashies::birthday::birthday());
         }
 

@@ -95,3 +95,70 @@ const DATE_TIME_FORMATS: &[DateTimeFormat] = &[
     make_date_format!("%Y-%m-%d %H:%M"),
     make_date_format!("%B %d, %Y %H:%M"),
 ];
+
+pub mod serde_time_delta {
+    use std::fmt;
+
+    use chrono::TimeDelta;
+    use serde::de::Error;
+    use serde::Deserializer;
+
+    struct Visitor;
+
+    fn parse_str(v: &str) -> Option<TimeDelta> {
+        let v = v.trim();
+        let (v, neg) = match v.strip_prefix('-') {
+            Some(v) => (v, true),
+            None => (v, false),
+        };
+
+        if v.contains('-') {
+            return None;
+        }
+
+        let (h, v) = v.split_once(':')?;
+        let (m, s) = v.split_once(':')?;
+
+        let (d, h) = match h.split_once('.') {
+            Some((d, h)) => (d.parse().ok()?, h),
+            None => (0i64, h),
+        };
+
+        let h = h.parse().ok()?;
+        let m = m.parse().ok()?;
+        let s = s.parse().ok()?;
+
+        if !(0..60).contains(&m) || !(0..60).contains(&s) {
+            return None;
+        }
+
+        let delta = TimeDelta::try_days(d)?
+            .checked_add(&TimeDelta::try_hours(h)?)?
+            .checked_add(&TimeDelta::try_minutes(m)?)?
+            .checked_add(&TimeDelta::try_seconds(s)?)?;
+
+        Some(if neg { -delta } else { delta })
+    }
+
+    impl serde::de::Visitor<'_> for Visitor {
+        type Value = TimeDelta;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("expected duration string in hh:mm:ss format")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            parse_str(v).ok_or_else(|| E::custom("expected duration in hh:mm:ss format"))
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<TimeDelta, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Visitor)
+    }
+}

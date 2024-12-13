@@ -7,7 +7,7 @@ use chrono::{Datelike, Month, NaiveDate};
 use crate::modules::model_prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct DayOfYear(NonZero<i32>);
+pub struct DayOfYear(NonZero<u16>);
 
 impl DayOfYear {
     // this must be a leap-year
@@ -34,8 +34,7 @@ impl DayOfYear {
     }
 
     fn into_date(self) -> Option<NaiveDate> {
-        #[allow(clippy::cast_sign_loss)]
-        NaiveDate::from_yo_opt(Self::REF_YEAR, self.0.get() as u32)
+        NaiveDate::from_yo_opt(Self::REF_YEAR, self.0.get().into())
     }
 
     fn into_month_day(self) -> Option<(Month, u32)> {
@@ -52,8 +51,8 @@ impl DayOfYear {
     }
 
     fn from_ordinal(ordinal: u32) -> Option<Self> {
-        #[allow(clippy::cast_possible_wrap)]
-        let num = NonZero::new(ordinal as i32)?;
+        let ordinal = ordinal.try_into().ok()?;
+        let num = NonZero::new(ordinal)?;
         Some(Self(num))
     }
 }
