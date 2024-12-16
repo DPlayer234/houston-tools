@@ -112,3 +112,47 @@ impl Effect {
         }
     }
 }
+
+/// Checks for certain allowed Discord error codes, which will be turned into
+/// [`Ok(None)`](Ok). Other errors are passed through as is.
+///
+/// This allows swallowing a couple errors you expect to run into.
+///
+/// Currently, the following error codes are okayed:
+/// - 10007 (Unknown Member)
+/// - 10013 (Unknown User)
+///
+/// If it was [`Ok`] to begin with, returns that value wrapped in [`Some`].
+fn ok_allowed_discord_error<T>(
+    result: Result<T, serenity::Error>,
+) -> Result<Option<T>, serenity::Error> {
+    use serenity::http::{HttpError, JsonErrorCode as J};
+
+    if let Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = &result {
+        if matches!(why.error.code, J::UnknownMember | J::UnknownUser) {
+            return Ok(None);
+        }
+    }
+
+    result.map(Some)
+}
+
+/// Checks whether a result contains a [`serenity::Error`] with the Discord
+/// error code 10007 (Unknown Member).
+///
+/// If it does, returns [`Ok(false)`](Ok). Otherwise returns [`Ok(true)`](Ok)
+/// for an [`Ok`] value or the original error.
+fn is_known_member(result: Result) -> Result<bool> {
+    use serenity::http::{HttpError, JsonErrorCode as J};
+
+    if let Err(why) = &result {
+        let why = why.downcast_ref();
+        if let Some(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = why {
+            if matches!(why.error.code, J::UnknownMember | J::UnknownUser) {
+                return Ok(false);
+            }
+        }
+    }
+
+    result.map(|_| true)
+}

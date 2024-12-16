@@ -684,8 +684,10 @@ fn search_referenced_weapons_in_effect_entry(
 }
 
 fn merge_attacks(attacks: &mut Vec<SkillAttack>) {
+    // count occurences of each attack in the vector
+    // and retain only the first of each
     let mut counts = HashMap::<u32, u32>::new();
-    attacks.retain_mut(|a| {
+    attacks.retain(|a| {
         *counts
             .entry(a.weapon.weapon_id)
             .and_modify(|c| *c += 1)
@@ -694,18 +696,16 @@ fn merge_attacks(attacks: &mut Vec<SkillAttack>) {
     });
 
     for attack in attacks {
-        let count = *counts.get(&attack.weapon.weapon_id).unwrap_or(&1);
-        if count <= 1 {
-            continue;
-        }
-
-        match &mut attack.weapon.data {
-            WeaponData::Bullets(b) | WeaponData::AntiAir(b) => {
-                for b in &mut b.bullets {
-                    b.amount *= count;
-                }
-            },
-            WeaponData::Aircraft(a) => a.amount *= count,
+        // only have to modify inner data if we have a count of least 2
+        if let Some(&count @ 2..) = counts.get(&attack.weapon.weapon_id) {
+            match &mut attack.weapon.data {
+                WeaponData::Bullets(b) | WeaponData::AntiAir(b) => {
+                    for b in &mut b.bullets {
+                        b.amount *= count;
+                    }
+                },
+                WeaponData::Aircraft(a) => a.amount *= count,
+            }
         }
     }
 }

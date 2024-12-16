@@ -32,7 +32,8 @@ impl Shape for RainbowRole {
 
     async fn disable(&self, args: Args<'_>) -> Result {
         if let Ok(role) = find_rainbow_role(&args) {
-            args.ctx
+            let result = args
+                .ctx
                 .http
                 .remove_member_role(
                     args.guild_id,
@@ -40,7 +41,9 @@ impl Shape for RainbowRole {
                     role.role,
                     Some("disabled rainbow role perk"),
                 )
-                .await?;
+                .await;
+
+            super::ok_allowed_discord_error(result)?;
         }
 
         Ok(())

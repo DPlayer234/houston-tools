@@ -67,7 +67,8 @@ impl Shape for Birthday {
     async fn disable(&self, args: Args<'_>) -> Result {
         if let Ok(config) = get_guild_config(&args) {
             if let Some(role) = config.role {
-                args.ctx
+                let result = args
+                    .ctx
                     .http
                     .remove_member_role(
                         args.guild_id,
@@ -75,7 +76,9 @@ impl Shape for Birthday {
                         role,
                         Some("their birthday is over"),
                     )
-                    .await?;
+                    .await;
+
+                super::ok_allowed_discord_error(result)?;
             }
         }
 
@@ -146,7 +149,8 @@ impl Shape for Birthday {
                     }
 
                     let args = Args::new(ctx, guild, user);
-                    if is_known_member(self.enable(args, None).await)? {
+                    let result = self.enable(args, None).await;
+                    if super::is_known_member(result)? {
                         ActivePerk::collection(db)
                             .set_enabled(guild, user, Effect::Birthday, tomorrow)
                             .await?;
@@ -161,21 +165,6 @@ impl Shape for Birthday {
 
         Ok(())
     }
-}
-
-fn is_known_member(result: Result) -> Result<bool> {
-    use serenity::http::{HttpError, JsonErrorCode};
-
-    if let Err(why) = &result {
-        let why = why.downcast_ref();
-        if let Some(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = why {
-            if why.error.code == JsonErrorCode::UnknownMember {
-                return Ok(false);
-            }
-        }
-    }
-
-    result.map(|_| true)
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

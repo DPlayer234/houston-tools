@@ -61,11 +61,10 @@ impl fmt::Display for DayOfYear {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.into_month_day() {
             Some((month, day)) => {
-                let suffix = match (day / 10, day % 10) {
-                    (1, _) => "th",
-                    (_, 1) => "st",
-                    (_, 2) => "nd",
-                    (_, 3) => "rd",
+                let suffix = match (day % 10, (10..=20).contains(&day)) {
+                    (1, false) => "st",
+                    (2, false) => "nd",
+                    (3, false) => "rd",
                     _ => "th",
                 };
 
