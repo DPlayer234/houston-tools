@@ -22,3 +22,9 @@ round_trip_test!(round_trip_args_augment, ViewAugment => azur::buttons::augment:
 round_trip_test!(round_trip_args_skill, ViewSkill => { use azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), CustomData::EMPTY) });
 round_trip_test!(round_trip_args_lines, ViewLines => azur::buttons::lines::View::with_back(9999, CustomData::EMPTY));
 round_trip_test!(round_trip_args_equip, ViewEquip => azur::buttons::equip::View::new(9999));
+
+#[test]
+fn eq_direct_to_custom_id() {
+    let view = azur::buttons::ship::View::new(9999);
+    assert_eq!(view.to_custom_id(), view.to_custom_data().to_custom_id());
+}

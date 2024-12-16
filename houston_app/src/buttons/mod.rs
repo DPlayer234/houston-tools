@@ -1,6 +1,8 @@
 use std::mem::swap;
-use std::ptr;
+use std::ops::Deref;
+use std::{io, ptr};
 
+use arrayvec::ArrayVec;
 use serenity::prelude::*;
 use smallvec::SmallVec;
 use utils::fields::FieldMut;
@@ -131,9 +133,9 @@ define_button_args! {
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
     pub fn from_custom_id(id: &str) -> Result<Self> {
-        let mut bytes = SmallVec::new();
+        let mut bytes = ArrayVec::default();
         utils::str_as_data::decode_b65536(&mut bytes, id)?;
-        CustomData(bytes).to_button_args()
+        StackCustomData::new(bytes).to_button_args()
     }
 }
 
@@ -284,9 +286,7 @@ pub mod handler {
 pub trait ToCustomData {
     /// Converts this instance to a component custom ID.
     #[must_use]
-    fn to_custom_id(&self) -> String {
-        self.to_custom_data().to_custom_id()
-    }
+    fn to_custom_id(&self) -> String;
 
     /// Converts this instance to custom data.
     #[must_use]
@@ -350,6 +350,10 @@ impl<T> ToCustomData for T
 where
     for<'a> &'a T: Into<ButtonArgsRef<'a>>,
 {
+    fn to_custom_id(&self) -> String {
+        StackCustomData::from_button_args(self.into()).to_custom_id()
+    }
+
     fn to_custom_data(&self) -> CustomData {
         CustomData::from_button_args(self.into())
     }
@@ -381,8 +385,7 @@ pub trait ButtonMessage: Sized {
 
 impl<T: ButtonMessage> ButtonArgsReply for T {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let reply = self.edit_reply(ctx.clone())?;
-        reply
+        self.edit_reply(ctx.clone())?
             .execute_as_response(
                 &ctx.serenity.http,
                 ctx.interaction.id,
@@ -393,8 +396,7 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
     }
 
     async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
-        let reply = self.edit_modal_reply(ctx.clone())?;
-        reply
+        self.edit_modal_reply(ctx.clone())?
             .execute_as_response(
                 &ctx.serenity.http,
                 ctx.interaction.id,
@@ -407,11 +409,24 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
 
 /// Represents custom data for another menu.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct CustomData(SmallVec<[u8; 16]>);
+pub struct CustomData<B = SmallVec<[u8; 16]>>(B);
+
+type StackCustomData = CustomData<ArrayVec<u8, 200>>;
 
 impl CustomData {
     /// Gets an empty value.
-    pub const EMPTY: Self = Self(SmallVec::new_const());
+    #[cfg(test)]
+    pub const EMPTY: Self = Self::new(SmallVec::new_const());
+}
+
+impl<B> CustomData<B>
+where
+    B: Deref<Target = [u8]> + Default + io::Write,
+{
+    /// Wraps the buffer in [`CustomData`].
+    const fn new(buf: B) -> Self {
+        Self(buf)
+    }
 
     /// Converts this instance to a component custom ID.
     #[must_use]
@@ -427,13 +442,11 @@ impl CustomData {
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
     pub fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
-        let mut data = SmallVec::new();
-        match serde_bare::to_writer(&mut data, &args) {
-            Ok(()) => Self(data),
-            Err(err) => {
-                log::error!("Error [{err:?}] serializing: {args:?}");
-                Self::EMPTY
-            },
+        let mut data = B::default();
+        if let Err(why) = serde_bare::to_writer(&mut data, &args) {
+            log::error!("Error [{why:?}] serializing: {args:?}");
         }
+
+        Self::new(data)
     }
 }
