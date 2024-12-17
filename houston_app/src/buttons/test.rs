@@ -6,12 +6,23 @@ macro_rules! round_trip_test {
         fn $test_name() {
             let args = $make;
             let custom_data = args.to_custom_data();
+            let wrapped_args = ButtonArgs::$variant(args);
+
             let re_args = custom_data
                 .to_button_args()
                 .expect("just constructed from valid data");
 
-            assert_eq!(re_args, ButtonArgs::$variant(args));
+            assert_eq!(re_args, wrapped_args);
             assert_eq!(custom_data, re_args.to_custom_data());
+
+            let custom_id = custom_data.to_custom_id();
+            let re_args = ButtonArgs::from_custom_id(&custom_id).expect("must be valid data");
+
+            assert_eq!(re_args, wrapped_args);
+            assert_eq!(custom_data, re_args.to_custom_data());
+
+            let wrapped_custom_id = wrapped_args.to_custom_id();
+            assert_eq!(custom_id, wrapped_custom_id);
         }
     };
 }

@@ -1,16 +1,14 @@
 use std::mem::swap;
-use std::ops::Deref;
-use std::{io, ptr};
+use std::ptr;
 
-use arrayvec::ArrayVec;
 use serenity::prelude::*;
-use smallvec::SmallVec;
 use utils::fields::FieldMut;
 
 use crate::modules::{azur, core as core_mod, perks, starboard};
 use crate::prelude::*;
 
 mod context;
+mod encoding;
 #[cfg(test)]
 mod test;
 
@@ -126,16 +124,16 @@ define_button_args! {
     StarboardTopPosts(starboard::buttons::top_posts::View),
     /// Open the "go to page" modal.
     ToPage(core_mod::buttons::ToPage),
+    /// Delete the source message.
     Delete(core_mod::buttons::Delete),
+    /// Sets the birthday for the perks module.
     PerksBirthdaySet(perks::buttons::birthday::Set),
 }
 
 impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
     pub fn from_custom_id(id: &str) -> Result<Self> {
-        let mut bytes = ArrayVec::default();
-        utils::str_as_data::decode_b65536(&mut bytes, id)?;
-        StackCustomData::new(bytes).to_button_args()
+        encoding::from_custom_id(id)
     }
 }
 
@@ -351,7 +349,7 @@ where
     for<'a> &'a T: Into<ButtonArgsRef<'a>>,
 {
     fn to_custom_id(&self) -> String {
-        StackCustomData::from_button_args(self.into()).to_custom_id()
+        encoding::to_custom_id(self.into())
     }
 
     fn to_custom_data(&self) -> CustomData {
@@ -409,44 +407,30 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
 
 /// Represents custom data for another menu.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct CustomData<B = SmallVec<[u8; 16]>>(B);
-
-type StackCustomData = CustomData<ArrayVec<u8, 200>>;
+pub struct CustomData(encoding::Buf);
 
 impl CustomData {
     /// Gets an empty value.
     #[cfg(test)]
-    pub const EMPTY: Self = Self::new(SmallVec::new_const());
-}
-
-impl<B> CustomData<B>
-where
-    B: Deref<Target = [u8]> + Default + io::Write,
-{
-    /// Wraps the buffer in [`CustomData`].
-    const fn new(buf: B) -> Self {
-        Self(buf)
-    }
+    pub const EMPTY: Self = Self(encoding::Buf::new_const());
 
     /// Converts this instance to a component custom ID.
     #[must_use]
     pub fn to_custom_id(&self) -> String {
-        utils::str_as_data::to_b65536(&self.0)
+        encoding::encode_custom_id(&self.0)
     }
 
     /// Converts this instance to [`ButtonArgs`].
+    #[cfg(test)]
     pub fn to_button_args(&self) -> Result<ButtonArgs> {
-        Ok(serde_bare::from_slice(&self.0)?)
+        encoding::read_button_args(&self.0)
     }
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
     pub fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
-        let mut data = B::default();
-        if let Err(why) = serde_bare::to_writer(&mut data, &args) {
-            log::error!("Error [{why:?}] serializing: {args:?}");
-        }
-
-        Self::new(data)
+        let mut buf = encoding::Buf::new();
+        encoding::write_button_args(&mut buf, args);
+        Self(buf)
     }
 }
