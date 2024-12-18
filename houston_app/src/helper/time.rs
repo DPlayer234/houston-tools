@@ -1,7 +1,10 @@
 //! Convenience module for dealing with times and timestamps.
 
 use std::cell::UnsafeCell;
+use std::sync::LazyLock;
 
+use arrayvec::ArrayVec;
+use chrono::format::Item;
 use chrono::prelude::*;
 
 // basically SyncUnsafeCell<DateTime<Utc>>
@@ -59,42 +62,71 @@ pub fn get_startup_time() -> DateTime<Utc> {
 
 /// Tries to parse a date time from some default formats, in the context of a
 /// specific time zone.
-#[must_use]
 pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
-    for f in DATE_TIME_FORMATS {
-        if let Ok(date_time) = DateTime::parse_from_str(s, f.full) {
-            return Some(date_time);
-        }
+    use chrono::format::{parse, parse_and_remainder, Parsed};
 
-        if let Ok(date_time) = NaiveDateTime::parse_from_str(s, f.naive) {
-            return date_time
+    let formats = &*FORMATS;
+    for f in &formats.date_time {
+        let mut parsed = Parsed::new();
+
+        // parse the date & time, keeping the remainder
+        let Ok(s) = parse_and_remainder(&mut parsed, s, f.iter()) else {
+            continue;
+        };
+
+        // input already entirely consumed, so it has no time zone
+        // assume the time zone passed to this function is to be used
+        if s.is_empty() {
+            // we do it like this rather than `to_datetime_with_timezone` to still be able
+            // to return a value when it's ambigious due to DST. this use case isn't _that_
+            // error sensitive
+            return parsed
+                .to_naive_datetime_with_offset(0)
+                .ok()?
                 .and_local_timezone(tz)
                 .earliest()
                 .map(|d| d.fixed_offset());
+        }
+
+        for tz in &formats.tz {
+            if parse(&mut parsed, s, tz.iter()).is_ok() {
+                return parsed.to_datetime().ok();
+            }
         }
     }
 
     None
 }
 
-struct DateTimeFormat {
-    full: &'static str,
-    naive: &'static str,
+// honestly i wanted to const-construct these instead of invoking parsing logic
+// but some of the item variants cannot be publicly constructed
+struct Formats {
+    pub date_time: [ArrayVec<Item<'static>, 13>; 4],
+    pub tz: [ArrayVec<Item<'static>, 3>; 1],
 }
 
-macro_rules! make_date_format {
-    ($x:expr) => {
-        DateTimeFormat {
-            full: concat!($x, " %#z"),
-            naive: $x,
-        }
-    };
-}
+static FORMATS: LazyLock<Formats> = LazyLock::new(|| {
+    use chrono::format::StrftimeItems;
 
-const DATE_TIME_FORMATS: &[DateTimeFormat] = &[
-    make_date_format!("%Y-%m-%d %H:%M"),
-    make_date_format!("%B %d, %Y %H:%M"),
-];
+    // like `StrftimeItems::parse` but collects into `ArrayVec` and panics on error
+    fn create<const N: usize>(s: &'static str) -> ArrayVec<Item<'static>, N> {
+        StrftimeItems::new(s)
+            .inspect(|i| assert_ne!(*i, Item::Error, "date time format is invalid"))
+            .collect()
+    }
+
+    // if this is changed, make sure to ensure `Formats` is updated to still have
+    // enough space for all format items. run the tests to be sure also
+    Formats {
+        date_time: [
+            create(" %Y-%m-%d %H:%M "),
+            create(" %m/%d/%Y %I:%M %p "),
+            create(" %d.%m.%Y %H:%M "),
+            create(" %B %d, %Y %H:%M "),
+        ],
+        tz: [create(" %#z ")],
+    }
+});
 
 pub mod serde_time_delta {
     use std::fmt;
@@ -160,5 +192,65 @@ pub mod serde_time_delta {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_str(Visitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{DateTime, Utc};
+
+    #[test]
+    fn parse_date_time1() {
+        let input = "2024-03-12 15:31";
+        let parsed = super::parse_date_time(input, Utc).unwrap();
+
+        assert_eq!(
+            parsed,
+            DateTime::parse_from_rfc3339("2024-03-12T15:31:00Z").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_date_time2() {
+        let input = "03/12/2024 03:31pm";
+        let parsed = super::parse_date_time(input, Utc).unwrap();
+
+        assert_eq!(
+            parsed,
+            DateTime::parse_from_rfc3339("2024-03-12T15:31:00Z").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_date_time3() {
+        let input = "12.03.2024 15:31";
+        let parsed = super::parse_date_time(input, Utc).unwrap();
+
+        assert_eq!(
+            parsed,
+            DateTime::parse_from_rfc3339("2024-03-12T15:31:00Z").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_date_time4() {
+        let input = "March 12, 2024 15:31";
+        let parsed = super::parse_date_time(input, Utc).unwrap();
+
+        assert_eq!(
+            parsed,
+            DateTime::parse_from_rfc3339("2024-03-12T15:31:00Z").unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_date_time_with_offset() {
+        let input = "2024-03-12 15:31 +0230";
+        let parsed = super::parse_date_time(input, Utc).unwrap();
+
+        assert_eq!(
+            parsed,
+            DateTime::parse_from_rfc3339("2024-03-12T15:31:00+02:30").unwrap()
+        );
     }
 }

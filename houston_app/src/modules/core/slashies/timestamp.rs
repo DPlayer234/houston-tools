@@ -6,11 +6,6 @@ use chrono::TimeDelta;
 use crate::helper::time::parse_date_time;
 use crate::slashies::prelude::*;
 
-const DATE_TIME_INVALID: HArgError = HArgError::new_const("The time format is invalid.");
-const TIME_OUT_OF_RANGE: HArgError =
-    HArgError::new_const("The values are outside the allowed range.");
-const SNOWFLAKE_INVALID: HArgError = HArgError::new_const("The Discord snowflake is invalid.");
-
 /// Provides methods for localized timestamps.
 #[chat_command(
     contexts = "Guild | BotDm | PrivateChannel",
@@ -28,6 +23,9 @@ pub mod timestamp {
         /// Minutes in the future.
         minutes: Option<i64>,
     ) -> Result {
+        const TIME_OUT_OF_RANGE: HArgError =
+            HArgError::new_const("The inputs exceed the allowed range.");
+
         let mut delta = TimeDelta::zero();
 
         if let Some(days) = days {
@@ -57,8 +55,10 @@ pub mod timestamp {
         /// Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'
         date_time: &str,
     ) -> Result {
-        let timestamp = parse_date_time(date_time, Utc).ok_or(DATE_TIME_INVALID)?;
+        const INVALID_INPUT: HArgError =
+            HArgError::new_const("The input doesn't match the expected format.");
 
+        let timestamp = parse_date_time(date_time, Utc).ok_or(INVALID_INPUT)?;
         show_timestamp(ctx, timestamp).await
     }
 
@@ -72,7 +72,7 @@ pub mod timestamp {
         let timestamp = UserId::from_str(snowflake)
             .ok()
             .map(|s| *s.created_at())
-            .ok_or(SNOWFLAKE_INVALID)?;
+            .ok_or(HArgError::new_const("The Discord snowflake is invalid."))?;
 
         show_timestamp(ctx, timestamp).await
     }
