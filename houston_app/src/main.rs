@@ -12,12 +12,13 @@ mod slashies;
 async fn main() -> anyhow::Result<()> {
     use std::num::NonZero;
     use std::panic;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use houston_cmd::Framework;
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
 
+    use crate::helper::sync::OnceReset;
     use crate::prelude::*;
 
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -61,13 +62,14 @@ async fn main() -> anyhow::Result<()> {
         tokio::task::spawn(load_azur_lane(Arc::clone(&bot_data)));
 
         let event_handler = HEventHandler {
-            commands: Mutex::new(Some(houston_cmd::to_create_command(&init.commands))),
+            ready: OnceReset::new(),
         };
 
         let framework = Framework::new()
             .commands(init.commands)
             .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
-            .on_error(|err| Box::pin(slashies::error_handler(err)));
+            .on_error(|err| Box::pin(slashies::error_handler(err)))
+            .auto_register();
 
         let mut client = Client::builder(config.discord.token, init.intents)
             .activity(ActivityData::custom(
@@ -106,7 +108,7 @@ async fn main() -> anyhow::Result<()> {
 
     /// Type to handle various Discord events.
     struct HEventHandler {
-        commands: Mutex<Option<Vec<CreateCommand<'static>>>>,
+        ready: OnceReset,
     }
 
     #[serenity::async_trait]
@@ -115,14 +117,13 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
-            let data = ctx.data_ref::<HContextData>();
-            _ = data.set_current_user(ready.user);
+            if self.ready.set() {
+                let data = ctx.data_ref::<HContextData>();
+                _ = data.set_current_user(ready.user);
 
-            let commands = { self.commands.lock().unwrap().take() };
-            if let Some(commands) = commands {
-                if let Err(why) = ready_setup(&ctx, data, &commands).await {
+                if let Err(why) = ready_setup(&ctx, data).await {
+                    self.ready.reset();
                     log::error!("Failure in ready: {why:?}");
-                    *self.commands.lock().unwrap() = Some(commands);
                 }
             }
         }
@@ -153,20 +154,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    async fn ready_setup(
-        ctx: &Context,
-        data: &HBotData,
-        commands: &[CreateCommand<'static>],
-    ) -> Result {
-        let commands = ctx
-            .http()
-            .create_global_commands(&commands)
-            .await
-            .context("failed to create global commands")?;
-
-        log::trace!("Created {} global commands.", commands.len());
-
-        data.load_app_emojis(ctx.http()).await?;
+    async fn ready_setup(ctx: &Context, data: &HBotData) -> Result {
+        data.load_app_emojis(&ctx.http).await?;
         Ok(())
     }
 
@@ -206,6 +195,7 @@ async fn main() -> anyhow::Result<()> {
             .set_default("log.appenders.default.kind", "default")?
             .set_default("log.appenders.default.encoder.kind", "default")?
             .set_default("log.loggers.houston_app.level", "trace")?
+            .set_default("log.loggers.houston_cmd.level", "trace")?
             .build()
             .context("cannot build config")?
             .try_deserialize()

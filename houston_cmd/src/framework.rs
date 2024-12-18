@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::mem::take;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use serenity::async_trait;
 use serenity::builder::CreateInteractionResponse;
@@ -19,18 +19,22 @@ type OnErrorFn = fn(Error<'_>) -> BoxFuture<'_, ()>;
 
 /// The command framework itself.
 ///
-/// Can be registered to serenity's client.
+/// Can be registered to [serenity's client].
+///
+/// [serenity's client]: serenity::gateway::client::ClientBuilder::framework
 #[derive(Debug, Default)]
 pub struct Framework {
     commands: HashMap<Cow<'static, str>, Command>,
     pre_command: Option<PreCommandFn>,
     on_error: Option<OnErrorFn>,
+    auto_register: AtomicBool,
 }
 
 #[async_trait]
 impl SerenityFramework for Framework {
     async fn dispatch(&self, ctx: &SerenityContext, event: &FullEvent) {
         match event {
+            FullEvent::Ready { .. } => self.register_commands(ctx).await,
             FullEvent::InteractionCreate {
                 interaction: Interaction::Command(interaction),
             } => self.run_command(ctx, interaction).await,
@@ -56,7 +60,10 @@ impl Framework {
     ///
     /// Repeated calls replace the entire list.
     #[must_use]
-    pub fn commands(mut self, commands: impl IntoIterator<Item = Command>) -> Self {
+    pub fn commands<I>(mut self, commands: I) -> Self
+    where
+        I: IntoIterator<Item = Command>,
+    {
         self.commands = commands
             .into_iter()
             .map(|c| (c.data.name.clone(), c))
@@ -78,11 +85,46 @@ impl Framework {
         self
     }
 
+    /// Sets the framework to automatically register all commands globally.
+    ///
+    /// If there is a need to register commands to a guild specifically, or to
+    /// register various commands differently, you will need to handle that
+    /// manually. You can use [`Command::to_create_command`] and
+    /// [`crate::to_create_command`] to get the appropriate application command
+    /// entities.
+    #[must_use]
+    pub fn auto_register(mut self) -> Self {
+        *self.auto_register.get_mut() = true;
+        self
+    }
+
     async fn handle_error(&self, why: Error<'_>) {
         match self.on_error {
             Some(on_error) => on_error(why).await,
-            None => log::error!("unhandled command error: {why}"),
+            None => log::error!("Unhandled command error: {why}"),
         }
+    }
+
+    async fn register_commands(&self, ctx: &SerenityContext) {
+        // if this was already false, either `auto_register` was not used or we are
+        // already registering commands
+        if !self.auto_register.swap(false, Ordering::AcqRel) {
+            return;
+        }
+
+        if let Err(why) = self.register_commands_or(ctx).await {
+            // on failure, reset it to true so we might be able to retry later
+            self.auto_register.store(true, Ordering::Release);
+            log::error!("Failed to register commands: {why}");
+        }
+    }
+
+    async fn register_commands_or(&self, ctx: &SerenityContext) -> Result<(), serenity::Error> {
+        let commands = crate::to_create_command(self.commands.values());
+        let commands = ctx.http.create_global_commands(&commands).await?;
+
+        log::info!("Created {} global commands.", commands.len());
+        Ok(())
     }
 
     async fn run_command(&self, ctx: &SerenityContext, interaction: &CommandInteraction) {
