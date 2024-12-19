@@ -114,7 +114,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             make_equip_slot!("equip_4"),
             make_equip_slot!("equip_5"),
         ],
-        shadow_equip: parse::skill::load_equips(lua, read!(set.statistics, "fix_equip_list"))?
+        shadow_equip: parse::skill::load_wequips(lua, read!(set.statistics, "fix_equip_list"))?
             .into_iter()
             .enumerate()
             .map(|(index, equip)| {

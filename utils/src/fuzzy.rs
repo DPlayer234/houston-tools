@@ -584,7 +584,7 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
 #[cfg(test)]
 mod test {
-    use super::{MatchIter, Search};
+    use super::{norm_str, MatchIter, Search};
 
     type TSearch = Search<u8>;
 
@@ -629,5 +629,21 @@ mod test {
         fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
             v.map(|p| *p.data).collect()
         }
+    }
+
+    #[test]
+    fn norm_str_equality() {
+        assert_eq!(norm_str("hello-world"), norm_str("Hello World!"));
+        assert_eq!(norm_str("(hELLO)(wORLD)"), norm_str("Hello World!"));
+        assert_eq!(norm_str(""), norm_str("----"));
+        assert_eq!(norm_str("Hello123"), norm_str(" hELLO123 "));
+    }
+
+    #[test]
+    fn norm_str_inequality() {
+        assert_ne!(norm_str("hello-world"), norm_str("HelloWorld!"));
+        assert_ne!(norm_str("(hELLOwORLD)"), norm_str("Hello World!"));
+        assert_ne!(norm_str(""), norm_str("--a--"));
+        assert_ne!(norm_str("Hello123"), norm_str("Hello 123"));
     }
 }

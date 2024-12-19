@@ -152,3 +152,50 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     unsafe { transmute_slice(slice) }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn as_sized_correct_size() {
+        let x: &[u8] = &[1, 2, 3, 4];
+        let y: &[u8; 4] = as_sized(x);
+        assert_eq!(x, y);
+    }
+
+    #[test]
+    #[should_panic(expected = "requested size must match exactly")]
+    fn as_sized_too_small() {
+        let x: &[u8] = &[1, 2, 3];
+        let _y: &[u8; 4] = as_sized(x);
+    }
+
+    #[test]
+    #[should_panic(expected = "requested size must match exactly")]
+    fn as_sized_too_large() {
+        let x: &[u8] = &[1, 2, 3, 4, 5];
+        let _y: &[u8; 4] = as_sized(x);
+    }
+
+    #[test]
+    fn try_as_sized_correct_size() {
+        let x: &[u8] = &[1, 2, 3, 4];
+        let y: Option<&[u8; 4]> = try_as_sized(x);
+        assert_eq!(y, Some(&[1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn try_as_sized_too_small() {
+        let x: &[u8] = &[1, 2, 3];
+        let y: Option<&[u8; 4]> = try_as_sized(x);
+        assert_eq!(y, None);
+    }
+
+    #[test]
+    fn try_as_sized_too_large() {
+        let x: &[u8] = &[1, 2, 3, 4, 5];
+        let y: Option<&[u8; 4]> = try_as_sized(x);
+        assert_eq!(y, None);
+    }
+}

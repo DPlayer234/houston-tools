@@ -194,6 +194,42 @@ pub fn load_equips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<Equip>> {
         .collect()
 }
 
+/// Loads shadow equipment pieces from the Lua state.
+///
+/// It turns out that shadow equipment actually doesn't load from the equipment
+/// tables but instead only from the weapon tables. To retain some
+/// compatability, we still try to use the equipment tables as long as the
+/// weapon stored within the equipment is the correct weapon.
+pub fn load_wequips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<WEquipLoad>> {
+    equip_ids
+        .into_iter()
+        .map(|id| {
+            if let Ok(equip) = load_equip(lua, id) {
+                if let [weapon] = equip.weapons.as_slice() {
+                    if weapon.weapon_id == id {
+                        return Ok(WEquipLoad {
+                            name: equip.name,
+                            weapons: equip.weapons,
+                        });
+                    }
+                }
+            }
+
+            if let Some(weapon) = load_weapon(lua, id)? {
+                Ok(WEquipLoad {
+                    name: weapon
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| "<only weapon>".to_owned()),
+                    weapons: vec![weapon],
+                })
+            } else {
+                Err(LuaError::external("neither weapon nor equip exists"))
+            }
+        })
+        .collect()
+}
+
 /// Loads a weapon from the Lua state.
 pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
     const RLD_MULT_AT_100: f64 = 0.006650724;
@@ -718,6 +754,11 @@ fn require_buff_data(lua: &Lua, buff_id: u32) -> LuaResult<LuaTable> {
 /// Calls our "require_skill" Lua helper to get skill data.
 fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_skill", skill_id)
+}
+
+pub struct WEquipLoad {
+    pub name: String,
+    pub weapons: Vec<Weapon>,
 }
 
 #[derive(Debug, Default)]
