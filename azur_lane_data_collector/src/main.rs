@@ -602,6 +602,9 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
     add_missing(&mut main.equips, next.equips, |a, b| {
         a.equip_id == b.equip_id
     });
+    add_missing(&mut main.juustagram_chats, next.juustagram_chats, |a, b| {
+        a.chat_id == b.chat_id
+    });
 
     action.finish();
 }
