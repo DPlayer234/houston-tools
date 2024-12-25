@@ -99,23 +99,23 @@ define_button_args! {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
     None(core_mod::buttons::None),
     /// Open the ship detail view.
-    ViewShip(azur::buttons::ship::View),
+    AzurShip(azur::buttons::ship::View),
     /// Open the augment detail view.
-    ViewAugment(azur::buttons::augment::View),
+    AzurAugment(azur::buttons::augment::View),
     /// Open the skill detail view.
-    ViewSkill(azur::buttons::skill::View),
+    AzurSkill(azur::buttons::skill::View),
     /// Open the ship lines detail view.
-    ViewLines(azur::buttons::lines::View),
+    AzurLines(azur::buttons::lines::View),
     /// Open the ship filter list view.
-    ViewSearchShip(azur::buttons::search_ship::View),
+    AzurSearchShip(azur::buttons::search_ship::View),
     /// Open the ship shadow equip details.
-    ViewShadowEquip(azur::buttons::shadow_equip::View),
+    AzurShadowEquip(azur::buttons::shadow_equip::View),
     /// Open the equipment details.
-    ViewEquip(azur::buttons::equip::View),
+    AzurEquip(azur::buttons::equip::View),
     /// Open the equipment search.
-    ViewSearchEquip(azur::buttons::search_equip::View),
+    AzurSearchEquip(azur::buttons::search_equip::View),
     /// Open the augment search.
-    ViewSearchAugment(azur::buttons::search_augment::View),
+    AzurSearchAugment(azur::buttons::search_augment::View),
     /// Open the perk store.
     PerksStore(perks::buttons::shop::View),
     /// Open the starboard top view.
@@ -128,6 +128,10 @@ define_button_args! {
     Delete(core_mod::buttons::Delete),
     /// Sets the birthday for the perks module.
     PerksBirthdaySet(perks::buttons::birthday::Set),
+    /// Open a Juustagram chat.
+    AzurJuustagramChat(azur::buttons::juustagram_chat::View),
+    /// Open the Juustagram chat search.
+    AzurSearchJuustagramChat(azur::buttons::search_justagram_chat::View),
 }
 
 impl ButtonArgs {

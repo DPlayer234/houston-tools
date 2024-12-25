@@ -2,9 +2,11 @@ use crate::buttons::prelude::*;
 
 pub mod augment;
 pub mod equip;
+pub mod juustagram_chat;
 pub mod lines;
 pub mod search_augment;
 pub mod search_equip;
+pub mod search_justagram_chat;
 pub mod search_ship;
 pub mod shadow_equip;
 pub mod ship;
@@ -18,6 +20,8 @@ enum AzurParseError {
     Equip,
     #[error("unknown augment")]
     Augment,
+    #[error("unknown juustagram chat")]
+    JuustagramChat,
 }
 
 /// Gets the URL to a ship on the wiki.

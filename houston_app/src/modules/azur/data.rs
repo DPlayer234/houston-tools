@@ -3,6 +3,7 @@ use std::path::{Component, Path, PathBuf};
 use std::{fs, io};
 
 use azur_lane::equip::*;
+use azur_lane::juustagram::*;
 use azur_lane::ship::*;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -25,6 +26,10 @@ pub struct HAzurLane {
     augment_id_to_index: HashMap<u32, usize>,
     augment_simsearch: Search<()>,
     ship_id_to_augment_indices: HashMap<u32, IndexVec>,
+
+    juustagram_chats: Vec<Chat>,
+    juustagram_chat_id_to_index: HashMap<u32, usize>,
+    ship_id_to_juustagram_chat_indices: HashMap<u32, IndexVec>,
 
     // use Bytes to avoid copying the data redundantly
     chibi_sprite_cache: DashMap<String, Option<Bytes>>,
@@ -82,9 +87,12 @@ impl HAzurLane {
             equip_id_to_index: HashMap::with_capacity(data.equips.len()),
             augment_id_to_index: HashMap::with_capacity(data.augments.len()),
             ship_id_to_augment_indices: HashMap::with_capacity(data.augments.len()),
+            juustagram_chat_id_to_index: HashMap::with_capacity(data.juustagram_chats.len()),
+            ship_id_to_juustagram_chat_indices: HashMap::with_capacity(data.juustagram_chats.len()),
             ships: data.ships,
             equips: data.equips,
             augments: data.augments,
+            juustagram_chats: data.juustagram_chats,
             ..Self::default()
         };
 
@@ -146,6 +154,14 @@ impl HAzurLane {
             }
         }
 
+        for (index, data) in this.juustagram_chats.iter().enumerate() {
+            this.juustagram_chat_id_to_index.insert(data.chat_id, index);
+            this.ship_id_to_juustagram_chat_indices
+                .entry(data.group_id)
+                .and_modify(|v| v.push(index))
+                .or_insert_with(|| smallvec![index]);
+        }
+
         this.ship_simsearch.shrink_to_fit();
         this.equip_simsearch.shrink_to_fit();
         this.augment_simsearch.shrink_to_fit();
@@ -165,6 +181,11 @@ impl HAzurLane {
     /// Gets all known augment modules.
     pub fn augments(&self) -> &[Augment] {
         &self.augments
+    }
+
+    /// Gets all known Juustagram chats.
+    pub fn juustagram_chats(&self) -> &[Chat] {
+        &self.juustagram_chats
     }
 
     /// Gets a ship by its ID.
@@ -216,6 +237,21 @@ impl HAzurLane {
             .into_iter()
             .flatten()
             .filter_map(|i| self.augments.get(*i))
+    }
+
+    /// Gets a Juustagram chat by its ID.
+    pub fn juustagram_chat_by_id(&self, chat_id: u32) -> Option<&Chat> {
+        let index = *self.juustagram_chat_id_to_index.get(&chat_id)?;
+        self.juustagram_chats.get(index)
+    }
+
+    /// Gets all Juustagram chats by their associated ship ID.
+    pub fn juustagram_chats_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Chat> {
+        self.ship_id_to_juustagram_chat_indices
+            .get(&ship_id)
+            .into_iter()
+            .flatten()
+            .filter_map(|i| self.juustagram_chats.get(*i))
     }
 
     /// Gets a chibi's image data.

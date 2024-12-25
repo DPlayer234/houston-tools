@@ -413,15 +413,16 @@ impl ButtonMessage for View {
             .azur_lane()
             .ship_by_id(self.ship_id)
             .ok_or(AzurParseError::Ship)?;
-        Ok(
-            match self
-                .retrofit
-                .and_then(|index| ship.retrofits.get(usize::from(index)))
-            {
-                None => self.edit_with_ship(&ctx, ship, None),
-                Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship)),
-            },
-        )
+
+        let edit = match self
+            .retrofit
+            .and_then(|index| ship.retrofits.get(usize::from(index)))
+        {
+            None => self.edit_with_ship(&ctx, ship, None),
+            Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship)),
+        };
+
+        Ok(edit)
     }
 }
 

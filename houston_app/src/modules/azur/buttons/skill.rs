@@ -79,7 +79,7 @@ impl View {
             if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
                 let button = self
                     .button_with_skill(t_index)
-                    .label(utils::text::truncate(&skill.name, 25))
+                    .label(utils::text::truncate(&skill.name, 80))
                     .style(ButtonStyle::Secondary);
 
                 components.push(button);
@@ -122,7 +122,7 @@ impl View {
             let a_index = Some(a_index as u8);
             components.push(
                 self.button_with_augment(a_index)
-                    .label(utils::text::truncate(&augment.name, 25)),
+                    .label(utils::text::truncate(&augment.name, 80)),
             );
 
             if a_index == self.augment_index {

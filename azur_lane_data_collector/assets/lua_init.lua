@@ -120,6 +120,15 @@ setmetatable(pg, {
     end
 })
 
+-- helpers
+local function _map(tbl, func)
+    local new_tbl = {}
+    for k, v in pairs(tbl) do
+        new_tbl[k] = func(v)
+    end
+    return new_tbl
+end
+
 -- Used by our code to load a buff/skill.
 function require_buff(id)
     if pg.buffCfg_tag["buff_" .. id] then
@@ -139,4 +148,67 @@ function get_augment_ship_types(kind)
     if sp then
         return sp.ship_type
     end
+end
+
+function get_juustagram_chat(chat_id)
+    local function load_chat_content(content_id)
+        local content = pg.activity_ins_chat_language[content_id]
+        assert(content, "content not found: " .. content_id)
+
+        if content.type == 1 then
+            inner = {
+                Message = {
+                    sender_id = content.ship_group,
+                    text = content.param,
+                }
+            }
+        elseif content.type == 4 then
+            local emoji_desc = pg
+                .emoji_template[tonumber(content.param)]
+                .desc
+                :gsub("<.->", "")
+
+            inner = {
+                Sticker = {
+                    sender_id = content.ship_group,
+                    label = emoji_desc,
+                }
+            }
+        elseif content.type == 5 then
+            inner = {
+                System = {
+                    text = content.param,
+                }
+            }
+        end
+
+        local options
+        if content.option and #content.option ~= 0 then
+            options = _map(content.option, function(option)
+                return {
+                    flag = option[1],
+                    value = option[2],
+                }
+            end)
+        end
+
+        return {
+            entry_id = content.id,
+            content = inner,
+            flag = content.flag,
+            options = options,
+        }
+    end
+
+    local chat = pg.activity_ins_chat_group[chat_id]
+    assert(chat, "chat not found: " .. chat_id)
+
+    local content = _map(chat.content, load_chat_content)
+    return {
+        chat_id = chat.id,
+        group_id = chat.ship_group,
+        name = chat.name,
+        unlock_desc = chat.unlock_desc,
+        entries = content,
+    }
 end

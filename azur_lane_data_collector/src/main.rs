@@ -5,7 +5,7 @@ use std::{fs, io};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use azur_lane::DefinitionData;
+use azur_lane::{juustagram, DefinitionData};
 use clap::Parser;
 use mlua::prelude::*;
 
@@ -137,11 +137,13 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
     let ships = load_ships(&lua, &pg)?;
     let equips = load_equips(&lua, &pg)?;
     let augments = load_augments(&lua, &pg)?;
+    let juustagram_chats = load_juustagram_chats(&lua, &pg)?;
 
     Ok(DefinitionData {
         ships,
         equips,
         augments,
+        juustagram_chats,
     })
 }
 
@@ -532,6 +534,32 @@ fn load_augments(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Augment>> {
 
     augments.sort_unstable_by_key(|t| t.augment_id);
     Ok(augments)
+}
+
+fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<juustagram::Chat>> {
+    let activity_ins_chat_group: LuaTable = pg
+        .get("activity_ins_chat_group")
+        .context("global pg.activity_ins_chat_group")?;
+    let activity_ins_chat_group_all: LuaTable = activity_ins_chat_group
+        .get("all")
+        .context("global pg.activity_ins_chat_group.all")?;
+
+    let mut chats = Vec::new();
+
+    let total = activity_ins_chat_group_all.len()?;
+    let mut action = log::action!("Building Juustagram chats.")
+        .bounded_total(total.try_into()?)
+        .start();
+
+    activity_ins_chat_group_all.for_each(|_: u32, id: u32| {
+        let chat: LuaValue = lua.globals().call_function("get_juustagram_chat", id)?;
+        chats.push(lua.from_value(chat)?);
+        action.inc_amount();
+        Ok(())
+    })?;
+
+    action.finish();
+    Ok(chats)
 }
 
 fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<()> {

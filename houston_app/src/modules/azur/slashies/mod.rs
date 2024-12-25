@@ -191,6 +191,34 @@ pub mod azur {
         Ok(())
     }
 
+    /// View Juustagram chats.
+    #[sub_command(name = "juustagram-chat")]
+    async fn juustagram_chat(
+        ctx: Context<'_>,
+        /// The ship's name. This supports auto completion.
+        #[autocomplete = "autocomplete::ship_name_juustagram_chats"]
+        ship: Option<&str>,
+        /// Whether to show the response only to yourself.
+        ephemeral: Option<bool>,
+    ) -> Result {
+        use buttons::search_justagram_chat::*;
+
+        let data = ctx.data_ref();
+
+        let filter = Filter {
+            ship: match ship {
+                Some(ship) => Some(find::ship(data, ship)?.group_id),
+                None => None,
+            },
+        };
+
+        let view = View::new(filter);
+        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+            .await?;
+
+        Ok(())
+    }
+
     /// Calculates the actual reload time for a weapon.
     #[sub_command(name = "reload-time")]
     async fn reload_time(

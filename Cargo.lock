@@ -145,7 +145,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "azur_lane"
-version = "1.8.1"
+version = "1.9.0"
 dependencies = [
  "bitflags 2.6.0",
  "serde",
@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "2.0.3"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -729,6 +729,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "erased-serde"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24e2389d65ab4fab27dc2a5de7b191e1f6617d1f1c8855c0dc569c94a4cbb18d"
+dependencies = [
+ "serde",
+ "typeid",
+]
+
+[[package]]
 name = "errno"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1024,7 +1034,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.6.1"
+version = "2.7.0"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -1659,10 +1669,13 @@ checksum = "9ea43c3ffac2d0798bd7128815212dd78c98316b299b7a902dabef13dc7b6b8d"
 dependencies = [
  "bstr",
  "either",
+ "erased-serde",
  "mlua-sys",
  "num-traits",
  "parking_lot",
  "rustc-hash",
+ "serde",
+ "serde-value",
 ]
 
 [[package]]
@@ -3068,6 +3081,12 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "typeid"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e13db2e0ccd5e14a544e8a246ba2312cd25223f616442d7f2cb0e3db614236e"
 
 [[package]]
 name = "typemap-ors"
