@@ -1,3 +1,4 @@
+mod build;
 mod buttons;
 mod config;
 mod data;
@@ -18,14 +19,9 @@ async fn main() -> anyhow::Result<()> {
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
 
+    use crate::build::{GIT_HASH, VERSION};
     use crate::helper::sync::OnceReset;
     use crate::prelude::*;
-
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
-    const GIT_HASH: &str = match option_env!("GIT_HASH") {
-        Some(git_hash) => git_hash,
-        None => "<unknown>",
-    };
 
     // run the program and clean up
     let res = run().await;
