@@ -1,6 +1,3 @@
-// Note: benchmarks pull in this file via `include!` so don't reference other
-// modules in this crate without checking that the benchmarks still compile.
-
 use std::str::Chars;
 
 /// Provides just the indices of [`char`]s in a string.
@@ -61,5 +58,70 @@ impl Iterator for Indices<'_> {
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // needed for test but unused in benchmark
+    #[allow(unused_imports)]
+    use super::Indices;
+
+    #[allow(dead_code)]
+    fn assert_eq_indices(s: &str) {
+        let indices: Vec<usize> = Indices::new(s).collect();
+        let expected: Vec<usize> = s.char_indices().map(|(i, _)| i).collect();
+        assert_eq!(indices, expected);
+    }
+
+    #[test]
+    fn indices_empty() {
+        assert_eq_indices("");
+    }
+
+    #[test]
+    fn indices_ascii() {
+        assert_eq_indices("hello");
+    }
+
+    #[test]
+    fn indices_unicode() {
+        assert_eq_indices("héllo");
+    }
+
+    #[test]
+    fn indices_emoji() {
+        assert_eq_indices("hello😊");
+    }
+
+    #[test]
+    fn indices_mixed() {
+        assert_eq_indices("héllo😊");
+    }
+
+    #[test]
+    fn nth() {
+        let s = "héllo😊";
+        for i in 0..6 {
+            assert_eq!(
+                Indices::new(s).nth(i),
+                s.char_indices().nth(i).map(|(i, _)| i),
+                "mismatch at index {i}",
+            );
+        }
+    }
+
+    #[test]
+    fn count() {
+        let s = "héllo😊";
+        let indices = Indices::new(s);
+        assert_eq!(indices.count(), s.chars().count());
+    }
+
+    #[test]
+    fn size_hint() {
+        let s = "héllo😊";
+        let indices = Indices::new(s);
+        assert_eq!(indices.size_hint(), s.chars().size_hint());
     }
 }

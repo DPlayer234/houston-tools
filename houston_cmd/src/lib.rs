@@ -12,7 +12,7 @@
 //! #[chat_command]
 //! async fn echo(
 //!     ctx: Context<'_>,
-//!     /// "The message to return."
+//!     /// The message to return.
 //!     text: &str,
 //! ) -> Result<(), serenity::Error> {
 //!     let reply = CreateReply::new()
@@ -33,7 +33,8 @@
 //! guaranteed to be `const`.
 //!
 //! The doc-string on the `#[chat_command]` is required and is used as the
-//! description.
+//! description. Similarly, doc-strings are required on every parameter other
+//! than the context.
 //!
 //! Context menu commands can be created similarly:
 //!
@@ -54,7 +55,7 @@
 //!
 //! You must specify either `user` or `message` in the attribute, specifying
 //! which context to register the command to. The `name` is required for context
-//! menu commands, but the doc-string isn't since context menu commands cannot
+//! menu commands, but the doc-strings aren't since context menu commands cannot
 //! have descriptions.
 //!
 //! Chat commands can also be used to create groups:
@@ -72,7 +73,7 @@
 //!     #[sub_command]
 //!     async fn ban(
 //!         ctx: Context<'_>,
-//!         /// "The member to ban."
+//!         /// The member to ban.
 //!         user: &PartialMember,
 //!     ) -> Result<(), serenity::Error> {
 //!         todo!()
@@ -82,7 +83,7 @@
 //!     #[sub_command]
 //!     async fn kick(
 //!         ctx: Context<'_>,
-//!         /// "The member to kick."
+//!         /// The member to kick.
 //!         user: &PartialMember,
 //!     ) -> Result<(), serenity::Error> {
 //!         todo!()
@@ -104,7 +105,7 @@
 //! | Name                         | Meaning |
 //! |:---------------------------- |:------- |
 //! | `name`                       | Replaces the display name. Required for context commands. |
-//! | `default_member_permissions` | A `\|` separated list of permissions. Specifies the default set of required permissions for the command. |
+//! | `default_member_permissions` | A `\|` separated list of [`Permissions`] values. Specifies the default set of required permissions for the command. |
 //! | `contexts`                   | A `\|` separated list of [`InteractionContext`] values in which the command can be used. |
 //! | `integration_types`          | A `\|` separated list of [`InstallationContext`] values in which the command can be used. |
 //! | `nsfw`                       | Indicates that the command can only be used in nsfw channels. |
@@ -120,13 +121,13 @@
 //!
 //! | Name                      | Meaning |
 //! |:------------------------- |:------- |
-//! | `description`             | Sets the description. Required. |
 //! | `autocomplete`            | The path to a function to be used for autocompletion. |
 //! | `min`/`max`               | Numeric limits to the input value. |
 //! | `min_length`/`max_length` | Limits to the length of the input. |
 //!
 //! [`InteractionContext`]: serenity::model::application::InteractionContext
 //! [`InstallationContext`]: serenity::model::application::InstallationContext
+//! [`Permissions`]: serenity::model::Permissions
 
 mod args;
 mod context;

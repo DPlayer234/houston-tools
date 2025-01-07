@@ -7,16 +7,26 @@ use crate::context::Context;
 use crate::error::Error;
 use crate::BoxFuture;
 
+/// Function to execute for a [`Invoke::ChatInput`] command.
+///
+/// It is expected that the function extracts its parameters from the
+/// [`Context::options`] and validates them itself.
 pub type ChatInputFn = for<'i> fn(Context<'i>) -> BoxFuture<'i, Result<(), Error<'i>>>;
 
+/// Function to execute for a [`Invoke::User`] context command.
 pub type UserFn = for<'i> fn(
     Context<'i>,
     &'i User,
     Option<&'i PartialMember>,
 ) -> BoxFuture<'i, Result<(), Error<'i>>>;
 
+/// Function to execute for a [`Invoke::Message`] context command.
 pub type MessageFn = for<'i> fn(Context<'i>, &'i Message) -> BoxFuture<'i, Result<(), Error<'i>>>;
 
+/// Function to return autocompletion choices for a command parameter.
+///
+/// This does not return a [`Result`] as there is no way to communicate that
+/// failure to the user.
 pub type AutocompleteFn =
     for<'i> fn(Context<'i>, &'i str) -> BoxFuture<'i, CreateAutocompleteResponse<'i>>;
 

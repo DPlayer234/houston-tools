@@ -11,6 +11,6 @@ workspace = true
 
 [dependencies]
 bitflags = { version = "2.6.0", features = ["serde"] }
-serde = { version = "1.0.215", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 
 utils = { path = "../utils" }

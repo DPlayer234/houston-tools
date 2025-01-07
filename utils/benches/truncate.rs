@@ -32,13 +32,8 @@ fn bench_char_indices(c: &mut Criterion) {
 }
 
 fn bench_indices(c: &mut Criterion) {
-    mod internals {
-        // HACK: i do not want to duplicate this code or make the type public
-        // so... we include it here. this shouldn't be a problem.
-        // if i do anything that's a problem, rust-analyzer will spit
-        // out a slightly weird usage error, but that's hopefully fine.
-        include!("../src/private/str.rs");
-    }
+    #[path = "../src/private/str.rs"]
+    mod internals;
 
     #[inline]
     fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
