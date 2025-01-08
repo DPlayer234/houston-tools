@@ -158,3 +158,22 @@ pub fn to_create_command<'a>(
         .map(|c| c.to_create_command())
         .collect()
 }
+
+/// Mostly a sanity-check to ensure that this crate is usable.
+fn _assert_traits() {
+    fn send<T: Send>(_: T) {}
+    fn send_sync<T: Send + Sync>(_: T) {}
+    fn dummy<T>() -> T {
+        unreachable!()
+    }
+
+    send(dummy::<CreateReply<'_>>());
+    send(dummy::<EditReply<'_>>());
+    send(dummy::<ReplyHandle<'_>>());
+    send_sync(dummy::<Context<'_>>());
+    send_sync(dummy::<Error<'_>>());
+    send_sync(dummy::<Framework>());
+
+    send(dummy::<Context<'_>>().defer(dummy()));
+    send(dummy::<Context<'_>>().send(dummy()));
+}

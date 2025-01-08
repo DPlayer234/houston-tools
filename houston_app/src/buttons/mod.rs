@@ -15,10 +15,8 @@ mod test;
 pub use context::{ButtonContext, ModalContext};
 
 pub mod prelude {
-    #[allow(unused_imports)]
     pub use super::{
-        ButtonArgs, ButtonArgsRef, ButtonArgsReply, ButtonContext, ButtonMessage, CustomData,
-        ModalContext, ToCustomData,
+        ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ModalContext, ToCustomData,
     };
     pub use crate::prelude::*;
 }
@@ -29,9 +27,8 @@ macro_rules! define_button_args {
         /// The supported button interaction arguments.
         ///
         /// This is owned data that can be deserialized into.
-        /// To serialize it, call [`ButtonArgs::borrow`] first.
         #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
-        pub enum ButtonArgs {
+        enum ButtonArgs {
             $(
                 $(#[$attr])*
                 $name($Ty),
@@ -42,7 +39,7 @@ macro_rules! define_button_args {
         ///
         /// This is borrowed data that can be serialized.
         #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-        pub enum ButtonArgsRef<'a> {
+        enum ButtonArgsRef<'a> {
             $(
                 $(#[$attr])*
                 $name(&'a $Ty),
@@ -50,12 +47,6 @@ macro_rules! define_button_args {
         }
 
         $(
-            impl From<$Ty> for ButtonArgs {
-                fn from(value: $Ty) -> Self {
-                    Self::$name(value)
-                }
-            }
-
             impl<'a> From<&'a $Ty> for ButtonArgsRef<'a> {
                 fn from(value: &'a $Ty) -> Self {
                     Self::$name(value)
@@ -63,17 +54,18 @@ macro_rules! define_button_args {
             }
         )*
 
-        impl ButtonArgs {
+        impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
             /// Borrows the inner data.
-            #[must_use]
-            pub const fn borrow(&self) -> ButtonArgsRef<'_> {
-                match self {
+            fn from(value: &'a ButtonArgs) -> Self {
+                match value {
                     $(
-                        Self::$name(v) => ButtonArgsRef::$name(v),
+                        ButtonArgs::$name(v) => Self::$name(v),
                     )*
                 }
             }
+        }
 
+        impl ButtonArgs {
             async fn reply(self, ctx: ButtonContext<'_>) -> Result {
                 match self {
                     $(
@@ -138,12 +130,6 @@ impl ButtonArgs {
     /// Constructs button arguments from a component custom ID.
     pub fn from_custom_id(id: &str) -> Result<Self> {
         encoding::from_custom_id(id)
-    }
-}
-
-impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
-    fn from(value: &'a ButtonArgs) -> Self {
-        value.borrow()
     }
 }
 
@@ -362,7 +348,7 @@ where
 }
 
 /// Provides a way for button arguments to reply to the interaction.
-pub trait ButtonArgsReply: Sized {
+pub trait ButtonArgsReply: Sized + Send {
     /// Replies to the component interaction.
     async fn reply(self, ctx: ButtonContext<'_>) -> Result;
 
@@ -374,7 +360,7 @@ pub trait ButtonArgsReply: Sized {
 }
 
 /// Provides a way for button arguments to modify the create-reply payload.
-pub trait ButtonMessage: Sized {
+pub trait ButtonMessage: Sized + Send {
     /// Creates an edit-reply payload.
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>>;
 
@@ -426,15 +412,33 @@ impl CustomData {
 
     /// Converts this instance to [`ButtonArgs`].
     #[cfg(test)]
-    pub fn to_button_args(&self) -> Result<ButtonArgs> {
+    fn to_button_args(&self) -> Result<ButtonArgs> {
         encoding::read_button_args(&self.0)
     }
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
-    pub fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
+    fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
         let mut buf = encoding::Buf::new();
         encoding::write_button_args(&mut buf, args);
         Self(buf)
     }
+}
+
+/// Compile-time helper to assert that types are [`Send`] as expected.
+///
+/// Only done so we get errors at an early point rather than a sporadic "future
+/// is not send" elsewhere.
+fn _assert_traits() {
+    fn ok<T: Send>(_v: T) {}
+    fn dummy<T>() -> T {
+        unreachable!()
+    }
+    ok(dummy::<ButtonArgs>());
+    ok(dummy::<ButtonArgs>().reply(dummy()));
+    ok(dummy::<ButtonArgs>().modal_reply(dummy()));
+    ok(dummy::<ButtonArgsRef<'_>>());
+    ok(dummy::<CustomData>());
+    ok(dummy::<ButtonContext<'_>>());
+    ok(dummy::<ModalContext<'_>>());
 }
