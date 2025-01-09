@@ -552,7 +552,10 @@ fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<juustag
         .start();
 
     activity_ins_chat_group_all.for_each(|_: u32, id: u32| {
-        let chat: LuaValue = lua.globals().call_function("get_juustagram_chat", id)?;
+        let chat: LuaValue = lua
+            .globals()
+            .call_function("get_juustagram_chat", id)
+            .with_context(context!("activity_ins_chat_group with id {id}"))?;
         chats.push(lua.from_value(chat)?);
         action.inc_amount();
         Ok(())

@@ -163,10 +163,8 @@ function get_juustagram_chat(chat_id)
                 }
             }
         elseif content.type == 4 then
-            local emoji_desc = pg
-                .emoji_template[tonumber(content.param)]
-                .desc
-                :gsub("<.->", "")
+            local emoji = pg.emoji_template[tonumber(content.param)]
+            local emoji_desc = emoji and emoji.desc:gsub("<.->", "") or "[unknown emoji]"
 
             inner = {
                 Sticker = {
