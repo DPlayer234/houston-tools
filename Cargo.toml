@@ -13,7 +13,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.83"
+rust-version = "1.84"
 
 [profile.release]
 lto = true
@@ -27,7 +27,7 @@ unused_macro_rules = "warn"
 
 # edition 2024 compatability
 impl_trait_overcaptures = "warn"
-# rust_2024_incompatible_pat = "warn"
+rust_2024_incompatible_pat = "warn"
 
 [workspace.lints.clippy]
 # pedantic

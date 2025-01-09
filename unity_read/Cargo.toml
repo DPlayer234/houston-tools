@@ -21,4 +21,4 @@ lz4 = "1.28.1"
 lzma-rs = "0.3.0"
 once_cell = { version = "1.20.2", default-features = false }
 texture2ddecoder = "0.1.1"
-thiserror = "2.0.9"
+thiserror = "2.0.10"

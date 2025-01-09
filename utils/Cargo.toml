@@ -13,7 +13,7 @@ workspace = true
 anstyle-query = "1.1.2"
 arrayvec = "0.7.6"
 smallvec = { version = "1.13.2", features = ["const_generics", "union"] }
-thiserror = "2.0.9"
+thiserror = "2.0.10"
 
 [dev-dependencies]
 criterion = "0.5.1"

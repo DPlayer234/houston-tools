@@ -38,7 +38,6 @@ pub struct SlashMember<'a> {
     pub member: PartialRef<'a, Member>,
 }
 
-#[serenity::async_trait]
 impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
     fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {

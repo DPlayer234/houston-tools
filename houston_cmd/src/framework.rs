@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::mem::take;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-use serenity::async_trait;
 use serenity::builder::CreateInteractionResponse;
 use serenity::framework::Framework as SerenityFramework;
 use serenity::gateway::client::{Context as SerenityContext, FullEvent};
@@ -30,7 +29,7 @@ pub struct Framework {
     auto_register: AtomicBool,
 }
 
-#[async_trait]
+#[serenity::async_trait]
 impl SerenityFramework for Framework {
     async fn dispatch(&self, ctx: &SerenityContext, event: &FullEvent) {
         match event {

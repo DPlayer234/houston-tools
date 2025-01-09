@@ -34,7 +34,7 @@ pub fn load_chibi_image(action: &Action, dir: &str, name: &str) -> anyhow::Resul
                 let mut image = texture.read_data(&unity_fs)?.decode()?;
                 imageops::flip_vertical_in_place(&mut image);
 
-                let mut writer = Cursor::new(Vec::new());
+                let mut writer = Cursor::new(Vec::with_capacity(32 * 1024));
                 image.write_to(&mut writer, ImageFormat::WebP)?;
                 return Ok(Some(writer.into_inner()));
             }

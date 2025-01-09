@@ -8,7 +8,7 @@ rust-version.workspace = true
 anyhow = "1.0.95"
 log = { version = "0.4.22", features = ["serde"] }
 serde = "1.0.217"
-thiserror = "2.0.9"
+thiserror = "2.0.10"
 
 houston_cmd_macros = { path = "./macros" }
 
