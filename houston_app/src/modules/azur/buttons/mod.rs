@@ -6,7 +6,7 @@ pub mod juustagram_chat;
 pub mod lines;
 pub mod search_augment;
 pub mod search_equip;
-pub mod search_justagram_chat;
+pub mod search_juustagram_chat;
 pub mod search_ship;
 pub mod shadow_equip;
 pub mod ship;
@@ -43,35 +43,72 @@ fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
     Some(name.split_once('.').map_or(name, |a| a.0))
 }
 
-use crate::helper::discord::create_string_select_menu_row;
-
-const PAGE_SIZE: usize = 15;
-
 macro_rules! pagination {
-    ($rows:ident => $obj:expr, $options:expr, $iter:expr) => {
+    ($obj:expr, $options:expr, $iter:expr, $label:expr) => {{
         if $options.is_empty() {
-            if $obj.page == 0 {
-                let embed = CreateEmbed::new()
-                    .color(ERROR_EMBED_COLOR)
-                    .description("No results for that filter.");
-
-                return Ok(CreateReply::new().embed(embed));
-            } else {
-                return Err(HArgError::new("This page has no data.").into())
-            }
+            return $crate::modules::azur::buttons::pagination_impl::no_results($obj.page);
         }
 
-        let mut $rows = Vec::new();
-
-        #[allow(clippy::cast_possible_truncation)]
-        let page_count = 1 + $obj.page + $iter.count().div_ceil($crate::modules::azur::buttons::PAGE_SIZE) as u16;
-        let pagination = $crate::modules::core::buttons::ToPage::build_row(&mut $obj, ::utils::field_mut!(Self: page))
-            .exact_page_count(page_count);
-
-        if let Some(pagination) = pagination.end() {
-            $rows.push(pagination);
-        }
-    };
+        $crate::modules::azur::buttons::pagination_impl::rows_setup(
+            &mut $obj,
+            $options.into(),
+            $iter,
+            $label.into(),
+            ::utils::field_mut!(Self: page),
+        )
+    }};
 }
 
 pub(crate) use pagination;
+
+mod pagination_impl {
+    use utils::fields::FieldMut;
+
+    use crate::buttons::prelude::*;
+    use crate::helper::discord::create_string_select_menu_row;
+    use crate::modules::core::buttons::ToPage;
+
+    const PAGE_SIZE: usize = 15;
+
+    pub fn no_results<'new>(page: u16) -> Result<CreateReply<'new>> {
+        if page == 0 {
+            let embed = CreateEmbed::new()
+                .color(ERROR_EMBED_COLOR)
+                .description("No results for that filter.");
+
+            Ok(CreateReply::new().embed(embed))
+        } else {
+            Err(HArgError::new("This page has no data.").into())
+        }
+    }
+
+    pub fn rows_setup<'a, T, I, F>(
+        obj: &mut T,
+        options: Cow<'a, [CreateSelectMenuOption<'a>]>,
+        iter: I,
+        label: Cow<'a, str>,
+        page: F,
+    ) -> Vec<CreateActionRow<'a>>
+    where
+        T: ToCustomData,
+        I: Iterator,
+        F: FieldMut<T, u16>,
+    {
+        let mut rows = Vec::new();
+
+        #[allow(clippy::cast_possible_truncation)]
+        let page_count = 1 + page.get(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;
+        let pagination = ToPage::build_row(obj, page).exact_page_count(page_count);
+
+        if let Some(pagination) = pagination.end() {
+            rows.push(pagination);
+        }
+
+        rows.push(create_string_select_menu_row(
+            obj.to_custom_id(),
+            options,
+            label,
+        ));
+        rows
+    }
+}

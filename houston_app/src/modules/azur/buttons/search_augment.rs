@@ -45,7 +45,7 @@ impl View {
             ));
         }
 
-        super::pagination!(rows => self, options, iter);
+        let rows = super::pagination!(self, options, iter, "View augment module...");
 
         let author = CreateEmbedAuthor::new("Augment Modules")
             .url(config::azur_lane::equip::AUGMENT_LIST_URL);
@@ -54,12 +54,6 @@ impl View {
             .author(author)
             .description(desc)
             .color(data.config().embed_color);
-
-        rows.push(super::create_string_select_menu_row(
-            self.to_custom_id(),
-            options,
-            "View augment module...",
-        ));
 
         Ok(CreateReply::new().embed(embed).components(rows))
     }

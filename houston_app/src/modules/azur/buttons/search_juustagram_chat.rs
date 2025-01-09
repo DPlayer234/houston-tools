@@ -1,4 +1,5 @@
 use azur_lane::juustagram::*;
+use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
@@ -32,21 +33,24 @@ impl View {
         let mut options = Vec::new();
 
         for chat in iter.by_ref().take(PAGE_SIZE) {
+            let chat_name: Cow<'_, str>;
             if let Some(ship) = data.azur_lane().ship_by_id(chat.group_id) {
-                writeln_str!(desc, "- **{}** [{}]", chat.name, ship.name,);
+                writeln_str!(desc, "- **{}** [{}]", chat.name, ship.name);
+                chat_name = format!("{} [{}]", chat.name, ship.name).into();
             } else {
-                writeln_str!(desc, "- **{}**", chat.name,);
+                writeln_str!(desc, "- **{}**", chat.name);
+                chat_name = chat.name.as_str().into();
             }
 
             let view_chat =
                 super::juustagram_chat::View::new(chat.chat_id).back(self.to_custom_data());
-            options.push(CreateSelectMenuOption::new(
-                &chat.name,
-                view_chat.to_custom_id(),
-            ));
+            options.push(
+                CreateSelectMenuOption::new(truncate(chat_name, 100), view_chat.to_custom_id())
+                    .description(truncate(&chat.unlock_desc, 100)),
+            );
         }
 
-        super::pagination!(rows => self, options, iter);
+        let rows = super::pagination!(self, options, iter, "Read chat...");
 
         let author = CreateEmbedAuthor::new("JUUS [Chats]");
 
@@ -54,12 +58,6 @@ impl View {
             .author(author)
             .description(desc)
             .color(data.config().embed_color);
-
-        rows.push(super::create_string_select_menu_row(
-            self.to_custom_id(),
-            options,
-            "Read chat...",
-        ));
 
         Ok(CreateReply::new().embed(embed).components(rows))
     }

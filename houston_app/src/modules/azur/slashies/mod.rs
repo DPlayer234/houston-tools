@@ -201,7 +201,7 @@ pub mod azur {
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
-        use buttons::search_justagram_chat::*;
+        use buttons::search_juustagram_chat::*;
 
         let data = ctx.data_ref();
 

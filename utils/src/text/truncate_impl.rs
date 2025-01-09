@@ -39,8 +39,8 @@ const ELLIPSIS: char = '\u{2026}';
 /// # use std::borrow::Cow;
 /// # use utils::text::truncate;
 /// let text = "hello world";
-/// let long: Cow<str> = truncate(text, 11);
-/// let short: Cow<str> = truncate(text, 6);
+/// let long: Cow<'_, str> = truncate(text, 11);
+/// let short: Cow<'_, str> = truncate(text, 6);
 /// assert!(matches!(long, Cow::Borrowed(text)));
 /// assert!(short == "hello…");
 /// ```
@@ -48,7 +48,6 @@ const ELLIPSIS: char = '\u{2026}';
 /// By value, here with [`String`]:
 ///
 /// ```
-/// # use std::borrow::Cow;
 /// # use utils::text::truncate;
 /// let text = String::from("hello world");
 /// let long: String = truncate(text, 11);
@@ -60,7 +59,6 @@ const ELLIPSIS: char = '\u{2026}';
 /// By mutable reference, here with [`&mut String`](String):
 ///
 /// ```
-/// # use std::borrow::Cow;
 /// # use utils::text::truncate;
 /// let mut text = String::from("hello world");
 /// truncate(&mut text, 11);

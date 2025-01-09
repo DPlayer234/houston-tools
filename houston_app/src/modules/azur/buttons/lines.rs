@@ -4,6 +4,7 @@ use utils::text::write_str::*;
 use super::{get_ship_preview_name, AzurParseError};
 use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
+use crate::helper::discord::create_string_select_menu_row;
 
 /// Views ship lines.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -123,7 +124,7 @@ impl View {
                 .map(|(index, skin)| self.select_with_skin_index(skin, index))
                 .collect();
 
-            components.push(super::create_string_select_menu_row(
+            components.push(create_string_select_menu_row(
                 self.to_custom_id(),
                 options,
                 &skin.name,

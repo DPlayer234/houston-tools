@@ -123,7 +123,7 @@ define_button_args! {
     /// Open a Juustagram chat.
     AzurJuustagramChat(azur::buttons::juustagram_chat::View),
     /// Open the Juustagram chat search.
-    AzurSearchJuustagramChat(azur::buttons::search_justagram_chat::View),
+    AzurSearchJuustagramChat(azur::buttons::search_juustagram_chat::View),
 }
 
 impl ButtonArgs {

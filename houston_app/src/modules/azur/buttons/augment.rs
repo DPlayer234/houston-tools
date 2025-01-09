@@ -1,5 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::skill::*;
+use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
@@ -70,16 +71,15 @@ impl View {
                 )
                 .expect("writing to String cannot fail");
 
-                let label = utils::text::truncate(label, 80);
                 CreateButton::new("=dummy-usability")
-                    .label(label)
+                    .label(truncate(label, 80))
                     .disabled(true)
             },
             AugmentUsability::UniqueShipId(ship_id) => {
                 if let Some(ship) = data.azur_lane().ship_by_id(*ship_id) {
                     let view = super::ship::View::new(ship.group_id).back(self.to_custom_data());
-                    let label = utils::text::truncate(format!("For: {}", ship.name), 80);
-                    CreateButton::new(view.to_custom_id()).label(label)
+                    let label = format!("For: {}", ship.name);
+                    CreateButton::new(view.to_custom_id()).label(truncate(label, 80))
                 } else {
                     CreateButton::new("=dummy-usability")
                         .label("<Invalid>")

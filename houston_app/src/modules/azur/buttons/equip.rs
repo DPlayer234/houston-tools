@@ -1,4 +1,5 @@
 use azur_lane::equip::*;
+use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
@@ -47,7 +48,7 @@ impl View {
             .fields(equip.skills.iter().map(|skill| {
                 (
                     format!("{} {}", skill.category.emoji(), skill.name),
-                    utils::text::truncate(&skill.description, 1000),
+                    truncate(&skill.description, 1000),
                     false,
                 )
             }))

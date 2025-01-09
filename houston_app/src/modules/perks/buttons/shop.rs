@@ -1,6 +1,7 @@
 use bson::{doc, Document};
 use chrono::Utc;
 use serenity::prelude::*;
+use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
@@ -100,7 +101,7 @@ impl View {
             let info = effect.info(perks);
 
             let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
-            let button = CreateButton::new(custom_id).label(utils::text::truncate(info.name, 25));
+            let button = CreateButton::new(custom_id).label(truncate(info.name, 25));
 
             buttons.push(button);
 
@@ -132,7 +133,7 @@ impl View {
             let info = item.info(perks);
 
             let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
-            let button = CreateButton::new(custom_id).label(utils::text::truncate(info.name, 25));
+            let button = CreateButton::new(custom_id).label(truncate(info.name, 25));
 
             buttons.push(button);
 
@@ -216,7 +217,7 @@ impl View {
         }
 
         let embed = base_shop_embed(perks, &wallet)
-            .title(utils::text::truncate(info.name, 100))
+            .title(truncate(info.name, 100))
             .description(description)
             .color(data.config().embed_color);
 
@@ -269,7 +270,7 @@ impl View {
         }
 
         let embed = base_shop_embed(perks, &wallet)
-            .title(utils::text::truncate(info.name, 100))
+            .title(truncate(info.name, 100))
             .description(description)
             .color(data.config().embed_color);
 

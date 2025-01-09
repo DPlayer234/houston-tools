@@ -2,6 +2,7 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 use utils::fields::FieldMut;
+use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
@@ -79,7 +80,7 @@ impl View {
             if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
                 let button = self
                     .button_with_skill(t_index)
-                    .label(utils::text::truncate(&skill.name, 80))
+                    .label(truncate(&skill.name, 80))
                     .style(ButtonStyle::Secondary);
 
                 components.push(button);
@@ -122,7 +123,7 @@ impl View {
             let a_index = Some(a_index as u8);
             components.push(
                 self.button_with_augment(a_index)
-                    .label(utils::text::truncate(&augment.name, 80)),
+                    .label(truncate(&augment.name, 80)),
             );
 
             if a_index == self.augment_index {
@@ -201,7 +202,7 @@ impl View {
     fn create_skill_field<'a>(&self, skill: &'a Skill) -> [EmbedFieldCreate<'a>; 1] {
         [(
             format!("{} {}", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000),
+            truncate(&skill.description, 1000),
             false,
         )]
     }
@@ -210,7 +211,7 @@ impl View {
     fn create_ex_skill_fields<'a>(&self, skill: &'a Skill) -> Vec<EmbedFieldCreate<'a>> {
         let mut fields = vec![(
             format!("{} __{}__", skill.category.emoji(), skill.name),
-            utils::text::truncate(&skill.description, 1000),
+            truncate(&skill.description, 1000),
             false,
         )];
 

@@ -52,7 +52,7 @@ impl View {
             ));
         }
 
-        super::pagination!(rows => self, options, iter);
+        let rows = super::pagination!(self, options, iter, "View equipment...");
 
         let author =
             CreateEmbedAuthor::new("Equipments").url(config::azur_lane::EQUIPMENT_LIST_URL);
@@ -61,12 +61,6 @@ impl View {
             .author(author)
             .description(desc)
             .color(data.config().embed_color);
-
-        rows.push(super::create_string_select_menu_row(
-            self.to_custom_id(),
-            options,
-            "View equipment...",
-        ));
 
         Ok(CreateReply::new().embed(embed).components(rows))
     }
