@@ -12,9 +12,9 @@ define_unity_class! {
         pub name: String = "m_Name",
         pub width: i32 = "m_Width",
         pub height: i32 = "m_Height",
-        format: i32 = "m_TextureFormat",
-        image_data: Vec<u8> = "image data",
-        stream_data: StreamingInfo = "m_StreamData",
+        pub format: i32 = "m_TextureFormat",
+        pub image_data: Vec<u8> = "image data",
+        pub stream_data: StreamingInfo = "m_StreamData",
     }
 }
 
@@ -42,6 +42,24 @@ impl Texture2D {
                 .stream_data
                 .load_data_or_else(fs, || &self.image_data)?,
         })
+    }
+
+    /// Gets the data for this texture if it's not specified through stream
+    /// data. In general, you should use [`Self::read_data`] instead.
+    ///
+    /// If `stream_data` is set, this function returns an [`Err`].
+    #[doc(hidden)]
+    pub fn as_data(&self) -> crate::Result<Texture2DData<'_>> {
+        if self.stream_data.is_empty() {
+            Ok(Texture2DData {
+                texture: self,
+                data: &self.image_data,
+            })
+        } else {
+            Err(Error::InvalidData(
+                "cannot use `to_data` when `stream_data` is set. use `read_data` instead.",
+            ))
+        }
     }
 }
 
@@ -130,12 +148,23 @@ impl Args {
 
         decode(&self, slice_u32)?;
 
-        // Swap red and green channels
+        // fix the color output to match RGBA32, so `[R, G, B, A]` bytes.
+        //
+        // `texture2ddecoder` has somewhat weird "endianness" for the output.
+        // technically, it claims to output BGRA, however this is actually loaded as a
+        // little-endian byte array into a native u32 via `u32::from_le_bytes`. the
+        // result is that the _numeric value_ is endian independent and always has the
+        // form of `0xAARRGGBB`, but the byte-wise result differs between architectures,
+        // and that's what we actually care about.
         for px in slice_u32 {
             if cfg!(target_endian = "little") {
+                // for little-endian, the bytes are `[B, G, R, A]`, so, we need to swap the
+                // green and red channels.
                 *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
             } else {
-                *px = (*px & 0x00_FF00FF) | ((*px & 0xFF00_0000) >> 16) | ((*px & 0xFF00) << 16);
+                // for big-endian, the bytes are `[A, R, G, B]`. a rotate-left by 1 byte happens
+                // to put the bytes into the correct spots.
+                *px = px.rotate_left(8);
             }
         }
 
