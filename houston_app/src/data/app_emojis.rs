@@ -109,11 +109,19 @@ async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> Result<React
 }
 
 fn png_to_data_url(png: &[u8]) -> String {
+    use base64::engine::Config;
     use base64::prelude::*;
 
-    let mut res = String::new();
-    res.push_str("data:image/png;base64,");
-    BASE64_STANDARD.encode_string(png, &mut res);
+    const PREFIX: &str = "data:image/png;base64,";
+
+    let engine = &BASE64_STANDARD;
+    let size = base64::encoded_len(png.len(), engine.config().encode_padding())
+        .and_then(|s| s.checked_add(PREFIX.len()))
+        .expect("base64 emoji images should fit into memory");
+
+    let mut res = String::with_capacity(size);
+    res.push_str(PREFIX);
+    engine.encode_string(png, &mut res);
 
     res
 }

@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "azur_lane",
     "azur_lane_data_collector",
