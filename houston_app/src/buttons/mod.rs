@@ -434,11 +434,22 @@ fn _assert_traits() {
     fn dummy<T>() -> T {
         unreachable!()
     }
+
     ok(dummy::<ButtonArgs>());
     ok(dummy::<ButtonArgs>().reply(dummy()));
     ok(dummy::<ButtonArgs>().modal_reply(dummy()));
     ok(dummy::<ButtonArgsRef<'_>>());
     ok(dummy::<CustomData>());
+
     ok(dummy::<ButtonContext<'_>>());
+    ok(dummy::<ButtonContext<'_>>().acknowledge());
+    ok(dummy::<ButtonContext<'_>>().defer_as(true));
+    ok(dummy::<ButtonContext<'_>>().reply(dummy()));
+    ok(dummy::<ButtonContext<'_>>().edit(dummy()));
+
     ok(dummy::<ModalContext<'_>>());
+    ok(dummy::<ModalContext<'_>>().acknowledge());
+    ok(dummy::<ModalContext<'_>>().defer_as(true));
+    ok(dummy::<ModalContext<'_>>().reply(dummy()));
+    ok(dummy::<ModalContext<'_>>().edit(dummy()));
 }
