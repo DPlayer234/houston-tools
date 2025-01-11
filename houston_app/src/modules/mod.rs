@@ -1,3 +1,4 @@
+use serenity::futures::future::always_ready;
 use serenity::prelude::*;
 
 use crate::prelude::*;
@@ -90,7 +91,7 @@ pub trait Module {
 
     fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
         _ = db;
-        Box::pin(const { crate::helper::future::Done::new_zst(|| Ok(())) })
+        Box::pin(always_ready(|| Ok(())))
     }
 
     /// Applies the settings if enabled.

@@ -3,7 +3,6 @@ use std::hash::Hash;
 
 pub mod bson;
 pub mod discord;
-pub mod future;
 pub mod sync;
 pub mod time;
 
