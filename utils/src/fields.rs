@@ -1,4 +1,5 @@
 //! Provides traits and macros to refer to a field of a struct.
+#![deprecated = "use Fn traits instead"]
 
 /// Represents access to a field of a struct.
 ///

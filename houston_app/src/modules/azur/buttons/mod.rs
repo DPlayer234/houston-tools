@@ -54,7 +54,7 @@ macro_rules! pagination {
             $options.into(),
             $iter,
             $label.into(),
-            ::utils::field_mut!(Self: page),
+            |s| &mut s.page,
         )
     }};
 }
@@ -62,8 +62,6 @@ macro_rules! pagination {
 pub(crate) use pagination;
 
 mod pagination_impl {
-    use utils::fields::FieldMut;
-
     use crate::buttons::prelude::*;
     use crate::helper::discord::create_string_select_menu_row;
     use crate::modules::core::buttons::ToPage;
@@ -92,12 +90,12 @@ mod pagination_impl {
     where
         T: ToCustomData,
         I: Iterator,
-        F: FieldMut<T, u16>,
+        F: Fn(&mut T) -> &mut u16,
     {
         let mut rows = Vec::new();
 
         #[allow(clippy::cast_possible_truncation)]
-        let page_count = 1 + page.get(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;
+        let page_count = 1 + *page(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;
         let pagination = ToPage::build_row(obj, page).exact_page_count(page_count);
 
         if let Some(pagination) = pagination.end() {

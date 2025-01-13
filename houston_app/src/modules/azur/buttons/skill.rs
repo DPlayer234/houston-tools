@@ -1,7 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
-use utils::fields::FieldMut;
 use utils::text::truncate;
 
 use super::AzurParseError;
@@ -181,18 +180,18 @@ impl View {
 
     /// Creates a button that redirects to a skill index.
     fn button_with_skill<'a>(&mut self, index: Option<u8>) -> CreateButton<'a> {
-        self.button_with_u8(utils::field_mut!(Self: skill_index), index)
+        self.button_with_u8(|s| &mut s.skill_index, index)
     }
 
     /// Creates a button that redirects to a skill index.
     fn button_with_augment<'a>(&mut self, index: Option<u8>) -> CreateButton<'a> {
-        self.button_with_u8(utils::field_mut!(Self: augment_index), index)
+        self.button_with_u8(|s| &mut s.augment_index, index)
     }
 
     /// Shared logic for buttons that use a `Option<u8>` field.
     fn button_with_u8<'a>(
         &mut self,
-        field: impl FieldMut<Self, Option<u8>>,
+        field: impl Fn(&mut Self) -> &mut Option<u8>,
         index: Option<u8>,
     ) -> CreateButton<'a> {
         self.new_button(field, index, |u| u.map_or(u16::MAX, u16::from))

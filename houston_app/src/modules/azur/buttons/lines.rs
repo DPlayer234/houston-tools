@@ -136,13 +136,13 @@ impl View {
 
     /// Creates a button that redirects to a different Base/EX state.
     fn button_with_extra<'a>(&mut self, extra: bool) -> CreateButton<'a> {
-        self.new_button(utils::field_mut!(Self: extra), extra, bool::into)
+        self.new_button(|s| &mut s.extra, extra, bool::into)
     }
 
     /// Creates a button that redirects to a different viewed part.
     fn button_with_part<'a>(&mut self, part: ViewPart, words: &ShipSkinWords) -> CreateButton<'a> {
         let disabled = self.part == part || !part.has_texts(words);
-        self.new_button(utils::field_mut!(Self: part), part, |u| u as u16)
+        self.new_button(|s| &mut s.part, part, |u| u as u16)
             .disabled(disabled)
     }
 
@@ -155,7 +155,7 @@ impl View {
         // Just as-cast the index to u8 since we'd have problems long before an
         // overflow.
         #[allow(clippy::cast_possible_truncation)]
-        self.new_select_option(&skin.name, utils::field_mut!(Self: skin_index), index as u8)
+        self.new_select_option(&skin.name, |s| &mut s.skin_index, index as u8)
     }
 
     fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> Result<(&'a ShipData, &'a ShipSkin)> {

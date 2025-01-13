@@ -50,7 +50,7 @@ impl View {
             _ = new_flags.pop();
 
             nav_row.push(
-                self.new_button(utils::field_mut!(Self: flags), new_flags, |_| u16::MAX)
+                self.new_button(|s| &mut s.flags, new_flags, |_| u16::MAX)
                     .label("Undo"),
             );
         }
@@ -100,9 +100,7 @@ impl View {
                         _ = new_flags.try_push(option.flag);
 
                         let button = self
-                            .new_button(utils::field_mut!(Self: flags), new_flags, |_| {
-                                option.flag.into()
-                            })
+                            .new_button(|s| &mut s.flags, new_flags, |_| option.flag.into())
                             .label(truncate(&option.value, 80))
                             .style(ButtonStyle::Secondary);
 

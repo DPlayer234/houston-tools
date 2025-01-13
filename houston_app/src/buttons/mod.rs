@@ -2,7 +2,6 @@ use std::mem::swap;
 use std::ptr;
 
 use serenity::prelude::*;
-use utils::fields::FieldMut;
 
 use crate::modules::{azur, core as core_mod, perks, starboard};
 use crate::prelude::*;
@@ -285,17 +284,18 @@ pub trait ToCustomData {
     ///
     /// If the field value is the same, instead returns a disabled button with
     /// the sentinel value.
-    fn new_button<'a, T: PartialEq>(
-        &mut self,
-        field: impl FieldMut<Self, T>,
-        value: T,
-        sentinel: impl FnOnce(T) -> u16,
-    ) -> CreateButton<'a> {
-        let disabled = *field.get(self) == value;
+    fn new_button<'a, T, F, S>(&mut self, field: F, value: T, sentinel: S) -> CreateButton<'a>
+    where
+        T: PartialEq,
+        F: Fn(&mut Self) -> &mut T,
+        S: FnOnce(T) -> u16,
+    {
+        let field_ref = field(self);
+        let disabled = *field_ref == value;
         if disabled {
             // This value is intended to be unique for a given object.
             // It isn't used in any way other than as a discriminator.
-            let sentinel_key = ptr::from_ref(field.get(self)) as u16;
+            let sentinel_key = ptr::from_ref(field_ref) as u16;
 
             let sentinel = core_mod::buttons::None::new(sentinel_key, sentinel(value));
             let custom_id = sentinel.to_custom_id();
@@ -308,13 +308,17 @@ pub trait ToCustomData {
 
     /// Creates a new select option that would switch to a state where one field
     /// is changed.
-    fn new_select_option<'a, T: PartialEq>(
+    fn new_select_option<'a, T, F>(
         &mut self,
         label: impl Into<Cow<'a, str>>,
-        field: impl FieldMut<Self, T>,
+        field: F,
         value: T,
-    ) -> CreateSelectMenuOption<'a> {
-        let default = *field.get(self) == value;
+    ) -> CreateSelectMenuOption<'a>
+    where
+        T: PartialEq,
+        F: Fn(&mut Self) -> &mut T,
+    {
+        let default = *field(self) == value;
         let custom_id = self.to_custom_id_with(field, value);
 
         CreateSelectMenuOption::new(label, custom_id).default_selection(default)
@@ -322,13 +326,16 @@ pub trait ToCustomData {
 
     /// Creates a custom ID with one field replaced.
     #[must_use]
-    fn to_custom_id_with<T>(&mut self, field: impl FieldMut<Self, T>, mut value: T) -> String {
+    fn to_custom_id_with<T, F>(&mut self, field: F, mut value: T) -> String
+    where
+        F: Fn(&mut Self) -> &mut T,
+    {
         // Swap new value into the field
-        swap(field.get_mut(self), &mut value);
+        swap(field(self), &mut value);
         // Create the custom ID
         let custom_id = self.to_custom_id();
         // Move original value back into field, dropping the new value.
-        *field.get_mut(self) = value;
+        *field(self) = value;
 
         custom_id
     }

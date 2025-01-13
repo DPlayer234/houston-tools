@@ -1,5 +1,3 @@
-use utils::fields::FieldMut;
-
 use crate::buttons::prelude::*;
 
 /// Opens a modal for page navigation.
@@ -41,7 +39,7 @@ impl ToPage {
     pub fn build_row<T, F>(obj: &mut T, page_field: F) -> PageRowBuilder<'_, T, F>
     where
         T: ToCustomData,
-        F: FieldMut<T, u16>,
+        F: Fn(&mut T) -> &mut u16,
     {
         PageRowBuilder {
             obj,
@@ -68,7 +66,7 @@ enum MaxPage {
 impl<T, F> PageRowBuilder<'_, T, F>
 where
     T: ToCustomData,
-    F: FieldMut<T, u16>,
+    F: Fn(&mut T) -> &mut u16,
 {
     pub fn exact_page_count(mut self, pages: u16) -> Self {
         self.max_page = MaxPage::Exact(pages);
@@ -84,16 +82,16 @@ where
         if pages <= max_show {
             self.exact_page_count(pages)
         } else if has_more {
-            let page = *self.page_field.get(self.obj);
+            let page = *(self.page_field)(self.obj);
             self.min_page_count(max_show.max(page + 1))
         } else {
-            let page = *self.page_field.get(self.obj);
+            let page = *(self.page_field)(self.obj);
             self.exact_page_count(page + 1)
         }
     }
 
     pub fn end<'new>(self) -> Option<CreateActionRow<'new>> {
-        let page = *self.page_field.get(self.obj);
+        let page = *(self.page_field)(self.obj);
 
         let has_more = match self.max_page {
             MaxPage::NoMore => false,

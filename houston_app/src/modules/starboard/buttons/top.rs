@@ -95,7 +95,7 @@ impl View {
             .color(data.config().embed_color)
             .description(description);
 
-        let components = ToPage::build_row(&mut self, utils::field_mut!(Self: page))
+        let components = ToPage::build_row(&mut self, |s| &mut s.page)
             .auto_page_count(page_count, has_more, MAX_PAGE)
             .end()
             .as_slice()
