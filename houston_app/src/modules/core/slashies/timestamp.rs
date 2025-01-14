@@ -52,11 +52,21 @@ pub mod timestamp {
     #[sub_command]
     async fn at(
         ctx: Context<'_>,
-        /// Format is 'YYYY-MM-DD HH:mm', f.e.: '2024-03-20 15:28'
+        /// The date & time in a format like '2024-04-16 14:53'.
+        #[name = "date-time"]
         date_time: &str,
     ) -> Result {
-        const INVALID_INPUT: HArgError =
-            HArgError::new_const("The input doesn't match the expected format.");
+        const INVALID_INPUT: HArgError = HArgError::new_const(
+            "The input doesn't match any expected format.\n\
+             \n\
+             Here are some allowed examples, each representing the same time:\n\
+             - `2024-04-16 14:53`\n\
+             - `16.04.2024 14:53`\n\
+             - `04/16/2024 02:53pm`\n\
+             - `2024-04-16 15:53 +01`\n\
+             - `2024-04-16 16:23 +01:30`\n\
+             - `Apr 16, 2024 14:53`",
+        );
 
         let timestamp = parse_date_time(date_time, Utc).ok_or(INVALID_INPUT)?;
         show_timestamp(ctx, timestamp).await
