@@ -75,7 +75,7 @@ pub trait RangeNum {
 
 macro_rules! impl_range {
     ($Type:ident, $Num:ty) => {
-        #[doc = concat!("An inclusive range type using `", stringify!($Num), "` with static restrictions on the allowed values")]
+        #[doc = concat!("An inclusive range type using [`", stringify!($Num), "`] with static restrictions on the allowed values")]
         ///
         /// This type is particularly useful when dealing with user input.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -269,6 +269,29 @@ mod test {
         };
     }
 
+    macro_rules! impl_parse_test {
+        ($fn:ident, $Type:ident) => {
+            #[test]
+            fn $fn() {
+                use std::str::FromStr;
+
+                use super::$Type;
+
+                let valid = <$Type<1, 10>>::from_str("4..6");
+                let single = <$Type<1, 10>>::from_str("5");
+                let low_only = <$Type<1, 10>>::from_str("4..");
+                let high_only = <$Type<1, 10>>::from_str("..6");
+                let all = <$Type<1, 10>>::from_str("..");
+
+                assert!(matches!(valid.map($Type::tuple), Ok((4, 6))));
+                assert!(matches!(single.map($Type::tuple), Ok((5, 5))));
+                assert!(matches!(low_only.map($Type::tuple), Ok((4, 10))));
+                assert!(matches!(high_only.map($Type::tuple), Ok((1, 6))));
+                assert!(matches!(all.map($Type::tuple), Ok((1, 10))));
+            }
+        };
+    }
+
     impl_test!(range_u8, RangeU8);
     impl_test!(range_u16, RangeU16);
     impl_test!(range_u32, RangeU32);
@@ -282,4 +305,18 @@ mod test {
     impl_test!(range_i64, RangeI64);
     impl_test!(range_i128, RangeI128);
     impl_test!(range_isize, RangeIsize);
+
+    impl_parse_test!(parse_range_u8, RangeU8);
+    impl_parse_test!(parse_range_u16, RangeU16);
+    impl_parse_test!(parse_range_u32, RangeU32);
+    impl_parse_test!(parse_range_u64, RangeU64);
+    impl_parse_test!(parse_range_u128, RangeU128);
+    impl_parse_test!(parse_range_usize, RangeUsize);
+
+    impl_parse_test!(parse_range_i8, RangeI8);
+    impl_parse_test!(parse_range_i16, RangeI16);
+    impl_parse_test!(parse_range_i32, RangeI32);
+    impl_parse_test!(parse_range_i64, RangeI64);
+    impl_parse_test!(parse_range_i128, RangeI128);
+    impl_parse_test!(parse_range_isize, RangeIsize);
 }
