@@ -61,3 +61,56 @@ pub mod id_as_u64 {
         int.serialize(serializer)
     }
 }
+
+/// Serializes a Discord ID array as an [`u64`].
+pub mod id_array_as_u64 {
+    use arrayvec::ArrayVec;
+    use serde::de::Error;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn deserialize<'de, D, T, const N: usize>(deserializer: D) -> Result<[T; N], D::Error>
+    where
+        D: Deserializer<'de>,
+        T: From<u64>,
+    {
+        let ints = <ArrayVec<u64, N>>::deserialize(deserializer)?
+            .into_inner()
+            .map_err(|_| D::Error::custom("incorrect array size"))?;
+
+        let mut ids = <ArrayVec<T, N>>::new();
+        for int in ints {
+            if int != u64::MAX {
+                // SAFETY: at most N pushes
+                unsafe { ids.push_unchecked(T::from(int)) };
+            } else {
+                return Err(D::Error::custom("invalid discord id"));
+            }
+        }
+
+        debug_assert_eq!(ids.len(), N, "must have been exactly N pushes");
+
+        // SAFETY: must be exactly N pushes at this point
+        Ok(unsafe { ids.into_inner_unchecked() })
+    }
+
+    pub fn serialize<S, T, const N: usize>(val: &[T; N], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Into<u64> + Copy,
+    {
+        let mut ints = <ArrayVec<u64, N>>::new();
+        for id in val {
+            let int: u64 = (*id).into();
+
+            // SAFETY: at most N pushes
+            unsafe {
+                ints.push_unchecked(int);
+            }
+        }
+
+        debug_assert_eq!(ints.len(), N, "must have been exactly N pushes");
+
+        // SAFETY: must be exactly N pushes at this point
+        unsafe { ints.into_inner_unchecked() }.serialize(serializer)
+    }
+}

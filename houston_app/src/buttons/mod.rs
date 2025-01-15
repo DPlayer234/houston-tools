@@ -3,7 +3,7 @@ use std::ptr;
 
 use serenity::prelude::*;
 
-use crate::modules::{azur, core as core_mod, perks, starboard};
+use crate::modules::{azur, core as core_mod, minigame, perks, starboard};
 use crate::prelude::*;
 
 mod context;
@@ -123,6 +123,7 @@ define_button_args! {
     AzurJuustagramChat(azur::buttons::juustagram_chat::View),
     /// Open the Juustagram chat search.
     AzurSearchJuustagramChat(azur::buttons::search_juustagram_chat::View),
+    MinigameTicTacToe(minigame::buttons::tic_tac_toe::View),
 }
 
 impl ButtonArgs {

@@ -29,6 +29,18 @@ pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenSt
         .into()
 }
 
+/// Turns a function into a chat command or a module into a chat command group
+/// _option_.
+///
+/// This is intended for use when you want to programatically create command
+/// groups.
+#[proc_macro_attribute]
+pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
+    chat_command_impl::sub_entry_point(args.into(), item.into())
+        .unwrap_or_else(|e| e.into_compile_error())
+        .into()
+}
+
 /// Derives [`ChoiceArg`] for an enum.
 #[proc_macro_derive(ChoiceArg, attributes(name))]
 pub fn derive_choice_arg(input: StdTokenStream) -> StdTokenStream {

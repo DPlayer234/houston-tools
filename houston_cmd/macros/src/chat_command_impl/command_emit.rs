@@ -18,6 +18,13 @@ pub fn to_command_option_command(
     func: &mut ItemFn,
     name: Option<String>,
 ) -> syn::Result<TokenStream> {
+    if func.sig.asyncness.is_none() {
+        return Err(syn::Error::new_spanned(
+            &func.sig,
+            "command function must be async",
+        ));
+    }
+
     let parameters = extract_parameters(func)?;
 
     let param_names: Vec<_> = parameters.iter().map(|param| &param.name).collect();

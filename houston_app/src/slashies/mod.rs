@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub mod args;
 
 pub mod prelude {
-    pub use houston_cmd::{chat_command, context_command, Context};
+    pub use houston_cmd::{chat_command, context_command, sub_command, Context};
 
     pub use super::args::*;
     pub use super::{create_reply, ContextExt as _, SlashUserExt as _};

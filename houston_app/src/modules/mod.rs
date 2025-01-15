@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub mod azur;
 pub mod core;
 pub mod media_react;
+pub mod minigame;
 pub mod perks;
 pub mod profile;
 pub mod starboard;
@@ -59,6 +60,7 @@ impl Info {
     pub fn load(&mut self, config: &config::HBotConfig) -> Result {
         core::Module.apply(self, config)?;
         azur::Module.apply(self, config)?;
+        minigame::Module.apply(self, config)?;
         perks::Module.apply(self, config)?;
         media_react::Module.apply(self, config)?;
         profile::Module.apply(self, config)?;

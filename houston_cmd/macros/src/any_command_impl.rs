@@ -66,3 +66,17 @@ pub fn to_command_shared(
         }
     })
 }
+
+pub fn to_command_option_shared(
+    vis: &Visibility,
+    ident: &Ident,
+    command_option: TokenStream,
+) -> syn::Result<TokenStream> {
+    Ok(quote::quote! {
+        #vis const fn #ident() -> ::houston_cmd::model::CommandOption {
+            const {
+                #command_option
+            }
+        }
+    })
+}
