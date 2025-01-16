@@ -131,15 +131,11 @@ end
 
 -- Used by our code to load a buff/skill.
 function require_buff(id)
-    if pg.buffCfg_tag["buff_" .. id] then
-        return require("gamecfg.buff.buff_" .. id)
-    end
+    return require("gamecfg.buff.buff_" .. id)
 end
 
 function require_skill(id)
-    if pg.skillCfg_tag["skill_" .. id] then
-        return require("gamecfg.skill.skill_" .. id)
-    end
+    return require("gamecfg.skill.skill_" .. id)
 end
 
 -- Helper for augment parsing
