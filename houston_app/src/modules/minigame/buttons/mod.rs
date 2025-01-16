@@ -4,10 +4,11 @@ use crate::buttons::ButtonContext;
 use crate::data::HArgError;
 use crate::helper::discord::id_array_as_u64;
 
+pub mod rock_paper_scissors;
 pub mod tic_tac_toe;
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum Player {
+enum Player {
     P1,
     P2,
 }

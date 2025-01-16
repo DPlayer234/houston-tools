@@ -27,16 +27,6 @@ azur_lane_data = "azur_lane_data"
 # sets the color used for most embeds.
 # optional. defaults to 0xDDA0DD
 embed_color = 0xDDA0DD
-
-# optional. enables the /minigame commands
-[bot.minigame]
-# optional. enables all games
-all = true
-# for all of the below:
-# optional. sets whether the game is enabled
-# these override the value specified in "all"
-# that is if `all=true`, you can set these to false to disable them.
-tic_tac_toe = true
 ```
 
 To configure logging, see the Logging section further down.
@@ -68,11 +58,12 @@ The following commands are supported in context menus:
 | Get as Quote | (Message) Copies a format that is appropriate to use as a quote to crosspost. |
 | User Info    | (User) Equivalent to `/who`. |
 
-When minigames are enabled, these commands also become available:
+The bot also has a couple of minigames:
 
-| Command              | Description |
-|:-------------------- |:----------- |
-| minigame tic-tac-toe | Play tic-tac-toe with someone else. |
+| Command                      | Description |
+|:---------------------------- |:----------- |
+| minigame tic-tac-toe         | Play tic-tac-toe with someone else. |
+| minigame rock-paper-scissors | Play rock-paper-scissors with someone else. |
 
 Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
 

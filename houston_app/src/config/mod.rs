@@ -38,8 +38,6 @@ pub struct HBotConfig {
     #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
     pub perks: Option<crate::modules::perks::Config>,
-    #[serde(default)]
-    pub minigame: crate::modules::minigame::Config,
 }
 
 impl HBotConfig {

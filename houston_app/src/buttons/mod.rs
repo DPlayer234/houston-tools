@@ -123,7 +123,10 @@ define_button_args! {
     AzurJuustagramChat(azur::buttons::juustagram_chat::View),
     /// Open the Juustagram chat search.
     AzurSearchJuustagramChat(azur::buttons::search_juustagram_chat::View),
+    /// Play the next tic-tac-toe turn.
     MinigameTicTacToe(minigame::buttons::tic_tac_toe::View),
+    /// Choose your action for rock-paper-scissors.
+    MinigameRockPaperScissors(minigame::buttons::rock_paper_scissors::View),
 }
 
 impl ButtonArgs {

@@ -1,0 +1,149 @@
+use serenity::small_fixed_array::FixedString;
+use utils::text::write_str::*;
+
+use crate::buttons::prelude::*;
+use crate::helper::discord::id_as_u64;
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct View {
+    states: [State; 2],
+    action: Option<Choice>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+struct State {
+    #[serde(with = "id_as_u64")]
+    user: UserId,
+    choice: Option<Choice>,
+}
+
+impl State {
+    fn new(user: UserId) -> Self {
+        Self { user, choice: None }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+enum Choice {
+    Rock,
+    Paper,
+    Scissors,
+}
+
+impl Choice {
+    fn emoji(self) -> ReactionType {
+        match self {
+            Self::Rock => ReactionType::from('\u{1FAA8}'),
+            Self::Paper => ReactionType::from('\u{1F4F0}'),
+            Self::Scissors => ReactionType::Unicode(FixedString::from_static_trunc("✂️")),
+        }
+    }
+}
+
+enum Ready {
+    Winner(UserId),
+    Draw,
+}
+
+impl View {
+    pub fn new(players: [UserId; 2]) -> Self {
+        Self {
+            states: players.map(State::new),
+            action: None,
+        }
+    }
+
+    fn state_mut(&mut self, user: UserId) -> Option<&mut State> {
+        self.states.iter_mut().find(|s| s.user == user)
+    }
+
+    fn ready(&self) -> Option<Ready> {
+        let c0 = self.states[0].choice?;
+        let c1 = self.states[1].choice?;
+
+        Some(match (c0, c1) {
+            (Choice::Rock, Choice::Rock)
+            | (Choice::Paper, Choice::Paper)
+            | (Choice::Scissors, Choice::Scissors) => Ready::Draw,
+
+            (Choice::Rock, Choice::Scissors)
+            | (Choice::Paper, Choice::Rock)
+            | (Choice::Scissors, Choice::Paper) => Ready::Winner(self.states[0].user),
+
+            (Choice::Rock, Choice::Paper)
+            | (Choice::Paper, Choice::Scissors)
+            | (Choice::Scissors, Choice::Rock) => Ready::Winner(self.states[1].user),
+        })
+    }
+
+    pub fn create_next_reply<'new>(mut self, data: &HBotData) -> CreateReply<'new> {
+        let description = format!("<@{}> VS <@{}>", self.states[0].user, self.states[1].user);
+
+        let embed = CreateEmbed::new()
+            .description(description)
+            .color(data.config().embed_color);
+
+        let buttons = CreateActionRow::buttons(vec![
+            self.new_action_button(Choice::Rock).label("Rock"),
+            self.new_action_button(Choice::Paper).label("Paper"),
+            self.new_action_button(Choice::Scissors).label("Scissors"),
+        ]);
+
+        CreateReply::new().embed(embed).components(vec![buttons])
+    }
+
+    fn create_ready_reply<'new>(self, data: &HBotData, ready: Ready) -> CreateReply<'new> {
+        let mut description = String::with_capacity(64);
+        match ready {
+            Ready::Winner(user) => writeln_str!(description, "## <@{user}> wins!"),
+            Ready::Draw => writeln_str!(description, "## Draw!"),
+        }
+
+        let match_icon = match ready {
+            Ready::Winner(user) if user == self.states[0].user => ">",
+            Ready::Winner(_) => "<",
+            Ready::Draw => "=",
+        };
+
+        writeln_str!(
+            description,
+            "<@{}> {} **{}** {} <@{}>",
+            self.states[0].user,
+            self.states[0].choice.unwrap_or(Choice::Rock).emoji(),
+            match_icon,
+            self.states[1].choice.unwrap_or(Choice::Rock).emoji(),
+            self.states[1].user,
+        );
+
+        dbg!(description.len());
+
+        let embed = CreateEmbed::new()
+            .description(description)
+            .color(data.config().embed_color);
+
+        CreateReply::new().embed(embed)
+    }
+
+    fn new_action_button<'new>(&mut self, choice: Choice) -> CreateButton<'new> {
+        let custom_id = self.to_custom_id_with(|s| &mut s.action, Some(choice));
+        CreateButton::new(custom_id).emoji(choice.emoji())
+    }
+}
+
+impl ButtonArgsReply for View {
+    async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
+        let action = self.action;
+        let state = self
+            .state_mut(ctx.interaction.user.id)
+            .ok_or(HArgError::new_const("You weren't invited to this round."))?;
+
+        state.choice = action;
+
+        let reply = if let Some(ready) = self.ready() {
+            self.create_ready_reply(ctx.data, ready)
+        } else {
+            self.create_next_reply(ctx.data)
+        };
+        ctx.edit(reply.into()).await
+    }
+}
