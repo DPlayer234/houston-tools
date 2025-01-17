@@ -7,11 +7,11 @@ pub struct View {
     board: [[Option<Player>; 3]; 3],
 }
 
-const fn icon(p: Option<Player>) -> char {
+fn icon(data: &HBotData, p: Option<Player>) -> ReactionType {
     match p {
-        Some(Player::P1) => '❌',
-        Some(Player::P2) => '⭕',
-        None => '❕',
+        Some(Player::P1) => ReactionType::from('❌'),
+        Some(Player::P2) => ReactionType::from('⭕'),
+        None => data.app_emojis().empty().clone(),
     }
 }
 
@@ -102,9 +102,14 @@ impl View {
         None
     }
 
-    fn board_buttons<'new, F>(&mut self, current: Player, modify: F) -> Vec<CreateActionRow<'new>>
+    fn board_buttons<'a, F>(
+        &mut self,
+        data: &'a HBotData,
+        current: Player,
+        modify: F,
+    ) -> Vec<CreateActionRow<'a>>
     where
-        F: Fn(CreateButton<'_>, usize, usize, Option<Player>) -> CreateButton<'_>,
+        F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
         let mut components = Vec::with_capacity(3);
 
@@ -119,7 +124,7 @@ impl View {
                         Some(current),
                         |_| flat_index(x, y) as u16,
                     )
-                    .emoji(icon(state))
+                    .emoji(icon(data, state))
                     .style(ButtonStyle::Secondary);
 
                 row.push(modify(button, x, y, state));
@@ -131,7 +136,7 @@ impl View {
         components
     }
 
-    pub fn create_next_reply<'new>(mut self, data: &HBotData) -> CreateReply<'new> {
+    pub fn create_next_reply(mut self, data: &HBotData) -> CreateReply<'_> {
         let description = match self.players.turn {
             Player::P1 => format!(
                 "> **❌ <@{}>**\n-# ⭕ <@{}>",
@@ -147,18 +152,19 @@ impl View {
             .description(description)
             .color(data.config().embed_color);
 
-        let components =
-            self.board_buttons(self.players.turn, |b, _, _, s| b.disabled(s.is_some()));
+        let components = self.board_buttons(data, self.players.turn, |b, _, _, s| {
+            b.disabled(s.is_some())
+        });
 
         CreateReply::new().embed(embed).components(components)
     }
 
-    fn create_win_reply<'new>(
+    fn create_win_reply(
         mut self,
         data: &HBotData,
         winner: Player,
         win_line: WinLine,
-    ) -> CreateReply<'new> {
+    ) -> CreateReply<'_> {
         let winner_id = self.players.user_id(winner);
 
         let description = format!(
@@ -173,7 +179,7 @@ impl View {
             .description(description)
             .color(data.config().embed_color);
 
-        let components = self.board_buttons(Player::P1, |b, x, y, _| {
+        let components = self.board_buttons(data, Player::P1, |b, x, y, _| {
             b.disabled(true).style(if win_line.is_match(x, y) {
                 ButtonStyle::Success
             } else {
@@ -184,7 +190,7 @@ impl View {
         CreateReply::new().embed(embed).components(components)
     }
 
-    fn create_draw_reply<'new>(mut self, data: &HBotData) -> CreateReply<'new> {
+    fn create_draw_reply(mut self, data: &HBotData) -> CreateReply<'_> {
         let embed = format!(
             "## Draw!\n\
              -# ❌ <@{p1}>\n\
@@ -197,7 +203,7 @@ impl View {
             .description(embed)
             .color(data.config().embed_color);
 
-        let components = self.board_buttons(Player::P1, |b, _, _, _| {
+        let components = self.board_buttons(data, Player::P1, |b, _, _, _| {
             b.disabled(true).style(ButtonStyle::Danger)
         });
 
