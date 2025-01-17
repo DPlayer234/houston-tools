@@ -253,7 +253,6 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                     .await
                     .unwrap_or(false)
                 {
-                    // CMBK: refactor when forwards are properly supported
                     let mut forward = MessageReference::from(&message);
                     forward.kind = MessageReferenceKind::Forward;
 

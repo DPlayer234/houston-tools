@@ -37,6 +37,22 @@ pub mod minigame {
         ctx.send(reply).await?;
         Ok(())
     }
+
+    /// Play, uh, "chess" with someone else.
+    #[sub_command(name = "chess")]
+    async fn chess(
+        ctx: Context<'_>,
+        /// The user to play against.
+        opponent: &User,
+    ) -> Result {
+        use crate::modules::minigame::buttons::chess::View;
+
+        check_user(&ctx, opponent)?;
+        let players = [ctx.user().id, opponent.id];
+        let reply = View::new(players).create_next_reply(ctx.data_ref());
+        ctx.send(reply).await?;
+        Ok(())
+    }
 }
 
 fn check_user(ctx: &Context<'_>, user: &User) -> Result {

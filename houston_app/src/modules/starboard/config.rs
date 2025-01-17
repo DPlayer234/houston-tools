@@ -65,7 +65,7 @@ pub struct StarboardEntry {
     pub name: String,
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,
-    pub reacts: u8,
+    pub reacts: u32,
     #[serde(default = "Vec::new")]
     pub notices: Vec<String>,
     #[serde(default)]

@@ -127,6 +127,8 @@ define_button_args! {
     MinigameTicTacToe(minigame::buttons::tic_tac_toe::View),
     /// Choose your action for rock-paper-scissors.
     MinigameRockPaperScissors(minigame::buttons::rock_paper_scissors::View),
+    /// Play the next "chess" turn.
+    MinigameChess(minigame::buttons::chess::View),
 }
 
 impl ButtonArgs {

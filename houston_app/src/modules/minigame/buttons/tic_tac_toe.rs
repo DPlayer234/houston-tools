@@ -132,8 +132,7 @@ impl View {
     }
 
     pub fn create_next_reply<'new>(mut self, data: &HBotData) -> CreateReply<'new> {
-        let current = self.players.turn;
-        let description = match current {
+        let description = match self.players.turn {
             Player::P1 => format!(
                 "> **❌ <@{}>**\n-# ⭕ <@{}>",
                 self.players.ids[0], self.players.ids[1]
@@ -148,7 +147,8 @@ impl View {
             .description(description)
             .color(data.config().embed_color);
 
-        let components = self.board_buttons(current, |b, _, _, s| b.disabled(s.is_some()));
+        let components =
+            self.board_buttons(self.players.turn, |b, _, _, s| b.disabled(s.is_some()));
 
         CreateReply::new().embed(embed).components(components)
     }

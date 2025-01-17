@@ -64,6 +64,7 @@ The bot also has a couple of minigames:
 |:---------------------------- |:----------- |
 | minigame tic-tac-toe         | Play tic-tac-toe with someone else. |
 | minigame rock-paper-scissors | Play rock-paper-scissors with someone else. |
+| minigame chess               | Play, uh, "chess" with someone else. |
 
 Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
 

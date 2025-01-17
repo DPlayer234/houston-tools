@@ -8,7 +8,7 @@ use crate::modules::Module;
 use crate::prelude::*;
 
 macro_rules! generate {
-    ({ $($key:ident = $name:literal $(if $condition:expr)?;)* }) => {
+    ({ $($key:ident = $name:literal, $path:literal $(if $condition:expr)?;)* }) => {
         #[derive(Debug)]
         pub struct HAppEmojiStore {
             $(pub $key: ReactionType,)*
@@ -54,7 +54,7 @@ macro_rules! generate {
                         $key: match exist.$key {
                             Some(e) => e,
                             $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
-                            None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $name, ".png"))).await?,
+                            None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
                         },
                     )*
                 })
@@ -68,25 +68,40 @@ fn azur(config: &HBotConfig) -> bool {
 }
 
 generate!({
-    hull_dd   = "Hull_DD"   if azur;
-    hull_cl   = "Hull_CL"   if azur;
-    hull_ca   = "Hull_CA"   if azur;
-    hull_bc   = "Hull_BC"   if azur;
-    hull_bb   = "Hull_BB"   if azur;
-    hull_cvl  = "Hull_CVL"  if azur;
-    hull_cv   = "Hull_CV"   if azur;
-    hull_ss   = "Hull_SS"   if azur;
-    hull_bbv  = "Hull_BBV"  if azur;
-    hull_ar   = "Hull_AR"   if azur;
-    hull_bm   = "Hull_BM"   if azur;
-    hull_ssv  = "Hull_SSV"  if azur;
-    hull_cb   = "Hull_CB"   if azur;
-    hull_ae   = "Hull_AE"   if azur;
-    hull_ddgv = "Hull_DDGv" if azur;
-    hull_ddgm = "Hull_DDGm" if azur;
-    hull_ixs  = "Hull_IXs"  if azur;
-    hull_ixv  = "Hull_IXv"  if azur;
-    hull_ixm  = "Hull_IXm"  if azur;
+    empty = "Empty", "Empty.png";
+
+    chess_white_pawn   = "Chess_WhitePawn",   "chess/WhitePawn.png";
+    chess_white_rook   = "Chess_WhiteRook",   "chess/WhiteRook.png";
+    chess_white_bishop = "Chess_WhiteBishop", "chess/WhiteBishop.png";
+    chess_white_knight = "Chess_WhiteKnight", "chess/WhiteKnight.png";
+    chess_white_queen  = "Chess_WhiteQueen",  "chess/WhiteQueen.png";
+    chess_white_king   = "Chess_WhiteKing",   "chess/WhiteKing.png";
+    chess_black_pawn   = "Chess_BlackPawn",   "chess/BlackPawn.png";
+    chess_black_rook   = "Chess_BlackRook",   "chess/BlackRook.png";
+    chess_black_bishop = "Chess_BlackBishop", "chess/BlackBishop.png";
+    chess_black_knight = "Chess_BlackKnight", "chess/BlackKnight.png";
+    chess_black_queen  = "Chess_BlackQueen",  "chess/BlackQueen.png";
+    chess_black_king   = "Chess_BlackKing",   "chess/BlackKing.png";
+
+    hull_dd   = "Hull_DD",   "azur/Hull_DD.png"   if azur;
+    hull_cl   = "Hull_CL",   "azur/Hull_CL.png"   if azur;
+    hull_ca   = "Hull_CA",   "azur/Hull_CA.png"   if azur;
+    hull_bc   = "Hull_BC",   "azur/Hull_BC.png"   if azur;
+    hull_bb   = "Hull_BB",   "azur/Hull_BB.png"   if azur;
+    hull_cvl  = "Hull_CVL",  "azur/Hull_CVL.png"  if azur;
+    hull_cv   = "Hull_CV",   "azur/Hull_CV.png"   if azur;
+    hull_ss   = "Hull_SS",   "azur/Hull_SS.png"   if azur;
+    hull_bbv  = "Hull_BBV",  "azur/Hull_BBV.png"  if azur;
+    hull_ar   = "Hull_AR",   "azur/Hull_AR.png"   if azur;
+    hull_bm   = "Hull_BM",   "azur/Hull_BM.png"   if azur;
+    hull_ssv  = "Hull_SSV",  "azur/Hull_SSV.png"  if azur;
+    hull_cb   = "Hull_CB",   "azur/Hull_CB.png"   if azur;
+    hull_ae   = "Hull_AE",   "azur/Hull_AE.png"   if azur;
+    hull_ddgv = "Hull_DDGv", "azur/Hull_DDGv.png" if azur;
+    hull_ddgm = "Hull_DDGm", "azur/Hull_DDGm.png" if azur;
+    hull_ixs  = "Hull_IXs",  "azur/Hull_IXs.png"  if azur;
+    hull_ixv  = "Hull_IXv",  "azur/Hull_IXv.png"  if azur;
+    hull_ixm  = "Hull_IXm",  "azur/Hull_IXm.png"  if azur;
 });
 
 static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| ReactionType::from('❔'));

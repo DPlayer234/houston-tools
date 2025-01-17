@@ -1,9 +1,12 @@
+use std::fmt;
+
 use serenity::model::id::UserId;
 
 use crate::buttons::ButtonContext;
 use crate::data::HArgError;
 use crate::helper::discord::id_array_as_u64;
 
+pub mod chess;
 pub mod rock_paper_scissors;
 pub mod tic_tac_toe;
 
@@ -22,7 +25,7 @@ impl Player {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct PlayerState {
     #[serde(with = "id_array_as_u64")]
     ids: [UserId; 2],
@@ -59,5 +62,15 @@ impl PlayerState {
         }
 
         Ok(())
+    }
+}
+
+impl fmt::Debug for PlayerState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.turn == Player::P1 {
+            write!(f, "([{}] vs {})", self.ids[0], self.ids[1])
+        } else {
+            write!(f, "({} vs [{}])", self.ids[0], self.ids[1])
+        }
     }
 }
