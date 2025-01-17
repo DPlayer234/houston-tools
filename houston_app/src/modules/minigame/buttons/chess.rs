@@ -1,7 +1,17 @@
-//! A chess variant with a 5x5 grid.
+//! I learned that 5x5 chess variants were a thing and have since changed the
+//! starting layout to match Gardner chess:
+//!
+//! Martin Gardner (1991). The Unexpected Hanging and Other Mathematical
+//! Diversions (Reprint ed.)
+//!
+//! Also see <https://en.m.wikipedia.org/wiki/Minichess>.
+//!
+//! The original comment is below:
+//!
+//! ## A chess variant with a 5x5 grid.
 //!
 //! Like normal chess, moving into check is illegal and the victory condition is
-//! a check-mate.
+//! a check-mate. Castling and pawn double-move are disallowed.
 //! Pawns promote into Queens with no player choice.
 //!
 //! This is incredibly stupid and shouldn't be taken seriously, but it can
@@ -399,42 +409,13 @@ impl View {
             players: PlayerState::new(players),
             action: Action::Idle,
             board: Grid {
+                #[rustfmt::skip]
                 array: [
-                    [
-                        p2(Piece::Bishop),
-                        p2(Piece::Pawn),
-                        None,
-                        p1(Piece::Pawn),
-                        p1(Piece::Rook),
-                    ],
-                    [
-                        p2(Piece::Queen),
-                        p2(Piece::Pawn),
-                        None,
-                        p1(Piece::Pawn),
-                        p1(Piece::Knight),
-                    ],
-                    [
-                        p2(Piece::King),
-                        p2(Piece::Pawn),
-                        None,
-                        p1(Piece::Pawn),
-                        p1(Piece::King),
-                    ],
-                    [
-                        p2(Piece::Knight),
-                        p2(Piece::Pawn),
-                        None,
-                        p1(Piece::Pawn),
-                        p1(Piece::Queen),
-                    ],
-                    [
-                        p2(Piece::Rook),
-                        p2(Piece::Pawn),
-                        None,
-                        p1(Piece::Pawn),
-                        p1(Piece::Bishop),
-                    ],
+                    [p2(Piece::Rook), p2(Piece::Pawn), None, p1(Piece::Pawn), p1(Piece::Rook)],
+                    [p2(Piece::Knight), p2(Piece::Pawn), None, p1(Piece::Pawn), p1(Piece::Knight)],
+                    [p2(Piece::Bishop), p2(Piece::Pawn), None, p1(Piece::Pawn), p1(Piece::Bishop)],
+                    [p2(Piece::Queen), p2(Piece::Pawn), None, p1(Piece::Pawn), p1(Piece::Queen)],
+                    [p2(Piece::King), p2(Piece::Pawn), None, p1(Piece::Pawn), p1(Piece::King)],
                 ],
             },
         }
