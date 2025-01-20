@@ -55,13 +55,16 @@ impl PlayerState {
         self.user_id(self.turn)
     }
 
-    fn check_turn(&self, ctx: &ButtonContext<'_>) -> anyhow::Result<()> {
+    fn check_turn(&self, ctx: &ButtonContext<'_>) -> Result<(), HArgError> {
+        let interacting = ctx.interaction.user.id;
         let current_turn = self.turn_user_id();
-        if ctx.interaction.user.id != current_turn {
-            anyhow::bail!(HArgError::new(format!("It's <@{current_turn}>'s turn.")));
+        if interacting == current_turn {
+            Ok(())
+        } else if self.ids.contains(&interacting) {
+            Err(HArgError::new(format!("It's <@{current_turn}>'s turn.")))
+        } else {
+            Err(HArgError::new_const("You're not part of this game."))
         }
-
-        Ok(())
     }
 }
 
