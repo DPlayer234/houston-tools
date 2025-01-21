@@ -4,29 +4,17 @@
 //! To avoid trimming of white-space at the start and end of strings,
 //! every string output has delimiters added.
 //!
-//! The `to_*` and `from_*` methods output [`String`] and [`Vec<u8>`],
-//! while `encode_*` and `decode_*` write to buffers.
-//! The input cannot be a reader.
+//! Each format provides a pair of `encode` and `decode` methods. "Encoding"
+//! takes bytes and returns strings whereas "decoding" does the inverse.
 //!
-//! The current supported formats are:
+//! Additionally there are `to_string` and `from_str` convenience methods.
 //!
-//! ## Base 256
-//!
-//! Via [`to_b256`]/[`encode_b256`] and [`from_b256`]/[`decode_b256`]:
-//! Encodes each byte as one [`char`] of the output with the equivalent code
-//! point value.
-//!
-//! ## Base 65536:
-//!
-//! Via [`to_b65536`]/[`encode_b65536`] and [`from_b65536`]/[`decode_b65536`]:
-//! Encodes pairs of bytes as one [`char`] of the output with a unique code
-//! point for each possible input.
+//! See the documentation of sub-modules for more information.
 
-mod b256;
-mod b65536;
-
-pub use b256::*;
-pub use b65536::*;
+pub mod b256;
+pub mod b65536;
+#[cfg(test)]
+mod tests;
 
 /// Error decoding [`str_as_data`](self) data.
 #[derive(Debug, thiserror::Error)]
@@ -39,6 +27,3 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
-
-#[cfg(test)]
-mod test;

@@ -5,8 +5,8 @@
 #[cfg(test)]
 use criterion as _;
 
-pub mod fields;
 pub mod fuzzy;
+pub mod iter;
 pub mod mem;
 pub mod range;
 pub mod str_as_data;

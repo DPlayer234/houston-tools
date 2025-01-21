@@ -279,38 +279,33 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "cannot parse"]
     fn fail_parse_date_partial_time() {
         let input = "2024-02-16 11:";
-        parse_date_time(input, Utc).expect("cannot parse");
+        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
     }
 
     #[test]
-    #[should_panic = "cannot parse"]
     fn fail_parse_date_invalid_time() {
         let input = "2024-02-16 11:61";
-        parse_date_time(input, Utc).expect("cannot parse");
+        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
     }
 
     #[test]
-    #[should_panic = "cannot parse"]
     fn fail_parse_partial_date() {
         let input = "13/13/ 14:15";
-        parse_date_time(input, Utc).expect("cannot parse");
+        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
     }
 
     #[test]
-    #[should_panic = "cannot parse"]
     fn fail_parse_invalid_date() {
         let input = "13/13/13 14:15";
-        parse_date_time(input, Utc).expect("cannot parse");
+        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
     }
 
     #[test]
-    #[should_panic = "cannot parse"]
     fn fail_parse_date_time_invalid_time_zone() {
         let input = "2024-02-12 11:51 CET";
-        parse_date_time(input, Utc).expect("cannot parse");
+        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
     }
 
     #[test]

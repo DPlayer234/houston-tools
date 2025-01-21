@@ -1,28 +1,43 @@
+//! Encodes bytes as "base 65535".
+//!
+//! Encodes each byte as one [`char`] of the output with the equivalent code
+//! point value. A start and end marker are added.
+//!
+//! The exact format is as follows:
+//!
+//! - The prefix is added: It is always `#`.
+//! - Each byte is converted to a [`char`] with the code point equal to the
+//!   byte's numeric value.
+//! - The suffix is added: It is always `&`.
+//!
+//! Decoding applies these rules in reverse, with only [`char`] codes in the
+//! range `0x0` to `0xFF` being allowed.
+
 use std::{fmt, io};
 
 use super::Error;
 
-/// Converts the bytes to "base 256".
+/// Encodes bytes as "base 256", returning a [`String`] with the result.
 ///
-/// Each byte will be mapped to the UTF-8 character with the equivalent code.
+/// This is equivalent to using [`encode`] with a [`String`].
 ///
-/// The sequence will be prefixed with `#` and ends with `&`.
+/// Use [`from_str`] to reverse the operation.
 #[must_use]
-pub fn to_b256(bytes: &[u8]) -> String {
+pub fn to_string(bytes: &[u8]) -> String {
     let expected_size = 2 + bytes.len() + (bytes.len() >> 1);
     let mut result = String::with_capacity(expected_size);
 
-    encode_b256(&mut result, bytes).expect("write to String cannot fail");
+    encode(&mut result, bytes).expect("write to String cannot fail");
 
     result
 }
 
-/// Encodes the bytes to "base 256", writing them to a buffer.
+/// Encodes bytes as "base 65535", writing them to a buffer.
 ///
-/// See [`to_b256`] for more information.
+/// Use [`decode`] to reverse the operation.
 ///
 /// This can only return an [`Err`] if the `writer` does so.
-pub fn encode_b256<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
+pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     writer.write_char('#')?;
     for b in bytes {
         writer.write_char(char::from(*b))?;
@@ -31,22 +46,22 @@ pub fn encode_b256<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     writer.write_char('&')
 }
 
-/// Reverses the operation done by [`to_b256`].
-///
-/// If the data is invalid or lacks the required markers, returns an error.
-pub fn from_b256(input: &str) -> Result<Vec<u8>, Error> {
-    let expected_size = input.len().saturating_sub(2);
+/// Equivalent to [`decode`] with a [`Vec<u8>`] as the buffer.
+pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
+    let expected_size = input.len();
     let mut result = Vec::with_capacity(expected_size);
 
-    decode_b256(&mut result, input)?;
+    decode(&mut result, input)?;
     Ok(result)
 }
 
-/// Reverses the operation done by [`to_b256`], writing to a given buffer.
+/// Decodes a string holding "base 65536" data, writing the bytes bytes to a
+/// buffer.
 ///
-/// If the data is invalid or lacks the required markers, returns an error.
-pub fn decode_b256<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
-    let input = try_strip_b256_input(input)?;
+/// Returns [`Err`] if the data is invalid, lacks the required markers, or the
+/// writer returned an error.
+pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
+    let input = strip_input(input)?;
 
     for c in input.chars() {
         let byte = u8::try_from(c).map_err(|_| Error::Invalid)?;
@@ -56,7 +71,7 @@ pub fn decode_b256<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error
     Ok(())
 }
 
-fn try_strip_b256_input(input: &str) -> Result<&str, Error> {
+fn strip_input(input: &str) -> Result<&str, Error> {
     input
         // strip the start marker
         .strip_prefix('#')

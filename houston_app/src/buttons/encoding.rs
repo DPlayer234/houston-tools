@@ -2,6 +2,7 @@ use std::io;
 
 use arrayvec::ArrayVec;
 use smallvec::SmallVec;
+use utils::str_as_data::b65536;
 
 use super::{ButtonArgs, ButtonArgsRef};
 use crate::prelude::*;
@@ -22,13 +23,13 @@ pub fn to_custom_id(args: ButtonArgsRef<'_>) -> String {
 /// Decodes a [`ButtonArgs`] from a custom ID.
 pub fn from_custom_id(id: &str) -> Result<ButtonArgs> {
     let mut data = StackBuf::new();
-    utils::str_as_data::decode_b65536(&mut data, id)?;
+    b65536::decode(&mut data, id)?;
     read_button_args(&data)
 }
 
 /// Encodes a [`super::CustomData`] buffer as a custom ID.
 pub fn encode_custom_id(slice: &[u8]) -> String {
-    utils::str_as_data::to_b65536(slice)
+    b65536::to_string(slice)
 }
 
 /// Reads a [`super::CustomData`] buffer as a [`ButtonArgs`].

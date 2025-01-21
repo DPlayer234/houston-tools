@@ -1,32 +1,60 @@
+//! Encodes bytes as "base 65535".
+//!
+//! Bytes will be paired. The combined value of each pair will mapped to UTF-8
+//! characters and the sequence is then joined. Both a start and end marker will
+//! be added, depending on the byte count.
+//!
+//! The exact format is as follows:
+//!
+//! - The prefix is added: It is `&` if the byte count is even, otherwise it is
+//!   `%`.
+//! - The byte slice is chunked into 16-bit pieces. Each piece is regarded as a
+//!   little-endian [`u16`]. These [`u16`] are in turn mapped to [`char`] with
+//!   rules described further down. For a byte slice with odd count, the
+//!   sequence is treated as if it had an additional null byte at the end.
+//! - The suffix is added: It is always `&`.
+//!
+//! [`u16`] are converted to [`char`] as follows:
+//!
+//! - If the value is `0x0` to `0xD7FF`: The [`char`] with the code point equal
+//!   to the value is used.
+//! - If the value is `0xD800` to `0xFFFF`: The [`char`] with the code point
+//!   equal to the value plus `0x800` is used.
+//!
+//! These rules ensure only valid unicode code points are in the output.
+//!
+//! Decoding applies these rules in reverse, with only [`char`] codes in the
+//! range `0x0` to `0xD7FF` and `0xE000` to `0x10FFFF` being allowed. The prefix
+//! is used to determine whether to treat the last char as a single byte
+//! or a pair.
+
 use std::{fmt, io};
 
 use super::Error;
 
-/// Converts the bytes to "base 65535".
+/// Encodes bytes as "base 65535", returning a [`String`] with the result.
 ///
-/// Bytes will be paired. The combined value of each pair will mapped to UTF-8
-/// characters and the sequence is then joined. A marker for whether the input
-/// sequence had an odd amount of bytes will be stored.
+/// This is equivalent to using [`encode`] with a [`String`].
 ///
-/// The sequence will be prefixed with a header character and ends with `&`.
+/// Use [`from_str`] to reverse the operation.
 #[must_use]
-pub fn to_b65536(bytes: &[u8]) -> String {
+pub fn to_string(bytes: &[u8]) -> String {
     // Testing indicates more than 100% is normal, usually about ~130%.
     // But more is still common and more than 200% is rare, so we go for that.
     let expected_size = 2 + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
-    encode_b65536(&mut result, bytes).expect("write to String cannot fail");
+    encode(&mut result, bytes).expect("write to String cannot fail");
 
     result
 }
 
-/// Encodes the bytes to "base 65535", writing them to a buffer.
+/// Encodes bytes as "base 65535", writing them to a buffer.
 ///
-/// See [`to_b65536`] for more information.
+/// Use [`decode`] to reverse the operation.
 ///
 /// This can only return an [`Err`] if the `writer` does so.
-pub fn encode_b65536<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
+pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     let skip_last = bytes.len() % 2 != 0;
     writer.write_char(match skip_last {
         false => '&',
@@ -48,25 +76,27 @@ pub fn encode_b65536<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result 
     writer.write_char('&')
 }
 
-/// Reverses the operation done by [`to_b65536`].
+/// Decodes a string holding "base 65536" data.
 ///
-/// If the data is invalid or lacks the required markers, returns an error.
-pub fn from_b65536(input: &str) -> Result<Vec<u8>, Error> {
+/// Returns [`Err`] if the data is invalid or lacks the required markers.
+pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     // Extending the logic in `to_b65536`, less than ~130% is also common.
     // This almost always has enough space and rarely leads to more than
     // half the capacity going entirely unused.
     let expected_size = input.len().saturating_sub(2);
     let mut result = Vec::with_capacity(expected_size);
 
-    decode_b65536(&mut result, input)?;
+    decode(&mut result, input)?;
     Ok(result)
 }
 
-/// Reverses the operation done by [`to_b65536`], writing to a given buffer.
+/// Decodes a string holding "base 65536" data, writing the bytes bytes to a
+/// buffer.
 ///
-/// If the data is invalid or lacks the required markers, returns an error.
-pub fn decode_b65536<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
-    let (skip_last, input) = try_strip_b65536_input(input)?;
+/// Returns [`Err`] if the data is invalid, lacks the required markers, or the
+/// writer returned an error.
+pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
+    let (skip_last, input) = strip_input(input)?;
 
     let mut chars = input.chars();
     if let Some(last) = chars.next_back() {
@@ -88,7 +118,7 @@ pub fn decode_b65536<W: io::Write>(mut writer: W, input: &str) -> Result<(), Err
 
 /// Tries to strip a base 65536 input, returning `skip_last` and the stripped
 /// input.
-fn try_strip_b65536_input(s: &str) -> Result<(bool, &str), Error> {
+fn strip_input(s: &str) -> Result<(bool, &str), Error> {
     // strip the end marker
     let s = s.strip_suffix('&').ok_or(Error::Invalid)?;
 

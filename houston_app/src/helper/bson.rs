@@ -32,7 +32,7 @@ pub(crate) use {bson_id, doc_object_id};
 pub async fn update_indices<T>(
     collection: Collection<T>,
     indices: Vec<IndexModel>,
-) -> crate::prelude::Result
+) -> anyhow::Result<()>
 where
     T: Send + Sync,
 {
@@ -47,7 +47,7 @@ where
     async fn update_indices_inner(
         collection: Collection<Document>,
         indices: Vec<IndexModel>,
-    ) -> crate::prelude::Result {
+    ) -> anyhow::Result<()> {
         for index in indices {
             match collection.create_index(index.clone()).await {
                 Ok(_) => {},

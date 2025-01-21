@@ -1,6 +1,7 @@
 use bson::{doc, Document};
 use chrono::Utc;
 use serenity::prelude::*;
+use utils::iter::IteratorExt as _;
 use utils::text::truncate;
 use utils::text::write_str::*;
 
@@ -163,8 +164,9 @@ impl View {
             .color(data.config().embed_color);
 
         let components: Vec<_> = buttons
-            .chunks(5)
-            .map(|c| CreateActionRow::buttons(c.to_vec()))
+            .into_iter()
+            .vec_chunks(5)
+            .map(CreateActionRow::buttons)
             .collect();
 
         let reply = CreateReply::new().embed(embed).components(components);
