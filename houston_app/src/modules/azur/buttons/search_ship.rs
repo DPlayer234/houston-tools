@@ -37,7 +37,7 @@ impl View {
         let mut options = Vec::new();
 
         for ship in iter.by_ref().take(PAGE_SIZE) {
-            let emoji = data.app_emojis().hull(ship.hull_type);
+            let emoji = super::hull_emoji(ship.hull_type, data);
 
             writeln_str!(
                 desc,

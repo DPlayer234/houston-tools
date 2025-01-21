@@ -5,7 +5,7 @@ use azur_lane::ship::*;
 use utils::join;
 use utils::text::write_str::*;
 
-use super::{get_ship_preview_name, AzurParseError};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 
 /// View general ship details.
@@ -89,7 +89,7 @@ impl View {
         if let Some((skin, image_data)) = base_skin() {
             embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
 
-            if Some(skin.image_key.as_str()) != get_ship_preview_name(ctx) {
+            if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
                 create = create.new_attachment(CreateAttachment::bytes(
                     image_data,
                     format!("{}.webp", skin.image_key),
@@ -112,7 +112,7 @@ impl View {
             "[{}] {:★<star_pad$}\n{} {} {}",
             ship.rarity.name(),
             '★',
-            data.app_emojis().hull(ship.hull_type),
+            super::hull_emoji(ship.hull_type, data),
             ship.faction.name(),
             ship.hull_type.name(),
             star_pad = usize::from(ship.stars)

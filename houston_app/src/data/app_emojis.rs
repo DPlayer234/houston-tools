@@ -1,6 +1,5 @@
 use std::sync::LazyLock;
 
-use azur_lane::ship::HullType;
 use serenity::http::Http;
 
 use super::HBotConfig;
@@ -21,6 +20,7 @@ macro_rules! generate {
         impl<'a> HAppEmojis<'a> {
             $(
                 #[must_use]
+                #[inline(always)]
                 pub fn $key(self) -> &'a ReactionType {
                     match self.0 {
                         Some(e) => &e.$key,
@@ -61,6 +61,12 @@ macro_rules! generate {
             }
         }
     };
+}
+
+impl<'a> HAppEmojis<'a> {
+    pub fn fallback(self) -> &'a ReactionType {
+        &FALLBACK_EMOJI
+    }
 }
 
 fn azur(config: &HBotConfig) -> bool {
@@ -139,36 +145,4 @@ fn png_to_data_url(png: &[u8]) -> String {
     engine.encode_string(png, &mut res);
 
     res
-}
-
-impl<'a> HAppEmojis<'a> {
-    #[must_use]
-    pub fn hull(self, hull_type: HullType) -> &'a ReactionType {
-        let Some(s) = self.0 else {
-            return &FALLBACK_EMOJI;
-        };
-
-        match hull_type {
-            HullType::Unknown => &FALLBACK_EMOJI,
-            HullType::Destroyer => &s.hull_dd,
-            HullType::LightCruiser => &s.hull_cl,
-            HullType::HeavyCruiser => &s.hull_ca,
-            HullType::Battlecruiser => &s.hull_bc,
-            HullType::Battleship => &s.hull_bb,
-            HullType::LightCarrier => &s.hull_cvl,
-            HullType::AircraftCarrier => &s.hull_cv,
-            HullType::Submarine => &s.hull_ss,
-            HullType::AviationBattleship => &s.hull_bbv,
-            HullType::RepairShip => &s.hull_ar,
-            HullType::Monitor => &s.hull_bm,
-            HullType::AviationSubmarine => &s.hull_ssv,
-            HullType::LargeCruiser => &s.hull_cb,
-            HullType::MunitionShip => &s.hull_ae,
-            HullType::MissileDestroyerV => &s.hull_ddgv,
-            HullType::MissileDestroyerM => &s.hull_ddgm,
-            HullType::FrigateS => &s.hull_ixs,
-            HullType::FrigateV => &s.hull_ixv,
-            HullType::FrigateM => &s.hull_ixm,
-        }
-    }
 }

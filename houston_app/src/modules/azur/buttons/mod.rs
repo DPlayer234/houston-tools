@@ -1,3 +1,5 @@
+use azur_lane::ship::{HullType, ShipData};
+
 use crate::buttons::prelude::*;
 
 pub mod augment;
@@ -25,7 +27,7 @@ enum AzurParseError {
 }
 
 /// Gets the URL to a ship on the wiki.
-fn get_ship_wiki_url(base_ship: &azur_lane::ship::ShipData) -> CreateEmbedAuthor<'_> {
+fn get_ship_wiki_url(base_ship: &ShipData) -> CreateEmbedAuthor<'_> {
     let mut wiki_url = config::azur_lane::WIKI_BASE_URL.to_owned();
     urlencoding::Encoded::new(&base_ship.name).append_to(&mut wiki_url);
 
@@ -41,6 +43,32 @@ fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
     let thumb = embed.thumbnail.as_ref()?;
     let (_, name) = thumb.url.rsplit_once('/')?;
     Some(name.split_once('.').map_or(name, |a| a.0))
+}
+
+pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
+    let e = data.app_emojis();
+    match hull_type {
+        HullType::Unknown => e.fallback(),
+        HullType::Destroyer => e.hull_dd(),
+        HullType::LightCruiser => e.hull_cl(),
+        HullType::HeavyCruiser => e.hull_ca(),
+        HullType::Battlecruiser => e.hull_bc(),
+        HullType::Battleship => e.hull_bb(),
+        HullType::LightCarrier => e.hull_cvl(),
+        HullType::AircraftCarrier => e.hull_cv(),
+        HullType::Submarine => e.hull_ss(),
+        HullType::AviationBattleship => e.hull_bbv(),
+        HullType::RepairShip => e.hull_ar(),
+        HullType::Monitor => e.hull_bm(),
+        HullType::AviationSubmarine => e.hull_ssv(),
+        HullType::LargeCruiser => e.hull_cb(),
+        HullType::MunitionShip => e.hull_ae(),
+        HullType::MissileDestroyerV => e.hull_ddgv(),
+        HullType::MissileDestroyerM => e.hull_ddgm(),
+        HullType::FrigateS => e.hull_ixs(),
+        HullType::FrigateV => e.hull_ixv(),
+        HullType::FrigateM => e.hull_ixm(),
+    }
 }
 
 macro_rules! pagination {

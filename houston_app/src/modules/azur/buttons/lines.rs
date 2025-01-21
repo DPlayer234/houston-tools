@@ -1,7 +1,7 @@
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
-use super::{get_ship_preview_name, AzurParseError};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
 use crate::helper::discord::create_string_select_menu_row;
@@ -51,7 +51,7 @@ impl View {
         if let Some(image_data) = ctx.data.azur_lane().get_chibi_image(&skin.image_key) {
             embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
 
-            if Some(skin.image_key.as_str()) != get_ship_preview_name(ctx) {
+            if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
                 let filename = format!("{}.webp", skin.image_key);
                 create = create.new_attachment(CreateAttachment::bytes(image_data, filename));
             }
