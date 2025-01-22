@@ -65,6 +65,7 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
             "N was shorter than total input length"
         );
 
+        // CMBK: should use `copy_from_slice` instead when it's const-stable
         unsafe {
             // SAFETY: just checked that `slice` fits in `out`
             ptr::copy_nonoverlapping(slice.as_ptr(), out.as_mut_ptr().add(offset), slice.len());

@@ -3,11 +3,11 @@ use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use smallvec::SmallVec;
-use utils::str_as_data::b65536 as encoder;
+use utils::str_as_data::*;
 
 fn bench_to_b65536(c: &mut Criterion) {
     fn bench(c: &mut Criterion, name: &str, data: &[u8]) {
-        c.bench_function(name, |b| b.iter(|| encoder::to_string(black_box(data))));
+        c.bench_function(name, |b| b.iter(|| b65536::to_string(black_box(data))));
     }
 
     bench(c, "to_b65536_small", &create_data::<16>());
@@ -16,12 +16,12 @@ fn bench_to_b65536(c: &mut Criterion) {
 
 fn bench_from_b65536(c: &mut Criterion) {
     fn bench(c: &mut Criterion, name: &str, data: &[u8]) {
-        let data = encoder::to_string(data);
+        let data = b65536::to_string(data);
 
         c.bench_function(name, |b| {
             b.iter(|| {
                 let mut vec = <SmallVec<[u8; 16]>>::new();
-                black_box(encoder::decode(&mut vec, &data)).expect("data is valid");
+                black_box(b65536::decode(&mut vec, &data)).expect("data is valid");
                 vec
             })
         });
@@ -43,5 +43,5 @@ fn create_data<const LEN: usize>() -> [u8; LEN] {
     buf
 }
 
-criterion_group!(b65536, bench_to_b65536, bench_from_b65536);
-criterion_main!(b65536);
+criterion_group!(str_as_data, bench_to_b65536, bench_from_b65536);
+criterion_main!(str_as_data);

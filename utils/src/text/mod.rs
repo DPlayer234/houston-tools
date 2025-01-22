@@ -1,8 +1,8 @@
 //! Provides helper methods to work with displayed text.
 
-pub mod __private;
 mod escape;
 mod inline_str;
+pub mod private;
 mod titlecase_impl;
 mod truncate_impl;
 pub mod write_str;
@@ -35,8 +35,8 @@ macro_rules! join {
     }};
     ($($str:expr),*) => { const {
         const STRS: &[&str] = &[$($str),*];
-        const N: usize = $crate::text::__private::count_str_const(STRS);
-        const JOIN: $crate::text::InlineStr<N> = $crate::text::__private::join_str_const(STRS);
+        const N: usize = $crate::text::private::count_str_const(STRS);
+        const JOIN: $crate::text::InlineStr<N> = $crate::text::private::join_str_const(STRS);
         JOIN.as_str()
     }};
 }

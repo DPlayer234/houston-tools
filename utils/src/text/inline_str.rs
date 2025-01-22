@@ -135,7 +135,7 @@ impl<const LEN: usize> InlineStr<LEN> {
                 "length of inputs doesn't match result length"
             );
         }
-        super::__private::join_str_const(&[self.as_str(), other.as_str()])
+        super::private::join_str_const(&[self.as_str(), other.as_str()])
     }
 }
 

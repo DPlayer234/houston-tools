@@ -33,6 +33,9 @@ pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
 ///
 /// Returns [`None`] if the slice isn't exactly `N` long.
 ///
+/// If you need a prefix or suffix of the slice instead, use
+/// `[T]::first_chunk` or `[T]::last_chunk` instead.
+///
 /// # Examples
 ///
 /// ```
@@ -49,92 +52,25 @@ pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
 #[inline]
 pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
     if slice.len() == N {
-        Some(unsafe {
-            // SAFETY: The length has already been validated.
-            &*slice.as_ptr().cast::<[T; N]>()
-        })
+        // SAFETY: The length has already been validated.
+        Some(unsafe { &*slice.as_ptr().cast::<[T; N]>() })
     } else {
         None
     }
 }
 
-/// Transmutes a slice of some type into one of another.
-///
-/// The length of the new slice is adjusted to cover the same memory region
-/// without going out of bounds of the original slice.
+/// Transmutes a slice into raw bytes. Take note of endianness.
 ///
 /// # Safety
 ///
-/// The start of `slice` must have a supported alignment for `Dst`.
-/// This is required when even the slice is empty.
+/// Every bit of `slice` must be initialized. This isn't necessarily guaranteed
+/// for every `T` since there may be unused bits within a given `T`.
 ///
-/// The start of the new slice will be the same pointer as the original slice.
-///
-/// The length will chosen as such:
-/// - If either of `Src` or `Dst`, but not both, are zero-sized types, the new
-///   slice will be empty.
-/// - If both are zero-sized types, the new slice will have the same length as
-///   the original.
-/// - Otherwise, the length will be `size_of::<Src>() * len / size_of::<Dst>()`,
-///   truncating away the end section that doesn't fit another `Dst`.
-///
-/// The memory of `slice` must be valid for every `Dst` produced.
-///
-/// There is no guarantee this operation is reversible, i.e. this may fail:
-/// ```no_run
-/// # use utils::mem::transmute_slice;
-/// unsafe {
-///     let bytes: &[u8] = &[1, 2, 3];
-///     let shorts: &[u16] = transmute_slice(bytes);
-///     let not_bytes: &[u8] = transmute_slice(shorts);
-///     assert_eq!(bytes, not_bytes);
-/// }
-/// ```
-#[inline]
-#[must_use = "transmuting has no effect if you don't use the return value"]
-#[allow(clippy::cast_sign_loss)]
-pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
-    let ptr = slice.as_ptr_range();
-
-    // `<*const T>::is_aligned` is not yet const-stable.
-    // Uncomment the following line when it is:
-    // debug_assert!(ptr.start.cast::<Dst>().is_aligned());
-
-    // SAFETY: Both pointers are to the slice, so the offset must be valid.
-    let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
-    debug_assert!(
-        byte_len >= 0,
-        "sanity: end >= start, so byte_len must be positive"
-    );
-
-    let src_size = size_of::<Src>();
-    let dst_size = size_of::<Dst>();
-
-    unsafe {
-        let dst_len = match (src_size, dst_size) {
-            (0, 0) => slice.len(),
-            (_, 0) | (0, _) => 0,
-            _ => (byte_len as usize) / dst_size,
-        };
-
-        slice::from_raw_parts(ptr.start.cast(), dst_len)
-    }
-}
-
-/// Transmutes a slice into raw bytes.
-///
-/// This equivalent to [`transmute_slice`] with a `Dst` of [`u8`].
-///
-/// # Safety
-///
-/// Every bit of `slice` must be initialized.
-/// This isn't necessarily guaranteed for every `T`
-/// since there may be unused bits within a given `T`.
+/// If `T` is a primitive integer type, this is always safe.
 ///
 /// # Example
 ///
 /// ```
-/// # use utils::mem::as_bytes;
 /// let slice: &[u16] = &[1, 2, 3];
 /// let bytes = unsafe {
 ///     utils::mem::as_bytes(slice)
@@ -150,7 +86,17 @@ pub const unsafe fn transmute_slice<Src, Dst>(slice: &[Src]) -> &[Dst] {
 #[inline]
 #[must_use = "transmuting has no effect if you don't use the return value"]
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
-    unsafe { transmute_slice(slice) }
+    let ptr = slice.as_ptr_range();
+
+    // SAFETY: Both pointers are to the slice, so the offset must be valid.
+    let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
+
+    // SAFETY: Pointer is derived from a reference and byte length is known to be in
+    // range.
+    unsafe {
+        #[allow(clippy::cast_sign_loss)]
+        slice::from_raw_parts(ptr.start.cast(), byte_len as usize)
+    }
 }
 
 #[cfg(test)]

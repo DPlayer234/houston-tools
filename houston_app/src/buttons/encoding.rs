@@ -7,8 +7,10 @@ use utils::str_as_data::b65536;
 use super::{ButtonArgs, ButtonArgsRef};
 use crate::prelude::*;
 
+const STACK: usize = b65536::max_byte_len(100);
+
 /// Buffer used for on-stack coding.
-pub type StackBuf = ArrayVec<u8, 200>;
+pub type StackBuf = ArrayVec<u8, STACK>;
 
 /// Buffer used for coding when inline size is important.
 pub type Buf = SmallVec<[u8; 16]>;

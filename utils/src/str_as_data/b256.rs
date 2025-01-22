@@ -17,6 +17,13 @@ use std::{fmt, io};
 
 use super::Error;
 
+/// The maximum byte length a specified count of characters may decode to.
+///
+/// This can be used to reserve space in a buffer.
+pub const fn max_byte_len(char_count: usize) -> usize {
+    char_count - 2
+}
+
 /// Encodes bytes as "base 256", returning a [`String`] with the result.
 ///
 /// This is equivalent to using [`encode`] with a [`String`].
@@ -55,8 +62,7 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     Ok(result)
 }
 
-/// Decodes a string holding "base 65536" data, writing the bytes bytes to a
-/// buffer.
+/// Decodes a string holding "base 65536" data, writing the bytes to a buffer.
 ///
 /// Returns [`Err`] if the data is invalid, lacks the required markers, or the
 /// writer returned an error.

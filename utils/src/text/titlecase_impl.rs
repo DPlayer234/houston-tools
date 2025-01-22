@@ -90,7 +90,7 @@ macro_rules! titlecase {
 
             // Include length in constant for next call.
             const CLONE: [u8; N] = *$crate::mem::as_sized(INPUT);
-            const RESULT: [u8; N] = $crate::text::__private::to_titlecase_u8_array(CLONE);
+            const RESULT: [u8; N] = $crate::text::private::to_titlecase_u8_array(CLONE);
             &RESULT as &[u8]
         }
     };

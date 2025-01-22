@@ -24,13 +24,20 @@
 //! These rules ensure only valid unicode code points are in the output.
 //!
 //! Decoding applies these rules in reverse, with only [`char`] codes in the
-//! range `0x0` to `0xD7FF` and `0xE000` to `0x10FFFF` being allowed. The prefix
+//! range `0x0` to `0xD7FF` and `0xE000` to `0x107FF` being allowed. The prefix
 //! is used to determine whether to treat the last char as a single byte
 //! or a pair.
 
 use std::{fmt, io};
 
 use super::Error;
+
+/// The maximum byte length a specified count of characters may decode to.
+///
+/// This can be used to reserve space in a buffer.
+pub const fn max_byte_len(char_count: usize) -> usize {
+    (char_count - 2) * 2
+}
 
 /// Encodes bytes as "base 65535", returning a [`String`] with the result.
 ///
@@ -80,7 +87,7 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
 ///
 /// Returns [`Err`] if the data is invalid or lacks the required markers.
 pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
-    // Extending the logic in `to_b65536`, less than ~130% is also common.
+    // Extending the logic in `to_string`, less than ~130% is also common.
     // This almost always has enough space and rarely leads to more than
     // half the capacity going entirely unused.
     let expected_size = input.len().saturating_sub(2);
@@ -90,8 +97,7 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     Ok(result)
 }
 
-/// Decodes a string holding "base 65536" data, writing the bytes bytes to a
-/// buffer.
+/// Decodes a string holding "base 65536" data, writing the bytes to a buffer.
 ///
 /// Returns [`Err`] if the data is invalid, lacks the required markers, or the
 /// writer returned an error.
