@@ -64,13 +64,12 @@ impl View {
         let mut components = Vec::with_capacity(5);
 
         let moves = match self.action {
-            Action::Selected(pos) => self
-                .board
-                .get(pos)
-                .copied()
-                .flatten()
-                .map(|t| t.piece.get_move().target_mask(&self.board, pos, t.player))
-                .map(|t| (t, pos)),
+            Action::Selected(pos) => self.board.get(pos).copied().flatten().map(|t| {
+                (
+                    t.piece.get_move().target_mask(&self.board, pos, t.player),
+                    pos,
+                )
+            }),
             _ => None,
         };
 
@@ -90,11 +89,7 @@ impl View {
                         (ButtonStyle::Primary, Action::Selected(pos))
                     },
                     (t, Some((mask, src))) if mask.get(pos) == Some(&true) => (
-                        if t.is_some() {
-                            ButtonStyle::Danger
-                        } else {
-                            ButtonStyle::Success
-                        },
+                        t.map_or(ButtonStyle::Success, |_| ButtonStyle::Danger),
                         Action::Move(*src, pos),
                     ),
                     _ => (ButtonStyle::Secondary, Action::Idle),

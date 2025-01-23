@@ -7,7 +7,7 @@ mod titlecase_impl;
 mod truncate_impl;
 pub mod write_str;
 
-pub use escape::{escape_by_char, EscapeByChar, EscapeByCharIter};
+pub use escape::{escape_by_char, EscapeByChar};
 pub use inline_str::InlineStr;
 pub use titlecase_impl::to_titlecase;
 pub use truncate_impl::truncate;

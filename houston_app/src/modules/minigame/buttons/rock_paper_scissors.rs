@@ -115,8 +115,6 @@ impl View {
             self.states[1].user,
         );
 
-        dbg!(description.len());
-
         let embed = CreateEmbed::new()
             .description(description)
             .color(data.config().embed_color);

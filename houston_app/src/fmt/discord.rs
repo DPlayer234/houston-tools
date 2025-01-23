@@ -19,7 +19,9 @@ pub fn get_unique_username(user: &User) -> Cow<'_, str> {
 /// Escapes markdown sequences.
 #[must_use]
 pub fn escape_markdown(input: &str) -> impl Display + '_ {
-    utils::text::escape_by_char(input, |c| matches!(c, '*' | '`' | '_' | '>'), |c| ['\\', c])
+    utils::text::escape_by_char(input, |c| {
+        matches!(c, '*' | '`' | '_' | '>').then_some(['\\', c])
+    })
 }
 
 /// Allows mentioning a timestamp in Discord messages.
