@@ -158,6 +158,20 @@ function get_juustagram_chat(chat_id)
                     text = content.param,
                 }
             }
+        elseif content.type == 2 then
+            inner = {
+                Message = {
+                    sender_id = content.ship_group,
+                    text = "[Voice Message]",
+                }
+            }
+        elseif content.type == 3 then
+            inner = {
+                Message = {
+                    sender_id = content.ship_group,
+                    text = "[Present]",
+                }
+            }
         elseif content.type == 4 then
             local emoji = pg.emoji_template[tonumber(content.param)]
             local emoji_desc = emoji and emoji.desc:gsub("<.->", "") or "[unknown emoji]"
@@ -177,7 +191,7 @@ function get_juustagram_chat(chat_id)
         end
 
         local options
-        if content.option and #content.option ~= 0 then
+        if type(content.option) == "table" then
             options = _map(content.option, function(option)
                 return {
                     flag = option[1],
