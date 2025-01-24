@@ -4,6 +4,7 @@ use std::path::Path;
 use std::{fs, io};
 
 use azur_lane::equip::*;
+use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{juustagram, DefinitionData};
 use clap::Parser;
@@ -138,12 +139,14 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
     let equips = load_equips(&lua, &pg)?;
     let augments = load_augments(&lua, &pg)?;
     let juustagram_chats = load_juustagram_chats(&lua, &pg)?;
+    let special_secretaries = load_special_secretaries(&lua, &pg)?;
 
     Ok(DefinitionData {
         ships,
         equips,
         augments,
         juustagram_chats,
+        special_secretaries,
     })
 }
 
@@ -563,6 +566,61 @@ fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<juustag
 
     action.finish();
     Ok(chats)
+}
+
+fn load_special_secretaries(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<SpecialSecretary>> {
+    let secretary_special_ship: LuaTable = pg
+        .get("secretary_special_ship")
+        .context("global pg.secretary_special_ship")?;
+    let secretary_special_ship_all: LuaTable = secretary_special_ship
+        .get("all")
+        .context("global pg.secretary_special_ship.all")?;
+
+    let mut action = log::action!("Finding special secretaries.")
+        .unbounded()
+        .suffix("..")
+        .start();
+
+    let mut ships = Vec::new();
+    secretary_special_ship_all.for_each(|_: u32, id: u32| {
+        let template: LuaTable = secretary_special_ship
+            .get(id)
+            .with_context(context!("secretary_special_ship with id {id}"))?;
+
+        let kind: u32 = template
+            .get("type")
+            .with_context(context!("type of secretary_special_ship with id {id}"))?;
+
+        if kind != 0 {
+            action.inc_amount();
+            ships.push(template);
+        }
+
+        Ok(())
+    })?;
+
+    let total = action.amount();
+    action.finish();
+
+    let mut action = log::action!("Building special secretaries.")
+        .bounded_total(total)
+        .start();
+
+    let make_secretary = |data| {
+        let equip = parse::secretary::load_special_secretary(lua, &data)?;
+        action.inc_amount();
+        Ok(equip)
+    };
+
+    let mut ships = ships
+        .into_iter()
+        .map(make_secretary)
+        .collect::<LuaResult<Vec<_>>>()?;
+
+    action.finish();
+
+    ships.sort_unstable_by_key(|t| (t.id));
+    Ok(ships)
 }
 
 fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<()> {

@@ -13,6 +13,8 @@ use mlua::prelude::*;
 pub struct Config {
     /// Overrides for ship names based on their group ID.
     pub name_overrides: HashMap<u32, String>,
+    /// Names for the special secretary kinds.
+    pub special_secretary_kinds: Vec<String>,
     /// Overrides for skills based on their buff ID.
     pub predefined_skills: HashMap<u32, Skill>,
 }

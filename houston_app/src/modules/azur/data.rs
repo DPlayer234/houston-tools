@@ -4,6 +4,7 @@ use std::{fs, io};
 
 use azur_lane::equip::*;
 use azur_lane::juustagram::*;
+use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -30,6 +31,10 @@ pub struct HAzurLane {
     juustagram_chats: Vec<Chat>,
     juustagram_chat_id_to_index: HashMap<u32, usize>,
     ship_id_to_juustagram_chat_indices: HashMap<u32, IndexVec>,
+
+    special_secretaries: Vec<SpecialSecretary>,
+    special_secretary_id_to_index: HashMap<u32, usize>,
+    special_secretary_simsearch: Search<()>,
 
     // use Bytes to avoid copying the data redundantly
     chibi_sprite_cache: DashMap<String, Option<Bytes>>,
@@ -89,6 +94,7 @@ impl HAzurLane {
             ship_id_to_augment_indices: HashMap::with_capacity(data.augments.len()),
             juustagram_chat_id_to_index: HashMap::with_capacity(data.juustagram_chats.len()),
             ship_id_to_juustagram_chat_indices: HashMap::with_capacity(data.juustagram_chats.len()),
+            special_secretary_id_to_index: HashMap::with_capacity(data.special_secretaries.len()),
             ships: data.ships,
             equips: data.equips,
             augments: data.augments,
@@ -162,9 +168,16 @@ impl HAzurLane {
                 .or_insert_with(|| smallvec![index]);
         }
 
+        for (index, data) in this.special_secretaries.iter_mut().enumerate() {
+            data.name.push_str(&data.kind);
+            this.special_secretary_id_to_index.insert(data.id, index);
+            this.special_secretary_simsearch.insert(&data.name, ());
+        }
+
         this.ship_simsearch.shrink_to_fit();
         this.equip_simsearch.shrink_to_fit();
         this.augment_simsearch.shrink_to_fit();
+        this.special_secretaries.shrink_to_fit();
         this
     }
 
@@ -186,6 +199,11 @@ impl HAzurLane {
     /// Gets all known Juustagram chats.
     pub fn juustagram_chats(&self) -> &[Chat] {
         &self.juustagram_chats
+    }
+
+    /// Gets all known special secretaries.
+    pub fn special_secretaries(&self) -> &[SpecialSecretary] {
+        &self.special_secretaries
     }
 
     /// Gets a ship by its ID.
@@ -252,6 +270,22 @@ impl HAzurLane {
             .into_iter()
             .flatten()
             .filter_map(|i| self.juustagram_chats.get(*i))
+    }
+
+    /// Gets a special secretary by its ID.
+    pub fn special_secretary_by_id(&self, id: u32) -> Option<&SpecialSecretary> {
+        let index = *self.special_secretary_id_to_index.get(&id)?;
+        self.special_secretaries.get(index)
+    }
+
+    /// Gets all special secretaries by a name prefix.
+    pub fn special_secretaries_by_prefix(
+        &self,
+        prefix: &str,
+    ) -> impl Iterator<Item = &SpecialSecretary> {
+        self.special_secretary_simsearch
+            .search(prefix)
+            .filter_map(|i| self.special_secretaries.get(i.index))
     }
 
     /// Gets a chibi's image data.

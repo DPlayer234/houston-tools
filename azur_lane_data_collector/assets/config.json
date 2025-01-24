@@ -5,6 +5,16 @@
         "1060003": "Kasumi (Venus Vacation)",
         "1100005": "Fubuki (Senran Kagura)"
     },
+    "special_secretary_kinds": [
+        "Unknown",
+        "Normal",
+        "Kind",
+        "Quiet",
+        "Peppy",
+        "Mild",
+        "Rebellious",
+        "Imp of the Bathtub"
+    ],
     "predefined_skills": {
         "17030": {
             "buff_id": 17030,

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 mod data_def;
 pub mod equip;
 pub mod juustagram;
+pub mod secretary;
 pub mod ship;
 pub mod skill;
 
@@ -27,6 +28,9 @@ pub struct DefinitionData {
     /// All known Juustagram chats.
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub juustagram_chats: Vec<juustagram::Chat>,
+    /// All special secretary variants.
+    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    pub special_secretaries: Vec<secretary::SpecialSecretary>,
 }
 
 define_data_enum! {

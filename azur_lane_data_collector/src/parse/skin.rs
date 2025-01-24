@@ -149,7 +149,7 @@ fn load_words_extra(
     })
 }
 
-fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = ShipMainScreenLine> + '_ {
+pub fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = ShipMainScreenLine> + '_ {
     raw.into_iter()
         .flat_map(|s| s.split('|'))
         .enumerate()
