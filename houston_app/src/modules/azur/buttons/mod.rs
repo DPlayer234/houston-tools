@@ -10,9 +10,11 @@ pub mod search_augment;
 pub mod search_equip;
 pub mod search_juustagram_chat;
 pub mod search_ship;
+pub mod search_special_secretary;
 pub mod shadow_equip;
 pub mod ship;
 pub mod skill;
+pub mod special_secretary;
 
 #[derive(Debug, thiserror::Error)]
 enum AzurParseError {
@@ -22,6 +24,8 @@ enum AzurParseError {
     Equip,
     #[error("unknown augment")]
     Augment,
+    #[error("unknown special secretary")]
+    SpecialSecretary,
     #[error("unknown juustagram chat")]
     JuustagramChat,
 }

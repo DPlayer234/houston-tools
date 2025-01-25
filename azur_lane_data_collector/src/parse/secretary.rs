@@ -4,8 +4,32 @@ use mlua::prelude::*;
 use super::skin::to_main_screen;
 use crate::{context, CONFIG};
 
-pub fn load_special_secretary(_lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSecretary> {
+pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSecretary> {
     let id: u32 = data.get("id")?;
+
+    let kind_name = if data.get::<u32>("unlock_type")? == 4 {
+        // type 4 is a "skin" unlock, so we grab the kind name from the corresponding
+        // skin data. i don't expect there to be too many but may as well do it properly
+        let [unlock] = data.get::<[u32; 1]>("unlock")?;
+        lua.globals()
+            .get::<LuaTable>("pg")
+            .context("global pg")?
+            .get::<LuaTable>("ship_skin_template")
+            .context("global pg.ship_skin_template")?
+            .get::<LuaTable>(unlock)
+            .with_context(context!("skin with id {unlock}"))?
+            .get::<String>("name")
+            .with_context(context!("name for ship_skin_template {unlock}"))?
+    } else {
+        // otherwise, take them from the configuration list. i didn't figure out how the
+        // game gets them -- if it does at all. there isn't really a need for the game
+        // to have some way to map the type to a string name after all
+        CONFIG
+            .special_secretary_kinds
+            .get(data.get::<usize>("type")?)
+            .cloned()
+            .unwrap_or_else(|| "<unknown>".to_owned())
+    };
 
     macro_rules! get {
         ($key:literal) => {{
@@ -25,11 +49,8 @@ pub fn load_special_secretary(_lua: &Lua, data: &LuaTable) -> LuaResult<SpecialS
     Ok(SpecialSecretary {
         id,
         name: data.get("name")?,
-        kind: CONFIG
-            .special_secretary_kinds
-            .get(data.get::<usize>("type")?)
-            .cloned()
-            .unwrap_or_else(|| "Unknown".to_owned()),
+        kind: kind_name,
+        login: get!("login"),
         main_screen: to_main_screen(get!("main").as_deref()).collect(),
         touch: get!("touch"),
         mission_reminder: get!("mission"),

@@ -99,6 +99,7 @@ impl HAzurLane {
             equips: data.equips,
             augments: data.augments,
             juustagram_chats: data.juustagram_chats,
+            special_secretaries: data.special_secretaries,
             ..Self::default()
         };
 
@@ -169,7 +170,7 @@ impl HAzurLane {
         }
 
         for (index, data) in this.special_secretaries.iter_mut().enumerate() {
-            data.name.push_str(&data.kind);
+            data.name = format!("{} ({})", data.name, data.kind);
             this.special_secretary_id_to_index.insert(data.id, index);
             this.special_secretary_simsearch.insert(&data.name, ());
         }
@@ -282,7 +283,7 @@ impl HAzurLane {
     pub fn special_secretaries_by_prefix(
         &self,
         prefix: &str,
-    ) -> impl Iterator<Item = &SpecialSecretary> {
+    ) -> impl Iterator<Item = &SpecialSecretary> + use<'_> {
         self.special_secretary_simsearch
             .search(prefix)
             .filter_map(|i| self.special_secretaries.get(i.index))

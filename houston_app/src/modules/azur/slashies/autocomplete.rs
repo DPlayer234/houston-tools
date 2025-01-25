@@ -24,6 +24,7 @@ macro_rules! make_autocomplete {
 make_autocomplete!(ship_name, ships_by_prefix, group_id);
 make_autocomplete!(equip_name, equips_by_prefix, equip_id);
 make_autocomplete!(augment_name, augments_by_prefix, augment_id);
+make_autocomplete!(special_secretary_name, special_secretaries_by_prefix, id);
 
 pub async fn ship_name_juustagram_chats<'a>(
     ctx: Context<'a>,

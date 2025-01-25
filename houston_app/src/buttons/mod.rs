@@ -129,6 +129,10 @@ define_button_args! {
     MinigameRockPaperScissors(minigame::buttons::rock_paper_scissors::View),
     /// Play the next "chess" turn.
     MinigameChess(minigame::buttons::chess::View),
+    /// Open the special secretary view.
+    AzurSpecialSecretary(azur::buttons::special_secretary::View),
+    /// Open the special secretary search.
+    AzurSearchSpecialSecretary(azur::buttons::search_special_secretary::View),
 }
 
 impl ButtonArgs {

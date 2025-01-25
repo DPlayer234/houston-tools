@@ -35,44 +35,6 @@ pub mod azur {
         Ok(())
     }
 
-    /// Searches for ships.
-    #[sub_command(name = "search-ship")]
-    async fn search_ship(
-        ctx: Context<'_>,
-        /// A name to search for.
-        name: Option<&str>,
-        /// The faction to select.
-        faction: Option<EFaction>,
-        /// The hull type to select.
-        #[name = "hull-type"]
-        hull_type: Option<EHullType>,
-        /// The rarity to select.
-        rarity: Option<EShipRarity>,
-        /// Whether the ships have a unique augment.
-        #[name = "has-augment"]
-        has_augment: Option<bool>,
-        /// Whether to show the response only to yourself.
-        ephemeral: Option<bool>,
-    ) -> Result {
-        use buttons::search_ship::*;
-
-        let data = ctx.data_ref();
-
-        let filter = Filter {
-            name: name.map(str::to_owned),
-            faction: faction.map(EFaction::convert),
-            hull_type: hull_type.map(EHullType::convert),
-            rarity: rarity.map(EShipRarity::convert),
-            has_augment,
-        };
-
-        let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
-            .await?;
-
-        Ok(())
-    }
-
     /// Shows information about equipment.
     #[sub_command]
     async fn equip(
@@ -92,39 +54,6 @@ pub mod azur {
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;
-        Ok(())
-    }
-
-    /// Searches for equipment.
-    #[sub_command(name = "search-equip")]
-    async fn search_equip(
-        ctx: Context<'_>,
-        /// A name to search for.
-        name: Option<&str>,
-        /// The faction to select.
-        faction: Option<EFaction>,
-        /// The kind to select.
-        kind: Option<EEquipKind>,
-        /// The rarity to select.
-        rarity: Option<EEquipRarity>,
-        /// Whether to show the response only to yourself.
-        ephemeral: Option<bool>,
-    ) -> Result {
-        use buttons::search_equip::*;
-
-        let data = ctx.data_ref();
-
-        let filter = Filter {
-            name: name.map(str::to_owned),
-            faction: faction.map(EFaction::convert),
-            kind: kind.map(EEquipKind::convert),
-            rarity: rarity.map(EEquipRarity::convert),
-        };
-
-        let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
-            .await?;
-
         Ok(())
     }
 
@@ -150,44 +79,25 @@ pub mod azur {
         Ok(())
     }
 
-    /// Searches for augment modules.
-    #[sub_command(name = "search-augment")]
-    async fn search_augment(
+    /// Shows lines for a special secretary.
+    #[sub_command(name = "special-secretary")]
+    async fn special_secretary(
         ctx: Context<'_>,
-        /// A name to search for.
-        name: Option<&str>,
-        /// The allowed hull type.
-        #[name = "hull-type"]
-        hull_type: Option<EHullType>,
-        /// The rarity to select.
-        rarity: Option<EAugmentRarity>,
-        /// The name of the ship it is uniquely for.
-        #[autocomplete = "autocomplete::ship_name"]
-        #[name = "for-ship"]
-        for_ship: Option<&str>,
+        /// The equipment name. This supports auto completion.
+        #[autocomplete = "autocomplete::special_secretary_name"]
+        name: &str,
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
-        use buttons::search_augment::*;
-
         let data = ctx.data_ref();
+        let secretary = find::special_secretary(data, name)?;
 
-        let unique_ship_id = match for_ship {
-            Some(for_ship) => Some(find::ship(data, for_ship)?.group_id),
-            None => None,
-        };
-
-        let filter = Filter {
-            name: name.map(str::to_owned),
-            hull_type: hull_type.map(EHullType::convert),
-            rarity: rarity.map(EAugmentRarity::convert),
-            unique_ship_id,
-        };
-
-        let view = View::new(filter);
-        ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
-            .await?;
-
+        let view = buttons::special_secretary::View::new(secretary.id);
+        ctx.send(
+            view.create_with_sectary(data, secretary)
+                .ephemeral(ephemeral.into_ephemeral()),
+        )
+        .await?;
         Ok(())
     }
 
@@ -248,5 +158,145 @@ pub mod azur {
 
         ctx.send(create_reply(ephemeral).embed(embed)).await?;
         Ok(())
+    }
+
+    /// Search for information.
+    #[sub_command]
+    mod search {
+        /// Searches for ships.
+        #[sub_command]
+        async fn ship(
+            ctx: Context<'_>,
+            /// A name to search for.
+            name: Option<&str>,
+            /// The faction to select.
+            faction: Option<EFaction>,
+            /// The hull type to select.
+            #[name = "hull-type"]
+            hull_type: Option<EHullType>,
+            /// The rarity to select.
+            rarity: Option<EShipRarity>,
+            /// Whether the ships have a unique augment.
+            #[name = "has-augment"]
+            has_augment: Option<bool>,
+            /// Whether to show the response only to yourself.
+            ephemeral: Option<bool>,
+        ) -> Result {
+            use buttons::search_ship::*;
+
+            let data = ctx.data_ref();
+
+            let filter = Filter {
+                name: name.map(str::to_owned),
+                faction: faction.map(EFaction::convert),
+                hull_type: hull_type.map(EHullType::convert),
+                rarity: rarity.map(EShipRarity::convert),
+                has_augment,
+            };
+
+            let view = View::new(filter);
+            ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+                .await?;
+
+            Ok(())
+        }
+
+        /// Searches for equipment.
+        #[sub_command]
+        async fn equip(
+            ctx: Context<'_>,
+            /// A name to search for.
+            name: Option<&str>,
+            /// The faction to select.
+            faction: Option<EFaction>,
+            /// The kind to select.
+            kind: Option<EEquipKind>,
+            /// The rarity to select.
+            rarity: Option<EEquipRarity>,
+            /// Whether to show the response only to yourself.
+            ephemeral: Option<bool>,
+        ) -> Result {
+            use buttons::search_equip::*;
+
+            let data = ctx.data_ref();
+
+            let filter = Filter {
+                name: name.map(str::to_owned),
+                faction: faction.map(EFaction::convert),
+                kind: kind.map(EEquipKind::convert),
+                rarity: rarity.map(EEquipRarity::convert),
+            };
+
+            let view = View::new(filter);
+            ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+                .await?;
+
+            Ok(())
+        }
+
+        /// Searches for augment modules.
+        #[sub_command]
+        async fn augment(
+            ctx: Context<'_>,
+            /// A name to search for.
+            name: Option<&str>,
+            /// The allowed hull type.
+            #[name = "hull-type"]
+            hull_type: Option<EHullType>,
+            /// The rarity to select.
+            rarity: Option<EAugmentRarity>,
+            /// The name of the ship it is uniquely for.
+            #[autocomplete = "autocomplete::ship_name"]
+            #[name = "for-ship"]
+            for_ship: Option<&str>,
+            /// Whether to show the response only to yourself.
+            ephemeral: Option<bool>,
+        ) -> Result {
+            use buttons::search_augment::*;
+
+            let data = ctx.data_ref();
+
+            let unique_ship_id = match for_ship {
+                Some(for_ship) => Some(find::ship(data, for_ship)?.group_id),
+                None => None,
+            };
+
+            let filter = Filter {
+                name: name.map(str::to_owned),
+                hull_type: hull_type.map(EHullType::convert),
+                rarity: rarity.map(EAugmentRarity::convert),
+                unique_ship_id,
+            };
+
+            let view = View::new(filter);
+            ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+                .await?;
+
+            Ok(())
+        }
+
+        /// Searches for special secretaries.
+        #[sub_command(name = "special-secretary")]
+        async fn special_secretary(
+            ctx: Context<'_>,
+            /// A name to search for.
+            name: Option<&str>,
+            /// Whether to show the response only to yourself.
+            ephemeral: Option<bool>,
+        ) -> Result {
+            use buttons::search_special_secretary::*;
+
+            let data = ctx.data_ref();
+
+            let filter = Filter {
+                name: name.map(str::to_owned),
+            };
+
+            let view = View::new(filter);
+            ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
+                .await?;
+
+            Ok(())
+        }
     }
 }

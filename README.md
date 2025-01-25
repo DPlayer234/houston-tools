@@ -68,16 +68,19 @@ The bot also has a couple of minigames:
 
 Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
 
-| Command             | Description |
-|:------------------- |:----------- |
-| azur                | Information about mobile game Azur Lane. |
-| azur ship           | Shows information about a ship. |
-| azur search-ship    | Searches for ships. |
-| azur equip          | Shows information about equipment. |
-| azur search-equip   | Searches for equipment. |
-| azur augment        | Shows information about an augment module. |
-| azur search-augment | Searches for augment modules. |
-| azur reload-time    | Calculates the actual reload time for a weapon. |
+| Command                | Description |
+|:---------------------- |:----------- |
+| azur                   | Information about mobile game Azur Lane. |
+| azur ship              | Shows information about a ship. |
+| azur equip             | Shows information about equipment. |
+| azur augment           | Shows information about an augment module. |
+| azur special-secretary | Shows lines for a special secretary. |
+| azur juustagram-chat   | View Juustagram chats. |
+| azur reload-time       | Calculates the actual reload time for a weapon. |
+| azur search ship       | Searches for ships. |
+| azur search equip      | Searches for equipment. |
+| azur search augment    | Searches for augment modules. |
+| azur search special-secretary | Searches for special secretaries. |
 
 ## Features requiring a database
 
@@ -125,7 +128,7 @@ The board emoji must either be a unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e
 
 The board channel is not required to be unique and multiple boards may use the same channel.
 
-Also note that messages in nsfw channels are still tracked for sfw board channels, so they will show up on the leaderboards, but they will not be forwarded. Messages will be forwarded from an nsfw channel only if the board is nsfw.
+Also note that messages in nsfw channels are still tracked for sfw board channels. In this case, a small embed with a message link will be posted instead of a forward. If the board channel itself is nsfw, it will always be a forward.
 
 The name is purely cosmetic and may be displayed in places where a channel name may be expected but channel mentions aren't valid.
 
@@ -135,6 +138,7 @@ The following commands will be enabled:
 |:------------------- |:----------- |
 | starboard top       | Shows a board's top users. |
 | starboard top-posts | Shows the most-reacted posts in a board. |
+| starboard overview  | Shows an overview of all boards. |
 
 ### Perks
 
@@ -147,11 +151,14 @@ This comes with the following configuration:
 # sets the display name of the currency
 cash_name = "$"
 
-[[bot.starboard.1293210831923974204.boards]]
+[[bot.starboard.1293210831923974204.boards.1]]
 ...
-# in addition to the other options, you can also specify this on starboards.
-# users will get as much currency per vote as specified here.
+# in addition to the other options, you can also specify these on starboards:
+# cash_gain: users will get as much currency per vote as specified here.
+# only relevant once the message is pinned. at that point, cash for all votes is added.
 cash_gain = 2
+# additional gain for a pin.
+cash_pin_gain = 10
 
 # collectible enables an item with no purpose.
 # it can be repeatedly bought in the perk store.
@@ -211,6 +218,7 @@ duration = "24:00:00"
 
 # define some regions here. the first is considered the default.
 # this allows users to pick when they want their birthday to start.
+# note that the index into this is stored in the database.
 [[bot.perks.birthday.regions]]
 name = "Europe/Africa (UTC+0)"
 time_offset = "0:00:00"

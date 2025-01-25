@@ -7,6 +7,8 @@ pub struct SpecialSecretary {
     pub id: u32,
     pub name: String,
     pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub login: Option<String>, // login
     #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
     pub main_screen: Vec<ShipMainScreenLine>, // main
     #[serde(default, skip_serializing_if = "Option::is_none")]
