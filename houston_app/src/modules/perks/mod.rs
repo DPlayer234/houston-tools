@@ -1,13 +1,8 @@
 use bson::{doc, Bson};
 use chrono::prelude::*;
-use chrono::TimeDelta;
 
 use super::prelude::*;
 use crate::helper::bson::doc_object_id;
-
-// 2 minutes is about the minimum safe interval for constant role updates
-// we go a little higher since we use this interval for other stuff too
-const CHECK_INTERVAL: TimeDelta = TimeDelta::minutes(3);
 
 pub mod buttons;
 pub mod config;
@@ -108,7 +103,7 @@ async fn check_perks_core(ctx: Context) -> Result {
     let perks = data.config().perks()?;
     let last = *perks.last_check.read().await;
     let next = last
-        .checked_add_signed(CHECK_INTERVAL)
+        .checked_add_signed(perks.check_interval)
         .context("time has broken")?;
 
     let now = Utc::now();

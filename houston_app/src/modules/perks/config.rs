@@ -12,10 +12,18 @@ fn default_cash_name() -> String {
     "$".to_owned()
 }
 
+fn default_check_interval() -> TimeDelta {
+    // 2 minutes is about the minimum safe interval for constant role updates
+    // we go a little higher since we use this interval for other stuff too
+    const { TimeDelta::minutes(3) }
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: String,
+    #[serde(with = "serde_time_delta", default = "default_check_interval")]
+    pub check_interval: TimeDelta,
     pub rainbow: Option<RainbowConfig>,
     pub pushpin: Option<PushpinConfig>,
     pub role_edit: Option<RoleEditConfig>,

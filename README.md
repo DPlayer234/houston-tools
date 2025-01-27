@@ -148,8 +148,12 @@ This comes with the following configuration:
 
 ```toml
 [bot.perks]
-# sets the display name of the currency
+# optional. sets the display name of the currency
 cash_name = "$"
+# optional. the minimum time between perk checks. defaults to 3 minutes.
+# the default is usually fine and you shouldn't need to adjust it.
+# DO NOT reduce this below 2 minutes (00:02:00) if rainbow role is enabled or you may hit rate limits.
+check_interval = "00:03:00"
 
 [[bot.starboard.1293210831923974204.boards.1]]
 ...
@@ -160,7 +164,7 @@ cash_gain = 2
 # additional gain for a pin.
 cash_pin_gain = 10
 
-# collectible enables an item with no purpose.
+# collectible enables an item with no inherent purpose.
 # it can be repeatedly bought in the perk store.
 [bot.perks.collectible]
 name = "Crab Plushy 🦀"
@@ -183,7 +187,7 @@ prize_roles = [
 ]
 
 # rainbow enables rainbow roles.
-# the color will only cycle when an event is received, at most once every 5 minutes.
+# the color will only cycle when an event is received, at most once every 3 minutes.
 [bot.perks.rainbow]
 cost = 20
 # duration is specified as HH:MM:SS.
