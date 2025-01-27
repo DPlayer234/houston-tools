@@ -77,7 +77,20 @@ impl View {
     }
 
     pub fn create_next_reply<'new>(mut self, data: &HBotData) -> CreateReply<'new> {
-        let description = format!("<@{}> VS <@{}>", self.states[0].user, self.states[1].user);
+        fn hidden_label(this: Option<Choice>) -> &'static str {
+            match this {
+                Some(_) => "\u{2757} ",
+                None => "",
+            }
+        }
+
+        let description = format!(
+            "<@{}> {}VS {}<@{}>",
+            self.states[0].user,
+            hidden_label(self.states[0].choice),
+            hidden_label(self.states[1].choice),
+            self.states[1].user
+        );
 
         let embed = CreateEmbed::new()
             .description(description)
