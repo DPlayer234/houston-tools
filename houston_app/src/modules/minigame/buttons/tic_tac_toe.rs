@@ -1,5 +1,6 @@
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
+use crate::helper::discord::unicode_emoji;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -9,8 +10,8 @@ pub struct View {
 
 fn icon(data: &HBotData, p: Option<Player>) -> ReactionType {
     match p {
-        Some(Player::P1) => ReactionType::from('❌'),
-        Some(Player::P2) => ReactionType::from('⭕'),
+        Some(Player::P1) => unicode_emoji("❌"),
+        Some(Player::P2) => unicode_emoji("⭕"),
         None => data.app_emojis().empty().clone(),
     }
 }

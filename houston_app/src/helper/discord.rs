@@ -1,3 +1,5 @@
+use serenity::small_fixed_array::FixedString;
+
 use crate::prelude::*;
 
 pub fn create_string_select_menu_row<'a>(
@@ -11,6 +13,21 @@ pub fn create_string_select_menu_row<'a>(
 
     let select = CreateSelectMenu::new(custom_id, kind).placeholder(placeholder);
     CreateActionRow::SelectMenu(select)
+}
+
+/// Creates a unicode [`ReactionType`] from a string with just the corresponding
+/// unicode code symbol without allocating any memory.
+///
+/// No validation. I wish this could be const.
+#[inline]
+pub fn unicode_emoji(text: &'static str) -> ReactionType {
+    // it is worth noting that `ReactionType::from` unconditionally allocates only
+    // to throw the allocation away. it seems the compiler isn't quite smart enough
+    // to eliminate it.
+    // but this is useful even if it was smart enough to optimize that better since
+    // some unicode emojis take up more than 1 char anyways.
+    let text = FixedString::from_static_trunc(text);
+    ReactionType::Unicode(text)
 }
 
 pub trait WithPartial {

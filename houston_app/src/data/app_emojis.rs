@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use serenity::http::Http;
 
 use super::HBotConfig;
+use crate::helper::discord::unicode_emoji;
 use crate::modules::Module;
 use crate::prelude::*;
 
@@ -126,7 +127,7 @@ generate!({
     hull_ixm  = "Hull_IXm",  "azur/Hull_IXm.png"  if azur;
 });
 
-static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| ReactionType::from('❔'));
+static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| unicode_emoji("❔"));
 
 async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
     Ok(ctx.get_application_emojis().await?)

@@ -1,8 +1,7 @@
-use serenity::small_fixed_array::FixedString;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::id_as_u64;
+use crate::helper::discord::{id_as_u64, unicode_emoji};
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -36,9 +35,9 @@ enum Choice {
 impl Choice {
     fn emoji(self) -> ReactionType {
         match self {
-            Self::Rock => ReactionType::from('\u{1FAA8}'),
-            Self::Paper => ReactionType::from('\u{1F4F0}'),
-            Self::Scissors => ReactionType::Unicode(FixedString::from_static_trunc("✂️")),
+            Self::Rock => unicode_emoji("\u{1FAA8}"),
+            Self::Paper => unicode_emoji("\u{1F4F0}"),
+            Self::Scissors => unicode_emoji("✂️"),
         }
     }
 }
