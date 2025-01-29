@@ -166,6 +166,116 @@ macro_rules! impl_op_via_assign {
     };
 }
 
+/// Provides a [`Debug`](std::fmt::Debug) implementation, similar to the
+/// derive-based version, only including listed fields and with custom generic
+/// bounds.
+///
+/// # Examples
+///
+/// Fields can be omitted. `..` must be included in case of missing fields:
+///
+/// ```no_run
+/// struct Login {
+///     username: String,
+///     password: String,
+/// }
+///
+/// // no password in the Debug output
+/// utils::impl_debug!(struct Login { username, .. });
+/// ```
+///
+/// You can also specify generics with custom bounds.
+/// All the fields must still impl Debug in all allowed cases.
+/// The generics for the impl must be specified via `for[..]`.
+///
+/// ```no_run
+/// # use std::marker::PhantomData;
+/// struct Raw<T> {
+///     ptr: *const (),
+///     _marker: PhantomData<T>,
+/// }
+///
+/// // impl Debug even for T that don't impl Debug
+/// utils::impl_debug!(for[T] struct Raw<T> { ptr, .. });
+/// ```
+///
+/// You will need to repeat bounds on the type:
+///
+/// ```no_run
+/// struct Sender<T: Send> {
+///     buf: Vec<T>,
+/// }
+///
+/// utils::impl_debug!(for[T: Send] struct Sender<T> { buf });
+/// ```
+///
+/// Enums are also supported. You will need to list every variant:
+///
+/// ```no_run
+/// enum Status {
+///     Int { num: i32 },
+///     String { str: String },
+/// }
+///
+/// utils::impl_debug!(enum Status {
+///     Int { num },
+///     String { str }
+/// });
+/// ```
+///
+/// When used with tuple-structs, you will need to provide variable names for
+/// the fields for the macro to use internally. Note that the original field
+/// names will be printed regardless.
+///
+/// ```no_run
+/// struct Block(u64, u64, u64, String);
+///
+/// utils::impl_debug!(struct Block { 0: _0, 1: _1, 2: _2, .. });
+/// ```
+#[macro_export]
+macro_rules! impl_debug {
+    ($(for [$($bound:tt)*])? struct $Ty:ty { $($body:tt)* }) => {
+        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                match self {
+                    Self { $($body)* } => $crate::impl_debug!(@body (f.debug_struct(stringify!($Ty))) $($body)*)
+                }
+            }
+        }
+    };
+
+    ($(for [$($bound:tt)*])? enum $Ty:ty { $($Var:ident { $($body:tt)* }),* $(,)? }) => {
+        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                match self {
+                    $(
+                        Self::$Var { $($body)* } => $crate::impl_debug!(@body (f.debug_struct(stringify!($Var))) $($body)*)
+                    ),*
+                }
+            }
+        }
+    };
+
+    // no more fields
+    (@body ($pref:expr) $(,)?) => {
+        $pref.finish()
+    };
+    // omit remaining fields
+    (@body ($pref:expr) ..) => {
+        $pref.finish_non_exhaustive()
+    };
+    // recursively add another field
+    (@body ($pref:expr) $field:ident, $($rest:tt)*) => {
+        $crate::impl_debug!(@body ($pref.field(stringify!($field), &$field)) $($rest)*)
+    };
+    // recursively add another field, but:
+    // tt instead of ident for $field so it can be used with tuple structs
+    // $as is the renamed local but is otherwise meaningless
+    (@body ($pref:expr) $field:tt: $as:ident, $($rest:tt)*) => {
+        $crate::impl_debug!(@body ($pref.field(stringify!($field), &$as)) $($rest)*)
+    };
+}
+
 #[cfg(test)]
 mod test {
     use std::ops::{Add, AddAssign, Sub, SubAssign};

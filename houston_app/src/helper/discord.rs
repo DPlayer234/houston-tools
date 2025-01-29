@@ -77,6 +77,9 @@ pub mod id_array_as_u64 {
             .into_inner()
             .map_err(|_| D::Error::custom("incorrect array size"))?;
 
+        // slightly easier than using `MaybeUninit`
+        // we know the size is correct since `ints` will always be `[u64; N]`
+        // could be done with safe apis but that doesn't seem worth the error paths
         let mut ids = <ArrayVec<T, N>>::new();
         for int in ints {
             if int != u64::MAX {
@@ -98,19 +101,7 @@ pub mod id_array_as_u64 {
         S: Serializer,
         T: Into<u64> + Copy,
     {
-        let mut ints = <ArrayVec<u64, N>>::new();
-        for id in val {
-            let int: u64 = (*id).into();
-
-            // SAFETY: at most N pushes
-            unsafe {
-                ints.push_unchecked(int);
-            }
-        }
-
-        debug_assert_eq!(ints.len(), N, "must have been exactly N pushes");
-
-        // SAFETY: must be exactly N pushes at this point
-        unsafe { ints.into_inner_unchecked() }.serialize(serializer)
+        // need wrap in `ArrayVec` so we can serialize with any `N`
+        ArrayVec::from(val.map(<T as Into<u64>>::into)).serialize(serializer)
     }
 }

@@ -4,18 +4,21 @@ use utils::text::write_str::*;
 use crate::buttons::prelude::*;
 use crate::helper::discord::id_as_u64;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     states: [State; 2],
     action: Option<Choice>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct State {
     #[serde(with = "id_as_u64")]
     user: UserId,
     choice: Option<Choice>,
 }
+
+utils::impl_debug!(struct View { states, .. });
+utils::impl_debug!(struct State { user, .. });
 
 impl State {
     fn new(user: UserId) -> Self {

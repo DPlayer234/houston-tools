@@ -4,7 +4,7 @@ Small Discord bot intended to be self-hosted.
 
 Optionally loads Azur Lane game data collected by the Azur Lane Data Collector in this repo.
 
-This bot uses serenity and poise "next" versions, so there may be sudden internal changes when those update.
+This bot uses serenity "next" versions, so there may be sudden internal changes when those update.
 
 ## Setup
 
@@ -20,18 +20,20 @@ Configuration is supported either via environment variables or a file named `hou
 token = "..."
 
 [bot]
-# relative or absolute path to the data produced by the Azur Lane Data Collector.
 # optional. when not present, disables the Azur Lane module.
+# relative or absolute path to the data produced by the Azur Lane Data Collector.
 azur_lane_data = "azur_lane_data"
 
-# sets the color used for most embeds.
 # optional. defaults to 0xDDA0DD
+# sets the color used for most embeds.
 embed_color = 0xDDA0DD
 ```
 
+Going forward, only the TOML config will be explained.
+
 To configure logging, see the Logging section further down.
 
-Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`.
+Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`, so it will load `houston_app.release.toml`.
 
 ## Commands
 
@@ -90,6 +92,8 @@ The following features are optional and require a MongoDB database. Configure it
 [bot]
 mongodb_uri = "mongodb://localhost/houston-tools"
 ```
+
+Note that the default database name is required as part of the URI and will be the database used.
 
 ### Starboard
 
@@ -299,6 +303,12 @@ The only standard appender available is ["rolling_file"](https://docs.rs/log4rs/
 For the application specific loggers, the following things are available:
 
 ```toml
+[log]
+# optional. disabled by default.
+# when set to true, sets a panic hook that will write panic messages to the logger.
+# this is somewhat pointless for debug but _should_ be harmless for prod scenarios.
+panic = false
+
 [log.root]
 # if you want to add loggers, you need to specify
 # the default explicitly, if you want to keep it.

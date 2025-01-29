@@ -26,12 +26,14 @@ mod tests;
 
 use game::{new_board, Board, Piece, Pos, N};
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
     players: PlayerState,
     board: Board,
     action: Action,
 }
+
+utils::impl_debug!(struct View { players, action, .. });
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 enum Action {
@@ -217,6 +219,8 @@ impl ButtonArgsReply for View {
 
             // check whether this is a pawn that has reached the enemy home row
             if let Some(src) = &mut src {
+                anyhow::ensure!(src.player == self.players.turn, "should select own piece");
+
                 // always go for queen promotion
                 if src.piece == Piece::Pawn && game::is_home_row(dst, self.players.turn.next()) {
                     src.piece = Piece::Queen;

@@ -1,7 +1,5 @@
 //! Model and actual core game logic like allowed moves etc.
 
-use std::fmt;
-
 use super::Player;
 use crate::buttons::prelude::*;
 
@@ -58,7 +56,7 @@ impl Offset {
     }
 }
 
-#[derive(Default, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Grid<T> {
     array: [[T; N]; N],
 }
@@ -84,12 +82,6 @@ impl<T> Grid<T> {
                 .enumerate()
                 .map(move |(y, tile)| (Pos::new_trunc(x, y), tile))
         })
-    }
-}
-
-impl<T> fmt::Debug for Grid<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Grid").finish_non_exhaustive()
     }
 }
 

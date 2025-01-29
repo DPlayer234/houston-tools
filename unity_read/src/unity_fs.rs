@@ -7,7 +7,6 @@ use std::borrow::Cow;
 use std::cell::Cell;
 use std::fmt;
 use std::io::{Cursor, SeekFrom};
-use std::ops::Deref;
 
 use binrw::{binread, BinRead, NullString};
 use modular_bitfield::specifiers::*;
@@ -24,11 +23,19 @@ use crate::{FromInt, SeekRead};
 // synchronization.
 
 /// A UnityFS file.
-#[derive(Debug)]
 pub struct UnityFsFile<'a> {
-    buf: DebugIgnore<Cell<Option<&'a mut dyn SeekRead>>>,
+    buf: Cell<Option<&'a mut dyn SeekRead>>,
     blocks_info: BlocksInfo,
     data_offset: u64,
+}
+
+impl fmt::Debug for UnityFsFile<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnityFsFile")
+            .field("blocks_info", &self.blocks_info)
+            .field("data_offset", &self.data_offset)
+            .finish_non_exhaustive()
+    }
 }
 
 /// A node within a UnityFS file.
@@ -194,7 +201,7 @@ impl<'a> UnityFsFile<'a> {
         let data_offset = buf.stream_position()?;
 
         Ok(UnityFsFile {
-            buf: DebugIgnore(Cell::new(Some(buf))),
+            buf: Cell::new(Some(buf)),
             blocks_info,
             data_offset,
         })
@@ -364,29 +371,6 @@ fn decompress_data(
         _ => Err(Error::Unsupported(format!(
             "unsupported compression method: {compression:?}"
         ))),
-    }
-}
-
-#[derive(Clone)]
-struct DebugIgnore<T>(pub T);
-
-impl<T> Deref for DebugIgnore<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> fmt::Debug for DebugIgnore<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("<hidden>")
-    }
-}
-
-impl<T: fmt::Display> fmt::Display for DebugIgnore<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
     }
 }
 
