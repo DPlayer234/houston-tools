@@ -51,11 +51,14 @@ macro_rules! generate {
 
                 Ok(Self {
                     $(
-                        $key: match exist.$key {
-                            Some(e) => e,
-                            $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
-                            None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
-                        },
+                        $key: staticify_emoji_name(
+                            match exist.$key {
+                                Some(e) => e,
+                                $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
+                                None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
+                            },
+                            $name
+                        ),
                     )*
                 })
             }
@@ -67,6 +70,19 @@ impl<'a> HAppEmojis<'a> {
     pub fn fallback(self) -> &'a ReactionType {
         &FALLBACK_EMOJI
     }
+}
+
+fn staticify_emoji_name(mut emoji: ReactionType, static_name: &'static str) -> ReactionType {
+    use serenity::small_fixed_array::FixedString;
+
+    if let ReactionType::Custom { name, .. } = &mut emoji {
+        assert_eq!(name.as_deref(), Some(static_name), "must equal static name");
+        *name = Some(FixedString::from_static_trunc(static_name));
+    } else {
+        panic!("unsupported application emoji type")
+    };
+
+    emoji
 }
 
 fn azur(config: &HBotConfig) -> bool {
