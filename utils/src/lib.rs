@@ -202,11 +202,12 @@ macro_rules! impl_op_via_assign {
 /// You will need to repeat bounds on the type:
 ///
 /// ```no_run
+/// # use std::fmt::Debug;
 /// struct Sender<T: Send> {
 ///     buf: Vec<T>,
 /// }
 ///
-/// utils::impl_debug!(for[T: Send] struct Sender<T> { buf });
+/// utils::impl_debug!(for[T: Send + Debug] struct Sender<T> { buf });
 /// ```
 ///
 /// Enums are also supported. You will need to list every variant:
@@ -256,13 +257,16 @@ macro_rules! impl_debug {
         }
     };
 
-    // no more fields
-    (@body ($pref:expr) $(,)?) => {
-        $pref.finish()
-    };
     // omit remaining fields
     (@body ($pref:expr) ..) => {
         $pref.finish_non_exhaustive()
+    };
+    // final field, same otherwise as the cases below
+    (@body ($pref:expr) $field:ident $(,)?) => {
+        $pref.field(stringify!($field), &$field).finish()
+    };
+    (@body ($pref:expr) $field:tt: $as:ident $(,)?) => {
+        $pref.field(stringify!($field), &$as).finish()
     };
     // recursively add another field
     (@body ($pref:expr) $field:ident, $($rest:tt)*) => {

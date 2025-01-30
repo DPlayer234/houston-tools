@@ -4,7 +4,7 @@ use serenity::model::id::UserId;
 
 use crate::buttons::ButtonContext;
 use crate::data::HArgError;
-use crate::helper::discord::id_array_as_u64;
+use crate::helper::discord::id_as_u64;
 
 pub mod chess;
 pub mod rock_paper_scissors;
@@ -27,15 +27,18 @@ impl Player {
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct PlayerState {
-    #[serde(with = "id_array_as_u64")]
-    ids: [UserId; 2],
+    #[serde(with = "id_as_u64")]
+    p1: UserId,
+    #[serde(with = "id_as_u64")]
+    p2: UserId,
     turn: Player,
 }
 
 impl PlayerState {
     fn new(players: [UserId; 2]) -> Self {
         Self {
-            ids: players,
+            p1: players[0],
+            p2: players[1],
             turn: Player::P1,
         }
     }
@@ -46,8 +49,8 @@ impl PlayerState {
 
     fn user_id(&self, player: Player) -> UserId {
         match player {
-            Player::P1 => self.ids[0],
-            Player::P2 => self.ids[1],
+            Player::P1 => self.p1,
+            Player::P2 => self.p2,
         }
     }
 
@@ -60,7 +63,7 @@ impl PlayerState {
         let current_turn = self.turn_user_id();
         if interacting == current_turn {
             Ok(())
-        } else if self.ids.contains(&interacting) {
+        } else if interacting == self.p1 || interacting == self.p2 {
             Err(HArgError::new(format!("It's <@{current_turn}>'s turn.")))
         } else {
             Err(HArgError::new_const("You're not part of this game."))
@@ -71,9 +74,9 @@ impl PlayerState {
 impl fmt::Debug for PlayerState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.turn == Player::P1 {
-            write!(f, "([{}] vs {})", self.ids[0], self.ids[1])
+            write!(f, "([{}] vs {})", self.p1, self.p2)
         } else {
-            write!(f, "({} vs [{}])", self.ids[0], self.ids[1])
+            write!(f, "({} vs [{}])", self.p1, self.p2)
         }
     }
 }

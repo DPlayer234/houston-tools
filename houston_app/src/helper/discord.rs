@@ -53,6 +53,9 @@ impl WithPartial for Member {
 
 /// Serializes a Discord ID as an [`u64`].
 pub mod id_as_u64 {
+    // LEB128 isn't really efficient for Discord IDs so circumvent that by encoding
+    // them as byte arrays. we also need an override anyways because serenity tries
+    // to deserialize them as any and that's no good.
     use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -61,7 +64,8 @@ pub mod id_as_u64 {
         D: Deserializer<'de>,
         T: From<u64>,
     {
-        let int = u64::deserialize(deserializer)?;
+        let int = <[u8; 8]>::deserialize(deserializer)?;
+        let int = u64::from_le_bytes(int);
         if int != u64::MAX {
             Ok(T::from(int))
         } else {
@@ -75,50 +79,6 @@ pub mod id_as_u64 {
         T: Into<u64> + Copy,
     {
         let int: u64 = (*val).into();
-        int.serialize(serializer)
-    }
-}
-
-/// Serializes a Discord ID array as an [`u64`].
-pub mod id_array_as_u64 {
-    use arrayvec::ArrayVec;
-    use serde::de::Error;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    pub fn deserialize<'de, D, T, const N: usize>(deserializer: D) -> Result<[T; N], D::Error>
-    where
-        D: Deserializer<'de>,
-        T: From<u64>,
-    {
-        let ints = <ArrayVec<u64, N>>::deserialize(deserializer)?
-            .into_inner()
-            .map_err(|_| D::Error::custom("incorrect array size"))?;
-
-        // slightly easier than using `MaybeUninit`
-        // we know the size is correct since `ints` will always be `[u64; N]`
-        // could be done with safe apis but that doesn't seem worth the error paths
-        let mut ids = <ArrayVec<T, N>>::new();
-        for int in ints {
-            if int != u64::MAX {
-                // SAFETY: at most N pushes
-                unsafe { ids.push_unchecked(T::from(int)) };
-            } else {
-                return Err(D::Error::custom("invalid discord id"));
-            }
-        }
-
-        debug_assert_eq!(ids.len(), N, "must have been exactly N pushes");
-
-        // SAFETY: must be exactly N pushes at this point
-        Ok(unsafe { ids.into_inner_unchecked() })
-    }
-
-    pub fn serialize<S, T, const N: usize>(val: &[T; N], serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Into<u64> + Copy,
-    {
-        // need wrap in `ArrayVec` so we can serialize with any `N`
-        ArrayVec::from(val.map(<T as Into<u64>>::into)).serialize(serializer)
+        int.to_le_bytes().serialize(serializer)
     }
 }

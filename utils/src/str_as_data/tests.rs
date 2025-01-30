@@ -50,6 +50,49 @@ fn invalid_len_b65536_fails() {
     b65536::from_str("%&").expect_err("odd count with empty str");
 }
 
+#[test]
+fn round_trip_b20bit() {
+    let data: Vec<u8> = IntoIterator::into_iter(0..0xFFFFFu64)
+        .flat_map(|u| *(u | (u << 20)).to_le_bytes().first_chunk::<5>().unwrap())
+        .collect();
+
+    round_trip_core(&data, b20bit::to_string, b20bit::from_str);
+    round_trip_core(&data[1..], b20bit::to_string, b20bit::from_str);
+    round_trip_core(&data[2..], b20bit::to_string, b20bit::from_str);
+    round_trip_core(&data[3..], b20bit::to_string, b20bit::from_str);
+    round_trip_core(&data[4..], b20bit::to_string, b20bit::from_str);
+}
+
+#[test]
+fn min_b20bit() {
+    const CASES: &[(&str, &[u8])] = &[
+        ("A\u{61820}\u{34850}&", &[0x20, 0x10, 0x36, 0x50, 0x40]),
+        ("B\u{61820}\u{30850}&", &[0x20, 0x10, 0x36, 0x50]),
+        ("C\u{61820}\u{30800}&", &[0x20, 0x10, 0x36]),
+        ("B\u{1020}&", &[0x20, 0x10]),
+        ("C\u{0020}&", &[0x20]),
+        ("A&", &[]),
+    ];
+
+    for (input, output) in CASES {
+        let back = b20bit::from_str(input).expect("decoding failed");
+        assert_eq!(back.as_slice(), *output);
+    }
+}
+
+#[test]
+fn invalid_char_b20bit_fails() {
+    b20bit::from_str("A\x00\u{100800}&").expect_err("invalid char code");
+    b20bit::from_str("A\x00\u{1007FF}&").expect("this should be valid");
+}
+
+#[test]
+fn invalid_len_b20bit_fails() {
+    b20bit::from_str("A\0&").expect_err("odd count with zero trim");
+    b20bit::from_str("B&").expect_err("odd count with empty str");
+    b20bit::from_str("C&").expect_err("odd count with empty str");
+}
+
 fn round_trip_core<E: fmt::Debug>(
     bytes: &[u8],
     encode: impl FnOnce(&[u8]) -> String,

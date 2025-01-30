@@ -6,6 +6,7 @@ members = [
     "houston_app",
 	"houston_cmd",
 	"houston_cmd/macros",
+    "steph",
     "unity_read",
     "utils",
     "utils_build",

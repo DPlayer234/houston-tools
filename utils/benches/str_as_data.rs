@@ -31,6 +31,32 @@ fn bench_from_b65536(c: &mut Criterion) {
     bench(c, "from_b65536_large", &create_data::<12000>());
 }
 
+fn bench_to_b20bit(c: &mut Criterion) {
+    fn bench(c: &mut Criterion, name: &str, data: &[u8]) {
+        c.bench_function(name, |b| b.iter(|| b20bit::to_string(black_box(data))));
+    }
+
+    bench(c, "to_b20bit_small", &create_data::<16>());
+    bench(c, "to_b20bit_large", &create_data::<12000>());
+}
+
+fn bench_from_b20bit(c: &mut Criterion) {
+    fn bench(c: &mut Criterion, name: &str, data: &[u8]) {
+        let data = b20bit::to_string(data);
+
+        c.bench_function(name, |b| {
+            b.iter(|| {
+                let mut vec = <SmallVec<[u8; 16]>>::new();
+                black_box(b20bit::decode(&mut vec, &data)).expect("data is valid");
+                vec
+            })
+        });
+    }
+
+    bench(c, "from_b20bit_small", &create_data::<16>());
+    bench(c, "from_b20bit_large", &create_data::<12000>());
+}
+
 fn create_data<const LEN: usize>() -> [u8; LEN] {
     let mut buf = [0u8; LEN];
     let (_, main, _) = unsafe { buf.align_to_mut::<u16>() };
@@ -43,5 +69,11 @@ fn create_data<const LEN: usize>() -> [u8; LEN] {
     buf
 }
 
-criterion_group!(str_as_data, bench_to_b65536, bench_from_b65536);
+criterion_group!(
+    str_as_data,
+    bench_to_b65536,
+    bench_from_b65536,
+    bench_to_b20bit,
+    bench_from_b20bit
+);
 criterion_main!(str_as_data);

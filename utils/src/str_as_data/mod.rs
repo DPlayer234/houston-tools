@@ -11,6 +11,7 @@
 //!
 //! See the documentation of sub-modules for more information.
 
+pub mod b20bit;
 pub mod b256;
 pub mod b65536;
 #[cfg(test)]

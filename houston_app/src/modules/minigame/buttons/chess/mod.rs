@@ -167,11 +167,11 @@ impl View {
         let description = match self.players.turn {
             Player::P1 => format!(
                 "> **⬜ <@{}>**\n-# ⬛ <@{}>",
-                self.players.ids[0], self.players.ids[1]
+                self.players.p1, self.players.p2
             ),
             Player::P2 => format!(
                 "-# ⬜ <@{}>\n> **⬛ <@{}>**",
-                self.players.ids[0], self.players.ids[1]
+                self.players.p1, self.players.p2
             ),
         };
 
@@ -191,8 +191,8 @@ impl View {
             "## <@{winner_id}> wins!\n\
              -# ⬜ <@{p1}>\n\
              -# ⬛ <@{p2}>",
-            p1 = self.players.ids[0],
-            p2 = self.players.ids[1],
+            p1 = self.players.p1,
+            p2 = self.players.p2,
         );
 
         let embed = CreateEmbed::new()

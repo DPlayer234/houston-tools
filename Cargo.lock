@@ -1093,10 +1093,10 @@ dependencies = [
  "mongodb",
  "rand",
  "serde",
- "serde_bare",
  "serde_json",
  "serenity",
  "smallvec",
+ "steph",
  "thiserror 2.0.11",
  "to-arraystring",
  "tokio",
@@ -2481,15 +2481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_bare"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51c55386eed0f1ae957b091dc2ca8122f287b60c79c774cbe3d5f2b69fded660"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "serde_bytes"
 version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2721,6 +2712,15 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "steph"
+version = "1.0.0"
+dependencies = [
+ "indexmap 2.7.1",
+ "serde",
+ "thiserror 2.0.11",
+]
 
 [[package]]
 name = "stringprep"

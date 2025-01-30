@@ -56,7 +56,7 @@ impl Offset {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct Grid<T> {
     array: [[T; N]; N],
 }
@@ -82,6 +82,83 @@ impl<T> Grid<T> {
                 .enumerate()
                 .map(move |(y, tile)| (Pos::new_trunc(x, y), tile))
         })
+    }
+}
+
+// choose a more compact serialization format for the board
+impl serde::Serialize for Board {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        fn to_num(value: Option<Tile>) -> u8 {
+            let Some(value) = value else {
+                return 0;
+            };
+
+            let low = match value.piece {
+                Piece::Pawn => 1,
+                Piece::Rook => 2,
+                Piece::Bishop => 3,
+                Piece::Knight => 4,
+                Piece::Queen => 5,
+                Piece::King => 6,
+            };
+
+            let high = match value.player {
+                Player::P1 => 0x00,
+                Player::P2 => 0x10,
+            };
+
+            low | high
+        }
+
+        self.array.map(|t| t.map(to_num)).serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Board {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+
+        fn from_num(num: u8) -> Option<Tile> {
+            if num == 0 {
+                return None;
+            }
+
+            let piece = match num & 0xF {
+                1 => Piece::Pawn,
+                2 => Piece::Rook,
+                3 => Piece::Bishop,
+                4 => Piece::Knight,
+                5 => Piece::Queen,
+                6 => Piece::King,
+                _ => return None,
+            };
+
+            let player = match num & 0xF0 {
+                0x00 => Player::P1,
+                0x10 => Player::P2,
+                _ => return None,
+            };
+
+            Some(Tile { player, piece })
+        }
+
+        fn is_valid(num: u8) -> bool {
+            (num & 0x17) == num && (num & 0xF) <= 6
+        }
+
+        let array = <[[u8; 5]; 5]>::deserialize(deserializer)?;
+        if array.as_flattened().iter().any(|n| !is_valid(*n)) {
+            return Err(D::Error::custom("invalid chess piece"));
+        }
+
+        let array = array.map(|t| t.map(from_num));
+        Ok(Self { array })
     }
 }
 
