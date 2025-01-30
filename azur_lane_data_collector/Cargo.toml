@@ -19,9 +19,9 @@ image = { version = "0.25.5", default-features = false, features = ["webp"] }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 
-azur_lane = { path = "../azur_lane" }
-unity_read = { path = "../unity_read" }
-utils = { path = "../utils" }
+azur_lane = { path = "../libs/azur_lane" }
+unity_read = { path = "../libs/unity_read" }
+utils = { path = "../libs/utils" }
 
 [dependencies.clap]
 version = "4.5.27"
@@ -33,4 +33,4 @@ version = "0.10.2"
 features = ["lua54", "vendored", "send", "serialize"]
 
 [build-dependencies]
-utils_build = { path = "../utils_build" }
+utils_build = { path = "../libs/utils_build" }

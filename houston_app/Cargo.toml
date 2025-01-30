@@ -35,10 +35,10 @@ to-arraystring = "0.2.2"
 url = "2.5.4"
 urlencoding = "2.1.3"
 
-azur_lane = { path = "../azur_lane" }
-houston_cmd = { path = "../houston_cmd" }
-steph = { path = "../steph" }
-utils = { path = "../utils" }
+azur_lane = { path = "../libs/azur_lane" }
+houston_cmd = { path = "../libs/houston_cmd" }
+serde_steph = { path = "../libs/serde_steph" }
+utils = { path = "../libs/utils" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
@@ -67,4 +67,4 @@ features = [
 ]
 
 [build-dependencies]
-utils_build = { path = "../utils_build" }
+utils_build = { path = "../libs/utils_build" }

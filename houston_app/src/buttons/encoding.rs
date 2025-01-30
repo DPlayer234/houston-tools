@@ -36,14 +36,14 @@ pub fn encode_custom_id(slice: &[u8]) -> String {
 
 /// Reads a [`super::CustomData`] buffer as a [`ButtonArgs`].
 pub fn read_button_args(slice: &[u8]) -> Result<ButtonArgs> {
-    Ok(steph::from_slice(slice)?)
+    Ok(serde_steph::from_slice(slice)?)
 }
 
 /// Encodes a [`ButtonArgsRef`] into a buffer.
 ///
 /// This logs errors instead of returning them.
 pub fn write_button_args<W: io::Write>(mut writer: W, args: ButtonArgsRef<'_>) {
-    if let Err(why) = steph::to_writer(&mut writer, &args) {
+    if let Err(why) = serde_steph::to_writer(&mut writer, &args) {
         log::error!("Error [{why:?}] serializing: {args:?}");
     }
 }

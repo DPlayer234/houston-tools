@@ -1,15 +1,15 @@
 [workspace]
 resolver = "3"
 members = [
-    "azur_lane",
     "azur_lane_data_collector",
     "houston_app",
-	"houston_cmd",
-	"houston_cmd/macros",
-    "steph",
-    "unity_read",
-    "utils",
-    "utils_build",
+    "libs/azur_lane",
+	"libs/houston_cmd",
+	"libs/houston_cmd/macros",
+    "libs/serde_steph",
+    "libs/unity_read",
+    "libs/utils",
+    "libs/utils_build",
 ]
 
 [workspace.package]
