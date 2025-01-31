@@ -2,7 +2,7 @@
 //!
 //! _Can you tell this isn't supposed to be an acronym?_
 //!
-//! Custom binary serialization format, vaguely inspired by [bare][^bare]. This
+//! Custom binary serialization format, vaguely inspired by [BARE][^bare]. This
 //! format is not self-describing and as such deserializing any is disallowed.
 //!
 //! The types in this serialization format are as follows:
@@ -30,12 +30,10 @@
 //! [^bare]: No, I did not really read the spec and the output likely isn't compatible.
 
 pub mod de;
-mod error;
 mod leb128;
 pub mod ser;
 
 pub use de::{from_reader, from_slice};
-pub use error::Error;
 pub use ser::{to_vec, to_writer};
 
 #[cfg(test)]
@@ -174,5 +172,18 @@ mod tests {
                 ("c".to_owned(), 'C'),
             ])),
         ]);
+    }
+
+    #[test]
+    fn error_eof() {
+        let res = from_slice::<Vec<u8>>(&[5, 1, 2, 3, 4]).expect_err("too short");
+        match res {
+            de::Error::Io(e) => assert_eq!(
+                e.kind(),
+                std::io::ErrorKind::UnexpectedEof,
+                "expected eof error"
+            ),
+            _ => panic!("incorrect error kind: {res:?}"),
+        }
     }
 }

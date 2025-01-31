@@ -4,8 +4,11 @@ use std::io;
 
 use serde::ser;
 
-use crate::error::Error;
 use crate::leb128;
+
+mod error;
+
+pub use error::Error;
 
 /// Serializes a value to a [`Vec<u8>`].
 ///

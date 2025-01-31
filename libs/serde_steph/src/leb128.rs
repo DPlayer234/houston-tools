@@ -8,8 +8,7 @@
 use std::io;
 use std::ops::{BitOr, BitOrAssign, Shl, Shr, ShrAssign};
 
-use crate::de::Read;
-use crate::error::Error;
+use crate::{de, ser};
 
 /// Supports the en-/decoding functions.
 ///
@@ -63,7 +62,7 @@ const fn bitness<T>() -> usize {
     size_of::<T>() * 8
 }
 
-pub fn write<T, W>(writer: W, x: T) -> Result<(), Error>
+pub fn write<T, W>(writer: W, x: T) -> Result<(), ser::Error>
 where
     T: Leb128,
     W: io::Write,
@@ -71,7 +70,7 @@ where
     write_inner(writer, x.into_unsigned())
 }
 
-fn write_inner<T, W>(mut writer: W, mut x: T) -> Result<(), Error>
+fn write_inner<T, W>(mut writer: W, mut x: T) -> Result<(), ser::Error>
 where
     T: Uleb128Encode,
     W: io::Write,
@@ -91,18 +90,18 @@ where
     Ok(writer.write_all(&buf[..i])?)
 }
 
-pub fn read<T, R>(reader: R) -> Result<T, Error>
+pub fn read<T, R>(reader: R) -> Result<T, de::Error>
 where
     T: Leb128,
-    R: Read,
+    R: de::Read,
 {
     read_inner(reader).map(T::from_unsigned)
 }
 
-fn read_inner<T, R>(mut reader: R) -> Result<T, Error>
+fn read_inner<T, R>(mut reader: R) -> Result<T, de::Error>
 where
     T: Uleb128Encode,
-    R: Read,
+    R: de::Read,
 {
     let mut x = T::default();
     let mut s = 0usize;
@@ -110,7 +109,7 @@ where
         let [b] = reader.read_bytes()?;
         // ensure the shift isn't greater than the bit-count of `T`
         if s >= bitness::<T>() {
-            return Err(Error::IntegerOverflow);
+            return Err(de::Error::IntegerOverflow);
         }
 
         // convert to shifted `T`
@@ -118,7 +117,7 @@ where
         let tb = T::from(b & 0x7F);
         let ts = tb << s;
         if ts >> s != tb {
-            return Err(Error::IntegerOverflow);
+            return Err(de::Error::IntegerOverflow);
         }
 
         x |= ts;

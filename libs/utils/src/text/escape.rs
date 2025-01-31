@@ -44,7 +44,7 @@ impl<'a, F> EscapeByChar<'a, F> {
     /// Produces an equivalent value with `escape_as` used by-ref.
     ///
     /// This is only necessary when the original value is not [`Copy`] and is
-    /// consumed for some reason, f.e. by calling [`EscapeByChar::into_iter`].
+    /// consumed for some reason.
     pub fn by_ref(&self) -> EscapeByChar<'a, &F> {
         EscapeByChar {
             source: self.source,
