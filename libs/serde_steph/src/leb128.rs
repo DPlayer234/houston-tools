@@ -90,18 +90,18 @@ where
     Ok(writer.write_all(&buf[..i])?)
 }
 
-pub fn read<T, R>(reader: R) -> Result<T, de::Error>
+pub fn read<'de, T, R>(reader: R) -> Result<T, de::Error>
 where
     T: Leb128,
-    R: de::Read,
+    R: de::Read<'de>,
 {
     read_inner(reader).map(T::from_unsigned)
 }
 
-fn read_inner<T, R>(mut reader: R) -> Result<T, de::Error>
+fn read_inner<'de, T, R>(mut reader: R) -> Result<T, de::Error>
 where
     T: Uleb128Encode,
-    R: de::Read,
+    R: de::Read<'de>,
 {
     let mut x = T::default();
     let mut s = 0usize;

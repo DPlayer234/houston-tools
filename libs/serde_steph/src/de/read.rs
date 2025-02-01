@@ -9,11 +9,14 @@ fn eof() -> Error {
     io::Error::from(io::ErrorKind::UnexpectedEof).into()
 }
 
-/// Specialized reader trait for use with [`Deserializer`].
+/// Specialized reader trait for use with [`Deserializer`](super::Deserializer).
 ///
 /// By default, this is implemented for `&[u8]` (byte slices), [`IoRead`] and
 /// mutable references to [`Read`] implementations.
-pub trait Read {
+///
+/// This trait also allows access to borrowed data if supported at runtime.
+/// `'de` represents that borrowed lifetime and is otherwise unused.
+pub trait Read<'de> {
     /// Reads a constant size chunk of bytes.
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error>;
 
@@ -25,9 +28,22 @@ pub trait Read {
 
     /// Reads a chunk of bytes, returning it as a newly allocated [`Vec`].
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error>;
+
+    /// Attempts to read a chunk of bytes, borrowing from the reader.
+    ///
+    /// If the reader supports borrowing data from it, returns [`Some`] with the
+    /// result of the operation. If the reader does not support it, returns
+    /// [`None`] without advancing.
+    ///
+    /// If [`None`] was returned, calling another reader method with the same
+    /// `len` must have the same result as if this method was never called.
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+        _ = len;
+        None
+    }
 }
 
-impl<R: Read> Read for &mut R {
+impl<'de, R: Read<'de>> Read<'de> for &mut R {
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         (**self).read_bytes()
     }
@@ -42,9 +58,13 @@ impl<R: Read> Read for &mut R {
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
         (**self).read_byte_vec(len)
     }
+
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+        (**self).try_read_bytes_borrow(len)
+    }
 }
 
-impl Read for &[u8] {
+impl<'de> Read<'de> for &'de [u8] {
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         let (out, rem) = self.split_first_chunk::<N>().ok_or_else(eof)?;
         *self = rem;
@@ -65,12 +85,22 @@ impl Read for &[u8] {
         *self = rem;
         Ok(out.to_vec())
     }
+
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+        let mut inner = move || -> Result<&'de [u8], Error> {
+            let (out, rem) = self.split_at_checked(len).ok_or_else(eof)?;
+            *self = rem;
+            Ok(out)
+        };
+
+        Some(inner())
+    }
 }
 
 /// Wraps a [`io::Read`] implementation so it can be used as a [`Read`].
 ///
 /// You cannot directly construct this type, instead use
-/// [`Deserializer::from_reader`].
+/// [`Deserializer::from_reader`](super::Deserializer::from_reader).
 #[derive(Debug)]
 pub struct IoRead<R> {
     pub(super) inner: R,
@@ -82,7 +112,7 @@ impl<R> IoRead<R> {
     }
 }
 
-impl<R: io::Read> Read for IoRead<R> {
+impl<R: io::Read> Read<'_> for IoRead<R> {
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         let mut buf = [0u8; N];
         self.inner.read_exact(&mut buf)?;

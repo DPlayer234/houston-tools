@@ -16,9 +16,9 @@ pub use read::{IoRead, Read};
 ///
 /// Excess bytes in the slice will be ignored. If you need to handle the
 /// remaining bytes, use [`Deserializer`]'s `from_slice` and `remainder`.
-pub fn from_slice<T>(buf: &[u8]) -> Result<T, Error>
+pub fn from_slice<'de, T>(buf: &'de [u8]) -> Result<T, Error>
 where
-    T: de::DeserializeOwned,
+    T: de::Deserialize<'de>,
 {
     T::deserialize(&mut Deserializer::from_slice(buf))
 }
@@ -44,7 +44,7 @@ pub struct Deserializer<R> {
     reader: R,
 }
 
-impl<R: Read> Deserializer<R> {
+impl<'de, R: Read<'de>> Deserializer<R> {
     /// Creates a new deserializer that reads a value from a [`Read`].
     ///
     /// When reading from a slice, using [`Self::from_slice`] may be clearer.
@@ -53,14 +53,14 @@ impl<R: Read> Deserializer<R> {
     }
 }
 
-impl<'a> Deserializer<&'a [u8]> {
+impl<'de> Deserializer<&'de [u8]> {
     /// Creates a new deserializer that reads a value from a slice.
-    pub fn from_slice(buf: &'a [u8]) -> Self {
+    pub fn from_slice(buf: &'de [u8]) -> Self {
         Self::new(buf)
     }
 
     /// Gets the remaining unread part of the slice.
-    pub fn remainder(&self) -> &'a [u8] {
+    pub fn remainder(&self) -> &'de [u8] {
         self.reader
     }
 }
@@ -71,9 +71,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     /// If you're working with a byte slice, it is more efficient to use
     /// [`from_slice`].
     pub fn from_reader(reader: R) -> Self {
-        Self {
-            reader: IoRead::new(reader),
-        }
+        Self::new(IoRead::new(reader))
     }
 
     /// Unwraps the deserializer into its inner reader.
@@ -89,7 +87,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     }
 }
 
-impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
+impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     type Error = Error;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -216,10 +214,17 @@ impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         let len: usize = leb128::read(&mut self.reader)?;
-        self.reader.read_byte_view(len, |v| {
-            let v = std::str::from_utf8(v).map_err(|_| Error::InvalidUtf8)?;
-            visitor.visit_str(v)
-        })
+
+        match self.reader.try_read_bytes_borrow(len) {
+            Some(v) => {
+                let v = std::str::from_utf8(v?).map_err(|_| Error::InvalidUtf8)?;
+                visitor.visit_borrowed_str(v)
+            },
+            None => self.reader.read_byte_view(len, |v| {
+                let v = std::str::from_utf8(v).map_err(|_| Error::InvalidUtf8)?;
+                visitor.visit_str(v)
+            }),
+        }
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -237,7 +242,11 @@ impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         let len: usize = leb128::read(&mut self.reader)?;
-        self.reader.read_byte_view(len, |v| visitor.visit_bytes(v))
+
+        match self.reader.try_read_bytes_borrow(len) {
+            Some(v) => visitor.visit_borrowed_bytes(v?),
+            None => self.reader.read_byte_view(len, |v| visitor.visit_bytes(v)),
+        }
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -385,7 +394,7 @@ struct SeqAccess<'a, R> {
     len: usize,
 }
 
-impl<'de, R: Read> de::SeqAccess<'de> for SeqAccess<'_, R> {
+impl<'de, R: Read<'de>> de::SeqAccess<'de> for SeqAccess<'_, R> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -405,7 +414,7 @@ impl<'de, R: Read> de::SeqAccess<'de> for SeqAccess<'_, R> {
     }
 }
 
-impl<'de, R: Read> de::MapAccess<'de> for SeqAccess<'_, R> {
+impl<'de, R: Read<'de>> de::MapAccess<'de> for SeqAccess<'_, R> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -432,7 +441,7 @@ impl<'de, R: Read> de::MapAccess<'de> for SeqAccess<'_, R> {
     }
 }
 
-impl<'de, R: Read> de::SeqAccess<'de> for &mut Deserializer<R> {
+impl<'de, R: Read<'de>> de::SeqAccess<'de> for &mut Deserializer<R> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -443,7 +452,7 @@ impl<'de, R: Read> de::SeqAccess<'de> for &mut Deserializer<R> {
     }
 }
 
-impl<'de, R: Read> de::EnumAccess<'de> for &mut Deserializer<R> {
+impl<'de, R: Read<'de>> de::EnumAccess<'de> for &mut Deserializer<R> {
     type Error = Error;
     type Variant = Self;
 
@@ -456,7 +465,7 @@ impl<'de, R: Read> de::EnumAccess<'de> for &mut Deserializer<R> {
     }
 }
 
-impl<'de, R: Read> de::VariantAccess<'de> for &mut Deserializer<R> {
+impl<'de, R: Read<'de>> de::VariantAccess<'de> for &mut Deserializer<R> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {

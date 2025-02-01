@@ -26,6 +26,9 @@
 //! - `enum`: enums, no matter their data
 //! - `map`: map-like sequences, f.e. [`HashMap`](std::collections::HashMap)
 //!
+//! When deserializing from a byte slice, deserializing borrowed data is
+//! supported.
+//!
 //! [bare]: <https://baremessages.org/>
 //! [^bare]: No, I did not really read the spec and the output likely isn't compatible.
 
@@ -185,5 +188,20 @@ mod tests {
             ),
             _ => panic!("incorrect error kind: {res:?}"),
         }
+    }
+
+    #[test]
+    fn de_borrowed() {
+        let slice = *b"\x04abcd";
+        let res: &str = from_slice(&slice).expect("must deserialize");
+
+        assert_eq!(res, "abcd", "expected match");
+
+        // is comparing addresses like this guaranteed to be stable?
+        assert_eq!(
+            res.as_ptr().addr(),
+            slice[1..].as_ptr().addr(),
+            "expected borrow from slice"
+        );
     }
 }
