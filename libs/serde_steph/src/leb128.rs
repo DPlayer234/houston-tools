@@ -107,13 +107,9 @@ where
     let mut s = 0usize;
     loop {
         let [b] = reader.read_bytes()?;
-        // ensure the shift isn't greater than the bit-count of `T`
-        if s >= bitness::<T>() {
-            return Err(de::Error::IntegerOverflow);
-        }
 
-        // convert to shifted `T`
-        // ensure that all bits fit into `T`
+        // convert to shifted `T` and ensure that all bits fit into `T`
+        // the compiler can elide this for all but the last iteration
         let tb = T::from(b & 0x7F);
         let ts = tb << s;
         if ts >> s != tb {
@@ -121,11 +117,16 @@ where
         }
 
         x |= ts;
-        s += 7;
-
         if b < 0x80 {
             // No continuation bit is set
             return Ok(x);
+        }
+
+        // ensure the shift for the next iteration isn't greater than the
+        // bit-count of `T`. the compiler can turn this into a hard cutoff
+        s += 7;
+        if s >= bitness::<T>() {
+            return Err(de::Error::IntegerOverflow);
         }
     }
 }
@@ -277,4 +278,31 @@ mod tests {
             i128::MAX
         ]
     );
+
+    #[test]
+    fn overflow_too_long() {
+        assert!(matches!(
+            read::<u16, &[u8]>(&[0x80, 0x80, 0x80]),
+            Err(de::Error::IntegerOverflow)
+        ));
+    }
+
+    #[test]
+    fn overflow_too_large() {
+        assert!(matches!(
+            read::<u16, &[u8]>(&[0x80, 0x80, 0x04]),
+            Err(de::Error::IntegerOverflow)
+        ));
+    }
+
+    #[test]
+    fn end_of_file_after_continuation() {
+        assert!(
+            matches!(
+                read::<u16, &[u8]>(&[0x80, 0x80]),
+                Err(de::Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
+            ),
+            "expected eof error"
+        );
+    }
 }

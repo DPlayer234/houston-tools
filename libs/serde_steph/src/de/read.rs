@@ -64,6 +64,13 @@ impl<'de, R: Read<'de>> Read<'de> for &mut R {
     }
 }
 
+#[inline]
+fn read_bytes_borrow<'de>(src: &mut &'de [u8], len: usize) -> Result<&'de [u8], Error> {
+    let (out, rem) = src.split_at_checked(len).ok_or_else(eof)?;
+    *src = rem;
+    Ok(out)
+}
+
 impl<'de> Read<'de> for &'de [u8] {
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         let (out, rem) = self.split_first_chunk::<N>().ok_or_else(eof)?;
@@ -75,25 +82,15 @@ impl<'de> Read<'de> for &'de [u8] {
     where
         F: FnOnce(&[u8]) -> Result<T, Error>,
     {
-        let (out, rem) = self.split_at_checked(len).ok_or_else(eof)?;
-        *self = rem;
-        access(out)
+        read_bytes_borrow(self, len).and_then(access)
     }
 
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
-        let (out, rem) = self.split_at_checked(len).ok_or_else(eof)?;
-        *self = rem;
-        Ok(out.to_vec())
+        read_bytes_borrow(self, len).map(<[u8]>::to_vec)
     }
 
     fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
-        let mut inner = move || -> Result<&'de [u8], Error> {
-            let (out, rem) = self.split_at_checked(len).ok_or_else(eof)?;
-            *self = rem;
-            Ok(out)
-        };
-
-        Some(inner())
+        Some(read_bytes_borrow(self, len))
     }
 }
 
