@@ -28,27 +28,16 @@ where
     T: ser::Serialize,
     W: io::Write,
 {
-    value.serialize(Serializer::from_writer(writer))
+    value.serialize(&mut Serializer::from_writer(writer))
 }
 
-/// A [`Serializer`] for this crate's binary format.
+/// A [`Serializer`] for this crate's binary format. The trait is only
+/// implemented by `&mut`.
 ///
 /// [`Serializer`]: serde::ser::Serializer
 #[derive(Debug)]
 pub struct Serializer<W> {
     writer: W,
-}
-
-impl<W> Serializer<W> {
-    /// Reborrows the serializer so it can be used for multiple
-    /// [`serialize`](ser::Serialize::serialize) calls.
-    ///
-    /// This could be useful for manually serializing a sequence of elements.
-    pub fn reborrow(&mut self) -> Serializer<&mut W> {
-        Serializer {
-            writer: &mut self.writer,
-        }
-    }
 }
 
 impl<W: io::Write> Serializer<W> {
@@ -62,24 +51,32 @@ impl<W: io::Write> Serializer<W> {
         self.writer
     }
 
-    fn write_byte(mut self, v: u8) -> Result<(), Error> {
+    fn write_byte(&mut self, v: u8) -> Result<(), Error> {
         Ok(self.writer.write_all(&[v])?)
+    }
+
+    fn write_leb128(&mut self, v: impl leb128::Leb128) -> Result<(), Error> {
+        leb128::write(&mut self.writer, v)
     }
 }
 
-impl<W: io::Write> ser::Serializer for Serializer<W> {
+// implemented by mut because this avoids adding another layer of indirection
+// for every nested Serialize call. most uses will stilly likely end up having
+// 2 layers of indirection here (&mut Serializer<&mut Write>) but that's
+// basically the minimum we end up with for the by-value case.
+impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
     // these types correspond to how the value is logically serialized, as noted in
     // the documentation of the crate root
-    type SerializeSeq = SerializeList<W>;
-    type SerializeTuple = SerializeTuple<W>;
-    type SerializeTupleStruct = SerializeTuple<W>;
-    type SerializeTupleVariant = SerializeTuple<W>;
-    type SerializeMap = SerializeMap<W>;
-    type SerializeStruct = SerializeTuple<W>;
-    type SerializeStructVariant = SerializeTuple<W>;
+    type SerializeSeq = SerializeList<'a, W>;
+    type SerializeTuple = SerializeTuple<'a, W>;
+    type SerializeTupleStruct = SerializeTuple<'a, W>;
+    type SerializeTupleVariant = SerializeTuple<'a, W>;
+    type SerializeMap = SerializeMap<'a, W>;
+    type SerializeStruct = SerializeTuple<'a, W>;
+    type SerializeStructVariant = SerializeTuple<'a, W>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
         self.write_byte(v.into())
@@ -91,19 +88,19 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     }
 
     fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
@@ -111,26 +108,26 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
     fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-        leb128::write(self.writer, v)
+        self.write_leb128(v)
     }
 
-    fn serialize_f32(mut self, v: f32) -> Result<Self::Ok, Self::Error> {
+    fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
         Ok(self.writer.write_all(&v.to_le_bytes())?)
     }
 
-    fn serialize_f64(mut self, v: f64) -> Result<Self::Ok, Self::Error> {
+    fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
         Ok(self.writer.write_all(&v.to_le_bytes())?)
     }
 
@@ -142,8 +139,8 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
         self.serialize_bytes(v.as_bytes())
     }
 
-    fn serialize_bytes(mut self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        leb128::write(&mut self.writer, v.len())?;
+    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        self.write_leb128(v.len())?;
         Ok(self.writer.write_all(v)?)
     }
 
@@ -151,11 +148,11 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
         self.write_byte(0)
     }
 
-    fn serialize_some<T>(mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + ser::Serialize,
     {
-        self.reborrow().write_byte(1)?;
+        self.write_byte(1)?;
         value.serialize(self)
     }
 
@@ -188,7 +185,7 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     }
 
     fn serialize_newtype_variant<T>(
-        mut self,
+        self,
         _name: &'static str,
         variant_index: u32,
         _variant: &'static str,
@@ -197,13 +194,13 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        self.reborrow().serialize_u32(variant_index)?;
+        self.serialize_u32(variant_index)?;
         value.serialize(self)
     }
 
-    fn serialize_seq(mut self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
         let len = len.ok_or(Error::LengthRequired)?;
-        leb128::write(&mut self.writer, len)?;
+        self.write_leb128(len)?;
         Ok(SerializeList(self))
     }
 
@@ -220,19 +217,19 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     }
 
     fn serialize_tuple_variant(
-        mut self,
+        self,
         _name: &'static str,
         variant_index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        self.reborrow().serialize_u32(variant_index)?;
+        self.serialize_u32(variant_index)?;
         Ok(SerializeTuple(self))
     }
 
-    fn serialize_map(mut self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
         let len = len.ok_or(Error::LengthRequired)?;
-        leb128::write(&mut self.writer, len)?;
+        self.write_leb128(len)?;
         Ok(SerializeMap(self))
     }
 
@@ -245,13 +242,13 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
     }
 
     fn serialize_struct_variant(
-        mut self,
+        self,
         _name: &'static str,
         variant_index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        self.reborrow().serialize_u32(variant_index)?;
+        self.serialize_u32(variant_index)?;
         Ok(SerializeTuple(self))
     }
 
@@ -264,21 +261,21 @@ impl<W: io::Write> ser::Serializer for Serializer<W> {
 ///
 /// You shouldn't use this type directly. It is returned by [`Serializer`] as
 /// needed.
-pub struct SerializeList<W>(Serializer<W>);
+pub struct SerializeList<'a, W>(&'a mut Serializer<W>);
 
 /// Allows serializing a sequence of elements as a `tuple`.
 ///
 /// You shouldn't use this type directly. It is returned by [`Serializer`] as
 /// needed.
-pub struct SerializeTuple<W>(Serializer<W>);
+pub struct SerializeTuple<'a, W>(&'a mut Serializer<W>);
 
 /// Allows serializing a sequence of elements as a `map`.
 ///
 /// You shouldn't use this type directly. It is returned by [`Serializer`] as
 /// needed.
-pub struct SerializeMap<W>(Serializer<W>);
+pub struct SerializeMap<'a, W>(&'a mut Serializer<W>);
 
-impl<W: io::Write> ser::SerializeSeq for SerializeList<W> {
+impl<W: io::Write> ser::SerializeSeq for SerializeList<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -286,7 +283,7 @@ impl<W: io::Write> ser::SerializeSeq for SerializeList<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -294,7 +291,7 @@ impl<W: io::Write> ser::SerializeSeq for SerializeList<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeTuple for SerializeTuple<W> {
+impl<W: io::Write> ser::SerializeTuple for SerializeTuple<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -302,7 +299,7 @@ impl<W: io::Write> ser::SerializeTuple for SerializeTuple<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -310,7 +307,7 @@ impl<W: io::Write> ser::SerializeTuple for SerializeTuple<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeTupleStruct for SerializeTuple<W> {
+impl<W: io::Write> ser::SerializeTupleStruct for SerializeTuple<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -318,7 +315,7 @@ impl<W: io::Write> ser::SerializeTupleStruct for SerializeTuple<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -326,7 +323,7 @@ impl<W: io::Write> ser::SerializeTupleStruct for SerializeTuple<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeTupleVariant for SerializeTuple<W> {
+impl<W: io::Write> ser::SerializeTupleVariant for SerializeTuple<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -334,7 +331,7 @@ impl<W: io::Write> ser::SerializeTupleVariant for SerializeTuple<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -342,7 +339,7 @@ impl<W: io::Write> ser::SerializeTupleVariant for SerializeTuple<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeMap for SerializeMap<W> {
+impl<W: io::Write> ser::SerializeMap for SerializeMap<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -350,14 +347,14 @@ impl<W: io::Write> ser::SerializeMap for SerializeMap<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        key.serialize(self.0.reborrow())
+        key.serialize(&mut *self.0)
     }
 
     fn serialize_value<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -365,7 +362,7 @@ impl<W: io::Write> ser::SerializeMap for SerializeMap<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeStruct for SerializeTuple<W> {
+impl<W: io::Write> ser::SerializeStruct for SerializeTuple<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -373,7 +370,7 @@ impl<W: io::Write> ser::SerializeStruct for SerializeTuple<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
@@ -381,7 +378,7 @@ impl<W: io::Write> ser::SerializeStruct for SerializeTuple<W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeStructVariant for SerializeTuple<W> {
+impl<W: io::Write> ser::SerializeStructVariant for SerializeTuple<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -389,7 +386,7 @@ impl<W: io::Write> ser::SerializeStructVariant for SerializeTuple<W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(self.0.reborrow())
+        value.serialize(&mut *self.0)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {

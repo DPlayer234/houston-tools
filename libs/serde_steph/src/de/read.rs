@@ -43,6 +43,7 @@ pub trait Read<'de> {
     }
 }
 
+// this implementation is required so the reader can be reborrowed
 impl<'de, R: Read<'de>> Read<'de> for &mut R {
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         (**self).read_bytes()
@@ -96,7 +97,7 @@ impl<'de> Read<'de> for &'de [u8] {
 
 /// Wraps a [`io::Read`] implementation so it can be used as a [`Read`].
 ///
-/// You cannot directly construct this type, instead use
+/// You cannot directly construct this type. Instead use
 /// [`Deserializer::from_reader`](super::Deserializer::from_reader).
 #[derive(Debug)]
 pub struct IoRead<R> {

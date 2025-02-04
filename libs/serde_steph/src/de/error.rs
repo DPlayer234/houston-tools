@@ -27,6 +27,10 @@ pub enum Error {
     /// While reading LEB128 integer data, the data overflowed the target type.
     #[error("LEB encoded integer overflows target type")]
     IntegerOverflow,
+    /// Used [`crate::de::from_slice`] and the slice had a remainder after
+    /// reading the type.
+    #[error("slice had {0} remaining byte(s); use `Deserializer` directly to handle this")]
+    SliceExcessData(usize),
     /// Another reason provided by the deserializing object.
     #[error("{0}")]
     Custom(String),

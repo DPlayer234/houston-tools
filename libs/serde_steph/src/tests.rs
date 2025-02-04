@@ -159,3 +159,14 @@ fn de_borrowed() {
         "expected borrow from slice"
     );
 }
+
+#[test]
+fn from_slice_excess() {
+    let slice = *b"\x03abcd";
+    let res = from_slice::<String>(&slice).expect_err("must be excess");
+
+    assert!(
+        matches!(res, de::Error::SliceExcessData(1)),
+        "must be slice excess error"
+    );
+}

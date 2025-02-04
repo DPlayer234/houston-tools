@@ -12,7 +12,7 @@ fn bench_search(c: &mut Criterion) {
     c.bench_function("search_exact", |b| {
         b.iter(|| {
             let name = names[index];
-            index = (index + 1) % names.len();
+            index = index.wrapping_add(1) % names.len();
 
             search.search(black_box(name))
         })
