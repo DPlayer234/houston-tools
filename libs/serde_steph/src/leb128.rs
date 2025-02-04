@@ -181,7 +181,8 @@ impl_uleb_signed!(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{read, write};
+    use crate::de::{self, SliceRead};
 
     macro_rules! round_trip {
         ($fn_name:ident, $Ty:ty, $values:expr) => {
@@ -193,7 +194,7 @@ mod tests {
                     buf.clear();
                     write(&mut buf, v).expect("encoding worked");
 
-                    let r: $Ty = read(buf.as_slice()).expect("decoding worked");
+                    let r: $Ty = read(SliceRead::new(&buf)).expect("decoding worked");
                     assert_eq!(v, r, "must be equal");
                 }
             }
@@ -282,7 +283,7 @@ mod tests {
     #[test]
     fn overflow_too_long() {
         assert!(matches!(
-            read::<u16, &[u8]>(&[0x80, 0x80, 0x80]),
+            read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x80])),
             Err(de::Error::IntegerOverflow)
         ));
     }
@@ -290,7 +291,7 @@ mod tests {
     #[test]
     fn overflow_too_large() {
         assert!(matches!(
-            read::<u16, &[u8]>(&[0x80, 0x80, 0x04]),
+            read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x04])),
             Err(de::Error::IntegerOverflow)
         ));
     }
@@ -299,7 +300,7 @@ mod tests {
     fn end_of_file_after_continuation() {
         assert!(
             matches!(
-                read::<u16, &[u8]>(&[0x80, 0x80]),
+                read::<u16, _>(SliceRead::new(&[0x80, 0x80])),
                 Err(de::Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
             ),
             "expected eof error"

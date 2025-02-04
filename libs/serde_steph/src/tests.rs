@@ -166,7 +166,7 @@ fn from_slice_excess() {
     let res = from_slice::<String>(&slice).expect_err("must be excess");
 
     assert!(
-        matches!(res, de::Error::SliceExcessData(1)),
-        "must be slice excess error"
+        matches!(res, de::Error::TrailingBytes),
+        "must be trailing bytes error"
     );
 }

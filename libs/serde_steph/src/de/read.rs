@@ -11,12 +11,14 @@ fn eof() -> Error {
 
 /// Specialized reader trait for use with [`Deserializer`](super::Deserializer).
 ///
-/// By default, this is implemented for `&[u8]` (byte slices), [`IoRead`] and
-/// mutable references to [`Read`] implementations.
+/// By default, this is implemented for [`SliceRead`], [`IoRead`] and mutable
+/// references to [`Read`] implementations.
 ///
 /// This trait also allows access to borrowed data if supported at runtime.
 /// `'de` represents that borrowed lifetime and is otherwise unused.
 pub trait Read<'de> {
+    fn next_byte(&mut self) -> Result<Option<u8>, Error>;
+
     /// Reads a constant size chunk of bytes.
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error>;
 
@@ -45,6 +47,10 @@ pub trait Read<'de> {
 
 // this implementation is required so the reader can be reborrowed
 impl<'de, R: Read<'de>> Read<'de> for &mut R {
+    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+        (**self).next_byte()
+    }
+
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         (**self).read_bytes()
     }
@@ -65,17 +71,42 @@ impl<'de, R: Read<'de>> Read<'de> for &mut R {
     }
 }
 
-#[inline]
-fn read_bytes_borrow<'de>(src: &mut &'de [u8], len: usize) -> Result<&'de [u8], Error> {
-    let (out, rem) = src.split_at_checked(len).ok_or_else(eof)?;
-    *src = rem;
-    Ok(out)
+/// Wraps a slice so it can be used as a [`Read`].
+///
+/// You cannot directly construct this type. Instead use
+/// [`Deserializer::from_slice`](super::Deserializer::from_slice).
+#[derive(Debug)]
+pub struct SliceRead<'de> {
+    pub(super) slice: &'de [u8],
 }
 
-impl<'de> Read<'de> for &'de [u8] {
+impl<'de> SliceRead<'de> {
+    pub(crate) fn new(slice: &'de [u8]) -> Self {
+        Self { slice }
+    }
+
+    fn next_byte_inner(&mut self) -> Option<u8> {
+        let (&out, rem) = self.slice.split_first()?;
+        self.slice = rem;
+        Some(out)
+    }
+
+    #[inline]
+    fn read_bytes_borrow(&mut self, len: usize) -> Result<&'de [u8], Error> {
+        let (out, rem) = self.slice.split_at_checked(len).ok_or_else(eof)?;
+        self.slice = rem;
+        Ok(out)
+    }
+}
+
+impl<'de> Read<'de> for SliceRead<'de> {
+    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+        Ok(self.next_byte_inner())
+    }
+
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
-        let (out, rem) = self.split_first_chunk::<N>().ok_or_else(eof)?;
-        *self = rem;
+        let (out, rem) = self.slice.split_first_chunk::<N>().ok_or_else(eof)?;
+        self.slice = rem;
         Ok(*out)
     }
 
@@ -83,15 +114,15 @@ impl<'de> Read<'de> for &'de [u8] {
     where
         F: FnOnce(&[u8]) -> Result<T, Error>,
     {
-        read_bytes_borrow(self, len).and_then(access)
+        self.read_bytes_borrow(len).and_then(access)
     }
 
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
-        read_bytes_borrow(self, len).map(<[u8]>::to_vec)
+        self.read_bytes_borrow(len).map(<[u8]>::to_vec)
     }
 
     fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
-        Some(read_bytes_borrow(self, len))
+        Some(self.read_bytes_borrow(len))
     }
 }
 
@@ -105,12 +136,18 @@ pub struct IoRead<R> {
 }
 
 impl<R> IoRead<R> {
-    pub(super) fn new(inner: R) -> Self {
+    pub(crate) fn new(inner: R) -> Self {
         Self { inner }
     }
 }
 
 impl<R: io::Read> Read<'_> for IoRead<R> {
+    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+        let mut byte = [0u8];
+        let read = self.inner.read(&mut byte)?;
+        Ok((read != 0).then_some(byte[0]))
+    }
+
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
         let mut buf = [0u8; N];
         self.inner.read_exact(&mut buf)?;
@@ -147,7 +184,7 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
         let limit = u64::try_from(len).map_err(|_| eof())?;
         (&mut self.inner).take(limit).read_to_end(&mut buf)?;
 
-        if buf.len() >= len {
+        if buf.len() != len {
             Ok(buf)
         } else {
             Err(eof())

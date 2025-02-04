@@ -10,41 +10,44 @@ mod error;
 mod read;
 
 pub use error::Error;
-pub use read::{IoRead, Read};
+pub use read::{IoRead, Read, SliceRead};
 
 /// Deserializes a value from a byte slice.
 ///
-/// In addition to other deserialization errors, this returns
-/// [`Error::SliceExcessData`] if the slice isn't fully consumed. If you want to
-/// use the rest of the slice instead, refer to [`Deserializer::from_slice`].
+/// This assumes that `buf` contains just one object. If there are trailing
+/// bytes, this function returns [`Error::TrailingBytes`].
+///
+/// If you want to handle trailing bytes yourself, use
+/// [`Deserializer::from_slice`] and [`Deserializer::remainder`].
 pub fn from_slice<'de, T>(buf: &'de [u8]) -> Result<T, Error>
 where
     T: de::Deserialize<'de>,
 {
-    let mut de = Deserializer::from_slice(buf);
-    let value = T::deserialize(&mut de)?;
-
-    if !de.remainder().is_empty() {
-        return Err(Error::SliceExcessData(de.remainder().len()));
-    }
-
-    Ok(value)
+    Deserializer::from_slice(buf).read_to_end()
 }
 
 /// Deserializes a value from a [`io::Read`].
 ///
-/// The reader may still have bytes available when this function returns
-/// successfully.
+/// This assumes that `reader` yields only one object. If it provides trailing
+/// bytes, this function returns [`Error::TrailingBytes`].
+///
+/// If you want to handle trailing bytes yourself, use
+/// [`Deserializer::from_reader`].
 pub fn from_reader<T, R>(reader: R) -> Result<T, Error>
 where
     T: de::DeserializeOwned,
     R: io::Read,
 {
-    T::deserialize(&mut Deserializer::from_reader(reader))
+    Deserializer::from_reader(reader).read_to_end()
 }
 
 /// A [`Deserializer`] for this crate's binary format. The trait is only
 /// implemented by `&mut`.
+///
+/// After deserializing an object, the underlying reader will be left just after
+/// the end of the data. The same deserializer may then be reused to read the
+/// next object, discarded to use the reader otherwise, or you may call
+/// [`Deserializer::end`] to explicitly expect the end of the data.
 ///
 /// [`Deserializer`]: serde::de::Deserializer
 #[derive(Debug)]
@@ -55,9 +58,35 @@ pub struct Deserializer<R> {
 impl<'de, R: Read<'de>> Deserializer<R> {
     /// Creates a new deserializer that reads a value from a [`Read`].
     ///
-    /// When reading from a slice, using [`Self::from_slice`] may be clearer.
+    /// You are most likely looking for [`Self::from_slice`] or
+    /// [`Self::from_reader`] instead, or perhaps one of the standalone
+    /// functions in this module are sufficient.
     pub fn new(reader: R) -> Self {
         Self { reader }
+    }
+
+    /// Should be called to indicate that the object has been fully
+    /// deserialized. Returns an error if there are more bytes left.
+    ///
+    /// This will try to read another byte from the underlying reader. If it
+    /// gets another byte, returns [`Error::TrailingBytes`]. It also propagates
+    /// I/O errors that happen during this attempt.
+    ///
+    /// This behavior also means that the corresponding reader should be
+    /// considered exhausted after this point. If you intend to use the reader
+    /// after this, you probably shouldn't call this.
+    pub fn end(&mut self) -> Result<(), Error> {
+        match self.reader.next_byte()? {
+            Some(_) => Err(Error::TrailingBytes),
+            None => Ok(()),
+        }
+    }
+
+    /// Helper method to deserialize one object and then call `end`.
+    fn read_to_end<T: de::Deserialize<'de>>(&mut self) -> Result<T, Error> {
+        let value = T::deserialize(&mut *self)?;
+        self.end()?;
+        Ok(value)
     }
 
     fn read_leb128<T: leb128::Leb128>(&mut self) -> Result<T, Error> {
@@ -65,12 +94,12 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     }
 }
 
-impl<'de> Deserializer<&'de [u8]> {
+impl<'de> Deserializer<SliceRead<'de>> {
     /// Creates a new deserializer that reads a value from a slice.
     ///
-    /// This is useful over [`from_slice`] when you want the remainder of the
-    /// slice instead of an error or want to deserialize a sequence of elements
-    /// manually.
+    /// This is gives more control than [`from_slice`], insofar that it allows
+    /// manual handling of the remainder or continuing deserialization after the
+    /// last object.
     ///
     /// # Examples
     ///
@@ -93,12 +122,12 @@ impl<'de> Deserializer<&'de [u8]> {
     /// # assert_eq!(example().expect("must succeed"), vec![1u32, 2, 3, 4, 5]);
     /// ```
     pub fn from_slice(buf: &'de [u8]) -> Self {
-        Self::new(buf)
+        Self::new(SliceRead::new(buf))
     }
 
     /// Gets the remaining unread part of the slice.
     pub fn remainder(&self) -> &'de [u8] {
-        self.reader
+        self.reader.slice
     }
 }
 
@@ -107,6 +136,32 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     ///
     /// If you're working with a byte slice, it is more efficient to use
     /// [`from_slice`].
+    ///
+    /// This is gives more control than [`from_reader`], insofar that it allows
+    /// manual handling of the remainder or continuing deserialization after the
+    /// last object.
+    ///
+    /// # Examples
+    ///
+    /// Manually deserialize an unprefixed variable-length sequence:
+    ///
+    /// ```
+    /// # use serde_steph::de::{Deserializer, Error};
+    /// # use serde::de::Deserialize;
+    /// # fn example() -> Vec<u32> {
+    /// # let buf = [1u8, 2, 3, 4, 5];
+    /// # let mut reader = buf.as_slice();
+    /// // out will be used to collect the data
+    /// // this terminates on any error for simplicity
+    /// let mut out = Vec::new();
+    /// let mut de = Deserializer::from_reader(&mut reader);
+    /// while let Ok(v) = u32::deserialize(&mut de) {
+    ///     out.push(v);
+    /// }
+    /// # out
+    /// # }
+    /// # assert_eq!(example(), vec![1u32, 2, 3, 4, 5]);
+    /// ```
     pub fn from_reader(reader: R) -> Self {
         Self::new(IoRead::new(reader))
     }
@@ -115,9 +170,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     pub fn into_reader(self) -> R {
         self.reader.inner
     }
-}
 
-impl<R: io::Read> Deserializer<IoRead<R>> {
     /// Gets a reference to the inner reader.
     pub fn as_reader(&mut self) -> &mut R {
         &mut self.reader.inner
