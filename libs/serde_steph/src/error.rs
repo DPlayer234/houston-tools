@@ -1,14 +1,30 @@
+//! Error handling types.
+//!
+//! The serde docs suggest a data format should expose one shared error type.
+//! So... we do. And also a result type.
+
 use std::{fmt, io};
 
-use serde::de;
+use serde::{de, ser};
 
-/// Potential errors to encounter when deserializing binary data.
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Potential errors to encounter when serializing or deserializing binary data.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    /// The error originated from the [`io::Read`] implementation.
+    /// Another reason provided by the object implementation.
+    #[error("{0}")]
+    Custom(String),
+    /// The error originated from the [`io::Write`] or [`io::Read`]
+    /// implementation.
     #[error(transparent)]
     Io(#[from] io::Error),
+
+    /// A sequence or map tried to serialize itself without a length hint.
+    #[error("sequences and maps must provide a length hint")]
+    LengthRequired,
+
     /// Tries to deserialize a [`str`] value but it contained invalid UTF-8.
     #[error("invalid utf-8 in data for string")]
     InvalidUtf8,
@@ -24,14 +40,22 @@ pub enum Error {
     /// A type tried to use [`de::Deserializer::deserialize_any`].
     #[error("types deserializing via any are unsupported")]
     AnyUnsupported,
-    /// While reading LEB128 integer data, the data overflowed the target type.
+    /// While deserializing LEB128 integer data, the data overflowed the target
+    /// type.
     #[error("LEB encoded integer overflows target type")]
     IntegerOverflow,
+    /// Past the expected end of the deserialized object were trailing bytes.
     #[error("trailing bytes past the end of the deserialized value")]
     TrailingBytes,
-    /// Another reason provided by the deserializing object.
-    #[error("{0}")]
-    Custom(String),
+}
+
+impl ser::Error for Error {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: fmt::Display,
+    {
+        Self::Custom(msg.to_string())
+    }
 }
 
 impl de::Error for Error {

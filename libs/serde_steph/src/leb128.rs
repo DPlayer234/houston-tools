@@ -1,14 +1,19 @@
 //! Generic LEB128 variable-length encoding/decoding.
 //!
 //! This is used as the serialized format for integers, excluding [`u8`] and
-//! [`i8`] which are encoded as just single bytes.
+//! [`i8`], which are encoded as just single bytes.
 //!
 //! See also: <https://en.wikipedia.org/wiki/LEB128>
+//!
+//! This module is an internal implementation detail, but can technically be
+//! used through a thin abstraction layer by serializing or deserializing
+//! integers.
 
 use std::io;
 use std::ops::{BitOr, BitOrAssign, Shl, Shr, ShrAssign};
 
-use crate::{de, ser};
+use crate::de;
+use crate::error::{Error, Result};
 
 /// Supports the en-/decoding functions.
 ///
@@ -62,7 +67,7 @@ const fn bitness<T>() -> usize {
     size_of::<T>() * 8
 }
 
-pub fn write<T, W>(writer: W, x: T) -> Result<(), ser::Error>
+pub fn write<T, W>(writer: W, x: T) -> Result<()>
 where
     T: Leb128,
     W: io::Write,
@@ -70,7 +75,7 @@ where
     write_inner(writer, x.into_unsigned())
 }
 
-fn write_inner<T, W>(mut writer: W, mut x: T) -> Result<(), ser::Error>
+fn write_inner<T, W>(mut writer: W, mut x: T) -> Result<()>
 where
     T: Uleb128Encode,
     W: io::Write,
@@ -90,7 +95,7 @@ where
     Ok(writer.write_all(&buf[..i])?)
 }
 
-pub fn read<'de, T, R>(reader: R) -> Result<T, de::Error>
+pub fn read<'de, T, R>(reader: R) -> Result<T>
 where
     T: Leb128,
     R: de::Read<'de>,
@@ -98,7 +103,7 @@ where
     read_inner(reader).map(T::from_unsigned)
 }
 
-fn read_inner<'de, T, R>(mut reader: R) -> Result<T, de::Error>
+fn read_inner<'de, T, R>(mut reader: R) -> Result<T>
 where
     T: Uleb128Encode,
     R: de::Read<'de>,
@@ -113,7 +118,7 @@ where
         let tb = T::from(b & 0x7F);
         let ts = tb << s;
         if ts >> s != tb {
-            return Err(de::Error::IntegerOverflow);
+            return Err(Error::IntegerOverflow);
         }
 
         x |= ts;
@@ -126,7 +131,7 @@ where
         // bit-count of `T`. the compiler can turn this into a hard cutoff
         s += 7;
         if s >= bitness::<T>() {
-            return Err(de::Error::IntegerOverflow);
+            return Err(Error::IntegerOverflow);
         }
     }
 }
@@ -182,7 +187,8 @@ impl_uleb_signed!(
 #[cfg(test)]
 mod tests {
     use super::{read, write};
-    use crate::de::{self, SliceRead};
+    use crate::error::Error;
+    use crate::read::SliceRead;
 
     macro_rules! round_trip {
         ($fn_name:ident, $Ty:ty, $values:expr) => {
@@ -284,7 +290,7 @@ mod tests {
     fn overflow_too_long() {
         assert!(matches!(
             read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x80])),
-            Err(de::Error::IntegerOverflow)
+            Err(Error::IntegerOverflow)
         ));
     }
 
@@ -292,7 +298,7 @@ mod tests {
     fn overflow_too_large() {
         assert!(matches!(
             read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x04])),
-            Err(de::Error::IntegerOverflow)
+            Err(Error::IntegerOverflow)
         ));
     }
 
@@ -301,7 +307,7 @@ mod tests {
         assert!(
             matches!(
                 read::<u16, _>(SliceRead::new(&[0x80, 0x80])),
-                Err(de::Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
+                Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
             ),
             "expected eof error"
         );

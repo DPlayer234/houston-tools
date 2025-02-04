@@ -33,10 +33,13 @@
 //! [^bare]: No, I did not really read the spec and the output likely isn't compatible.
 
 pub mod de;
+mod error;
 mod leb128;
+mod read;
 pub mod ser;
 #[cfg(test)]
 mod tests;
 
-pub use de::{from_reader, from_slice};
-pub use ser::{to_vec, to_writer};
+pub use de::{from_reader, from_slice, Deserializer};
+pub use error::{Error, Result};
+pub use ser::{to_vec, to_writer, Serializer};

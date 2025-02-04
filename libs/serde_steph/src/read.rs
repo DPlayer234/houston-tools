@@ -1,6 +1,8 @@
+//! Exposes a specialized reader trait.
+
 use std::io;
 
-use super::Error;
+use crate::error::{Error, Result};
 
 /// Returns an [`io::Error`] with kind [`io::ErrorKind::UnexpectedEof`].
 fn eof() -> Error {
@@ -17,19 +19,19 @@ fn eof() -> Error {
 /// This trait also allows access to borrowed data if supported at runtime.
 /// `'de` represents that borrowed lifetime and is otherwise unused.
 pub trait Read<'de> {
-    fn next_byte(&mut self) -> Result<Option<u8>, Error>;
+    fn next_byte(&mut self) -> Result<Option<u8>>;
 
     /// Reads a constant size chunk of bytes.
-    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error>;
+    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]>;
 
     /// Reads a chunk of bytes, possibly borrowed from the reader for the
     /// duration of the call.
-    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T, Error>
+    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T>
     where
-        F: FnOnce(&[u8]) -> Result<T, Error>;
+        F: FnOnce(&[u8]) -> Result<T>;
 
     /// Reads a chunk of bytes, returning it as a newly allocated [`Vec`].
-    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error>;
+    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>>;
 
     /// Attempts to read a chunk of bytes, borrowing from the reader.
     ///
@@ -39,7 +41,7 @@ pub trait Read<'de> {
     ///
     /// If [`None`] was returned, calling another reader method with the same
     /// `len` must have the same result as if this method was never called.
-    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8]>> {
         _ = len;
         None
     }
@@ -47,26 +49,26 @@ pub trait Read<'de> {
 
 // this implementation is required so the reader can be reborrowed
 impl<'de, R: Read<'de>> Read<'de> for &mut R {
-    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+    fn next_byte(&mut self) -> Result<Option<u8>> {
         (**self).next_byte()
     }
 
-    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
+    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         (**self).read_bytes()
     }
 
-    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T, Error>
+    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T>
     where
-        F: FnOnce(&[u8]) -> Result<T, Error>,
+        F: FnOnce(&[u8]) -> Result<T>,
     {
         (**self).read_byte_view(len, access)
     }
 
-    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>> {
         (**self).read_byte_vec(len)
     }
 
-    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8]>> {
         (**self).try_read_bytes_borrow(len)
     }
 }
@@ -92,7 +94,7 @@ impl<'de> SliceRead<'de> {
     }
 
     #[inline]
-    fn read_bytes_borrow(&mut self, len: usize) -> Result<&'de [u8], Error> {
+    fn read_bytes_borrow(&mut self, len: usize) -> Result<&'de [u8]> {
         let (out, rem) = self.slice.split_at_checked(len).ok_or_else(eof)?;
         self.slice = rem;
         Ok(out)
@@ -100,28 +102,28 @@ impl<'de> SliceRead<'de> {
 }
 
 impl<'de> Read<'de> for SliceRead<'de> {
-    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+    fn next_byte(&mut self) -> Result<Option<u8>> {
         Ok(self.next_byte_inner())
     }
 
-    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
+    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         let (out, rem) = self.slice.split_first_chunk::<N>().ok_or_else(eof)?;
         self.slice = rem;
         Ok(*out)
     }
 
-    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T, Error>
+    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T>
     where
-        F: FnOnce(&[u8]) -> Result<T, Error>,
+        F: FnOnce(&[u8]) -> Result<T>,
     {
         self.read_bytes_borrow(len).and_then(access)
     }
 
-    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>> {
         self.read_bytes_borrow(len).map(<[u8]>::to_vec)
     }
 
-    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8], Error>> {
+    fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8]>> {
         Some(self.read_bytes_borrow(len))
     }
 }
@@ -142,21 +144,21 @@ impl<R> IoRead<R> {
 }
 
 impl<R: io::Read> Read<'_> for IoRead<R> {
-    fn next_byte(&mut self) -> Result<Option<u8>, Error> {
+    fn next_byte(&mut self) -> Result<Option<u8>> {
         let mut byte = [0u8];
         let read = self.inner.read(&mut byte)?;
         Ok((read != 0).then_some(byte[0]))
     }
 
-    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], Error> {
+    fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         let mut buf = [0u8; N];
         self.inner.read_exact(&mut buf)?;
         Ok(buf)
     }
 
-    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T, Error>
+    fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T>
     where
-        F: FnOnce(&[u8]) -> Result<T, Error>,
+        F: FnOnce(&[u8]) -> Result<T>,
     {
         const STACK: usize = 0x1000;
 
@@ -175,7 +177,7 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
     }
 
     #[inline(never)]
-    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>> {
         use std::io::Read;
 
         // don't allocate too much or incorrect data could lead to a DoS

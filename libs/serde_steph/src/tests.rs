@@ -139,7 +139,7 @@ fn error_eof() {
     assert!(
         matches!(
             from_slice::<Vec<u8>>(&[5, 1, 2, 3, 4]),
-            Err(de::Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
+            Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
         ),
         "expected eof error"
     );
@@ -166,7 +166,7 @@ fn from_slice_excess() {
     let res = from_slice::<String>(&slice).expect_err("must be excess");
 
     assert!(
-        matches!(res, de::Error::TrailingBytes),
+        matches!(res, Error::TrailingBytes),
         "must be trailing bytes error"
     );
 }
