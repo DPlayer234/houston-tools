@@ -42,8 +42,8 @@ pub fn read_button_args(slice: &[u8]) -> Result<ButtonArgs> {
 /// Encodes a [`ButtonArgsRef`] into a buffer.
 ///
 /// This logs errors instead of returning them.
-pub fn write_button_args<W: io::Write>(mut writer: W, args: ButtonArgsRef<'_>) {
-    if let Err(why) = serde_steph::to_writer(&mut writer, &args) {
+pub fn write_button_args<W: io::Write>(writer: W, args: ButtonArgsRef<'_>) {
+    if let Err(why) = serde_steph::to_writer(writer, &args) {
         log::error!("Error [{why:?}] serializing: {args:?}");
     }
 }
