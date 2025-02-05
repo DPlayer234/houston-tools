@@ -7,7 +7,7 @@ use syn::{Attribute, Item, ItemMod, Meta};
 
 use super::command_emit::to_command_option_command;
 use crate::args::SubCommandArgs;
-use crate::util::{ensure_spanned, extract_description};
+use crate::util::{ensure_span, ensure_spanned, extract_description};
 
 pub fn to_command_option_group(
     module: &mut ItemMod,
@@ -70,10 +70,11 @@ pub fn to_command_option_group(
         syn::Error::new_spanned(&module, "a description is required, add a doc comment")
     })?;
 
-    ensure_spanned!(module, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
-    ensure_spanned!(module, (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
+    ensure_spanned!(&module.ident, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
+    ensure_span!(description.span(), (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
     ensure_spanned!(module, (1..=25).contains(&sub_commands.len()) => "there must be 1 to 25 sub commands");
 
+    let description = &*description;
     Ok(quote::quote! {{
         #(#use_items)*
 

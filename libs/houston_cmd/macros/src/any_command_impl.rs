@@ -11,7 +11,7 @@ pub fn to_command_shared(
     args: AnyCommandArgs,
 ) -> syn::Result<TokenStream> {
     let warning = (args.contexts.is_none() || args.integration_types.is_none())
-        .then(|| quote::quote!{
+        .then(|| quote::quote! {
             #[allow(clippy::let_unit_binding)]
             const _: () = {
                 #[deprecated(note = "specify both `contexts` and `integration_types`, discord's defaults can be faulty")]

@@ -1,5 +1,7 @@
+use darling::util::SpannedValue;
 use proc_macro2::TokenStream;
 use syn::fold::Fold;
+use syn::spanned::Spanned;
 use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue};
 
 pub fn quote_map_option<T>(value: Option<T>, f: impl FnOnce(T) -> TokenStream) -> TokenStream {
@@ -12,10 +14,10 @@ pub fn quote_map_option<T>(value: Option<T>, f: impl FnOnce(T) -> TokenStream) -
     }
 }
 
-pub fn extract_description(attrs: &[Attribute]) -> Option<String> {
+pub fn extract_description(attrs: &[Attribute]) -> Option<SpannedValue<String>> {
     let ident = quote::format_ident!("doc");
 
-    let mut desc = String::new();
+    let mut res = None;
     for a in attrs {
         if let Meta::NameValue(MetaNameValue {
             path,
@@ -28,6 +30,7 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<String> {
         }) = &a.meta
         {
             if path.is_ident(&ident) {
+                let desc = res.get_or_insert(SpannedValue::new(String::new(), a.span()));
                 if !desc.is_empty() {
                     desc.push(' ');
                 }
@@ -37,7 +40,7 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<String> {
         }
     }
 
-    (!desc.is_empty()).then_some(desc)
+    res
 }
 
 pub struct FoldLifetimeAsStatic;
@@ -45,6 +48,14 @@ impl Fold for FoldLifetimeAsStatic {
     fn fold_lifetime(&mut self, _i: syn::Lifetime) -> syn::Lifetime {
         syn::parse_quote! { 'static }
     }
+}
+
+macro_rules! ensure_span {
+    ($span:expr, $cond:expr => $($t:tt)*) => {
+        if !$cond {
+            return Err(syn::Error::new($span, format_args!($($t)*)))
+        }
+    };
 }
 
 macro_rules! ensure_spanned {
@@ -55,4 +66,4 @@ macro_rules! ensure_spanned {
     };
 }
 
-pub(crate) use ensure_spanned;
+pub(crate) use {ensure_span, ensure_spanned};

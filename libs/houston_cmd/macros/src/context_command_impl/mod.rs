@@ -76,7 +76,7 @@ fn to_command_option_command(
 
     let arg_ty = &arg.ty;
 
-    Ok(quote::quote! {
+    Ok(quote::quote_spanned! {func.sig.output.span()=>
         ::houston_cmd::model::CommandOption {
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(""),

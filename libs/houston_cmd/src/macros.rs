@@ -38,6 +38,7 @@ macro_rules! create_slash_argument {
             $($body)*,
             required: $req,
             choices: <$ty as $crate::SlashArg>::choices,
+            #[allow(unnecessary_cast)]
             type_setter: |c| <$ty as $crate::SlashArg>::set_options(c) $($setter)*,
         }
     };

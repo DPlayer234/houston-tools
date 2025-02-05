@@ -1,3 +1,4 @@
+use darling::util::SpannedValue;
 use syn::punctuated::Punctuated;
 use syn::{Ident, Lit, LitInt, Path, Token};
 
@@ -31,7 +32,7 @@ pub struct AnyCommandArgs {
 #[derive(Debug, darling::FromMeta)]
 pub struct ParameterArgs {
     pub name: Option<String>,
-    pub doc: String,
+    pub doc: SpannedValue<String>,
     pub autocomplete: Option<Path>,
     pub min: Option<Lit>,
     pub max: Option<Lit>,
