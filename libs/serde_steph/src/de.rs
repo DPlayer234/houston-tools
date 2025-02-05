@@ -64,17 +64,18 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     /// Should be called to indicate that the object has been fully
     /// deserialized. Returns an error if there are more bytes left.
     ///
-    /// This will try to read another byte from the underlying reader. If it
-    /// gets another byte, returns [`Error::TrailingBytes`]. It also propagates
-    /// I/O errors that happen during this attempt.
+    /// This will try to read from the underlying reader. If it succeeds to get
+    /// more bytes, returns [`Error::TrailingBytes`]. It also propagates I/O
+    /// errors that happen during this attempt.
     ///
     /// This behavior also means that the corresponding reader should be
     /// considered exhausted after this point. If you intend to use the reader
     /// after this, you probably shouldn't call this.
     pub fn end(&mut self) -> Result<()> {
-        match self.reader.next_byte()? {
-            Some(_) => Err(Error::TrailingBytes),
-            None => Ok(()),
+        if self.reader.read(&mut [0u8])? == 0 {
+            Ok(())
+        } else {
+            Err(Error::TrailingBytes)
         }
     }
 
@@ -472,6 +473,8 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
 /// Provides access to a sequence with length prefix.
 struct ListAccess<'a, R> {
     deserializer: &'a mut Deserializer<R>,
+    // don't use for size hints. this may come from the deserialized data,
+    // and if used as a size hint, could trigger a massive allocation.
     len: usize,
 }
 
@@ -493,10 +496,6 @@ impl<'de, R: Read<'de>> de::SeqAccess<'de> for ListAccess<'_, R> {
             self.len -= 1;
             Ok(Some(seed.deserialize(&mut *self.deserializer)?))
         }
-    }
-
-    fn size_hint(&self) -> Option<usize> {
-        Some(self.len)
     }
 }
 
@@ -520,10 +519,6 @@ impl<'de, R: Read<'de>> de::MapAccess<'de> for ListAccess<'_, R> {
         V: de::DeserializeSeed<'de>,
     {
         seed.deserialize(&mut *self.deserializer)
-    }
-
-    fn size_hint(&self) -> Option<usize> {
-        Some(self.len)
     }
 }
 

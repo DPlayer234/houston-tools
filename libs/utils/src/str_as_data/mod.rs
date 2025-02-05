@@ -23,8 +23,16 @@ mod tests;
 pub enum Error {
     /// The data was invalid.
     #[error("input data is invalid")]
+    #[deprecated = "not returned anymore, to be removed"]
     Invalid,
     /// The written buffer returned an error.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error("length invalid for metadata")]
+    LenMismatch,
+    #[error("prefix or suffix invalid for data format")]
+    PrefixSuffix,
+    #[error("content char code out of range for format")]
+    ContentFormat,
 }

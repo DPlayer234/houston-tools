@@ -126,7 +126,7 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
 /// input.
 fn strip_input(s: &str) -> Result<(bool, &str), Error> {
     // strip the end marker
-    let s = s.strip_suffix('&').ok_or(Error::Invalid)?;
+    let s = s.strip_suffix('&').ok_or(Error::PrefixSuffix)?;
 
     // the start marker is & if the last byte is included
     s.strip_prefix('&')
@@ -134,7 +134,7 @@ fn strip_input(s: &str) -> Result<(bool, &str), Error> {
         // otherwise, % may be used to indicate the last byte is skipped
         .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
         .filter(|(skip_last, s)| !skip_last || !s.is_empty())
-        .ok_or(Error::Invalid)
+        .ok_or(Error::PrefixSuffix)
 }
 
 const OFFSET: u32 = 0xE000 - 0xD800;
@@ -148,7 +148,7 @@ fn char_to_bytes(c: char) -> Result<[u8; 2], Error> {
     // char codes greater than 0x107FF would wrap around
     match u16::try_from(int) {
         Ok(i) => Ok(i.to_le_bytes()),
-        Err(_) => Err(Error::Invalid),
+        Err(_) => Err(Error::ContentFormat),
     }
 }
 

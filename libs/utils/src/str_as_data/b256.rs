@@ -70,7 +70,7 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let input = strip_input(input)?;
 
     for c in input.chars() {
-        let byte = u8::try_from(c).map_err(|_| Error::Invalid)?;
+        let byte = u8::try_from(c).map_err(|_| Error::ContentFormat)?;
         writer.write_all(&[byte])?;
     }
 
@@ -83,5 +83,5 @@ fn strip_input(input: &str) -> Result<&str, Error> {
         .strip_prefix('#')
         // strip the end marker
         .and_then(|s| s.strip_suffix('&'))
-        .ok_or(Error::Invalid)
+        .ok_or(Error::PrefixSuffix)
 }

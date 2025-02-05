@@ -115,7 +115,7 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
             let chunk = code_to_half_chunk(c1);
             writer.write_all(match skip_last {
                 // we never encode anything like this
-                SkipLast::Zero => return Err(Error::Invalid),
+                SkipLast::Zero => return Err(Error::LenMismatch),
                 SkipLast::One => &chunk[..2],
                 SkipLast::Two => &chunk[..1],
             })?;
@@ -135,7 +135,7 @@ enum SkipLast {
 /// Tries to strip an input, returning `skip_last` and the stripped input.
 fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
     // strip the end marker
-    let s = s.strip_suffix('&').ok_or(Error::Invalid)?;
+    let s = s.strip_suffix('&').ok_or(Error::PrefixSuffix)?;
 
     if let Some(s) = s.strip_prefix('A') {
         return Ok((SkipLast::Zero, s));
@@ -143,7 +143,7 @@ fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
 
     if let Some(s) = s.strip_prefix('B') {
         if s.is_empty() {
-            return Err(Error::Invalid);
+            return Err(Error::LenMismatch);
         }
 
         return Ok((SkipLast::One, s));
@@ -151,13 +151,13 @@ fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
 
     if let Some(s) = s.strip_prefix('C') {
         if s.is_empty() {
-            return Err(Error::Invalid);
+            return Err(Error::LenMismatch);
         }
 
         return Ok((SkipLast::Two, s));
     }
 
-    Err(Error::Invalid)
+    Err(Error::PrefixSuffix)
 }
 
 fn pack_code(prefix: u16, suffix: u8) -> u32 {
@@ -214,7 +214,7 @@ fn char_to_code(c: char) -> Result<u32, Error> {
     };
 
     if code > MAX_CODE {
-        Err(Error::Invalid)
+        Err(Error::ContentFormat)
     } else {
         Ok(code)
     }

@@ -18,9 +18,7 @@ fn eof() -> Error {
 ///
 /// This trait also allows access to borrowed data if supported at runtime.
 /// `'de` represents that borrowed lifetime and is otherwise unused.
-pub trait Read<'de> {
-    fn next_byte(&mut self) -> Result<Option<u8>>;
-
+pub trait Read<'de>: io::Read {
     /// Reads a constant size chunk of bytes.
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]>;
 
@@ -49,10 +47,6 @@ pub trait Read<'de> {
 
 // this implementation is required so the reader can be reborrowed
 impl<'de, R: Read<'de>> Read<'de> for &mut R {
-    fn next_byte(&mut self) -> Result<Option<u8>> {
-        (**self).next_byte()
-    }
-
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         (**self).read_bytes()
     }
@@ -87,12 +81,6 @@ impl<'de> SliceRead<'de> {
         Self { slice }
     }
 
-    fn next_byte_inner(&mut self) -> Option<u8> {
-        let (&out, rem) = self.slice.split_first()?;
-        self.slice = rem;
-        Some(out)
-    }
-
     #[inline]
     fn read_bytes_borrow(&mut self, len: usize) -> Result<&'de [u8]> {
         let (out, rem) = self.slice.split_at_checked(len).ok_or_else(eof)?;
@@ -102,10 +90,6 @@ impl<'de> SliceRead<'de> {
 }
 
 impl<'de> Read<'de> for SliceRead<'de> {
-    fn next_byte(&mut self) -> Result<Option<u8>> {
-        Ok(self.next_byte_inner())
-    }
-
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         let (out, rem) = self.slice.split_first_chunk::<N>().ok_or_else(eof)?;
         self.slice = rem;
@@ -128,6 +112,12 @@ impl<'de> Read<'de> for SliceRead<'de> {
     }
 }
 
+impl io::Read for SliceRead<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.slice.read(buf)
+    }
+}
+
 /// Wraps a [`io::Read`] implementation so it can be used as a [`Read`].
 ///
 /// You cannot directly construct this type. Instead use
@@ -144,12 +134,6 @@ impl<R> IoRead<R> {
 }
 
 impl<R: io::Read> Read<'_> for IoRead<R> {
-    fn next_byte(&mut self) -> Result<Option<u8>> {
-        let mut byte = [0u8];
-        let read = self.inner.read(&mut byte)?;
-        Ok((read != 0).then_some(byte[0]))
-    }
-
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]> {
         let mut buf = [0u8; N];
         self.inner.read_exact(&mut buf)?;
@@ -191,5 +175,11 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
         } else {
             Err(eof())
         }
+    }
+}
+
+impl<R: io::Read> io::Read for IoRead<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(buf)
     }
 }
