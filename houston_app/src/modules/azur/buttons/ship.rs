@@ -19,9 +19,7 @@ pub struct View {
 }
 
 /// The affinity used to calculate stat values.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ViewAffinity {
     Neutral,
     Love,
