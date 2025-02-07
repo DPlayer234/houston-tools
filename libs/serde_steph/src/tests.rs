@@ -81,6 +81,18 @@ fn round_trip_tuple() {
     assert_all_equal([
         round_trip(&(87654321i32, 54321u16)),
         round_trip(&Tuple(87654321i32, 54321u16)),
+    ]);
+
+    assert_all_equal([
+        round_trip(&(3u32, 87654321i32, 54321u16)),
+        round_trip(&Enum::Tuple(87654321i32, 54321u16)),
+    ]);
+}
+
+#[test]
+fn round_trip_struct() {
+    assert_all_equal([
+        round_trip(&(2usize, 87654321i32, 54321u16)),
         round_trip(&Struct {
             a: 87654321i32,
             b: 54321u16,
@@ -88,16 +100,11 @@ fn round_trip_tuple() {
     ]);
 
     assert_all_equal([
-        round_trip(&(2u32, 87654321i32, 54321u16)),
+        round_trip(&(2u32, 2usize, 87654321i32, 54321u16)),
         round_trip(&Enum::Struct {
             a: 87654321i32,
             b: 54321u16,
         }),
-    ]);
-
-    assert_all_equal([
-        round_trip(&(3u32, 87654321i32, 54321u16)),
-        round_trip(&Enum::Tuple(87654321i32, 54321u16)),
     ]);
 }
 
@@ -132,6 +139,39 @@ fn round_trip_map() {
             ("c".to_owned(), 'C'),
         ])),
     ]);
+}
+
+#[test]
+fn round_trip_addition() {
+    #[derive(Debug, Serialize, Deserialize)]
+    struct V1 {
+        hello: String,
+        code: u32,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct V2 {
+        hello: String,
+        code: u32,
+        #[serde(default)]
+        reason: Option<String>,
+    }
+
+    let buf_v1 = to_vec(&V1 {
+        hello: "hello world".to_owned(),
+        code: 974,
+    })
+    .expect("must serialize");
+
+    let as_v2: V2 = from_slice(&buf_v1).expect("must deserialize");
+    assert_eq!(
+        as_v2,
+        V2 {
+            hello: "hello world".to_owned(),
+            code: 974,
+            reason: None,
+        }
+    );
 }
 
 #[test]

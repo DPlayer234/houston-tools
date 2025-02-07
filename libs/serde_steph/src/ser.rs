@@ -72,8 +72,8 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
     type SerializeTupleStruct = SerializeTuple<'a, W>;
     type SerializeTupleVariant = SerializeTuple<'a, W>;
     type SerializeMap = SerializeMap<'a, W>;
-    type SerializeStruct = SerializeTuple<'a, W>;
-    type SerializeStructVariant = SerializeTuple<'a, W>;
+    type SerializeStruct = SerializeStruct<'a, W>;
+    type SerializeStructVariant = SerializeStruct<'a, W>;
 
     fn serialize_bool(self, v: bool) -> Result<()> {
         self.write_byte(v.into())
@@ -226,8 +226,9 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         Ok(SerializeMap(self))
     }
 
-    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Ok(SerializeTuple(self))
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
+        self.write_leb128(len)?;
+        Ok(SerializeStruct(self))
     }
 
     fn serialize_struct_variant(
@@ -235,10 +236,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         _name: &'static str,
         variant_index: u32,
         _variant: &'static str,
-        _len: usize,
+        len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         self.serialize_u32(variant_index)?;
-        Ok(SerializeTuple(self))
+        self.write_leb128(len)?;
+        Ok(SerializeStruct(self))
     }
 
     fn is_human_readable(&self) -> bool {
@@ -249,6 +251,10 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 /// Allows serializing a sequence of elements as a `list`.
 #[doc(hidden)]
 pub struct SerializeList<'a, W>(&'a mut Serializer<W>);
+
+/// Allows serializing a sequence of elements as a `struct`.
+#[doc(hidden)]
+pub struct SerializeStruct<'a, W>(&'a mut Serializer<W>);
 
 /// Allows serializing a sequence of elements as a `tuple`.
 #[doc(hidden)]
@@ -345,7 +351,7 @@ impl<W: io::Write> ser::SerializeMap for SerializeMap<'_, W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeStruct for SerializeTuple<'_, W> {
+impl<W: io::Write> ser::SerializeStruct for SerializeStruct<'_, W> {
     type Ok = ();
     type Error = Error;
 
@@ -361,7 +367,7 @@ impl<W: io::Write> ser::SerializeStruct for SerializeTuple<'_, W> {
     }
 }
 
-impl<W: io::Write> ser::SerializeStructVariant for SerializeTuple<'_, W> {
+impl<W: io::Write> ser::SerializeStructVariant for SerializeStruct<'_, W> {
     type Ok = ();
     type Error = Error;
 

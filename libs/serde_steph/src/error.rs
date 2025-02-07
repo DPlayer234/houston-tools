@@ -37,6 +37,10 @@ pub enum Error {
     /// Tried to deserialize an [`Option`] with an invalid discriminator.
     #[error("invalid option discriminator")]
     InvalidOption,
+    /// Tried to deserialize a struct or sequence but the [`de::Deserialize`]
+    /// implementations read less elements than specified by the length prefix.
+    #[error("read less seq elements than specified by length prefix")]
+    ShortSeqRead,
     /// A type tried to use [`de::Deserializer::deserialize_any`].
     #[error("types deserializing via any are unsupported")]
     AnyUnsupported,

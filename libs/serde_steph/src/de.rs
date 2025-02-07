@@ -2,7 +2,7 @@
 
 use std::io;
 
-use serde::de;
+use serde::de::{self, Deserializer as _};
 
 use crate::error::{Error, Result};
 use crate::leb128;
@@ -178,6 +178,12 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
 // for every nested Deserialize call. most uses will stilly likely end up having
 // 2 layers of indirection here (&mut Deserializer<&mut Write>) but that's
 // basically the minimum we end up with for the by-value case.
+//
+// note for the implementations for structured data:
+// - `deserialize_seq` is used for length-prefixed data (that is `list` and
+//   `struct` types) and is implemented in terms of `deserialize_tuple`
+// - `deserialize_tuple` is used for data without one, that is... `tuple` types
+// - `deserialize_map` is similar to `deserialize_seq`, just with `visit_map`
 impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     type Error = Error;
 
@@ -385,20 +391,15 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         let len: usize = self.read_leb128()?;
-        visitor.visit_seq(ListAccess {
-            deserializer: self,
-            len,
-        })
+        self.deserialize_tuple(len, visitor)
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple<V>(self, mut len: usize, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ListAccess {
-            deserializer: self,
-            len,
-        })
+        let value = visitor.visit_seq(self.list_access(&mut len))?;
+        ensure_remainder_zero(value, len)
     }
 
     fn deserialize_tuple_struct<V>(
@@ -410,21 +411,16 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ListAccess {
-            deserializer: self,
-            len,
-        })
+        self.deserialize_tuple(len, visitor)
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
     {
-        let len: usize = self.read_leb128()?;
-        visitor.visit_map(ListAccess {
-            deserializer: self,
-            len,
-        })
+        let mut len: usize = self.read_leb128()?;
+        let value = visitor.visit_map(self.list_access(&mut len))?;
+        ensure_remainder_zero(value, len)
     }
 
     fn deserialize_struct<V>(
@@ -436,7 +432,7 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(TupleAccess { deserializer: self })
+        self.deserialize_seq(visitor)
     }
 
     fn deserialize_enum<V>(
@@ -448,7 +444,7 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_enum(TupleAccess { deserializer: self })
+        visitor.visit_enum(self.enum_access())
     }
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value>
@@ -470,16 +466,39 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     }
 }
 
+impl<'de, R: Read<'de>> Deserializer<R> {
+    /// Gets a matching [`ListAccess`].
+    fn list_access<'a>(&'a mut self, len: &'a mut usize) -> ListAccess<'a, R> {
+        ListAccess {
+            deserializer: self,
+            len,
+        }
+    }
+
+    /// Gets a matching [`EnumAccess`].
+    fn enum_access(&mut self) -> EnumAccess<'_, R> {
+        EnumAccess { deserializer: self }
+    }
+}
+
+fn ensure_remainder_zero<T>(value: T, len: usize) -> Result<T> {
+    if len == 0 {
+        Ok(value)
+    } else {
+        Err(Error::ShortSeqRead)
+    }
+}
+
 /// Provides access to a sequence with length prefix.
 struct ListAccess<'a, R> {
     deserializer: &'a mut Deserializer<R>,
     // don't use for size hints. this may come from the deserialized data,
     // and if used as a size hint, could trigger a massive allocation.
-    len: usize,
+    len: &'a mut usize,
 }
 
-/// Provides access to a sequence with well-known length.
-struct TupleAccess<'a, R> {
+/// Provides access to an enum.
+struct EnumAccess<'a, R> {
     deserializer: &'a mut Deserializer<R>,
 }
 
@@ -490,10 +509,10 @@ impl<'de, R: Read<'de>> de::SeqAccess<'de> for ListAccess<'_, R> {
     where
         T: de::DeserializeSeed<'de>,
     {
-        if self.len == 0 {
+        if *self.len == 0 {
             Ok(None)
         } else {
-            self.len -= 1;
+            *self.len -= 1;
             Ok(Some(seed.deserialize(&mut *self.deserializer)?))
         }
     }
@@ -506,10 +525,10 @@ impl<'de, R: Read<'de>> de::MapAccess<'de> for ListAccess<'_, R> {
     where
         K: de::DeserializeSeed<'de>,
     {
-        if self.len == 0 {
+        if *self.len == 0 {
             Ok(None)
         } else {
-            self.len -= 1;
+            *self.len -= 1;
             Ok(Some(seed.deserialize(&mut *self.deserializer)?))
         }
     }
@@ -522,18 +541,7 @@ impl<'de, R: Read<'de>> de::MapAccess<'de> for ListAccess<'_, R> {
     }
 }
 
-impl<'de, R: Read<'de>> de::SeqAccess<'de> for TupleAccess<'_, R> {
-    type Error = Error;
-
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
-    where
-        T: de::DeserializeSeed<'de>,
-    {
-        Ok(Some(seed.deserialize(&mut *self.deserializer)?))
-    }
-}
-
-impl<'de, R: Read<'de>> de::EnumAccess<'de> for TupleAccess<'_, R> {
+impl<'de, R: Read<'de>> de::EnumAccess<'de> for EnumAccess<'_, R> {
     type Error = Error;
     type Variant = Self;
 
@@ -546,7 +554,7 @@ impl<'de, R: Read<'de>> de::EnumAccess<'de> for TupleAccess<'_, R> {
     }
 }
 
-impl<'de, R: Read<'de>> de::VariantAccess<'de> for TupleAccess<'_, R> {
+impl<'de, R: Read<'de>> de::VariantAccess<'de> for EnumAccess<'_, R> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<()> {
@@ -564,16 +572,13 @@ impl<'de, R: Read<'de>> de::VariantAccess<'de> for TupleAccess<'_, R> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(ListAccess {
-            deserializer: self.deserializer,
-            len,
-        })
+        self.deserializer.deserialize_tuple(len, visitor)
     }
 
     fn struct_variant<V>(self, _fields: &'static [&'static str], visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_seq(self)
+        self.deserializer.deserialize_seq(visitor)
     }
 }

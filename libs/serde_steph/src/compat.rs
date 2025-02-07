@@ -3,7 +3,7 @@
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-/// A marker type to reliably reject older versions of the structure on
+/// A marker type to reliably reject older or newer versions of the structure on
 /// deserialization.
 ///
 /// Add a field of this type to your struct, starting with [`VersionTag<0>`],
