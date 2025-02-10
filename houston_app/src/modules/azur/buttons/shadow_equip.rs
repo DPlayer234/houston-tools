@@ -5,6 +5,7 @@ use utils::text::write_str::*;
 use super::ship::View as ShipView;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
+use crate::modules::azur::Config;
 
 /// View a ship's shadow equip.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -17,15 +18,16 @@ impl View {
         Self { inner }
     }
 
-    pub fn create_with_ship<'a>(
+    fn create_with_ship<'a>(
         self,
+        config: &'a Config,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut embed = CreateEmbed::new()
-            .author(super::get_ship_wiki_url(base_ship))
+            .author(config.get_ship_wiki_url(base_ship))
             .color(ship.rarity.color_rgb());
 
         fn format_weapons(weapons: &[Weapon]) -> Option<String> {
@@ -68,9 +70,9 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let ship = ctx
-            .data
-            .azur_lane()
+        let config = ctx.data.config().azur()?;
+        let ship = config
+            .game_data()
             .ship_by_id(self.inner.ship_id)
             .ok_or(AzurParseError::Ship)?;
         Ok(
@@ -79,8 +81,8 @@ impl ButtonMessage for View {
                 .retrofit
                 .and_then(|index| ship.retrofits.get(usize::from(index)))
             {
-                None => self.create_with_ship(ship, None).into(),
-                Some(retrofit) => self.create_with_ship(retrofit, Some(ship)).into(),
+                None => self.create_with_ship(config, ship, None).into(),
+                Some(retrofit) => self.create_with_ship(config, retrofit, Some(ship)).into(),
             },
         )
     }

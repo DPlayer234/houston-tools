@@ -28,7 +28,7 @@ pub mod azur {
 
         let view = buttons::ship::View::new(ship.group_id);
         ctx.send(
-            view.create_with_ship(data, ship, None)
+            view.create_with_ship(data, ship, None)?
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;
@@ -72,7 +72,7 @@ pub mod azur {
 
         let view = buttons::augment::View::new(augment.augment_id);
         ctx.send(
-            view.create_with_augment(data, augment)
+            view.create_with_augment(data, augment)?
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;

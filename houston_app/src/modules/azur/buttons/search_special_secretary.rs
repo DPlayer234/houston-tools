@@ -3,7 +3,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -24,7 +24,7 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn create_with_iter<'a>(
+    fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
         mut iter: impl Iterator<Item = &'a SpecialSecretary>,
@@ -56,9 +56,10 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
+        let config = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(data.azur_lane())
+            .iterate(config.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
         self.create_with_iter(data, filtered)
@@ -79,17 +80,17 @@ impl ButtonMessage for View {
 impl Filter {
     fn iterate<'a>(
         &self,
-        data: &'a HAzurLane,
+        azur: &'a GameData,
     ) -> Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a> {
         match &self.name {
-            Some(name) => self.apply_filter(data, data.special_secretaries_by_prefix(name)),
-            None => self.apply_filter(data, data.special_secretaries().iter()),
+            Some(name) => self.apply_filter(azur, azur.special_secretaries_by_prefix(name)),
+            None => self.apply_filter(azur, azur.special_secretaries().iter()),
         }
     }
 
     fn apply_filter<'a, I>(
         &self,
-        _data: &'a HAzurLane,
+        _azur: &'a GameData,
         iter: I,
     ) -> Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a>
     where

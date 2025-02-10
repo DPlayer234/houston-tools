@@ -1,9 +1,9 @@
-use std::sync::{LazyLock, OnceLock};
+use std::sync::OnceLock;
 
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::DbInitFn;
 use crate::prelude::*;
 
 mod app_emojis;
@@ -45,8 +45,6 @@ pub struct HBotData {
     current_user: OnceLock<CurrentUser>,
     /// The loaded application emojis.
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
-    /// Lazily initialized Azur Lane data.
-    azur_lane: LazyLock<HAzurLane, Box<dyn Send + FnOnce() -> HAzurLane>>,
     /// Database connection.
     database: OnceLock<mongodb::Database>,
 }
@@ -55,22 +53,12 @@ impl HBotData {
     /// Creates a new instance.
     #[must_use]
     pub fn new(config: HBotConfig) -> Self {
-        let data_path = config.azur_lane_data.clone();
         Self {
             config,
             current_user: OnceLock::new(),
             app_emojis: OnceLock::new(),
-            azur_lane: LazyLock::new(match data_path {
-                Some(data_path) => Box::new(move || HAzurLane::load_from(data_path)),
-                None => Box::new(HAzurLane::default),
-            }),
             database: OnceLock::new(),
         }
-    }
-
-    /// Forces initialization of held lazy data.
-    pub fn force_init(&self) {
-        _ = self.azur_lane();
     }
 
     /// Gets the bot configuration.
@@ -110,14 +98,10 @@ impl HBotData {
         res.ok().context("current user already set")
     }
 
-    /// Gets the Azur Lane game data.
-    #[must_use]
-    pub fn azur_lane(&self) -> &HAzurLane {
-        &self.azur_lane
-    }
-
     /// Connects to the database and other needed services.
-    pub async fn connect(&self, init: &crate::modules::Info) -> Result {
+    ///
+    /// Called in a separate task during init.
+    pub async fn connect(&self, inits: impl IntoIterator<Item = DbInitFn>) -> Result {
         if let Some(uri) = &self.config.mongodb_uri {
             let client = mongodb::Client::with_uri_str(uri)
                 .await
@@ -127,7 +111,7 @@ impl HBotData {
                 .default_database()
                 .context("no default database specified")?;
 
-            for init in &init.db_init {
+            for init in inits {
                 init(&db).await?;
             }
 
@@ -143,7 +127,7 @@ impl HBotData {
 
     /// Gets the database connection.
     pub fn database(&self) -> Result<&mongodb::Database> {
-        self.database.get().context("database is not yet connected")
+        self.database.get().context("database is not connected")
     }
 }
 

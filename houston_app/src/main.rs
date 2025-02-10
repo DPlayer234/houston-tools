@@ -53,9 +53,7 @@ async fn main() -> anyhow::Result<()> {
         init.load(&config.bot)?;
 
         let bot_data = Arc::new(HBotData::new(config.bot));
-
-        bot_data.connect(&init).await?;
-        tokio::task::spawn(load_azur_lane(Arc::clone(&bot_data)));
+        tokio::spawn(connect_task(Arc::clone(&bot_data), init.db_init));
 
         let event_handler = HEventHandler {
             ready: OnceReset::new(),
@@ -155,12 +153,10 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    async fn load_azur_lane(bot_data: Arc<HBotData>) {
-        if bot_data.config().azur_lane_data.is_some() {
-            bot_data.force_init();
-            log::info!("Loaded Azur Lane data.");
-        } else {
-            log::trace!("Azur Lane module is disabled.");
+    async fn connect_task(data: Arc<HBotData>, inits: Vec<modules::DbInitFn>) {
+        // this isn't retried since it's not exposed whether the error is retryable
+        if let Err(why) = data.connect(inits).await {
+            log::error!("Failed to connect to MongoDB database: {why:?}");
         }
     }
 

@@ -3,7 +3,7 @@ use azur_lane::ship::*;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::azur::{Config, GameData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -27,9 +27,10 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn create_with_iter<'a>(
+    fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
+        config: &'a Config,
         mut iter: impl Iterator<Item = &'a Augment>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
@@ -47,8 +48,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View augment module...");
 
-        let author = CreateEmbedAuthor::new("Augment Modules")
-            .url(config::azur_lane::equip::AUGMENT_LIST_URL);
+        let author = CreateEmbedAuthor::new("Augment Modules").url(&*config.augment_list_url);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -59,12 +59,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
+        let config = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(data.azur_lane())
+            .iterate(config.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, filtered)
+        self.create_with_iter(data, config, filtered)
     }
 }
 
@@ -82,53 +83,53 @@ impl ButtonMessage for View {
 type FIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
 
 impl Filter {
-    fn iterate<'a>(&self, data: &'a HAzurLane) -> FIter<'a> {
+    fn iterate<'a>(&self, azur: &'a GameData) -> FIter<'a> {
         match &self.name {
-            Some(name) => self.apply_filter(data, data.augments_by_prefix(name.as_str())),
-            None => self.apply_filter(data, data.augments().iter()),
+            Some(name) => self.apply_filter(azur, azur.augments_by_prefix(name.as_str())),
+            None => self.apply_filter(azur, azur.augments().iter()),
         }
     }
 
-    fn apply_filter<'a, I>(&self, data: &'a HAzurLane, iter: I) -> FIter<'a>
+    fn apply_filter<'a, I>(&self, azur: &'a GameData, iter: I) -> FIter<'a>
     where
         I: Iterator<Item = &'a Augment> + 'a,
     {
         fn next_hull_type<'a>(
             f: &Filter,
-            data: &'a HAzurLane,
+            azur: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {
             match f.hull_type {
                 Some(filter) => next_rarity(
                     f,
-                    data,
+                    azur,
                     iter.filter(move |s| match &s.usability {
                         AugmentUsability::HullTypes(h) => h.contains(&filter),
                         AugmentUsability::UniqueShipId(id) => {
-                            data.ship_by_id(*id).is_some_and(|s| s.hull_type == filter)
+                            azur.ship_by_id(*id).is_some_and(|s| s.hull_type == filter)
                         },
                     }),
                 ),
-                None => next_rarity(f, data, iter),
+                None => next_rarity(f, azur, iter),
             }
         }
 
         fn next_rarity<'a>(
             f: &Filter,
-            data: &'a HAzurLane,
+            azur: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {
             match f.rarity {
                 Some(filter) => {
-                    next_unique_ship_id(f, data, iter.filter(move |s| s.rarity == filter))
+                    next_unique_ship_id(f, azur, iter.filter(move |s| s.rarity == filter))
                 },
-                None => next_unique_ship_id(f, data, iter),
+                None => next_unique_ship_id(f, azur, iter),
             }
         }
 
         fn next_unique_ship_id<'a>(
             f: &Filter,
-            _data: &'a HAzurLane,
+            _data: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {
             match f.unique_ship_id {
@@ -139,6 +140,6 @@ impl Filter {
             }
         }
 
-        next_hull_type(self, data, iter)
+        next_hull_type(self, azur, iter)
     }
 }

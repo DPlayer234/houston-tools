@@ -20,10 +20,6 @@ Configuration is supported either via environment variables or a file named `hou
 token = "..."
 
 [bot]
-# optional. when not present, disables the Azur Lane module.
-# relative or absolute path to the data produced by the Azur Lane Data Collector.
-azur_lane_data = "azur_lane_data"
-
 # optional. defaults to 0xDDA0DD
 # sets the color used for most embeds.
 embed_color = 0xDDA0DD
@@ -67,22 +63,6 @@ The bot also has a couple of minigames:
 | minigame tic-tac-toe         | Play tic-tac-toe with someone else. |
 | minigame rock-paper-scissors | Play rock-paper-scissors with someone else. |
 | minigame chess               | Play, uh, "chess" with someone else. |
-
-Additionally, when Azur Lane data is loaded, the azur command becomes available. Commands accepting names support fuzzy autocomplete.
-
-| Command                | Description |
-|:---------------------- |:----------- |
-| azur                   | Information about mobile game Azur Lane. |
-| azur ship              | Shows information about a ship. |
-| azur equip             | Shows information about equipment. |
-| azur augment           | Shows information about an augment module. |
-| azur special-secretary | Shows lines for a special secretary. |
-| azur juustagram-chat   | View Juustagram chats. |
-| azur reload-time       | Calculates the actual reload time for a weapon. |
-| azur search ship       | Searches for ships. |
-| azur search equip      | Searches for equipment. |
-| azur search augment    | Searches for augment modules. |
-| azur search special-secretary | Searches for special secretaries. |
 
 ## Features requiring a database
 
@@ -291,6 +271,32 @@ The following commands are supported in context menus:
 | Command        | Description |
 |:-------------- |:----------- |
 | Server Profile | (User) Equivalent to `/profile`. |
+
+## Azur Lane
+
+Provides access to data collected by the Azur Lane Data Collector via commands on the bot. To enable this, specify the directory with the collected data:
+
+```toml
+[bot.azur]
+# relative or absolute path to the data produced by the Azur Lane Data Collector
+# that is, this points to the folder with `main.json`
+data_data = "azur_lane_data"
+```
+
+The following commands will be enabled:
+
+| Command                | Description |
+|:---------------------- |:----------- |
+| azur ship              | Shows information about a ship. |
+| azur equip             | Shows information about equipment. |
+| azur augment           | Shows information about an augment module. |
+| azur special-secretary | Shows lines for a special secretary. |
+| azur juustagram-chat   | View Juustagram chats. |
+| azur reload-time       | Calculates the actual reload time for a weapon. |
+| azur search ship       | Searches for ships. |
+| azur search equip      | Searches for equipment. |
+| azur search augment    | Searches for augment modules. |
+| azur search special-secretary | Searches for special secretaries. |
 
 ## Logging
 

@@ -35,7 +35,7 @@ mod model_prelude {
     pub use crate::prelude::*;
 }
 
-type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, Result>;
+pub type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, Result>;
 type HCommand = houston_cmd::model::Command;
 
 /// Initialization data.

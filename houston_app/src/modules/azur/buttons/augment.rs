@@ -32,7 +32,8 @@ impl View {
         self,
         data: &'a HBotData,
         augment: &'a Augment,
-    ) -> CreateReply<'a> {
+    ) -> Result<CreateReply<'a>> {
+        let config = data.config().azur()?;
         let description = crate::fmt::azur::AugmentStats::new(augment).to_string();
 
         let embed = CreateEmbed::new()
@@ -76,7 +77,7 @@ impl View {
                     .disabled(true)
             },
             AugmentUsability::UniqueShipId(ship_id) => {
-                if let Some(ship) = data.azur_lane().ship_by_id(*ship_id) {
+                if let Some(ship) = config.game_data().ship_by_id(*ship_id) {
                     let view = super::ship::View::new(ship.group_id).back(self.to_custom_data());
                     let label = format!("For: {}", ship.name);
                     CreateButton::new(view.to_custom_id()).label(truncate(label, 80))
@@ -88,9 +89,9 @@ impl View {
             },
         });
 
-        CreateReply::new()
+        Ok(CreateReply::new()
             .embed(embed)
-            .components(vec![CreateActionRow::buttons(components)])
+            .components(vec![CreateActionRow::buttons(components)]))
     }
 
     /// Creates the field for a skill summary.
@@ -111,11 +112,13 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let augment = ctx
-            .data
-            .azur_lane()
+        let config = ctx.data.config().azur()?;
+        let augment = config
+            .game_data()
             .augment_by_id(self.augment_id)
             .ok_or(AzurParseError::Augment)?;
-        Ok(self.create_with_augment(ctx.data, augment).into())
+
+        self.create_with_augment(ctx.data, augment)
+            .map(EditReply::from)
     }
 }

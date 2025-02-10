@@ -1,11 +1,8 @@
-#![allow(dead_code, reason = "config might be partly unused")]
-use std::path::PathBuf;
-
+use anyhow::Context as _;
 use serde::Deserialize;
 use serenity::model::Color;
 use serenity::secrets::Token;
 
-pub mod azur_lane;
 mod token_parse;
 
 #[derive(Debug, Deserialize)]
@@ -27,11 +24,15 @@ const fn default_embed_color() -> Color {
     Color::new(0xDD_A0_DD)
 }
 
+// `azur` and `perks` fields are pretty big, but boxing them is probably not
+// worth it since this whole struct already gets moved into an `Arc`. At most,
+// when the features are disabled, using boxes would save like 2KiB of RAM, and
+// I doubt that would even be noticed.
 #[derive(Debug, Deserialize)]
 pub struct HBotConfig {
     #[serde(default = "default_embed_color")]
     pub embed_color: Color,
-    pub azur_lane_data: Option<PathBuf>,
+    pub azur: Option<crate::modules::azur::Config>,
     pub mongodb_uri: Option<String>,
     #[serde(default)]
     pub media_react: crate::modules::media_react::Config,
@@ -41,8 +42,11 @@ pub struct HBotConfig {
 }
 
 impl HBotConfig {
+    pub fn azur(&self) -> anyhow::Result<&crate::modules::azur::Config> {
+        self.azur.as_ref().context("azur must be enabled")
+    }
+
     pub fn perks(&self) -> anyhow::Result<&crate::modules::perks::Config> {
-        use anyhow::Context as _;
         self.perks.as_ref().context("perks must be enabled")
     }
 }

@@ -6,6 +6,7 @@ use utils::text::write_str::*;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::discord::escape_markdown;
+use crate::modules::azur::{Config, GameData};
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -32,7 +33,12 @@ impl View {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    pub fn create_with_chat<'a>(mut self, data: &'a HBotData, chat: &'a Chat) -> CreateReply<'a> {
+    fn create_with_chat<'a>(
+        mut self,
+        data: &'a HBotData,
+        config: &'a Config,
+        chat: &'a Chat,
+    ) -> CreateReply<'a> {
         let mut content = String::new();
         let mut components = Vec::new();
 
@@ -59,16 +65,15 @@ impl View {
             components.push(CreateActionRow::buttons(nav_row));
         }
 
-        fn get_sender_name(data: &HBotData, sender_id: u32) -> &str {
+        fn get_sender_name(azur: &GameData, sender_id: u32) -> &str {
             if sender_id == 0 {
                 return "<You>";
             }
 
-            data.azur_lane()
-                .ship_by_id(sender_id)
-                .map_or("<unknown>", |s| &s.name)
+            azur.ship_by_id(sender_id).map_or("<unknown>", |s| &s.name)
         }
 
+        let azur = config.game_data();
         for entry in &chat.entries {
             // if the chat entry does not have the right flag, we skip it
             if !self.flags.contains(&entry.flag) {
@@ -80,13 +85,13 @@ impl View {
                 ChatContent::Message { sender_id, text } => writeln_str!(
                     content,
                     "- **{}:** {}",
-                    get_sender_name(data, *sender_id),
+                    get_sender_name(azur, *sender_id),
                     escape_markdown(text)
                 ),
                 ChatContent::Sticker { sender_id, label } => writeln_str!(
                     content,
                     "- **{}:** {}",
-                    get_sender_name(data, *sender_id),
+                    get_sender_name(azur, *sender_id),
                     label
                 ),
                 ChatContent::System { text } => writeln_str!(content, "- [{}]", text),
@@ -124,13 +129,13 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let chat = ctx
-            .data
-            .azur_lane()
+        let config = ctx.data.config().azur()?;
+        let chat = config
+            .game_data()
             .juustagram_chat_by_id(self.chat_id)
             .ok_or(AzurParseError::JuustagramChat)?;
 
-        let create = self.create_with_chat(ctx.data, chat);
+        let create = self.create_with_chat(ctx.data, config, chat);
         Ok(create.into())
     }
 }

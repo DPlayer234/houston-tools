@@ -1,12 +1,11 @@
 use std::iter;
 
-use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::join;
 use utils::text::write_str::*;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
+use crate::modules::azur::Config;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -50,21 +49,22 @@ impl View {
         data: &'a HBotData,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
-    ) -> CreateReply<'a> {
+    ) -> Result<CreateReply<'a>> {
+        let config = data.config().azur()?;
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(data, ship, base_ship);
+        let (mut embed, rows) = self.with_ship(data, config, ship, base_ship);
 
         let mut create = CreateReply::new();
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
-            if let Some(image_data) = data.azur_lane().get_chibi_image(&skin.image_key) {
+            if let Some(image_data) = config.game_data().get_chibi_image(&skin.image_key) {
                 let filename = format!("{}.webp", skin.image_key);
                 embed = embed.thumbnail(format!("attachment://{}", filename));
                 create = create.attachment(CreateAttachment::bytes(image_data, filename));
             }
         }
 
-        create.embed(embed).components(rows)
+        Ok(create.embed(embed).components(rows))
     }
 
     fn edit_with_ship<'a>(
@@ -72,15 +72,16 @@ impl View {
         ctx: &ButtonContext<'a>,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
-    ) -> EditReply<'a> {
+    ) -> Result<EditReply<'a>> {
+        let config = ctx.data.config().azur()?;
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(ctx.data, ship, base_ship);
+        let (mut embed, rows) = self.with_ship(ctx.data, config, ship, base_ship);
         let mut create = EditReply::new();
 
         // try expressions when
         let base_skin = || {
             let skin = base_ship.skin_by_id(ship.default_skin_id)?;
-            let image = ctx.data.azur_lane().get_chibi_image(&skin.image_key)?;
+            let image = config.game_data().get_chibi_image(&skin.image_key)?;
             Some((skin, image))
         };
 
@@ -97,12 +98,13 @@ impl View {
             create = create.clear_attachments();
         }
 
-        create.embed(embed).components(rows)
+        Ok(create.embed(embed).components(rows))
     }
 
     fn with_ship<'a>(
         mut self,
         data: &'a HBotData,
+        config: &'a Config,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
@@ -117,12 +119,12 @@ impl View {
         );
 
         let embed = CreateEmbed::new()
-            .author(super::get_ship_wiki_url(base_ship))
+            .author(config.get_ship_wiki_url(base_ship))
             .description(description)
             .color(ship.rarity.color_rgb())
             .fields(self.get_stats_field(ship))
-            .fields(self.get_equip_field(ship))
-            .fields(self.get_skills_field(data, ship));
+            .fields(self.get_equip_field(config, ship))
+            .fields(self.get_skills_field(config, ship));
 
         let mut rows = Vec::new();
         self.add_upgrade_row(&mut rows);
@@ -318,7 +320,11 @@ impl View {
     }
 
     /// Creates the embed field that displays the weapon equipment slots.
-    fn get_equip_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
+    fn get_equip_field<'a>(
+        &self,
+        config: &Config,
+        ship: &ShipData,
+    ) -> [SimpleEmbedFieldCreate<'a>; 1] {
         let slots = ship
             .equip_slots
             .iter()
@@ -341,7 +347,8 @@ impl View {
                 if index != 0 {
                     text.push('/');
                 }
-                text.push_str(to_equip_slot_display(kind));
+
+                write_str!(text, "{}", config.get_equip_slot_display(kind));
             }
 
             if mount.preload != 0 {
@@ -378,7 +385,7 @@ impl View {
     /// Creates the embed field that display the skill summary.
     fn get_skills_field<'a>(
         &self,
-        data: &HBotData,
+        config: &Config,
         ship: &ShipData,
     ) -> Option<SimpleEmbedFieldCreate<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
@@ -393,7 +400,7 @@ impl View {
                 write_str!(text, "{} **{}**", s.category.emoji(), s.name);
             }
 
-            let augments = data.azur_lane().augments_by_ship_id(ship.group_id);
+            let augments = config.game_data().augments_by_ship_id(ship.group_id);
             for augment in augments {
                 if !text.is_empty() {
                     text.push('\n');
@@ -408,21 +415,19 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let ship = ctx
-            .data
-            .azur_lane()
+        let config = ctx.data.config().azur()?;
+        let ship = config
+            .game_data()
             .ship_by_id(self.ship_id)
             .ok_or(AzurParseError::Ship)?;
 
-        let edit = match self
+        match self
             .retrofit
             .and_then(|index| ship.retrofits.get(usize::from(index)))
         {
             None => self.edit_with_ship(&ctx, ship, None),
             Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship)),
-        };
-
-        Ok(edit)
+        }
     }
 }
 
@@ -434,32 +439,5 @@ impl ViewAffinity {
             Self::Love => 1.06,
             Self::Oath => 1.12,
         }
-    }
-}
-
-/// Converts the equip slot to a masked link to the appropriate wiki page.
-fn to_equip_slot_display(kind: EquipKind) -> &'static str {
-    use config::azur_lane::equip::*;
-
-    match kind {
-        EquipKind::DestroyerGun => join!("[DD Gun](", DD_GUN_LIST_URL, ")"),
-        EquipKind::LightCruiserGun => join!("[CL Gun](", CL_GUN_LIST_URL, ")"),
-        EquipKind::HeavyCruiserGun => join!("[CA Gun](", CA_GUN_LIST_URL, ")"),
-        EquipKind::LargeCruiserGun => join!("[CB Gun](", CB_GUN_LIST_URL, ")"),
-        EquipKind::BattleshipGun => join!("[BB Gun](", BB_GUN_LIST_URL, ")"),
-        EquipKind::SurfaceTorpedo => join!("[Torpedo](", SURFACE_TORPEDO_LIST_URL, ")"),
-        EquipKind::SubmarineTorpedo => join!("[Torpedo](", SUB_TORPEDO_LIST_URL, ")"),
-        EquipKind::AntiAirGun => join!("[AA Gun](", AA_GUN_LIST_URL, ")"),
-        EquipKind::FuzeAntiAirGun => join!("[AA Gun (Fuze)](", FUZE_AA_GUN_LIST_URL, ")"),
-        EquipKind::Fighter => join!("[Fighter](", FIGHTER_LIST_URL, ")"),
-        EquipKind::DiveBomber => join!("[Dive Bomber](", DIVE_BOMBER_LIST_URL, ")"),
-        EquipKind::TorpedoBomber => join!("[Torpedo Bomber](", TORPEDO_BOMBER_LIST_URL, ")"),
-        EquipKind::SeaPlane => join!("[Seaplane](", SEAPLANE_LIST_URL, ")"),
-        EquipKind::AntiSubWeapon => join!("[ASW](", ANTI_SUB_LIST_URL, ")"),
-        EquipKind::AntiSubAircraft => join!("[ASW Aircraft](", ANTI_SUB_LIST_URL, ")"),
-        EquipKind::Helicopter => join!("[Helicopter](", AUXILIARY_LIST_URL, ")"),
-        EquipKind::Missile => join!("[Missile](", SURFACE_TORPEDO_LIST_URL, ")"),
-        EquipKind::Cargo => join!("[Cargo](", CARGO_LIST_URL, ")"),
-        EquipKind::Auxiliary => join!("[Auxiliary](", AUXILIARY_LIST_URL, ")"),
     }
 }

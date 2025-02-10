@@ -1085,7 +1085,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.8.1"
+version = "2.9.0"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -3352,7 +3352,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utils"
-version = "7.2.0"
+version = "7.1.0"
 dependencies = [
  "anstyle-query",
  "arrayvec",

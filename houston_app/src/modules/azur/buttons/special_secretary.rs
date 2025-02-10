@@ -94,9 +94,9 @@ impl View {
     }
 
     fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> Result<&'a SpecialSecretary> {
-        let secretary = ctx
-            .data
-            .azur_lane()
+        let config = ctx.data.config().azur()?;
+        let secretary = config
+            .game_data()
             .special_secretary_by_id(self.secretary_id)
             .ok_or(AzurParseError::SpecialSecretary)?;
 

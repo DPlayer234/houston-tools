@@ -1,4 +1,13 @@
-use azur_lane::ship::{HullType, ShipData};
+//! Some small guidelines for the API of buttons here:
+//!
+//! - pub [`CreateReply`] returning methods should have as few parameters as
+//!   possible. If possible, don't expose the `Config` struct and just accept
+//!   [`HBotData`], even if it makes the method fallible.
+//! - Private methods should avoid doing duplicate work and be infallible if
+//!   possible -- pass the Config through as an additional parameter if needed
+//! - Builder-style methods >> [`Option`] parameter on `new` function
+
+use azur_lane::ship::HullType;
 
 use crate::buttons::prelude::*;
 
@@ -28,14 +37,6 @@ enum AzurParseError {
     SpecialSecretary,
     #[error("unknown juustagram chat")]
     JuustagramChat,
-}
-
-/// Gets the URL to a ship on the wiki.
-fn get_ship_wiki_url(base_ship: &ShipData) -> CreateEmbedAuthor<'_> {
-    let mut wiki_url = config::azur_lane::WIKI_BASE_URL.to_owned();
-    urlencoding::Encoded::new(&base_ship.name).append_to(&mut wiki_url);
-
-    CreateEmbedAuthor::new(&base_ship.name).url(wiki_url)
 }
 
 fn get_ship_preview_name<'a>(ctx: &ButtonContext<'a>) -> Option<&'a str> {

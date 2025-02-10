@@ -3,7 +3,7 @@ use azur_lane::Faction;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::azur::{Config, GameData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -27,9 +27,10 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn create_with_iter<'a>(
+    fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
+        config: &'a Config,
         mut iter: impl Iterator<Item = &'a Equip>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
@@ -54,8 +55,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View equipment...");
 
-        let author =
-            CreateEmbedAuthor::new("Equipments").url(config::azur_lane::EQUIPMENT_LIST_URL);
+        let author = CreateEmbedAuthor::new("Equipments").url(&*config.equipment_list_url);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -66,12 +66,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
+        let config = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(data.azur_lane())
+            .iterate(config.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, filtered)
+        self.create_with_iter(data, config, filtered)
     }
 }
 
@@ -87,10 +88,10 @@ impl ButtonMessage for View {
 }
 
 impl Filter {
-    fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
+    fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
         match &self.name {
-            Some(name) => self.apply_filter(data.equips_by_prefix(name.as_str())),
-            None => self.apply_filter(data.equips().iter()),
+            Some(name) => self.apply_filter(azur.equips_by_prefix(name.as_str())),
+            None => self.apply_filter(azur.equips().iter()),
         }
     }
 

@@ -15,7 +15,7 @@ type IndexVec = SmallVec<[usize; 2]>;
 
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug, Default)]
-pub struct HAzurLane {
+pub struct GameData {
     data_path: PathBuf,
     ships: Vec<ShipData>,
     equips: Vec<Equip>,
@@ -40,7 +40,7 @@ pub struct HAzurLane {
     chibi_sprite_cache: DashMap<String, Option<Bytes>>,
 }
 
-impl HAzurLane {
+impl GameData {
     /// Constructs extended data from definitions.
     #[must_use]
     pub fn load_from(data_path: PathBuf) -> Self {
@@ -179,6 +179,8 @@ impl HAzurLane {
         this.equip_simsearch.shrink_to_fit();
         this.augment_simsearch.shrink_to_fit();
         this.special_secretaries.shrink_to_fit();
+
+        log::info!("Loaded Azur Lane data.");
         this
     }
 

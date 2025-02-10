@@ -3,7 +3,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::azur::{Config, GameData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -24,17 +24,19 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn create_with_iter<'a>(
+    fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
+        config: &'a Config,
         mut iter: impl Iterator<Item = &'a Chat>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
 
+        let azur = config.game_data();
         for chat in iter.by_ref().take(PAGE_SIZE) {
             let chat_name: Cow<'_, str>;
-            if let Some(ship) = data.azur_lane().ship_by_id(chat.group_id) {
+            if let Some(ship) = azur.ship_by_id(chat.group_id) {
                 writeln_str!(desc, "- **{}** [{}]", chat.name, ship.name);
                 chat_name = format!("{} [{}]", chat.name, ship.name).into();
             } else {
@@ -63,12 +65,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
+        let config = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(data.azur_lane())
+            .iterate(config.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, filtered)
+        self.create_with_iter(data, config, filtered)
     }
 }
 
@@ -84,16 +87,16 @@ impl ButtonMessage for View {
 }
 
 impl Filter {
-    fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a Chat> + 'a> {
+    fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a Chat> + 'a> {
         match &self.ship {
-            Some(id) => self.apply_filter(data, data.juustagram_chats_by_ship_id(*id)),
-            None => self.apply_filter(data, data.juustagram_chats().iter()),
+            Some(id) => self.apply_filter(azur, azur.juustagram_chats_by_ship_id(*id)),
+            None => self.apply_filter(azur, azur.juustagram_chats().iter()),
         }
     }
 
     fn apply_filter<'a, I>(
         &self,
-        _data: &'a HAzurLane,
+        _data: &'a GameData,
         iter: I,
     ) -> Box<dyn Iterator<Item = &'a Chat> + 'a>
     where

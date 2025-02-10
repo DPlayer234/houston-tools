@@ -3,7 +3,7 @@ use azur_lane::Faction;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::data::HAzurLane;
+use crate::modules::azur::{Config, GameData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -28,9 +28,10 @@ impl View {
         Self { page: 0, filter }
     }
 
-    pub fn create_with_iter<'a>(
+    fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
+        config: &'a Config,
         mut iter: impl Iterator<Item = &'a ShipData>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
@@ -57,7 +58,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View ship...");
 
-        let author = CreateEmbedAuthor::new("Ships").url(config::azur_lane::SHIP_LIST_URL);
+        let author = CreateEmbedAuthor::new("Ships").url(&*config.ship_list_url);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -68,12 +69,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
+        let config = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(data.azur_lane())
+            .iterate(config.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, filtered)
+        self.create_with_iter(data, config, filtered)
     }
 }
 
@@ -89,16 +91,16 @@ impl ButtonMessage for View {
 }
 
 impl Filter {
-    fn iterate<'a>(&self, data: &'a HAzurLane) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
+    fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
         match &self.name {
-            Some(name) => self.apply_filter(data, data.ships_by_prefix(name.as_str())),
-            None => self.apply_filter(data, data.ships().iter()),
+            Some(name) => self.apply_filter(azur, azur.ships_by_prefix(name.as_str())),
+            None => self.apply_filter(azur, azur.ships().iter()),
         }
     }
 
     fn apply_filter<'a, I>(
         &self,
-        data: &'a HAzurLane,
+        azur: &'a GameData,
         iter: I,
     ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
     where
@@ -108,12 +110,12 @@ impl Filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
                 fn $fn_name<'a>(
                     f: &Filter,
-                    data: &'a HAzurLane,
+                    azur: &'a GameData,
                     iter: impl Iterator<Item = &'a ShipData> + 'a,
                 ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
                     match f.$field {
-                        Some(filter) => $next(f, data, iter.filter(move |s| s.$field == filter)),
-                        None => $next(f, data, iter),
+                        Some(filter) => $next(f, azur, iter.filter(move |s| s.$field == filter)),
+                        None => $next(f, azur, iter),
                     }
                 }
             };
@@ -125,17 +127,17 @@ impl Filter {
 
         fn next_has_augment<'a>(
             f: &Filter,
-            data: &'a HAzurLane,
+            azur: &'a GameData,
             iter: impl Iterator<Item = &'a ShipData> + 'a,
         ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
             match f.has_augment {
                 Some(filter) => Box::new(iter.filter(move |s| {
-                    data.augments_by_ship_id(s.group_id).next().is_some() == filter
+                    azur.augments_by_ship_id(s.group_id).next().is_some() == filter
                 })),
                 None => Box::new(iter),
             }
         }
 
-        next_faction(self, data, iter)
+        next_faction(self, azur, iter)
     }
 }

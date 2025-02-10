@@ -24,9 +24,9 @@ pub fn to_custom_id(args: ButtonArgsRef<'_>) -> String {
 
 /// Decodes a [`ButtonArgs`] from a custom ID.
 pub fn from_custom_id(id: &str) -> Result<ButtonArgs> {
-    let mut data = StackBuf::new();
-    b20bit::decode(&mut data, id)?;
-    read_button_args(&data)
+    let mut buf = StackBuf::new();
+    b20bit::decode(&mut buf, id)?;
+    read_button_args(&buf)
 }
 
 /// Encodes a [`super::CustomData`] buffer as a custom ID.
