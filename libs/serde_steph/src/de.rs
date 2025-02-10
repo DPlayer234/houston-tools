@@ -52,7 +52,7 @@ pub struct Deserializer<R> {
 }
 
 impl<'de, R: Read<'de>> Deserializer<R> {
-    /// Creates a new deserializer that reads a value from a [`Read`].
+    /// Creates a new deserializer that reads a value from a [`Read<'de>`].
     ///
     /// You are most likely looking for [`Self::from_slice`] or
     /// [`Self::from_reader`] instead, or perhaps one of the standalone
@@ -176,7 +176,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
 
 // implemented by mut because this avoids adding another layer of indirection
 // for every nested Deserialize call. most uses will stilly likely end up having
-// 2 layers of indirection here (&mut Deserializer<&mut Write>) but that's
+// 2 layers of indirection here (&mut Deserializer<&mut Read>) but that's
 // basically the minimum we end up with for the by-value case.
 //
 // note for the implementations for structured data:

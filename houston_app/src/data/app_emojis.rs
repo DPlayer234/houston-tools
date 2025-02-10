@@ -52,14 +52,11 @@ macro_rules! generate {
 
                 Ok(Self {
                     $(
-                        $key: staticify_emoji_name(
-                            match exist.$key {
-                                Some(e) => e,
-                                $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
-                                None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
-                            },
-                            $name
-                        ),
+                        $key: match exist.$key {
+                            Some(e) => staticify_emoji_name(e, $name),
+                            $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
+                            None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
+                        },
                     )*
                 })
             }
@@ -134,7 +131,7 @@ async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
 }
 
 #[inline(never)]
-async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> Result<ReactionType> {
+async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Result<ReactionType> {
     let map = serde_json::json!({
         "name": name,
         "image": png_to_data_url(image_data),
@@ -143,7 +140,7 @@ async fn update_emoji(ctx: &Http, name: &str, image_data: &[u8]) -> Result<React
     let emoji = ctx.create_application_emoji(&map).await?;
 
     log::info!("Added Application Emoji: {}", emoji);
-    Ok(emoji.into())
+    Ok(staticify_emoji_name(emoji.into(), name))
 }
 
 fn png_to_data_url(png: &[u8]) -> String {

@@ -14,9 +14,9 @@ pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ser::Serialize,
 {
-    let mut buf = Vec::new();
-    to_writer(&mut buf, value)?;
-    Ok(buf)
+    let mut ser = Serializer::from_writer(Vec::new());
+    value.serialize(&mut ser)?;
+    Ok(ser.into_writer())
 }
 
 /// Serializes a value to a [`io::Write`].
