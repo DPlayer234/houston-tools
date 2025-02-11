@@ -48,6 +48,11 @@ impl<W: io::Write> Serializer<W> {
         self.writer
     }
 
+    /// Gets a reference to the inner writer.
+    pub fn as_writer(&mut self) -> &mut W {
+        &mut self.writer
+    }
+
     fn write_byte(&mut self, v: u8) -> Result<()> {
         Ok(self.writer.write_all(&[v])?)
     }
@@ -241,6 +246,37 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         self.serialize_u32(variant_index)?;
         self.write_leb128(len)?;
         Ok(SerializeStruct(self))
+    }
+
+    fn collect_str<T>(self, value: &T) -> Result<()>
+    where
+        T: ?Sized + std::fmt::Display,
+    {
+        use io::Write as _;
+
+        // we can't just write to the buffer directly since we need to know the length,
+        // and to know the encoded length of the length, we do need its value.
+        // there's also no way to shift the data generically later so whatever.
+        // aaaanyways:
+        // we try to use a small temporary buffer since large strings are uncommon for
+        // this. on failure (which should only ever be that the buffer is too small), we
+        // instead fall back on `to_string`.
+        let mut buf = [0u8; 256];
+        let mut rem = buf.as_mut_slice();
+
+        if write!(rem, "{value}").is_ok() {
+            // `rem` should only hold the unwritten tail, so slice `buf` to be the written
+            // head and pass that down to the serializer. this could only panic if the
+            // `impl Write for &mut [u8]` is faulty, which i trust it's not
+            let rem_len = rem.len();
+            let len = buf.len() - rem_len;
+            let buf = &buf[..len];
+
+            // str is serialized the same as bytes
+            self.serialize_bytes(buf)
+        } else {
+            self.serialize_bytes(value.to_string().as_bytes())
+        }
     }
 
     fn is_human_readable(&self) -> bool {

@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
+use std::sync::Arc;
 use std::{fs, io};
 
 use azur_lane::equip::*;
@@ -14,12 +15,16 @@ use utils::fuzzy::Search;
 type IndexVec = SmallVec<[usize; 2]>;
 
 /// Extended Azur Lane game data for quicker access.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct GameData {
-    data_path: PathBuf,
+    data_path: Arc<Path>,
+
     ships: Vec<ShipData>,
     equips: Vec<Equip>,
     augments: Vec<Augment>,
+    juustagram_chats: Vec<Chat>,
+    special_secretaries: Vec<SpecialSecretary>,
+
     ship_id_to_index: HashMap<u32, usize>,
     ship_simsearch: Search<()>,
     equip_id_to_index: HashMap<u32, usize>,
@@ -27,12 +32,8 @@ pub struct GameData {
     augment_id_to_index: HashMap<u32, usize>,
     augment_simsearch: Search<()>,
     ship_id_to_augment_indices: HashMap<u32, IndexVec>,
-
-    juustagram_chats: Vec<Chat>,
     juustagram_chat_id_to_index: HashMap<u32, usize>,
     ship_id_to_juustagram_chat_indices: HashMap<u32, IndexVec>,
-
-    special_secretaries: Vec<SpecialSecretary>,
     special_secretary_id_to_index: HashMap<u32, usize>,
     special_secretary_simsearch: Search<()>,
 
@@ -42,7 +43,7 @@ pub struct GameData {
 
 impl GameData {
     /// Constructs extended data from definitions.
-    pub fn load_from(data_path: &Path) -> anyhow::Result<Self> {
+    pub fn load_from(data_path: Arc<Path>) -> anyhow::Result<Self> {
         // loads the actual definition file from disk
         // the error is just a short description of the error
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
@@ -77,9 +78,10 @@ impl GameData {
             }
         }
 
-        let data = load_definitions(data_path)?;
+        let data = load_definitions(&data_path)?;
         let mut this = Self {
-            data_path: data_path.to_path_buf(),
+            data_path,
+            // pre-allocate maps with appropriate capacities
             ship_id_to_index: HashMap::with_capacity(data.ships.len()),
             equip_id_to_index: HashMap::with_capacity(data.equips.len()),
             augment_id_to_index: HashMap::with_capacity(data.augments.len()),
@@ -87,12 +89,18 @@ impl GameData {
             juustagram_chat_id_to_index: HashMap::with_capacity(data.juustagram_chats.len()),
             ship_id_to_juustagram_chat_indices: HashMap::with_capacity(data.juustagram_chats.len()),
             special_secretary_id_to_index: HashMap::with_capacity(data.special_secretaries.len()),
+            // move in vecs
             ships: data.ships,
             equips: data.equips,
             augments: data.augments,
             juustagram_chats: data.juustagram_chats,
             special_secretaries: data.special_secretaries,
-            ..Self::default()
+            // default the rest of the fields
+            ship_simsearch: Search::new(),
+            equip_simsearch: Search::new(),
+            augment_simsearch: Search::new(),
+            special_secretary_simsearch: Search::new(),
+            chibi_sprite_cache: DashMap::new(),
         };
 
         // we trim away "hull_disallowed" equip values that never matter in practice to
@@ -171,8 +179,6 @@ impl GameData {
         this.equip_simsearch.shrink_to_fit();
         this.augment_simsearch.shrink_to_fit();
         this.special_secretaries.shrink_to_fit();
-
-        log::info!("Loaded Azur Lane data.");
         Ok(this)
     }
 
@@ -300,7 +306,7 @@ impl GameData {
         // IMPORTANT: the right-hand side of join may be absolute or relative and can
         // therefore read files outside of `data_path`. Currently, this doesn't
         // take user-input, but this should be considered for the future.
-        let path = utils::join_path!(&self.data_path, "chibi", image_key; "webp");
+        let path = utils::join_path!(&*self.data_path, "chibi", image_key; "webp");
         match fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::path::Path;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::Context as _;
 use azur_lane::ship::ShipData;
@@ -11,14 +11,47 @@ use super::GameData;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
-    data_path: PathBuf,
+    data_path: Arc<Path>,
 
     #[serde(default)]
     pub wiki_urls: WikiUrls,
 
-    /// Stores the loaded game data.
+    /// Stores the lazy-loaded game data.
+    ///
+    /// If this holds [`None`], the data could not be loaded. This state is
+    /// mapped to an error for callers outside this module.
     #[serde(skip)]
     game_data: OnceLock<Option<GameData>>,
+}
+
+impl Config {
+    /// Loads the config. Calling this on the same value will always return the
+    /// same result.
+    ///
+    /// Only one thread will load the config. Concurrent callers will wait for
+    /// it to finish loading. After it has been loaded, future calls will no
+    /// longer block and reuse the results.
+    pub fn load(&self) -> anyhow::Result<LoadedConfig<'_>> {
+        LoadedConfig::new(self)
+    }
+
+    /// Gets or loads the game data.
+    ///
+    /// Only one thread will load the game data, other threads will wait for it
+    /// to be finish loading. Future calls will return the cached data.
+    pub fn game_data(&self) -> anyhow::Result<&GameData> {
+        self.game_data
+            .get_or_init(|| self.load_game_data())
+            .as_ref()
+            .context("failed to load azur lane data")
+    }
+
+    fn load_game_data(&self) -> Option<GameData> {
+        GameData::load_from(Arc::clone(&self.data_path))
+            .inspect(|_| log::info!("Loaded Azur Lane data."))
+            .inspect_err(|why| log::error!("Failed to load Azur Lane data: {why:?}"))
+            .ok()
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -44,12 +77,6 @@ pub struct WikiUrls {
     pub torpedo_bomber_list: Cow<'static, str>,
     pub seaplane_list: Cow<'static, str>,
     pub augment_list: Cow<'static, str>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct LoadedConfig<'a> {
-    pub raw: &'a Config,
-    _unsafe: (),
 }
 
 impl Default for WikiUrls {
@@ -80,31 +107,27 @@ impl Default for WikiUrls {
     }
 }
 
-impl Config {
-    pub fn load(&self) -> anyhow::Result<LoadedConfig<'_>> {
-        LoadedConfig::new(self)
-    }
-
-    pub fn game_data(&self) -> anyhow::Result<&GameData> {
-        self.game_data
-            .get_or_init(|| match GameData::load_from(&self.data_path) {
-                Ok(data) => Some(data),
-                Err(why) => {
-                    log::error!("Failed to load Azur Lane data: {why:?}");
-                    None
-                },
-            })
-            .as_ref()
-            .context("failed to load azur lane data")
-    }
-}
-
 impl WikiUrls {
     pub fn ship<'s>(&self, base_ship: &'s ShipData) -> CreateEmbedAuthor<'s> {
         let mut wiki_url = (*self.ship_base).to_owned();
         urlencoding::Encoded::new(&base_ship.name).append_to(&mut wiki_url);
         CreateEmbedAuthor::new(&base_ship.name).url(wiki_url)
     }
+}
+
+/// Represents a config with loaded game data.
+//
+// Note: this type has a safety invariant for the `raw` field: Its `game_data` field must hold
+// `Some(GameData)` already. If that's not the case, UB may follow the use of this value.
+// Using `LoadedConfig::new` or `Config::load` ensures the data is loaded successfully.
+#[derive(Debug, Clone, Copy)]
+pub struct LoadedConfig<'a> {
+    /// The raw configuration.
+    pub raw: &'a Config,
+
+    // this field only serves to make it explicit that this type has safety invariants for
+    // construction and to avoid constructing it outside of this module.
+    _unsafe: (),
 }
 
 impl<'a> LoadedConfig<'a> {
@@ -133,19 +156,17 @@ impl<'a> LoadedConfig<'a> {
         Self { raw, _unsafe: () }
     }
 
+    /// Gets a reference to the wiki URLs.
     pub fn wiki_urls(self) -> &'a WikiUrls {
         &self.raw.wiki_urls
     }
 
+    /// Gets a reference to the game data.
     pub fn game_data(self) -> &'a GameData {
-        // SAFETY: `new` ensures that the game data is already loaded and not `None`
-        unsafe {
-            self.raw
-                .game_data
-                .get()
-                .unwrap_unchecked()
-                .as_ref()
-                .unwrap_unchecked()
+        match self.raw.game_data.get() {
+            Some(Some(data)) => data,
+            // SAFETY: `new` ensures that the game data is already loaded and not `None`
+            _ => unsafe { std::hint::unreachable_unchecked() },
         }
     }
 }

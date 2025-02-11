@@ -210,3 +210,17 @@ fn from_slice_excess() {
         "must be trailing bytes error"
     );
 }
+
+#[test]
+fn collect_str() {
+    use serde::ser::Serializer as _;
+    let mut ser = Serializer::from_writer(Vec::new());
+    ser.collect_str(&format_args!("hello world {}", 16))
+        .expect("must be able to write");
+
+    assert_eq!(
+        ser.as_writer().as_slice(),
+        b"\x0Ehello world 16",
+        "must have written string"
+    );
+}
