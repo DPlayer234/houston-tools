@@ -33,7 +33,7 @@ pub struct View {
     action: Action,
 }
 
-utils::impl_debug!(struct View { players, action, .. });
+utils::impl_debug!(struct View: { players, action, .. });
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 enum Action {

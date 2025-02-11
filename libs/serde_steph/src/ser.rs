@@ -198,8 +198,7 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq> {
         let len = len.ok_or(Error::LengthRequired)?;
-        self.write_leb128(len)?;
-        Ok(SerializeList(self))
+        Ok(SerializeList(SerializeLen::new(self, len)?))
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
@@ -227,13 +226,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
         let len = len.ok_or(Error::LengthRequired)?;
-        self.write_leb128(len)?;
-        Ok(SerializeMap(self))
+        Ok(SerializeMap(SerializeLen::new(self, len)?))
     }
 
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
-        self.write_leb128(len)?;
-        Ok(SerializeStruct(self))
+        Ok(SerializeStruct(SerializeLen::new(self, len)?))
     }
 
     fn serialize_struct_variant(
@@ -244,8 +241,7 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         self.serialize_u32(variant_index)?;
-        self.write_leb128(len)?;
-        Ok(SerializeStruct(self))
+        Ok(SerializeStruct(SerializeLen::new(self, len)?))
     }
 
     fn collect_str<T>(self, value: &T) -> Result<()>
@@ -286,11 +282,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
 /// Allows serializing a sequence of elements as a `list`.
 #[doc(hidden)]
-pub struct SerializeList<'a, W>(&'a mut Serializer<W>);
+pub struct SerializeList<'a, W>(SerializeLen<'a, W>);
 
 /// Allows serializing a sequence of elements as a `struct`.
 #[doc(hidden)]
-pub struct SerializeStruct<'a, W>(&'a mut Serializer<W>);
+pub struct SerializeStruct<'a, W>(SerializeLen<'a, W>);
 
 /// Allows serializing a sequence of elements as a `tuple`.
 #[doc(hidden)]
@@ -298,7 +294,43 @@ pub struct SerializeTuple<'a, W>(&'a mut Serializer<W>);
 
 /// Allows serializing a sequence of elements as a `map`.
 #[doc(hidden)]
-pub struct SerializeMap<'a, W>(&'a mut Serializer<W>);
+pub struct SerializeMap<'a, W>(SerializeLen<'a, W>);
+
+/// Helper to serialize values with a length prefix.
+struct SerializeLen<'a, W> {
+    serializer: &'a mut Serializer<W>,
+    len: usize,
+}
+
+impl<'a, W: io::Write> SerializeLen<'a, W> {
+    /// Creates a new instance and writes the length prefix.
+    fn new(serializer: &'a mut Serializer<W>, len: usize) -> Result<Self> {
+        serializer.write_leb128(len)?;
+        Ok(Self { serializer, len })
+    }
+
+    /// Serializes a value and decrements the remaining counter.
+    fn serialize_value<T>(&mut self, value: &T) -> Result<()>
+    where
+        T: ?Sized + ser::Serialize,
+    {
+        if self.len != 0 {
+            self.len -= 1;
+            value.serialize(&mut *self.serializer)
+        } else {
+            Err(Error::LengthIncorrect)
+        }
+    }
+
+    /// Validates that the correct amount of values was written.
+    fn end(self) -> Result<()> {
+        if self.len == 0 {
+            Ok(())
+        } else {
+            Err(Error::LengthIncorrect)
+        }
+    }
+}
 
 impl<W: io::Write> ser::SerializeSeq for SerializeList<'_, W> {
     type Ok = ();
@@ -308,11 +340,11 @@ impl<W: io::Write> ser::SerializeSeq for SerializeList<'_, W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(&mut *self.0)
+        self.0.serialize_value(value)
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        self.0.end()
     }
 }
 
@@ -372,18 +404,18 @@ impl<W: io::Write> ser::SerializeMap for SerializeMap<'_, W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        key.serialize(&mut *self.0)
+        self.0.serialize_value(key)
     }
 
     fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(&mut *self.0)
+        value.serialize(&mut *self.0.serializer)
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        self.0.end()
     }
 }
 
@@ -395,11 +427,11 @@ impl<W: io::Write> ser::SerializeStruct for SerializeStruct<'_, W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(&mut *self.0)
+        self.0.serialize_value(value)
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        self.0.end()
     }
 }
 
@@ -411,10 +443,10 @@ impl<W: io::Write> ser::SerializeStructVariant for SerializeStruct<'_, W> {
     where
         T: ?Sized + ser::Serialize,
     {
-        value.serialize(&mut *self.0)
+        self.0.serialize_value(value)
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        self.0.end()
     }
 }

@@ -16,8 +16,8 @@ struct State {
     choice: Option<Choice>,
 }
 
-utils::impl_debug!(struct View { states, .. });
-utils::impl_debug!(struct State { user, .. });
+utils::impl_debug!(struct View: { states, .. });
+utils::impl_debug!(struct State: { user, .. });
 
 impl State {
     fn new(user: UserId) -> Self {

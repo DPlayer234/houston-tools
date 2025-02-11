@@ -181,7 +181,7 @@ macro_rules! impl_op_via_assign {
 /// }
 ///
 /// // no password in the Debug output
-/// utils::impl_debug!(struct Login { username, .. });
+/// utils::impl_debug!(struct Login: { username, .. });
 /// ```
 ///
 /// You can also specify generics with custom bounds.
@@ -196,7 +196,7 @@ macro_rules! impl_op_via_assign {
 /// }
 ///
 /// // impl Debug even for T that don't impl Debug
-/// utils::impl_debug!(for[T] struct Raw<T> { ptr, .. });
+/// utils::impl_debug!(for[T] struct Raw<T>: { ptr, .. });
 /// ```
 ///
 /// You will need to repeat bounds on the type:
@@ -207,7 +207,7 @@ macro_rules! impl_op_via_assign {
 ///     buf: Vec<T>,
 /// }
 ///
-/// utils::impl_debug!(for[T: Send + Debug] struct Sender<T> { buf });
+/// utils::impl_debug!(for[T: Send + Debug] struct Sender<T>: { buf });
 /// ```
 ///
 /// Enums are also supported. You will need to list every variant:
@@ -219,7 +219,7 @@ macro_rules! impl_op_via_assign {
 ///     Unknown,
 /// }
 ///
-/// utils::impl_debug!(enum Status {
+/// utils::impl_debug!(enum Status: {
 ///     Int(i),
 ///     String { str },
 ///     Unknown,
@@ -233,7 +233,7 @@ macro_rules! impl_op_via_assign {
 /// ```no_run
 /// struct Block(u64, u64, u64, String);
 ///
-/// utils::impl_debug!(struct Block { 0: _0, 1: _1, 2: _2, .. });
+/// utils::impl_debug!(struct Block: { 0: _0, 1: _1, 2: _2, .. });
 /// ```
 ///
 /// You can also use tuple or unit syntax, but you won't be able to omit fields
@@ -242,11 +242,14 @@ macro_rules! impl_op_via_assign {
 /// ```no_run
 /// struct Chunk(u64, u64, String);
 ///
-/// utils::impl_debug!(struct Chunk(_0, _1, ..));
+/// utils::impl_debug!(struct Chunk: (_0, _1, ..));
 /// ```
 #[macro_export]
 macro_rules! impl_debug {
-    ($(for [$($bound:tt)*])? struct $Ty:tt $($body:tt)?) => {
+    // the colon after the type is needed since $ty can't be followed by $tt or `(`
+    // applied to enums for consistency, even though it isn't needed there
+    // we can't match the type with $tt because that excludes the generics
+    ($(for [$($bound:tt)*])? struct $Ty:ty: $($body:tt)?) => {
         impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 match self {
@@ -256,7 +259,7 @@ macro_rules! impl_debug {
         }
     };
 
-    ($(for [$($bound:tt)*])? enum $Ty:ty { $($body:tt)* }) => {
+    ($(for [$($bound:tt)*])? enum $Ty:ty: { $($body:tt)* }) => {
         impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 $crate::impl_debug!(@enum self, f, () () $($body)*)

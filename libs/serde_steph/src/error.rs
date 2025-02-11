@@ -21,9 +21,13 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] io::Error),
 
-    /// A sequence or map tried to serialize itself without a length hint.
-    #[error("sequences and maps must provide a length hint")]
+    /// A struct, sequence, or map tried to serialize itself without a length.
+    #[error("structs, sequences, and maps must specify a length")]
     LengthRequired,
+    /// A struct, sequence, or map tried to serialize itself with the wrong
+    /// length.
+    #[error("length for struct, sequence, or map was incorrect")]
+    LengthIncorrect,
 
     /// Tries to deserialize a [`str`] value but it contained invalid UTF-8.
     #[error("invalid utf-8 in data for string")]
