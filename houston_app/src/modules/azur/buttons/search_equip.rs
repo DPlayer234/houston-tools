@@ -3,7 +3,7 @@ use azur_lane::Faction;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::{Config, GameData};
+use crate::modules::azur::{LoadedConfig, GameData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -30,7 +30,7 @@ impl View {
     fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         mut iter: impl Iterator<Item = &'a Equip>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
@@ -55,7 +55,8 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View equipment...");
 
-        let author = CreateEmbedAuthor::new("Equipments").url(&*config.wiki_urls.equipment_list);
+        let wiki_url = &*azur.wiki_urls().equipment_list;
+        let author = CreateEmbedAuthor::new("Equipments").url(wiki_url);
 
         let embed = CreateEmbed::new()
             .author(author)
@@ -66,13 +67,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let config = data.config().azur()?;
+        let azur = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(config.game_data())
+            .iterate(azur.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, config, filtered)
+        self.create_with_iter(data, azur, filtered)
     }
 }
 

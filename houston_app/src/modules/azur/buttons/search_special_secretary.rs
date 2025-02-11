@@ -56,10 +56,10 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let config = data.config().azur()?;
+        let azur = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(config.game_data())
+            .iterate(azur.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
         self.create_with_iter(data, filtered)

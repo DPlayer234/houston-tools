@@ -42,8 +42,8 @@ pub struct HBotConfig {
 }
 
 impl HBotConfig {
-    pub fn azur(&self) -> anyhow::Result<&crate::modules::azur::Config> {
-        self.azur.as_ref().context("azur must be enabled")
+    pub fn azur(&self) -> anyhow::Result<crate::modules::azur::LoadedConfig<'_>> {
+        self.azur.as_ref().context("azur must be enabled")?.load()
     }
 
     pub fn perks(&self) -> anyhow::Result<&crate::modules::perks::Config> {

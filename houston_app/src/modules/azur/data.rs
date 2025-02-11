@@ -42,8 +42,7 @@ pub struct GameData {
 
 impl GameData {
     /// Constructs extended data from definitions.
-    #[must_use]
-    pub fn load_from(data_path: PathBuf) -> Self {
+    pub fn load_from(data_path: &Path) -> anyhow::Result<Self> {
         // loads the actual definition file from disk
         // the error is just a short description of the error
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
@@ -78,16 +77,9 @@ impl GameData {
             }
         }
 
-        let data = match load_definitions(&data_path) {
-            Ok(data) => data,
-            Err(err) => {
-                log::error!("No Azur Lane data: {err:?}");
-                return Self::default();
-            },
-        };
-
+        let data = load_definitions(data_path)?;
         let mut this = Self {
-            data_path,
+            data_path: data_path.to_path_buf(),
             ship_id_to_index: HashMap::with_capacity(data.ships.len()),
             equip_id_to_index: HashMap::with_capacity(data.equips.len()),
             augment_id_to_index: HashMap::with_capacity(data.augments.len()),
@@ -181,7 +173,7 @@ impl GameData {
         this.special_secretaries.shrink_to_fit();
 
         log::info!("Loaded Azur Lane data.");
-        this
+        Ok(this)
     }
 
     /// Gets all known ships.

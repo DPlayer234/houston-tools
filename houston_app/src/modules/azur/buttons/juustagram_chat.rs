@@ -6,7 +6,7 @@ use utils::text::write_str::*;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::discord::escape_markdown;
-use crate::modules::azur::{Config, GameData};
+use crate::modules::azur::{LoadedConfig, GameData};
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -36,7 +36,7 @@ impl View {
     fn create_with_chat<'a>(
         mut self,
         data: &'a HBotData,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         chat: &'a Chat,
     ) -> CreateReply<'a> {
         let mut content = String::new();
@@ -73,7 +73,6 @@ impl View {
             azur.ship_by_id(sender_id).map_or("<unknown>", |s| &s.name)
         }
 
-        let azur = config.game_data();
         for entry in &chat.entries {
             // if the chat entry does not have the right flag, we skip it
             if !self.flags.contains(&entry.flag) {
@@ -85,13 +84,13 @@ impl View {
                 ChatContent::Message { sender_id, text } => writeln_str!(
                     content,
                     "- **{}:** {}",
-                    get_sender_name(azur, *sender_id),
+                    get_sender_name(azur.game_data(), *sender_id),
                     escape_markdown(text)
                 ),
                 ChatContent::Sticker { sender_id, label } => writeln_str!(
                     content,
                     "- **{}:** {}",
-                    get_sender_name(azur, *sender_id),
+                    get_sender_name(azur.game_data(), *sender_id),
                     label
                 ),
                 ChatContent::System { text } => writeln_str!(content, "- [{}]", text),
@@ -129,13 +128,13 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let config = ctx.data.config().azur()?;
-        let chat = config
+        let azur = ctx.data.config().azur()?;
+        let chat = azur
             .game_data()
             .juustagram_chat_by_id(self.chat_id)
             .ok_or(AzurParseError::JuustagramChat)?;
 
-        let create = self.create_with_chat(ctx.data, config, chat);
+        let create = self.create_with_chat(ctx.data, azur, chat);
         Ok(create.into())
     }
 }

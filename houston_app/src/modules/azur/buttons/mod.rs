@@ -1,8 +1,7 @@
 //! Some small guidelines for the API of buttons here:
 //!
-//! - pub [`CreateReply`] returning methods should have as few parameters as
-//!   possible. If possible, don't expose the `Config` struct and just accept
-//!   [`HBotData`], even if it makes the method fallible.
+//! - Accept `LoadedConfig` instead of re-grabbing it manually from the bot data
+//!   unless there is no benefit to it.
 //! - Private methods should avoid doing duplicate work and be infallible if
 //!   possible -- pass the Config through as an additional parameter if needed
 //! - Builder-style methods >> [`Option`] parameter on `new` function

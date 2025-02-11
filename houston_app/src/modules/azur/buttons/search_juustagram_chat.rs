@@ -3,7 +3,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::{Config, GameData};
+use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -27,16 +27,15 @@ impl View {
     fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         mut iter: impl Iterator<Item = &'a Chat>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
 
-        let azur = config.game_data();
         for chat in iter.by_ref().take(PAGE_SIZE) {
             let chat_name: Cow<'_, str>;
-            if let Some(ship) = azur.ship_by_id(chat.group_id) {
+            if let Some(ship) = azur.game_data().ship_by_id(chat.group_id) {
                 writeln_str!(desc, "- **{}** [{}]", chat.name, ship.name);
                 chat_name = format!("{} [{}]", chat.name, ship.name).into();
             } else {
@@ -65,13 +64,13 @@ impl View {
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
-        let config = data.config().azur()?;
+        let azur = data.config().azur()?;
         let filtered = self
             .filter
-            .iterate(config.game_data())
+            .iterate(azur.game_data())
             .skip(PAGE_SIZE * usize::from(self.page));
 
-        self.create_with_iter(data, config, filtered)
+        self.create_with_iter(data, azur, filtered)
     }
 }
 

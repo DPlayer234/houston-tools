@@ -5,7 +5,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
 use crate::helper::discord::create_string_select_menu_row;
-use crate::modules::azur::Config;
+use crate::modules::azur::{LoadedConfig, GameData};
 
 /// Views ship lines.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -43,14 +43,14 @@ impl View {
     fn edit_with_ship<'a>(
         self,
         ctx: &ButtonContext<'a>,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> EditReply<'a> {
-        let (mut embed, components) = self.with_ship(config, ship, skin);
+        let (mut embed, components) = self.with_ship(azur, ship, skin);
         let mut create = EditReply::new();
 
-        if let Some(image_data) = config.game_data().get_chibi_image(&skin.image_key) {
+        if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
             embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
 
             if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
@@ -66,7 +66,7 @@ impl View {
 
     fn with_ship<'a>(
         mut self,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
@@ -80,8 +80,8 @@ impl View {
 
         let embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
-            .author(config.wiki_urls.ship(ship))
-            .description(self.part.get_description(config, words));
+            .author(azur.wiki_urls().ship(ship))
+            .description(self.part.get_description(azur.game_data(), words));
 
         let mut components = Vec::new();
 
@@ -163,10 +163,9 @@ impl View {
     fn resolve<'a>(
         &self,
         ctx: &ButtonContext<'a>,
-    ) -> Result<(&'a Config, &'a ShipData, &'a ShipSkin)> {
-        let config = ctx.data.config().azur()?;
-
-        let ship = config
+    ) -> Result<(LoadedConfig<'a>, &'a ShipData, &'a ShipSkin)> {
+        let azur = ctx.data.config().azur()?;
+        let ship = azur
             .game_data()
             .ship_by_id(self.ship_id)
             .ok_or(AzurParseError::Ship)?;
@@ -176,7 +175,7 @@ impl View {
             .get(usize::from(self.skin_index))
             .ok_or(AzurParseError::Ship)?;
 
-        Ok((config, ship, skin))
+        Ok((azur, ship, skin))
     }
 }
 
@@ -234,7 +233,7 @@ macro_rules! impl_view_part_fn {
 
 impl ViewPart {
     /// Creates the embed description for the current state.
-    fn get_description(self, config: &Config, words: &ShipSkinWords) -> String {
+    fn get_description(self, game_data: &GameData, words: &ShipSkinWords) -> String {
         use crate::fmt::discord::escape_markdown;
 
         let mut result = String::new();
@@ -261,7 +260,7 @@ impl ViewPart {
                 write_str!(
                     result,
                     "- **{}:** {}\n",
-                    get_label_for_ship_couple_encourage(config, $opt),
+                    get_label_for_ship_couple_encourage(game_data, $opt),
                     escape_markdown(&$opt.line),
                 );
             };
@@ -304,7 +303,7 @@ impl ButtonMessage for View {
 }
 
 /// Creates a label for a couple line.
-fn get_label_for_ship_couple_encourage(config: &Config, opt: &ShipCoupleEncourage) -> String {
+fn get_label_for_ship_couple_encourage(game_data: &GameData, opt: &ShipCoupleEncourage) -> String {
     fn fmt_sortie_count<'a>(
         label: &str,
         amount: u32,
@@ -330,10 +329,9 @@ fn get_label_for_ship_couple_encourage(config: &Config, opt: &ShipCoupleEncourag
 
     match &opt.condition {
         ShipCouple::ShipGroup(ship_ids) => {
-            let azur = config.game_data();
             let ships = ship_ids
                 .iter()
-                .filter_map(|&id| azur.ship_by_id(id))
+                .filter_map(|&id| game_data.ship_by_id(id))
                 .map(|ship| ship.name.as_str());
 
             if ship_ids.len() == opt.amount.try_into().unwrap_or(0) {

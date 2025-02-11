@@ -6,8 +6,8 @@ macro_rules! make_autocomplete {
             ctx: Context<'a>,
             partial: &'a str,
         ) -> CreateAutocompleteResponse<'a> {
-            if let Some(config) = &ctx.data_ref().config().azur {
-                let choices: Vec<_> = config
+            if let Ok(azur) = ctx.data_ref().config().azur() {
+                let choices: Vec<_> = azur
                     .game_data()
                     .$by_prefix(partial)
                     .take(25)
@@ -36,12 +36,13 @@ pub async fn ship_name_juustagram_chats<'a>(
     ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
-    if let Some(config) = &ctx.data_ref().config().azur {
-        let azur = config.game_data();
+    if let Ok(azur) = ctx.data_ref().config().azur() {
         let choices: Vec<_> = azur
+            .game_data()
             .ships_by_prefix(partial)
             .filter(|s| {
-                azur.juustagram_chats_by_ship_id(s.group_id)
+                azur.game_data()
+                    .juustagram_chats_by_ship_id(s.group_id)
                     .next()
                     .is_some()
             })

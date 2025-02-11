@@ -4,6 +4,7 @@ use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
+use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -30,10 +31,9 @@ impl View {
     /// Modifies the create-reply with a preresolved augment.
     pub fn create_with_augment<'a>(
         self,
-        data: &'a HBotData,
+        azur: LoadedConfig<'a>,
         augment: &'a Augment,
-    ) -> Result<CreateReply<'a>> {
-        let config = data.config().azur()?;
+    ) -> CreateReply<'a> {
         let description = crate::fmt::azur::AugmentStats::new(augment).to_string();
 
         let embed = CreateEmbed::new()
@@ -77,7 +77,7 @@ impl View {
                     .disabled(true)
             },
             AugmentUsability::UniqueShipId(ship_id) => {
-                if let Some(ship) = config.game_data().ship_by_id(*ship_id) {
+                if let Some(ship) = azur.game_data().ship_by_id(*ship_id) {
                     let view = super::ship::View::new(ship.group_id).back(self.to_custom_data());
                     let label = format!("For: {}", ship.name);
                     CreateButton::new(view.to_custom_id()).label(truncate(label, 80))
@@ -89,9 +89,9 @@ impl View {
             },
         });
 
-        Ok(CreateReply::new()
+        CreateReply::new()
             .embed(embed)
-            .components(vec![CreateActionRow::buttons(components)]))
+            .components(vec![CreateActionRow::buttons(components)])
     }
 
     /// Creates the field for a skill summary.
@@ -112,13 +112,12 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let config = ctx.data.config().azur()?;
-        let augment = config
+        let azur = ctx.data.config().azur()?;
+        let augment = azur
             .game_data()
             .augment_by_id(self.augment_id)
             .ok_or(AzurParseError::Augment)?;
 
-        self.create_with_augment(ctx.data, augment)
-            .map(EditReply::from)
+        Ok(self.create_with_augment(azur, augment).into())
     }
 }

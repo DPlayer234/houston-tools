@@ -5,7 +5,7 @@ use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
-use crate::modules::azur::Config;
+use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -93,7 +93,7 @@ impl View {
     /// Modifies the create-reply with preresolved ship data.
     fn edit_with_ship<'a>(
         mut self,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
     ) -> EditReply<'a> {
@@ -102,14 +102,14 @@ impl View {
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
         let mut embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
-            .author(config.wiki_urls.ship(base_ship));
+            .author(azur.wiki_urls().ship(base_ship));
 
         let components = CreateButton::new(self.back.to_custom_id())
             .emoji('⏪')
             .label("Back");
         let mut components = vec![components];
 
-        for (a_index, augment) in config
+        for (a_index, augment) in azur
             .game_data()
             .augments_by_ship_id(ship.group_id)
             .enumerate()
@@ -261,21 +261,22 @@ where
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let config = ctx.data.config().azur()?;
-        let azur = config.game_data();
+        let azur = ctx.data.config().azur()?;
         match &self.source {
             ViewSource::Ship(source) => {
                 let base_ship = azur
+                    .game_data()
                     .ship_by_id(source.ship_id)
                     .ok_or(AzurParseError::Ship)?;
                 let ship = source
                     .retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
                     .unwrap_or(base_ship);
-                Ok(self.edit_with_ship(config, ship, Some(base_ship)))
+                Ok(self.edit_with_ship(azur, ship, Some(base_ship)))
             },
             ViewSource::Augment(augment_id) => {
                 let augment = azur
+                    .game_data()
                     .augment_by_id(*augment_id)
                     .ok_or(AzurParseError::Augment)?;
                 Ok(self.edit_with_augment(augment))

@@ -24,11 +24,12 @@ pub mod azur {
         ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
-        let ship = find::ship(data, name)?;
+        let azur = data.config().azur()?;
+        let ship = find::ship(azur.game_data(), name)?;
 
         let view = buttons::ship::View::new(ship.group_id);
         ctx.send(
-            view.create_with_ship(data, ship, None)?
+            view.create_with_ship(data, azur, ship, None)
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;
@@ -46,7 +47,8 @@ pub mod azur {
         ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
-        let equip = find::equip(data, name)?;
+        let azur = data.config().azur()?;
+        let equip = find::equip(azur.game_data(), name)?;
 
         let view = buttons::equip::View::new(equip.equip_id);
         ctx.send(
@@ -68,11 +70,12 @@ pub mod azur {
         ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
-        let augment = find::augment(data, name)?;
+        let azur = data.config().azur()?;
+        let augment = find::augment(azur.game_data(), name)?;
 
         let view = buttons::augment::View::new(augment.augment_id);
         ctx.send(
-            view.create_with_augment(data, augment)?
+            view.create_with_augment(azur, augment)
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;
@@ -90,7 +93,8 @@ pub mod azur {
         ephemeral: Option<bool>,
     ) -> Result {
         let data = ctx.data_ref();
-        let secretary = find::special_secretary(data, name)?;
+        let azur = data.config().azur()?;
+        let secretary = find::special_secretary(azur.game_data(), name)?;
 
         let view = buttons::special_secretary::View::new(secretary.id);
         ctx.send(
@@ -114,10 +118,11 @@ pub mod azur {
         use buttons::search_juustagram_chat::*;
 
         let data = ctx.data_ref();
+        let azur = data.config().azur()?;
 
         let filter = Filter {
             ship: match ship {
-                Some(ship) => Some(find::ship(data, ship)?.group_id),
+                Some(ship) => Some(find::ship(azur.game_data(), ship)?.group_id),
                 None => None,
             },
         };
@@ -255,9 +260,10 @@ pub mod azur {
             use buttons::search_augment::*;
 
             let data = ctx.data_ref();
+            let azur = data.config().azur()?;
 
             let unique_ship_id = match for_ship {
-                Some(for_ship) => Some(find::ship(data, for_ship)?.group_id),
+                Some(for_ship) => Some(find::ship(azur.game_data(), for_ship)?.group_id),
                 None => None,
             };
 

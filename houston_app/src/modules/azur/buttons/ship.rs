@@ -6,7 +6,8 @@ use utils::text::write_str::*;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
-use crate::modules::azur::Config;
+use crate::modules::azur::config::WikiUrls;
+use crate::modules::azur::LoadedConfig;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -48,41 +49,41 @@ impl View {
     pub fn create_with_ship<'a>(
         self,
         data: &'a HBotData,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
-    ) -> Result<CreateReply<'a>> {
-        let config = data.config().azur()?;
+    ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(data, config, ship, base_ship);
+        let (mut embed, rows) = self.with_ship(data, azur, ship, base_ship);
 
         let mut create = CreateReply::new();
 
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
-            if let Some(image_data) = config.game_data().get_chibi_image(&skin.image_key) {
+            if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
                 let filename = format!("{}.webp", skin.image_key);
                 embed = embed.thumbnail(format!("attachment://{}", filename));
                 create = create.attachment(CreateAttachment::bytes(image_data, filename));
             }
         }
 
-        Ok(create.embed(embed).components(rows))
+        create.embed(embed).components(rows)
     }
 
     fn edit_with_ship<'a>(
         self,
         ctx: &ButtonContext<'a>,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: Option<&'a ShipData>,
-    ) -> Result<EditReply<'a>> {
-        let config = ctx.data.config().azur()?;
+    ) -> EditReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(ctx.data, config, ship, base_ship);
+        let (mut embed, rows) = self.with_ship(ctx.data, azur, ship, base_ship);
         let mut create = EditReply::new();
 
         // try expressions when
         let base_skin = || {
             let skin = base_ship.skin_by_id(ship.default_skin_id)?;
-            let image = config.game_data().get_chibi_image(&skin.image_key)?;
+            let image = azur.game_data().get_chibi_image(&skin.image_key)?;
             Some((skin, image))
         };
 
@@ -99,13 +100,13 @@ impl View {
             create = create.clear_attachments();
         }
 
-        Ok(create.embed(embed).components(rows))
+        create.embed(embed).components(rows)
     }
 
     fn with_ship<'a>(
         mut self,
         data: &'a HBotData,
-        config: &'a Config,
+        azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
@@ -120,12 +121,12 @@ impl View {
         );
 
         let embed = CreateEmbed::new()
-            .author(config.wiki_urls.ship(base_ship))
+            .author(azur.wiki_urls().ship(base_ship))
             .description(description)
             .color(ship.rarity.color_rgb())
             .fields(self.get_stats_field(ship))
-            .fields(self.get_equip_field(config, ship))
-            .fields(self.get_skills_field(config, ship));
+            .fields(self.get_equip_field(azur, ship))
+            .fields(self.get_skills_field(azur, ship));
 
         let mut rows = Vec::new();
         self.add_upgrade_row(&mut rows);
@@ -323,7 +324,7 @@ impl View {
     /// Creates the embed field that displays the weapon equipment slots.
     fn get_equip_field<'a>(
         &self,
-        config: &Config,
+        azur: LoadedConfig<'a>,
         ship: &ShipData,
     ) -> [SimpleEmbedFieldCreate<'a>; 1] {
         let slots = ship
@@ -349,7 +350,7 @@ impl View {
                     text.push('/');
                 }
 
-                write_str!(text, "{}", equip_slot_display(config, kind));
+                write_str!(text, "{}", equip_slot_display(azur.wiki_urls(), kind));
             }
 
             if mount.preload != 0 {
@@ -386,7 +387,7 @@ impl View {
     /// Creates the embed field that display the skill summary.
     fn get_skills_field<'a>(
         &self,
-        config: &Config,
+        azur: LoadedConfig<'a>,
         ship: &ShipData,
     ) -> Option<SimpleEmbedFieldCreate<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
@@ -401,7 +402,7 @@ impl View {
                 write_str!(text, "{} **{}**", s.category.emoji(), s.name);
             }
 
-            let augments = config.game_data().augments_by_ship_id(ship.group_id);
+            let augments = azur.game_data().augments_by_ship_id(ship.group_id);
             for augment in augments {
                 if !text.is_empty() {
                     text.push('\n');
@@ -416,8 +417,8 @@ impl View {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let config = ctx.data.config().azur()?;
-        let ship = config
+        let azur = ctx.data.config().azur()?;
+        let ship = azur
             .game_data()
             .ship_by_id(self.ship_id)
             .ok_or(AzurParseError::Ship)?;
@@ -426,8 +427,8 @@ impl ButtonMessage for View {
             .retrofit
             .and_then(|index| ship.retrofits.get(usize::from(index)))
         {
-            None => self.edit_with_ship(&ctx, ship, None),
-            Some(retrofit) => self.edit_with_ship(&ctx, retrofit, Some(ship)),
+            None => Ok(self.edit_with_ship(&ctx, azur, ship, None)),
+            Some(retrofit) => Ok(self.edit_with_ship(&ctx, azur, retrofit, Some(ship))),
         }
     }
 }
@@ -462,8 +463,7 @@ impl fmt::Display for Slot<'_> {
 }
 
 /// Converts the equip slot to a masked link to the appropriate wiki page.
-fn equip_slot_display(config: &Config, kind: EquipKind) -> Slot<'_> {
-    let w = &config.wiki_urls;
+fn equip_slot_display(w: &WikiUrls, kind: EquipKind) -> Slot<'_> {
     match kind {
         EquipKind::DestroyerGun => Slot::new("DD Gun", &w.dd_gun_list),
         EquipKind::LightCruiserGun => Slot::new("CL Gun", &w.cl_gun_list),

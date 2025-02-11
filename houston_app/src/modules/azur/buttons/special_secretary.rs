@@ -92,16 +92,6 @@ impl View {
         self.new_button(|s| &mut s.part, part, |u| u as u16)
             .disabled(disabled)
     }
-
-    fn resolve<'a>(&self, ctx: &ButtonContext<'a>) -> Result<&'a SpecialSecretary> {
-        let config = ctx.data.config().azur()?;
-        let secretary = config
-            .game_data()
-            .special_secretary_by_id(self.secretary_id)
-            .ok_or(AzurParseError::SpecialSecretary)?;
-
-        Ok(secretary)
-    }
 }
 
 /// Higher-order macro to share code logic for [`ViewPart`] functions.
@@ -218,7 +208,12 @@ impl ViewPart {
 
 impl ButtonMessage for View {
     fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let ship = self.resolve(&ctx)?;
+        let azur = ctx.data.config().azur()?;
+        let ship = azur
+            .game_data()
+            .special_secretary_by_id(self.secretary_id)
+            .ok_or(AzurParseError::SpecialSecretary)?;
+
         Ok(self.create_with_sectary(ctx.data, ship).into())
     }
 }
