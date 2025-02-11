@@ -1,5 +1,6 @@
 use azur_lane::secretary::*;
 use mlua::prelude::*;
+use small_fixed_array::{FixedString, TruncatingInto as _};
 
 use super::skin::to_main_screen;
 use crate::{context, CONFIG};
@@ -41,17 +42,19 @@ pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSe
             if text.is_empty() {
                 None
             } else {
-                Some(text)
+                Some(FixedString::<u32>::from_string_trunc(text))
             }
         }};
     }
 
     Ok(SpecialSecretary {
         id,
-        name: data.get("name")?,
-        kind: kind_name,
+        name: data.get::<String>("name")?.trunc_into(),
+        kind: kind_name.trunc_into(),
         login: get!("login"),
-        main_screen: to_main_screen(get!("main").as_deref()).collect(),
+        main_screen: to_main_screen(get!("main").as_deref())
+            .collect::<Vec<_>>()
+            .trunc_into(),
         touch: get!("touch"),
         mission_reminder: get!("mission"),
         mission_complete: get!("mission_complete"),
@@ -70,13 +73,14 @@ pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSe
     })
 }
 
-fn get_chimes(id: u32, data: &LuaTable) -> Option<Box<[String; 24]>> {
+fn get_chimes(id: u32, data: &LuaTable) -> Option<Box<[FixedString; 24]>> {
     macro_rules! get {
         ($key:literal) => {{
             data.get::<String>($key)
                 .with_context(context!("secretary word {} for secretary {}", $key, id))
                 .ok()
                 .filter(|s| !s.is_empty())?
+                .trunc_into()
         }};
     }
 

@@ -3,7 +3,7 @@ use azur_lane::Faction;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::modules::azur::{LoadedConfig, GameData};
+use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

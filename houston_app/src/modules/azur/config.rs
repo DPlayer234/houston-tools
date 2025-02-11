@@ -110,7 +110,7 @@ impl Default for WikiUrls {
 impl WikiUrls {
     pub fn ship<'s>(&self, base_ship: &'s ShipData) -> CreateEmbedAuthor<'s> {
         let mut wiki_url = (*self.ship_base).to_owned();
-        urlencoding::Encoded::new(&base_ship.name).append_to(&mut wiki_url);
+        urlencoding::Encoded::new(base_ship.name.as_str()).append_to(&mut wiki_url);
         CreateEmbedAuthor::new(&base_ship.name).url(wiki_url)
     }
 }

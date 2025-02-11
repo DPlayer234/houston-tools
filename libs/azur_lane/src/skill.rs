@@ -1,6 +1,7 @@
 //! Provides a subset of data for ship/equipment skills.
 
 use serde::{Deserialize, Serialize};
+use small_fixed_array::{FixedArray, FixedString};
 
 use crate::define_data_enum;
 use crate::equip::Weapon;
@@ -14,17 +15,17 @@ pub struct Skill {
     /// to buffs. A buff stays attached, while a skill is an instant effect.
     pub buff_id: u32,
     /// The skill's name.
-    pub name: String,
+    pub name: FixedString,
     /// The skill's description, with placeholders already replaced.
-    pub description: String,
+    pub description: FixedString,
     /// The category of this skill.
     pub category: SkillCategory,
     /// Barrages this skill can fire.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub barrages: Vec<SkillBarrage>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub barrages: FixedArray<SkillBarrage>,
     /// Weapons this skill may add to the ship.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub new_weapons: Vec<BuffWeapon>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub new_weapons: FixedArray<BuffWeapon>,
 }
 
 /// Represents a skill barrage.

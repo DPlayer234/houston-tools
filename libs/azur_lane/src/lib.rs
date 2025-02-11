@@ -17,19 +17,19 @@ use data_def::define_data_enum;
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DefinitionData {
     /// All known ships.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ships: Vec<ship::ShipData>,
     /// All known equips.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub equips: Vec<equip::Equip>,
     /// All known augments.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub augments: Vec<equip::Augment>,
     /// All known Juustagram chats.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub juustagram_chats: Vec<juustagram::Chat>,
     /// All special secretary variants.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub special_secretaries: Vec<secretary::SpecialSecretary>,
 }
 

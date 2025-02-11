@@ -528,7 +528,7 @@ impl<T> ExactSizeIterator for MatchIter<'_, T> {
 type Segment<const N: usize> = [u16; N];
 
 unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
-    let mut res = [0u16; N];
+    let mut res = [0xFFFFu16; N];
     debug_assert!(
         pts.len() <= N,
         "safety: pts.len() must be at most {N} but is {}",

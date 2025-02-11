@@ -1,5 +1,6 @@
 use azur_lane::ship::*;
 use mlua::prelude::*;
+use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
 use crate::model::*;
 use crate::{context, convert_al};
@@ -7,11 +8,10 @@ use crate::{context, convert_al};
 pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
     macro_rules! get {
         ($key:literal) => {
-            set.template.get($key).with_context(context!(
-                "skin template {} for skin {}",
-                $key,
-                set.skin_id
-            ))?
+            set.template
+                .get::<String>($key)
+                .with_context(context!("skin template {} for skin {}", $key, set.skin_id))?
+                .trunc_into()
         };
     }
 
@@ -42,7 +42,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
             if text.is_empty() {
                 None
             } else {
-                Some(text)
+                Some(FixedString::<u32>::from_string_trunc(text))
             }
         }};
     }
@@ -53,7 +53,9 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         acquisition: get!("unlock"),
         login: get!("login"),
         details: get!("detail"),
-        main_screen: to_main_screen(get!("main").as_deref()).collect(),
+        main_screen: to_main_screen(get!("main").as_deref())
+            .collect::<Vec<_>>()
+            .trunc_into(),
         touch: get!("touch"),
         special_touch: get!("touch2"),
         rub: get!("headtouch"),
@@ -81,7 +83,8 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
                 .into_iter()
                 .flatten()
                 .map(|t| load_couple_encourage(set, t))
-                .collect::<LuaResult<_>>()?
+                .collect::<LuaResult<Vec<_>>>()?
+                .trunc_into()
         },
     })
 }
@@ -103,7 +106,7 @@ fn load_words_extra(
                 LuaValue::Table(t) => {
                     let t: LuaTable = t.get(1)?;
                     let text: String = t.get(2)?;
-                    (!text.is_empty()).then_some(text)
+                    (!text.is_empty()).then(|| FixedString::<u32>::from_string_trunc(text))
                 },
                 _ => None,
             }
@@ -115,7 +118,7 @@ fn load_words_extra(
 
     main_screen.extend(to_main_screen(get!("main_extra").as_deref()).map(|line| {
         let index = line.index();
-        line.with_index(index + base.main_screen.len())
+        line.with_index(index + base.main_screen.len() as usize)
     }));
 
     Ok(ShipSkinWords {
@@ -124,7 +127,7 @@ fn load_words_extra(
         acquisition: get!("unlock"),
         login: get!("login"),
         details: get!("detail"),
-        main_screen,
+        main_screen: main_screen.trunc_into(),
         touch: get!("touch"),
         special_touch: get!("touch2"),
         rub: get!("headtouch"),
@@ -145,7 +148,7 @@ fn load_words_extra(
         crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
-        couple_encourage: Vec::new(),
+        couple_encourage: FixedArray::empty(),
     })
 }
 
@@ -154,7 +157,7 @@ pub fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = ShipMainScreenL
         .flat_map(|s| s.split('|'))
         .enumerate()
         .filter(|(_, text)| !text.is_empty() && *text != "nil")
-        .map(|(index, text)| ShipMainScreenLine::new(index, text.to_owned()))
+        .map(|(index, text)| ShipMainScreenLine::new(index, FixedString::from_str_trunc(text)))
 }
 
 fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCoupleEncourage> {
@@ -165,25 +168,26 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
         .get(4)
         .with_context(context!("couple_encourage 4 for skin {}", set.skin_id))?;
 
+    fn map<T>(filter: Vec<u32>, map: impl FnMut(u32) -> T) -> FixedArray<T> {
+        filter.into_iter().map(map).collect::<Vec<_>>().trunc_into()
+    }
+
     Ok(ShipCoupleEncourage {
         amount: table
             .get(2)
             .with_context(context!("couple_encourage 2 for skin {}", set.skin_id))?,
         line: table
-            .get(3)
-            .with_context(context!("couple_encourage 3 for skin {}", set.skin_id))?,
+            .get::<String>(3)
+            .with_context(context!("couple_encourage 3 for skin {}", set.skin_id))?
+            .trunc_into(),
         condition: match mode {
             // CMBK: check whether the seemingly incorrect lines for Hatsuharu and Richelieu work,
             // fix this up if so
-            Some(1) => {
-                ShipCouple::HullType(filter.into_iter().map(convert_al::to_hull_type).collect())
-            },
-            Some(2) => ShipCouple::Rarity(filter.into_iter().map(convert_al::to_rarity).collect()),
-            Some(3) => {
-                ShipCouple::Faction(filter.into_iter().map(convert_al::to_faction).collect())
-            },
+            Some(1) => ShipCouple::HullType(map(filter, convert_al::to_hull_type)),
+            Some(2) => ShipCouple::Rarity(map(filter, convert_al::to_rarity)),
+            Some(3) => ShipCouple::Faction(map(filter, convert_al::to_faction)),
             Some(4) => ShipCouple::Illustrator,
-            _ => ShipCouple::ShipGroup(filter),
+            _ => ShipCouple::ShipGroup(filter.trunc_into()),
         },
     })
 }

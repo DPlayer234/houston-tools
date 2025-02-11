@@ -9,6 +9,7 @@ use azur_lane::ship::*;
 use azur_lane::{juustagram, DefinitionData};
 use clap::Parser;
 use mlua::prelude::*;
+use small_fixed_array::FixedString;
 
 mod convert_al;
 mod enhance;
@@ -113,7 +114,7 @@ fn main() -> anyhow::Result<()> {
             if let Some(image) = parse::image::load_chibi_image(&action, assets, &skin.image_key)? {
                 extract_count += 1;
 
-                let path = utils::join_path!(out_dir, "chibi", &skin.image_key; "webp");
+                let path = utils::join_path!(out_dir, "chibi", skin.image_key.as_str(); "webp");
                 if let Ok(mut f) = fs::File::create_new(path) {
                     new_count += 1;
 
@@ -369,7 +370,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
 
         let mut mlb = parse::ship::load_ship_data(lua, raw_mlb)?;
         if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
-            mlb.name.clone_from(name_override);
+            mlb.name = FixedString::from_str_trunc(name_override);
         }
 
         if let Some(retrofit_data) = &raw_mlb.retrofit_data {

@@ -6,7 +6,7 @@ use utils::text::write_str::*;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::discord::escape_markdown;
-use crate::modules::azur::{LoadedConfig, GameData};
+use crate::modules::azur::{GameData, LoadedConfig};
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {

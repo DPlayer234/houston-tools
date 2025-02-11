@@ -5,7 +5,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::fmt::JoinNatural;
 use crate::helper::discord::create_string_select_menu_row;
-use crate::modules::azur::{LoadedConfig, GameData};
+use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -334,7 +334,7 @@ fn get_label_for_ship_couple_encourage(game_data: &GameData, opt: &ShipCoupleEnc
                 .filter_map(|&id| game_data.ship_by_id(id))
                 .map(|ship| ship.name.as_str());
 
-            if ship_ids.len() == opt.amount.try_into().unwrap_or(0) {
+            if ship_ids.len() == opt.amount {
                 fmt_ships_all(ships)
             } else {
                 fmt_ships_count(opt.amount, ships)

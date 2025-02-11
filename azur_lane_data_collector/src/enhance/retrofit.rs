@@ -1,7 +1,9 @@
 use std::borrow::Borrow;
+use std::mem::take;
 
 use azur_lane::ship::*;
 use mlua::prelude::*;
+use small_fixed_array::TruncatingInto as _;
 
 use crate::{parse, Retrofit};
 
@@ -49,7 +51,9 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
     }
 
     if !new_skills.is_empty() {
-        ship.skills.extend(new_skills);
+        let mut all_skills = take(&mut ship.skills).into_vec();
+        all_skills.extend(new_skills);
+        ship.skills = all_skills.trunc_into();
     }
 
     Ok(())

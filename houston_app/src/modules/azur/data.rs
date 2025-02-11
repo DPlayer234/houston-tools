@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::mem::take;
 use std::path::{Component, Path};
 use std::sync::Arc;
 use std::{fs, io};
@@ -9,6 +10,7 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use bytes::Bytes;
 use dashmap::DashMap;
+use serenity::small_fixed_array::TruncatingInto as _;
 use smallvec::{smallvec, SmallVec};
 use utils::fuzzy::Search;
 
@@ -145,8 +147,9 @@ impl GameData {
             );
 
             // trim away irrelevant disallowed hulls
-            data.hull_disallowed
-                .retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
+            let mut hull_disallowed = take(&mut data.hull_disallowed).into_vec();
+            hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
+            data.hull_disallowed = hull_disallowed.trunc_into();
         }
 
         for (index, data) in this.augments.iter().enumerate() {
@@ -170,7 +173,7 @@ impl GameData {
         }
 
         for (index, data) in this.special_secretaries.iter_mut().enumerate() {
-            data.name = format!("{} ({})", data.name, data.kind);
+            data.name = format!("{} ({})", data.name, data.kind).trunc_into();
             this.special_secretary_id_to_index.insert(data.id, index);
             this.special_secretary_simsearch.insert(&data.name, ());
         }

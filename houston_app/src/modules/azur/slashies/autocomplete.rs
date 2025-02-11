@@ -11,12 +11,7 @@ macro_rules! make_autocomplete {
                     .game_data()
                     .$by_prefix(partial)
                     .take(25)
-                    .map(|e| {
-                        AutocompleteChoice::new(
-                            e.name.as_str(),
-                            Cow::Owned(format!("/id:{}", e.$id)),
-                        )
-                    })
+                    .map(|e| AutocompleteChoice::new(&e.name, Cow::Owned(format!("/id:{}", e.$id))))
                     .collect();
 
                 CreateAutocompleteResponse::new().set_choices(choices)
@@ -47,9 +42,7 @@ pub async fn ship_name_juustagram_chats<'a>(
                     .is_some()
             })
             .take(25)
-            .map(|e| {
-                AutocompleteChoice::new(e.name.as_str(), Cow::Owned(format!("/id:{}", e.group_id)))
-            })
+            .map(|e| AutocompleteChoice::new(&e.name, Cow::Owned(format!("/id:{}", e.group_id))))
             .collect();
 
         CreateAutocompleteResponse::new().set_choices(choices)

@@ -32,13 +32,13 @@ impl View {
         let mut desc = String::new();
         let mut options = Vec::new();
 
-        for sectretary in iter.by_ref().take(PAGE_SIZE) {
-            writeln_str!(desc, "- **{}**", sectretary.name);
+        for secretary in iter.by_ref().take(PAGE_SIZE) {
+            writeln_str!(desc, "- **{}**", secretary.name);
 
             let view_chat =
-                super::special_secretary::View::new(sectretary.id).back(self.to_custom_data());
+                super::special_secretary::View::new(secretary.id).back(self.to_custom_data());
             options.push(CreateSelectMenuOption::new(
-                truncate(sectretary.name.as_str(), 100),
+                truncate(secretary.name.as_str(), 100),
                 view_chat.to_custom_id(),
             ));
         }

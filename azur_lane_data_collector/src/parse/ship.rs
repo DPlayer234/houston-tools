@@ -1,5 +1,6 @@
 use azur_lane::ship::*;
 use mlua::prelude::*;
+use small_fixed_array::TruncatingInto as _;
 
 use crate::model::*;
 use crate::{context, convert_al, enhance, parse};
@@ -77,13 +78,15 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
         }};
         (@allowed $allowed_at:literal) => {{
             let allow: Vec<u32> = read!(set.template, $allowed_at);
-            allow.into_iter().map(convert_al::to_equip_type).collect()
+            allow.into_iter().map(convert_al::to_equip_type).collect::<Vec<_>>().trunc_into()
         }};
     }
 
+    let name: String = read!(set.statistics, "name");
+
     let mut ship = ShipData {
         group_id: read!(set.template, "group_type"),
-        name: read!(set.statistics, "name"),
+        name: name.trunc_into(),
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),
         faction: convert_al::to_faction(read!(set.statistics, "nationality")),
         hull_type: convert_al::to_hull_type(read!(set.statistics, "type")),
@@ -113,7 +116,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             make_equip_slot!("equip_3", 3),
             make_equip_slot!("equip_4"),
             make_equip_slot!("equip_5"),
-        ],
+        ]
+        .trunc_into(),
         shadow_equip: parse::skill::load_wequips(lua, read!(set.statistics, "fix_equip_list"))?
             .into_iter()
             .enumerate()
@@ -127,9 +131,11 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
                     weapons: equip.weapons,
                 })
             })
-            .collect::<LuaResult<Vec<_>>>()?,
-        depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?,
-        skills: parse::skill::load_skills(lua, buff_list)?,
+            .collect::<LuaResult<Vec<_>>>()?
+            .trunc_into(),
+        depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?
+            .trunc_into(),
+        skills: parse::skill::load_skills(lua, buff_list)?.trunc_into(),
         retrofits: Vec::new(), // Added by caller.
         skins: Vec::new(),     // Added by caller.
     };
@@ -199,7 +205,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             // and at least Fusou META doesn't even have the right data here. Just use the
             // display list. The skill list will have been mostly empty, so we
             // don't repeat a lot of work here.
-            ship.skills = parse::skill::load_skills(lua, buff_list_display)?;
+            ship.skills = parse::skill::load_skills(lua, buff_list_display)?.trunc_into();
         },
     }
 

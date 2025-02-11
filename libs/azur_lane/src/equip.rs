@@ -1,6 +1,7 @@
 //! Provides data structures for ship equipment.
 
 use serde::{Deserialize, Serialize};
+use small_fixed_array::{FixedArray, FixedString};
 
 use crate::ship::*;
 use crate::skill::*;
@@ -12,13 +13,13 @@ pub struct Equip {
     /// The equipment's ID. This differs per upgrade step.
     pub equip_id: u32,
     /// The equipment's display name.
-    pub name: String,
+    pub name: FixedString,
     /// The equipment's description.
     ///
     /// This is not the skill description. Instead, it is the description shown
     /// when attempting to buy equipment from a shop. It is never seen for most
     /// gear, but often still contains flavor text.
-    pub description: String,
+    pub description: FixedString,
     /// The kind of equipment, determining whether it is allowed in a ship's
     /// slots.
     pub kind: EquipKind,
@@ -31,21 +32,21 @@ pub struct Equip {
     /// This will usually just hold a single element.
     /// The most common case where this doesn't hold is aircraft with intercept;
     /// the strike and intercept versions are different weapons.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub weapons: Vec<Weapon>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub weapons: FixedArray<Weapon>,
     /// Skills this equipment activates when equipped.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub skills: Vec<Skill>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub skills: FixedArray<Skill>,
     /// The stat bonuses provided when equipped.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub stat_bonuses: Vec<EquipStatBonus>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub stat_bonuses: FixedArray<EquipStatBonus>,
     /// Hull types that this equipment cannot be equipped on, even if the
     /// [`Equip::kind`] would allow it.
     ///
     /// Data on "allowed hull types" is excluded since it's purely informative,
     /// and not accurately at that.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub hull_disallowed: Vec<HullType>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub hull_disallowed: FixedArray<HullType>,
 }
 
 /// A weapon that is part of [`Equip`] or [`Skill`].
@@ -56,7 +57,7 @@ pub struct Weapon {
     /// The weapon's display name, if any.
     ///
     /// This is the label for a weapon on an aircraft.
-    pub name: Option<String>,
+    pub name: Option<FixedString>,
     /// The base reload time.
     ///
     /// This component is affected by the ship's RLD stat.
@@ -93,7 +94,7 @@ pub struct Barrage {
     /// between reloads.
     pub salvo_time: f64,
     /// The bullets fired by this barrage.
-    pub bullets: Vec<Bullet>,
+    pub bullets: FixedArray<Bullet>,
 }
 
 /// Bullet information for a [`Barrage`].
@@ -121,8 +122,8 @@ pub struct Bullet {
     pub flags: BulletFlags,
 
     /// Buffs caused by the bullet hit.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub attach_buff: Vec<BuffInfo>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub attach_buff: FixedArray<BuffInfo>,
 
     /// Extra data depending on the bullet type.
     #[serde(default, skip_serializing_if = "BulletExtra::is_none")]
@@ -176,7 +177,7 @@ pub struct Aircraft {
     /// How often each aircraft is allowed to dodge attacks.
     pub dodge_limit: u32,
     /// The aircraft-mounted weapons.
-    pub weapons: Vec<Weapon>,
+    pub weapons: FixedArray<Weapon>,
 }
 
 /// The possible data a [`Weapon`] can hold.
@@ -216,11 +217,11 @@ pub struct Augment {
     /// The augment's ID.
     pub augment_id: u32,
     /// The augment's display name.
-    pub name: String,
+    pub name: FixedString,
     /// The augment's rarity and star rating.
     pub rarity: AugmentRarity,
     /// The stat bonuses provided by the augment.
-    pub stat_bonuses: Vec<AugmentStatBonus>,
+    pub stat_bonuses: FixedArray<AugmentStatBonus>,
     /// Who can equip this augment.
     pub usability: AugmentUsability,
     /// The augment's primary effect skill.

@@ -4,6 +4,7 @@ use std::fmt;
 use std::ops::{Add, AddAssign};
 
 use serde::{Deserialize, Serialize};
+use small_fixed_array::{FixedArray, FixedString};
 
 use crate::equip::*;
 use crate::skill::*;
@@ -15,7 +16,7 @@ pub struct ShipData {
     /// The group ID. This is the same for the base and its retrofits.
     pub group_id: u32,
     /// The ship's display name.
-    pub name: String,
+    pub name: FixedString,
     /// The ship's rarity.
     ///
     /// For its star rating, see [`ShipData::stars`].
@@ -37,27 +38,27 @@ pub struct ShipData {
     /// [`ShipData::skin_by_id`] can be used to easily get skin data.
     pub default_skin_id: u32,
     /// The real equipment slots visible in-game, including auxiliary slots.
-    pub equip_slots: Vec<EquipSlot>,
+    pub equip_slots: FixedArray<EquipSlot>,
     /// Additional shadow or hidden equipment that's fixed to the ship.
     ///
     /// Most commonly, this is a secondary gun for torpedo CLs or CAs.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub shadow_equip: Vec<ShadowEquip>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub shadow_equip: FixedArray<ShadowEquip>,
     /// Default equipped depth charges.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub depth_charges: Vec<Equip>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub depth_charges: FixedArray<Equip>,
     /// The list of skills. Excludes inactive or hidden skills.
-    pub skills: Vec<Skill>,
+    pub skills: FixedArray<Skill>,
     /// Available retrofits for this ship in their maxed-out state.
     ///
     /// As of now, only DDGs have "multiple" retrofits, with their vanguard
     /// and main fleet states being considered different ones.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub retrofits: Vec<ShipData>,
     /// The ship's skins, including their default and all retrofit skins.
     ///
     /// This will be empty for nested retrofits. Access the base's skins.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub skins: Vec<ShipSkin>,
 }
 
@@ -89,7 +90,7 @@ pub struct ShipStat(f64, f64, f64);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EquipSlot {
     /// Which kinds of equipment can be equipped in the slot.
-    pub allowed: Vec<EquipKind>,
+    pub allowed: FixedArray<EquipKind>,
     /// If a weapon slot, the data for the mount.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mount: Option<EquipWeaponMount>,
@@ -118,11 +119,11 @@ pub struct EquipWeaponMount {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShadowEquip {
     /// The name of the associated equipment.
-    pub name: String,
+    pub name: FixedString,
     /// The mount efficiency. Same meaning as [`EquipWeaponMount::efficiency`].
     pub efficiency: f64,
     /// The weapons on that equipment.
-    pub weapons: Vec<Weapon>,
+    pub weapons: FixedArray<Weapon>,
 }
 
 /// Data for a ship skin. This may represent the default skin.
@@ -134,11 +135,11 @@ pub struct ShipSkin {
     ///
     /// Asset bundles and chibi sprites from the collector will use this as
     /// their filename.
-    pub image_key: String,
+    pub image_key: FixedString,
     /// The skin's display name.
-    pub name: String,
+    pub name: FixedString,
     /// The skin's description.
-    pub description: String,
+    pub description: FixedString,
     /// The default dialogue lines.
     pub words: ShipSkinWords,
     /// Replacement dialogue lines, usually after oath.
@@ -154,76 +155,76 @@ pub struct ShipSkinWords {
     /// Note that [`ShipSkin::description`] originates from the skin's template,
     /// whereas this field is actually part of the skin's words.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    pub description: Option<FixedString>,
     /// The "introduction". In-game, this is the profile text in the archive.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub introduction: Option<String>,
+    pub introduction: Option<FixedString>,
     /// Dialogue played when the ship is obtained.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub acquisition: Option<String>,
+    pub acquisition: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub login: Option<String>,
+    pub login: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub details: Option<String>,
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub main_screen: Vec<ShipMainScreenLine>,
+    pub details: Option<FixedString>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub main_screen: FixedArray<ShipMainScreenLine>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub touch: Option<String>,
+    pub touch: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub special_touch: Option<String>,
+    pub special_touch: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rub: Option<String>,
+    pub rub: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mission_reminder: Option<String>,
+    pub mission_reminder: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mission_complete: Option<String>,
+    pub mission_complete: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mail_reminder: Option<String>,
+    pub mail_reminder: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub return_to_port: Option<String>,
+    pub return_to_port: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub commission_complete: Option<String>,
+    pub commission_complete: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enhance: Option<String>,
+    pub enhance: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flagship_fight: Option<String>,
+    pub flagship_fight: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub victory: Option<String>,
+    pub victory: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub defeat: Option<String>,
+    pub defeat: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub skill: Option<String>,
+    pub skill: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub low_health: Option<String>,
+    pub low_health: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub disappointed: Option<String>,
+    pub disappointed: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub stranger: Option<String>,
+    pub stranger: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub friendly: Option<String>,
+    pub friendly: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub crush: Option<String>,
+    pub crush: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub love: Option<String>,
+    pub love: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub oath: Option<String>,
+    pub oath: Option<FixedString>,
     /// Voices lines that may be played when sortieing other specific ships.
-    #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-    pub couple_encourage: Vec<ShipCoupleEncourage>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub couple_encourage: FixedArray<ShipCoupleEncourage>,
 }
 
 /// Information about a ship line that may be displayed on the main screen.
 ///
 /// Also see [`ShipSkinWords::main_screen`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipMainScreenLine(usize, String);
+pub struct ShipMainScreenLine(usize, FixedString);
 
 /// Data for voices lines that may be played when sortieing other specific
 /// ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipCoupleEncourage {
     /// The line to be played.
-    pub line: String,
+    pub line: FixedString,
     /// The amount of allies that need to match the condition.
     pub amount: u32,
     /// The condition rule.
@@ -235,13 +236,13 @@ pub struct ShipCoupleEncourage {
 pub enum ShipCouple {
     /// Triggered when other specific ships are present.
     /// Holds a vector of ship group IDs.
-    ShipGroup(Vec<u32>),
+    ShipGroup(FixedArray<u32>),
     /// Triggered when ships of specified hull types are present.
-    HullType(Vec<HullType>),
+    HullType(FixedArray<HullType>),
     /// Triggered when ships of a specified rarity are present.
-    Rarity(Vec<ShipRarity>),
+    Rarity(FixedArray<ShipRarity>),
     /// Triggered when ships from a specified faction are present.
-    Faction(Vec<Faction>),
+    Faction(FixedArray<Faction>),
     /// Triggered when ships from the same illustrator are present.
     ///
     /// Actual in-game data specifies which one, but it's only ever used to
@@ -470,7 +471,7 @@ impl AddAssign<&Self> for ShipStat {
 impl ShipMainScreenLine {
     /// Creates a new instance.
     #[must_use]
-    pub fn new(index: usize, text: String) -> Self {
+    pub fn new(index: usize, text: FixedString) -> Self {
         Self(index, text)
     }
 

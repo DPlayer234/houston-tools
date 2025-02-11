@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use small_fixed_array::{FixedArray, FixedString};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chat {
@@ -6,10 +7,10 @@ pub struct Chat {
     pub chat_id: u32,
     // "ship_group"
     pub group_id: u32,
-    pub name: String,
-    pub unlock_desc: String,
+    pub name: FixedString,
+    pub unlock_desc: FixedString,
     // "content"
-    pub entries: Vec<ChatEntry>,
+    pub entries: FixedArray<ChatEntry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,7 +20,7 @@ pub struct ChatEntry {
     pub content: ChatContent,
     pub flag: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub options: Option<Vec<ChatOption>>,
+    pub options: Option<FixedArray<ChatOption>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,23 +30,23 @@ pub enum ChatContent {
         // "ship_group"
         sender_id: u32,
         // "param"
-        text: String,
+        text: FixedString,
     },
     // type = 4
     Sticker {
         // "ship_group"
         sender_id: u32,
         // "param"
-        label: String,
+        label: FixedString,
     },
     // type = 5
     System {
-        text: String,
+        text: FixedString,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatOption {
     pub flag: u8,
-    pub value: String,
+    pub value: FixedString,
 }

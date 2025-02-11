@@ -1,5 +1,6 @@
 use azur_lane::equip::*;
 use mlua::prelude::*;
+use small_fixed_array::TruncatingInto as _;
 
 use crate::model::*;
 use crate::{context, convert_al, parse};
@@ -75,9 +76,11 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
         )
     };
 
+    let name: String = read!("name");
+
     Ok(Augment {
         augment_id: set.id,
-        name: read!("name"),
+        name: name.trunc_into(),
         rarity: convert_al::to_augment_rarity(read!("rarity")),
         stat_bonuses: vec![
             AugmentStatBonus {
@@ -90,7 +93,8 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
                 amount: read!("value_2"),
                 random: read!("value_2_random"),
             },
-        ],
+        ]
+        .trunc_into(),
         usability,
         effect,
         skill_upgrade,

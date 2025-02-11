@@ -4,6 +4,7 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 use mlua::prelude::*;
+use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
 use crate::{context, convert_al, CONFIG};
 
@@ -38,8 +39,8 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
 
     if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
         let mut skill = skill.clone();
-        skill.name = name;
-        skill.description = desc;
+        skill.name = name.trunc_into();
+        skill.description = desc.trunc_into();
 
         return Ok(skill);
     }
@@ -64,10 +65,10 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     Ok(Skill {
         buff_id: skill_id,
         category,
-        name,
-        description: desc,
-        barrages: context.barrages,
-        new_weapons: context.new_weapons,
+        name: name.trunc_into(),
+        description: desc.trunc_into(),
+        barrages: context.barrages.trunc_into(),
+        new_weapons: context.new_weapons.trunc_into(),
     })
 }
 
@@ -159,8 +160,8 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     Ok(Equip {
         equip_id,
-        name,
-        description,
+        name: name.trunc_into(),
+        description: description.trunc_into(),
         rarity: convert_al::to_equip_rarity(
             statistics
                 .get("rarity")
@@ -176,13 +177,14 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
                 .get("nationality")
                 .with_context(context!("nationality for equip with id {equip_id}"))?,
         ),
-        hull_disallowed,
-        weapons,
-        skills,
+        hull_disallowed: hull_disallowed.trunc_into(),
+        weapons: weapons.trunc_into(),
+        skills: skills.trunc_into(),
         stat_bonuses: [stat_bonus!(1), stat_bonus!(2), stat_bonus!(3)]
             .into_iter()
             .flatten()
-            .collect(),
+            .collect::<Vec<_>>()
+            .trunc_into(),
     })
 }
 
@@ -220,8 +222,8 @@ pub fn load_wequips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<WEquipLoad>
                     name: weapon
                         .name
                         .clone()
-                        .unwrap_or_else(|| "<only weapon>".to_owned()),
-                    weapons: vec![weapon],
+                        .unwrap_or_else(|| FixedString::from_static_trunc("<only weapon>")),
+                    weapons: vec![weapon].trunc_into(),
                 })
             } else {
                 Err(LuaError::external("neither weapon nor equip exists"))
@@ -321,7 +323,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 speed,
                 health,
                 dodge_limit,
-                weapons,
+                weapons: weapons.trunc_into(),
             })
         },
         _ => {
@@ -331,7 +333,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
     Ok(Some(Weapon {
         weapon_id,
-        name: weapon_name,
+        name: weapon_name.map(|s| s.trunc_into()),
         reload_time: reload_max * RLD_MULT_AT_100,
         fixed_delay,
         kind,
@@ -386,7 +388,7 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
         range: weapon_data.get("range")?,
         firing_angle: weapon_data.get("angle")?,
         salvo_time,
-        bullets,
+        bullets: bullets.trunc_into(),
     })
 }
 
@@ -554,7 +556,7 @@ fn get_sub_barrage(
             velocity: bullet.get("velocity")?,
             modifiers: ArmorModifiers::from(armor_mods),
             flags,
-            attach_buff,
+            attach_buff: attach_buff.trunc_into(),
             extra,
         });
     }
@@ -757,8 +759,8 @@ fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
 }
 
 pub struct WEquipLoad {
-    pub name: String,
-    pub weapons: Vec<Weapon>,
+    pub name: FixedString,
+    pub weapons: FixedArray<Weapon>,
 }
 
 #[derive(Debug, Default)]
