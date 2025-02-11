@@ -80,7 +80,7 @@ impl View {
 
         let embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
-            .author(config.get_ship_wiki_url(ship))
+            .author(config.wiki_urls.ship(ship))
             .description(self.part.get_description(config, words));
 
         let mut components = Vec::new();

@@ -58,7 +58,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View ship...");
 
-        let author = CreateEmbedAuthor::new("Ships").url(&*config.ship_list_url);
+        let author = CreateEmbedAuthor::new("Ships").url(&*config.wiki_urls.ship_list);
 
         let embed = CreateEmbed::new()
             .author(author)

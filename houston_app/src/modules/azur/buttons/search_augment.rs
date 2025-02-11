@@ -48,7 +48,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View augment module...");
 
-        let author = CreateEmbedAuthor::new("Augment Modules").url(&*config.augment_list_url);
+        let author = CreateEmbedAuthor::new("Augment Modules").url(&*config.wiki_urls.augment_list);
 
         let embed = CreateEmbed::new()
             .author(author)

@@ -27,7 +27,7 @@ impl View {
         let base_ship = base_ship.unwrap_or(ship);
 
         let mut embed = CreateEmbed::new()
-            .author(config.get_ship_wiki_url(base_ship))
+            .author(config.wiki_urls.ship(base_ship))
             .color(ship.rarity.color_rgb());
 
         fn format_weapons(weapons: &[Weapon]) -> Option<String> {

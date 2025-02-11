@@ -1,5 +1,6 @@
-use std::iter;
+use std::{fmt, iter};
 
+use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
@@ -119,7 +120,7 @@ impl View {
         );
 
         let embed = CreateEmbed::new()
-            .author(config.get_ship_wiki_url(base_ship))
+            .author(config.wiki_urls.ship(base_ship))
             .description(description)
             .color(ship.rarity.color_rgb())
             .fields(self.get_stats_field(ship))
@@ -348,7 +349,7 @@ impl View {
                     text.push('/');
                 }
 
-                write_str!(text, "{}", config.get_equip_slot_display(kind));
+                write_str!(text, "{}", equip_slot_display(config, kind));
             }
 
             if mount.preload != 0 {
@@ -439,5 +440,49 @@ impl ViewAffinity {
             Self::Love => 1.06,
             Self::Oath => 1.12,
         }
+    }
+}
+
+struct Slot<'a> {
+    label: &'a str,
+    url: &'a str,
+}
+
+impl<'a> Slot<'a> {
+    fn new(label: &'a str, url: &'a str) -> Self {
+        Self { label, url }
+    }
+}
+
+impl fmt::Display for Slot<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self { label, url } = self;
+        write!(f, "[{label}]({url})")
+    }
+}
+
+/// Converts the equip slot to a masked link to the appropriate wiki page.
+fn equip_slot_display(config: &Config, kind: EquipKind) -> Slot<'_> {
+    let w = &config.wiki_urls;
+    match kind {
+        EquipKind::DestroyerGun => Slot::new("DD Gun", &w.dd_gun_list),
+        EquipKind::LightCruiserGun => Slot::new("CL Gun", &w.cl_gun_list),
+        EquipKind::HeavyCruiserGun => Slot::new("CA Gun", &w.ca_gun_list),
+        EquipKind::LargeCruiserGun => Slot::new("CB Gun", &w.cb_gun_list),
+        EquipKind::BattleshipGun => Slot::new("BB Gun", &w.bb_gun_list),
+        EquipKind::SurfaceTorpedo => Slot::new("Torpedo", &w.surface_torpedo_list),
+        EquipKind::SubmarineTorpedo => Slot::new("Torpedo", &w.sub_torpedo_list),
+        EquipKind::AntiAirGun => Slot::new("AA Gun", &w.aa_gun_list),
+        EquipKind::FuzeAntiAirGun => Slot::new("AA Gun (Fuze)", &w.fuze_aa_gun_list),
+        EquipKind::Fighter => Slot::new("Fighter", &w.fighter_list),
+        EquipKind::DiveBomber => Slot::new("Dive Bomber", &w.dive_bomber_list),
+        EquipKind::TorpedoBomber => Slot::new("Torpedo Bomber", &w.torpedo_bomber_list),
+        EquipKind::SeaPlane => Slot::new("Seaplane", &w.seaplane_list),
+        EquipKind::AntiSubWeapon => Slot::new("ASW", &w.anti_sub_list),
+        EquipKind::AntiSubAircraft => Slot::new("ASW Aircraft", &w.anti_sub_list),
+        EquipKind::Helicopter => Slot::new("Helicopter", &w.auxiliary_list),
+        EquipKind::Missile => Slot::new("Missile", &w.surface_torpedo_list),
+        EquipKind::Cargo => Slot::new("Cargo", &w.cargo_list),
+        EquipKind::Auxiliary => Slot::new("Auxiliary", &w.auxiliary_list),
     }
 }

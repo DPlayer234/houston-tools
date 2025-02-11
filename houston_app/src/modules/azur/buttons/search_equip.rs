@@ -55,7 +55,7 @@ impl View {
 
         let rows = super::pagination!(self, options, iter, "View equipment...");
 
-        let author = CreateEmbedAuthor::new("Equipments").url(&*config.equipment_list_url);
+        let author = CreateEmbedAuthor::new("Equipments").url(&*config.wiki_urls.equipment_list);
 
         let embed = CreateEmbed::new()
             .author(author)

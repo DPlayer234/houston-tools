@@ -102,7 +102,7 @@ impl View {
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
         let mut embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
-            .author(config.get_ship_wiki_url(base_ship));
+            .author(config.wiki_urls.ship(base_ship));
 
         let components = CreateButton::new(self.back.to_custom_id())
             .emoji('⏪')
