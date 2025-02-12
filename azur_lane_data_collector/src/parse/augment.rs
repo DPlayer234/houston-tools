@@ -2,6 +2,7 @@ use azur_lane::equip::*;
 use mlua::prelude::*;
 use small_fixed_array::TruncatingInto as _;
 
+use crate::intl_util::IterExt as _;
 use crate::model::*;
 use crate::{context, convert_al, parse};
 
@@ -72,7 +73,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
             ship_types
                 .into_iter()
                 .filter_map(convert_al::to_known_hull_type)
-                .collect(),
+                .collect_fixed_array(),
         )
     };
 

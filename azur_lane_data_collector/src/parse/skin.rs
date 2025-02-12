@@ -1,7 +1,8 @@
 use azur_lane::ship::*;
 use mlua::prelude::*;
-use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
+use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
+use crate::intl_util::IterExt as _;
 use crate::model::*;
 use crate::{context, convert_al};
 
@@ -53,9 +54,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         acquisition: get!("unlock"),
         login: get!("login"),
         details: get!("detail"),
-        main_screen: to_main_screen(get!("main").as_deref())
-            .collect::<Vec<_>>()
-            .trunc_into(),
+        main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
         touch: get!("touch"),
         special_touch: get!("touch2"),
         rub: get!("headtouch"),
@@ -118,7 +117,7 @@ fn load_words_extra(
 
     main_screen.extend(to_main_screen(get!("main_extra").as_deref()).map(|line| {
         let index = line.index();
-        line.with_index(index + base.main_screen.len() as usize)
+        line.with_index(index + base.main_screen.len().to_usize())
     }));
 
     Ok(ShipSkinWords {
@@ -169,7 +168,7 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
         .with_context(context!("couple_encourage 4 for skin {}", set.skin_id))?;
 
     fn map<T>(filter: Vec<u32>, map: impl FnMut(u32) -> T) -> FixedArray<T> {
-        filter.into_iter().map(map).collect::<Vec<_>>().trunc_into()
+        filter.into_iter().map(map).collect_fixed_array()
     }
 
     Ok(ShipCoupleEncourage {

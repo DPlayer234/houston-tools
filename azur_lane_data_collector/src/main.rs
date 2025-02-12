@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
+use std::mem::take;
 use std::path::Path;
 use std::{fs, io};
 
@@ -8,11 +9,13 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{juustagram, DefinitionData};
 use clap::Parser;
+use intl_util::FixedArrayExt as _;
 use mlua::prelude::*;
-use small_fixed_array::FixedString;
+use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
 mod convert_al;
 mod enhance;
+mod intl_util;
 mod log;
 mod macros;
 mod model;
@@ -102,7 +105,11 @@ fn main() -> anyhow::Result<()> {
         // Extract and save chibis for all skins.
         fs::create_dir_all(Path::new(out_dir).join("chibi"))?;
 
-        let total_count = out_data.ships.iter().map(|s| s.skins.len()).sum();
+        let total_count = out_data
+            .ships
+            .iter()
+            .map(|s| s.skins.len().to_usize())
+            .sum();
         let mut action = log::action!("Extracting chibis.")
             .bounded_total(total_count)
             .start();
@@ -136,11 +143,11 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
     let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
-    let ships = load_ships(&lua, &pg)?;
-    let equips = load_equips(&lua, &pg)?;
-    let augments = load_augments(&lua, &pg)?;
-    let juustagram_chats = load_juustagram_chats(&lua, &pg)?;
-    let special_secretaries = load_special_secretaries(&lua, &pg)?;
+    let ships = load_ships(&lua, &pg)?.trunc_into();
+    let equips = load_equips(&lua, &pg)?.trunc_into();
+    let augments = load_augments(&lua, &pg)?.trunc_into();
+    let juustagram_chats = load_juustagram_chats(&lua, &pg)?.trunc_into();
+    let special_secretaries = load_special_secretaries(&lua, &pg)?.trunc_into();
 
     Ok(DefinitionData {
         ships,
@@ -671,10 +678,13 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
     action.finish();
 }
 
-fn add_missing<T>(main: &mut Vec<T>, next: Vec<T>, matches: impl Fn(&T, &T) -> bool) {
+fn add_missing<T>(main: &mut FixedArray<T>, next: FixedArray<T>, matches: impl Fn(&T, &T) -> bool) {
+    let mut m = take(main).into_vec();
     for new in next {
-        if !main.iter().any(|old| matches(old, &new)) {
-            main.push(new);
+        if !m.iter().any(|old| matches(old, &new)) {
+            m.push(new);
         }
     }
+
+    *main = m.trunc_into();
 }

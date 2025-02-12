@@ -3,6 +3,7 @@ use mlua::prelude::*;
 use small_fixed_array::{FixedString, TruncatingInto as _};
 
 use super::skin::to_main_screen;
+use crate::intl_util::IterExt as _;
 use crate::{context, CONFIG};
 
 pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSecretary> {
@@ -52,9 +53,7 @@ pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSe
         name: data.get::<String>("name")?.trunc_into(),
         kind: kind_name.trunc_into(),
         login: get!("login"),
-        main_screen: to_main_screen(get!("main").as_deref())
-            .collect::<Vec<_>>()
-            .trunc_into(),
+        main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
         touch: get!("touch"),
         mission_reminder: get!("mission"),
         mission_complete: get!("mission_complete"),

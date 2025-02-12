@@ -2,7 +2,9 @@
 //! represented as.
 #![allow(clippy::upper_case_acronyms)]
 
+use data_def::define_data_enum;
 use serde::{Deserialize, Serialize};
+use small_fixed_array::FixedArray;
 
 mod data_def;
 pub mod equip;
@@ -11,26 +13,24 @@ pub mod secretary;
 pub mod ship;
 pub mod skill;
 
-use data_def::define_data_enum;
-
 /// Definition data to be saved/loaded in bulk.
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct DefinitionData {
     /// All known ships.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub ships: Vec<ship::ShipData>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub ships: FixedArray<ship::ShipData>,
     /// All known equips.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub equips: Vec<equip::Equip>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub equips: FixedArray<equip::Equip>,
     /// All known augments.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub augments: Vec<equip::Augment>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub augments: FixedArray<equip::Augment>,
     /// All known Juustagram chats.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub juustagram_chats: Vec<juustagram::Chat>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub juustagram_chats: FixedArray<juustagram::Chat>,
     /// All special secretary variants.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub special_secretaries: Vec<secretary::SpecialSecretary>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub special_secretaries: FixedArray<secretary::SpecialSecretary>,
 }
 
 define_data_enum! {

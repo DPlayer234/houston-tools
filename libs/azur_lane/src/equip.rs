@@ -236,7 +236,7 @@ pub struct Augment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AugmentUsability {
     /// Only certain hull types are allowed.
-    HullTypes(Vec<HullType>),
+    HullTypes(FixedArray<HullType>),
     /// Only a certain unique ship is allowed.
     UniqueShipId(u32),
 }

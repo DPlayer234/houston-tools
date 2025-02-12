@@ -21,11 +21,11 @@ type IndexVec = SmallVec<[usize; 2]>;
 pub struct GameData {
     data_path: Arc<Path>,
 
-    ships: Vec<ShipData>,
-    equips: Vec<Equip>,
-    augments: Vec<Augment>,
-    juustagram_chats: Vec<Chat>,
-    special_secretaries: Vec<SpecialSecretary>,
+    ships: Box<[ShipData]>,
+    equips: Box<[Equip]>,
+    augments: Box<[Augment]>,
+    juustagram_chats: Box<[Chat]>,
+    special_secretaries: Box<[SpecialSecretary]>,
 
     ship_id_to_index: HashMap<u32, usize>,
     ship_simsearch: Search<()>,
@@ -81,22 +81,29 @@ impl GameData {
         }
 
         let data = load_definitions(&data_path)?;
+
+        let ships = data.ships.into_boxed_slice();
+        let equips = data.equips.into_boxed_slice();
+        let augments = data.augments.into_boxed_slice();
+        let juustagram_chats = data.juustagram_chats.into_boxed_slice();
+        let special_secretaries = data.special_secretaries.into_boxed_slice();
+
         let mut this = Self {
             data_path,
             // pre-allocate maps with appropriate capacities
-            ship_id_to_index: HashMap::with_capacity(data.ships.len()),
-            equip_id_to_index: HashMap::with_capacity(data.equips.len()),
-            augment_id_to_index: HashMap::with_capacity(data.augments.len()),
+            ship_id_to_index: HashMap::with_capacity(ships.len()),
+            equip_id_to_index: HashMap::with_capacity(equips.len()),
+            augment_id_to_index: HashMap::with_capacity(augments.len()),
             ship_id_to_augment_indices: HashMap::new(),
-            juustagram_chat_id_to_index: HashMap::with_capacity(data.juustagram_chats.len()),
+            juustagram_chat_id_to_index: HashMap::with_capacity(juustagram_chats.len()),
             ship_id_to_juustagram_chat_indices: HashMap::new(),
-            special_secretary_id_to_index: HashMap::with_capacity(data.special_secretaries.len()),
+            special_secretary_id_to_index: HashMap::with_capacity(special_secretaries.len()),
             // move in vecs
-            ships: data.ships,
-            equips: data.equips,
-            augments: data.augments,
-            juustagram_chats: data.juustagram_chats,
-            special_secretaries: data.special_secretaries,
+            ships,
+            equips,
+            augments,
+            juustagram_chats,
+            special_secretaries,
             // default the rest of the fields
             ship_simsearch: Search::new(),
             equip_simsearch: Search::new(),
@@ -177,14 +184,6 @@ impl GameData {
             this.special_secretary_id_to_index.insert(data.id, index);
             this.special_secretary_simsearch.insert(&data.name, ());
         }
-
-        // these should be the right size but just in case
-        // `serde_json` doesn't exactly guarantee exact capacities
-        this.ships.shrink_to_fit();
-        this.equips.shrink_to_fit();
-        this.augments.shrink_to_fit();
-        this.juustagram_chats.shrink_to_fit();
-        this.special_secretaries.shrink_to_fit();
 
         // these are probably the wrong size
         this.ship_id_to_augment_indices.shrink_to_fit();

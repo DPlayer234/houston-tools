@@ -34,7 +34,7 @@ pub struct SkillBarrage {
     /// The ID of the skill that fires this barrage.
     pub skill_id: u32,
     /// The attacks within this barrage.
-    pub attacks: Vec<SkillAttack>,
+    pub attacks: FixedArray<SkillAttack>,
 }
 
 /// Represents a skill barrage's attack.

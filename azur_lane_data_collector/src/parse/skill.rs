@@ -6,6 +6,7 @@ use azur_lane::skill::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
+use crate::intl_util::IterExt as _;
 use crate::{context, convert_al, CONFIG};
 
 /// Loads a skill from the Lua state.
@@ -183,8 +184,7 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         stat_bonuses: [stat_bonus!(1), stat_bonus!(2), stat_bonus!(3)]
             .into_iter()
             .flatten()
-            .collect::<Vec<_>>()
-            .trunc_into(),
+            .collect_fixed_array(),
     })
 }
 
@@ -315,7 +315,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 .collect::<LuaResult<Vec<_>>>()?
                 .into_iter()
                 .flatten()
-                .collect::<Vec<_>>();
+                .collect_fixed_array();
 
             WeaponData::Aircraft(Aircraft {
                 aircraft_id: weapon_id,
@@ -323,7 +323,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 speed,
                 health,
                 dodge_limit,
-                weapons: weapons.trunc_into(),
+                weapons,
             })
         },
         _ => {
@@ -714,7 +714,7 @@ fn search_referenced_weapons_in_effect_entry(
         merge_attacks(&mut attacks);
         rwc.barrages.push(SkillBarrage {
             skill_id: sc.skill_id,
-            attacks,
+            attacks: attacks.trunc_into(),
         });
     }
 

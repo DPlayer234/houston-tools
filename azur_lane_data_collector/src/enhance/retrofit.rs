@@ -1,16 +1,14 @@
 use std::borrow::Borrow;
-use std::mem::take;
 
 use azur_lane::ship::*;
 use mlua::prelude::*;
-use small_fixed_array::TruncatingInto as _;
 
+use crate::intl_util::FixedArrayExt as _;
 use crate::{parse, Retrofit};
 
 /// Applies the full retrofit template to the ship data.
 pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -> LuaResult<()> {
     let list: Vec<Vec<LuaTable>> = retrofit.data.get("transform_list")?;
-    let mut new_skills = Vec::new();
 
     ship.rarity = ship.rarity.next();
 
@@ -36,7 +34,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
                         {
                             #[allow(clippy::cast_sign_loss)]
                             #[allow(clippy::cast_possible_truncation)]
-                            new_skills.push(parse::skill::load_skill(lua, v as u32)?)
+                            ship.skills.push(parse::skill::load_skill(lua, v as u32)?)
                         },
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,
                         "equipment_proficiency_2" => add_equip_efficiency(ship, 1, v)?,
@@ -48,12 +46,6 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
                 Ok(())
             })?;
         }
-    }
-
-    if !new_skills.is_empty() {
-        let mut all_skills = take(&mut ship.skills).into_vec();
-        all_skills.extend(new_skills);
-        ship.skills = all_skills.trunc_into();
     }
 
     Ok(())
