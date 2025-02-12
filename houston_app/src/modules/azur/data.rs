@@ -87,9 +87,9 @@ impl GameData {
             ship_id_to_index: HashMap::with_capacity(data.ships.len()),
             equip_id_to_index: HashMap::with_capacity(data.equips.len()),
             augment_id_to_index: HashMap::with_capacity(data.augments.len()),
-            ship_id_to_augment_indices: HashMap::with_capacity(data.augments.len()),
+            ship_id_to_augment_indices: HashMap::new(),
             juustagram_chat_id_to_index: HashMap::with_capacity(data.juustagram_chats.len()),
-            ship_id_to_juustagram_chat_indices: HashMap::with_capacity(data.juustagram_chats.len()),
+            ship_id_to_juustagram_chat_indices: HashMap::new(),
             special_secretary_id_to_index: HashMap::with_capacity(data.special_secretaries.len()),
             // move in vecs
             ships: data.ships,
@@ -178,10 +178,23 @@ impl GameData {
             this.special_secretary_simsearch.insert(&data.name, ());
         }
 
+        // these should be the right size but just in case
+        // `serde_json` doesn't exactly guarantee exact capacities
+        this.ships.shrink_to_fit();
+        this.equips.shrink_to_fit();
+        this.augments.shrink_to_fit();
+        this.juustagram_chats.shrink_to_fit();
+        this.special_secretaries.shrink_to_fit();
+
+        // these are probably the wrong size
+        this.ship_id_to_augment_indices.shrink_to_fit();
+        this.ship_id_to_juustagram_chat_indices.shrink_to_fit();
+
+        // these are probably also the wrong size, in several ways
         this.ship_simsearch.shrink_to_fit();
         this.equip_simsearch.shrink_to_fit();
         this.augment_simsearch.shrink_to_fit();
-        this.special_secretaries.shrink_to_fit();
+        this.special_secretary_simsearch.shrink_to_fit();
         Ok(this)
     }
 

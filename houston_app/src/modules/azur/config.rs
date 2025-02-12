@@ -131,13 +131,15 @@ pub struct LoadedConfig<'a> {
 }
 
 impl<'a> LoadedConfig<'a> {
-    /// Creates a new [`Config`] from a raw value, ensuring that the game data
-    /// is loaded. If the game data hasn't been loaded yet, attempts to load it
-    /// and returns an error on failure.
+    /// Creates a new [`LoadedConfig`] from a raw value, ensuring that the game
+    /// data is loaded. If the game data hasn't been loaded yet, attempts to
+    /// load it and returns an error on failure.
     ///
     /// If this function has returned an error once, it will always return one.
     fn new(raw: &'a Config) -> anyhow::Result<Self> {
-        _ = raw.game_data()?;
+        let _: &'a GameData = raw.game_data()?;
+
+        // SAFETY: just ensured that the game data is loaded
         Ok(unsafe { Self::new_unchecked(raw) })
     }
 
