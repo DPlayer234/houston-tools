@@ -53,7 +53,6 @@ async fn main() -> anyhow::Result<()> {
         init.load(&config.bot)?;
 
         let bot_data = Arc::new(HBotData::new(config.bot));
-        tokio::spawn(connect_task(Arc::clone(&bot_data), init.db_init));
 
         let event_handler = HEventHandler {
             ready: OnceReset::new(),
@@ -65,21 +64,27 @@ async fn main() -> anyhow::Result<()> {
             .on_error(|err| Box::pin(slashies::error_handler(err)))
             .auto_register();
 
-        let mut client = Client::builder(config.discord.token, init.intents)
-            .activity(ActivityData::custom(
-                // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
-                config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
-            ))
-            .data(Arc::clone(&bot_data))
-            .framework(framework)
-            .event_handler(event_handler)
-            .await
-            .context("failed to build discord client")?;
+        let connect = bot_data.connect(init.db_init);
+        let discord = async {
+            let mut client = Client::builder(config.discord.token, init.intents)
+                .activity(ActivityData::custom(
+                    // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
+                    config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
+                ))
+                .data(Arc::clone(&bot_data))
+                .framework(framework)
+                .event_handler(event_handler)
+                .await
+                .context("failed to build discord client")?;
 
-        client
-            .start()
-            .await
-            .context("discord client shut down unexpectedly")
+            client
+                .start()
+                .await
+                .context("discord client shut down unexpectedly")
+        };
+
+        tokio::try_join!(connect, discord)?;
+        Ok(())
     }
 
     /// Custom panic handler that writes the panic to the logger and flushes it.
@@ -151,13 +156,6 @@ async fn main() -> anyhow::Result<()> {
     async fn ready_setup(ctx: &Context, data: &HBotData) -> Result {
         data.load_app_emojis(&ctx.http).await?;
         Ok(())
-    }
-
-    async fn connect_task(data: Arc<HBotData>, inits: Vec<modules::DbInitFn>) {
-        // this isn't retried since it's not exposed whether the error is retryable
-        if let Err(why) = data.connect(inits).await {
-            log::error!("Failed to connect to MongoDB database: {why:?}");
-        }
     }
 
     fn profile() -> Result<Cow<'static, str>> {

@@ -3,8 +3,6 @@ use serde::Deserialize;
 use serenity::model::Color;
 use serenity::secrets::Token;
 
-mod token_parse;
-
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
     pub discord: HDiscordConfig,
@@ -15,7 +13,6 @@ pub struct HConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct HDiscordConfig {
-    #[serde(with = "token_parse")]
     pub token: Token,
     pub status: Option<String>,
 }
