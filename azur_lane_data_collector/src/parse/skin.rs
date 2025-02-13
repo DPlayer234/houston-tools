@@ -2,7 +2,7 @@ use azur_lane::ship::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
-use crate::intl_util::IterExt as _;
+use crate::intl_util::{IterExt as _, TryIterExt};
 use crate::model::*;
 use crate::{context, convert_al};
 
@@ -75,16 +75,14 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
         crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
-        couple_encourage: {
-            set.words
-                .get::<Vec<LuaTable>>("couple_encourage")
-                .context("skin word couple_encourage")
-                .into_iter()
-                .flatten()
-                .map(|t| load_couple_encourage(set, t))
-                .collect::<LuaResult<Vec<_>>>()?
-                .trunc_into()
-        },
+        couple_encourage: set
+            .words
+            .get::<Vec<LuaTable>>("couple_encourage")
+            .context("skin word couple_encourage")
+            .into_iter()
+            .flatten()
+            .map(|t| load_couple_encourage(set, t))
+            .try_collect_fixed_array()?,
     })
 }
 
@@ -112,13 +110,12 @@ fn load_words_extra(
         }};
     }
 
-    let mut main_screen: Vec<ShipMainScreenLine> =
-        to_main_screen(get!("main").as_deref()).collect();
-
-    main_screen.extend(to_main_screen(get!("main_extra").as_deref()).map(|line| {
-        let index = line.index();
-        line.with_index(index + base.main_screen.len().to_usize())
-    }));
+    let main_screen = to_main_screen(get!("main").as_deref())
+        .chain(to_main_screen(get!("main_extra").as_deref()).map(|line| {
+            let index = line.index();
+            line.with_index(index + base.main_screen.len().to_usize())
+        }))
+        .collect_fixed_array();
 
     Ok(ShipSkinWords {
         description: get!("drop_descrip"),
@@ -126,7 +123,7 @@ fn load_words_extra(
         acquisition: get!("unlock"),
         login: get!("login"),
         details: get!("detail"),
-        main_screen: main_screen.trunc_into(),
+        main_screen,
         touch: get!("touch"),
         special_touch: get!("touch2"),
         rub: get!("headtouch"),

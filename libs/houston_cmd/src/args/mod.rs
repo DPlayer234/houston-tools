@@ -4,8 +4,10 @@ use serenity::builder::CreateCommandOption;
 use serenity::model::prelude::*;
 
 mod impls;
+mod str_arg;
 
 pub use ::houston_cmd_macros::ChoiceArg;
+pub use str_arg::FromStrArg;
 
 use crate::context::Context;
 use crate::error::Error;

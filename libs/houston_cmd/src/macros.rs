@@ -1,22 +1,8 @@
 /// Parses a slash argument from a context by its name and type.
 #[macro_export]
 macro_rules! parse_slash_argument {
-    ($ctx:expr, $name:literal, Option<$ty:ty>) => {
-        match $ctx.options().iter().find(|o| o.name == $name) {
-            Some(value) => Some(<$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?),
-            None => None,
-        }
-    };
     ($ctx:expr, $name:literal, $ty:ty) => {{
-        match $ctx.options().iter().find(|o| o.name == $name) {
-            Some(value) => <$ty as $crate::SlashArg>::extract(&$ctx, &value.value)?,
-            None => {
-                return Err($crate::Error::structure_mismatch(
-                    $ctx,
-                    "a required parameter is missing",
-                ))
-            },
-        }
+        <$ty as $crate::private::SlashArgOption<'_>>::try_extract(&$ctx, |o| o.name == $name)
     }};
 }
 
@@ -27,25 +13,29 @@ macro_rules! parse_slash_argument {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! create_slash_argument {
-    (($($body:tt)*), Option<$ty:ty>, $($setter:tt)*) => {
-        $crate::create_slash_argument!(@internal ($($body)*), $ty, false, $($setter)*)
-    };
     (($($body:tt)*), $ty:ty, $($setter:tt)*) => {
-        $crate::create_slash_argument!(@internal ($($body)*), $ty, true, $($setter)*)
-    };
-    (@internal ($($body:tt)*), $ty:ty, $req:literal, $($setter:tt)*) => {
         $crate::model::Parameter {
             $($body)*,
-            required: $req,
-            choices: <$ty as $crate::SlashArg>::choices,
+            required: <$ty as $crate::private::SlashArgOption<'_>>::REQUIRED,
+            choices: <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::choices,
             #[allow(unnecessary_cast)]
-            type_setter: |c| <$ty as $crate::SlashArg>::set_options(c) $($setter)*,
+            type_setter: |c| <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::set_options(c) $($setter)*,
         }
     };
 }
 
-/// Implements [`SlashArg`](crate::SlashArg) via a type's
-/// [`FromStr`](std::str::FromStr) implementations.
+/// Implements [`SlashArg`] via a type's [`FromStr`] implementations.
+///
+/// The implementation's [`FromStr::Err`] must be [`Error`] and `'static` to be
+/// supported. This is the same requirement that [`FromStrArg`] has.
+///
+/// If you are dealing with a foreign type, you should use [`FromStrArg`].
+///
+/// [`SlashArg`]: crate::SlashArg
+/// [`Error`]: std::error::Error
+/// [`FromStr`]: std::str::FromStr
+/// [`FromStr::Err`]: std::str::FromStr::Err
+/// [`FromStrArg`]: crate::FromStrArg
 #[macro_export]
 macro_rules! impl_slash_arg_via_from_str {
     ($ty:ty) => {
@@ -54,23 +44,13 @@ macro_rules! impl_slash_arg_via_from_str {
                 ctx: &$crate::Context<'ctx>,
                 resolved: &$crate::private::serenity::ResolvedValue<'ctx>,
             ) -> ::std::result::Result<Self, $crate::Error<'ctx>> {
-                match resolved {
-                    $crate::private::serenity::ResolvedValue::String(value) => {
-                        ::std::str::FromStr::from_str(value).map_err(|e| {
-                            $crate::Error::argument_parse(*ctx, Some((*value).to_owned()), e)
-                        })
-                    },
-                    _ => Err($crate::Error::structure_mismatch(
-                        *ctx,
-                        "expected string argument",
-                    )),
-                }
+                $crate::FromStrArg::extract(ctx, resolved).map(|v| v.0)
             }
 
             fn set_options(
                 option: $crate::private::serenity::CreateCommandOption<'_>,
             ) -> $crate::private::serenity::CreateCommandOption<'_> {
-                option.kind($crate::private::serenity::CommandOptionType::String)
+                $crate::FromStrArg::<Self>::set_options(option)
             }
         }
     };

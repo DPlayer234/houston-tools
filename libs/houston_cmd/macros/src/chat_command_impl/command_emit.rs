@@ -53,7 +53,7 @@ pub fn to_command_option_command(
         let param_name = &param.name;
         let param_ty = &*param.ty;
         quote::quote_spanned! {param.span=>
-            let #param_ident = ::houston_cmd::parse_slash_argument!(ctx, #param_name, #param_ty);
+            let #param_ident = ::houston_cmd::parse_slash_argument!(ctx, #param_name, #param_ty)?;
         }
     });
 

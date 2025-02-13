@@ -9,7 +9,7 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{juustagram, DefinitionData};
 use clap::Parser;
-use intl_util::FixedArrayExt as _;
+use intl_util::{FixedArrayExt as _, TryIterExt};
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
@@ -143,11 +143,11 @@ fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
     let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
-    let ships = load_ships(&lua, &pg)?.trunc_into();
-    let equips = load_equips(&lua, &pg)?.trunc_into();
-    let augments = load_augments(&lua, &pg)?.trunc_into();
-    let juustagram_chats = load_juustagram_chats(&lua, &pg)?.trunc_into();
-    let special_secretaries = load_special_secretaries(&lua, &pg)?.trunc_into();
+    let ships = load_ships(&lua, &pg)?;
+    let equips = load_equips(&lua, &pg)?;
+    let augments = load_augments(&lua, &pg)?;
+    let juustagram_chats = load_juustagram_chats(&lua, &pg)?;
+    let special_secretaries = load_special_secretaries(&lua, &pg)?;
 
     Ok(DefinitionData {
         ships,
@@ -173,7 +173,7 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     Ok(lua)
 }
 
-fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
+fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<ShipData>> {
     let ship_data_template: LuaTable = pg
         .get("ship_data_template")
         .context("global pg.ship_data_template")?;
@@ -328,11 +328,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
 
     let config = &*CONFIG;
     let make_ship_from_group = |group: ShipGroup| {
-        let members = group
-            .members
-            .into_iter()
-            .map(make_ship_set)
-            .collect::<LuaResult<Vec<_>>>()?;
+        let members: Vec<_> = group.members.into_iter().map(make_ship_set).try_collect()?;
 
         let mlb_max_id = group.id * 10 + 4;
         let raw_mlb = members
@@ -368,12 +364,12 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
             })
         };
 
-        let raw_skins = ship_skin_template_get_id_list_by_ship_group
+        let raw_skins: Vec<_> = ship_skin_template_get_id_list_by_ship_group
             .get::<Vec<u32>>(group.id)
             .with_context(context!("skin ids for ship with id {}", group.id))?
             .into_iter()
             .map(make_skin)
-            .collect::<LuaResult<Vec<_>>>()?;
+            .try_collect()?;
 
         let mut mlb = parse::ship::load_ship_data(lua, raw_mlb)?;
         if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
@@ -398,18 +394,19 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
             }
         }
 
-        for raw_skin in raw_skins {
-            mlb.skins.push(parse::skin::load_skin(&raw_skin)?);
-        }
+        mlb.skins = raw_skins
+            .into_iter()
+            .map(|s| parse::skin::load_skin(&s))
+            .try_collect_fixed_array()?;
 
         action.inc_amount();
-        Ok(mlb)
+        Ok::<_, LuaError>(mlb)
     };
 
     let mut ships = groups
         .into_values()
         .map(make_ship_from_group)
-        .collect::<anyhow::Result<Vec<_>>>()?;
+        .try_collect_fixed_array()?;
 
     action.finish();
 
@@ -417,7 +414,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<ShipData>> {
     Ok(ships)
 }
 
-fn load_equips(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Equip>> {
+fn load_equips(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<Equip>> {
     let equip_data_template: LuaTable = pg
         .get("equip_data_template")
         .context("global pg.equip_data_template")?;
@@ -466,13 +463,13 @@ fn load_equips(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Equip>> {
     let make_equip = |id| {
         let equip = parse::skill::load_equip(lua, id)?;
         action.inc_amount();
-        Ok(equip)
+        Ok::<_, LuaError>(equip)
     };
 
     let mut equips = equips
         .into_iter()
         .map(make_equip)
-        .collect::<LuaResult<Vec<_>>>()?;
+        .try_collect_fixed_array()?;
 
     action.finish();
 
@@ -480,7 +477,7 @@ fn load_equips(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Equip>> {
     Ok(equips)
 }
 
-fn load_augments(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Augment>> {
+fn load_augments(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<Augment>> {
     let spweapon_data_statistics: LuaTable = pg
         .get("spweapon_data_statistics")
         .context("global pg.spweapon_data_statistics")?;
@@ -533,13 +530,13 @@ fn load_augments(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Augment>> {
         let data = AugmentSet { id, statistics };
         let augment = parse::augment::load_augment(lua, &data)?;
         action.inc_amount();
-        Ok(augment)
+        Ok::<_, LuaError>(augment)
     };
 
     let mut augments = groups
         .into_values()
         .map(make_augment)
-        .collect::<LuaResult<Vec<_>>>()?;
+        .try_collect_fixed_array()?;
 
     action.finish();
 
@@ -547,7 +544,7 @@ fn load_augments(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Augment>> {
     Ok(augments)
 }
 
-fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<juustagram::Chat>> {
+fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<juustagram::Chat>> {
     let activity_ins_chat_group: LuaTable = pg
         .get("activity_ins_chat_group")
         .context("global pg.activity_ins_chat_group")?;
@@ -573,10 +570,13 @@ fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<juustag
     })?;
 
     action.finish();
-    Ok(chats)
+    Ok(chats.trunc_into())
 }
 
-fn load_special_secretaries(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<SpecialSecretary>> {
+fn load_special_secretaries(
+    lua: &Lua,
+    pg: &LuaTable,
+) -> anyhow::Result<FixedArray<SpecialSecretary>> {
     let secretary_special_ship: LuaTable = pg
         .get("secretary_special_ship")
         .context("global pg.secretary_special_ship")?;
@@ -617,13 +617,13 @@ fn load_special_secretaries(lua: &Lua, pg: &LuaTable) -> anyhow::Result<Vec<Spec
     let make_secretary = |data| {
         let equip = parse::secretary::load_special_secretary(lua, &data)?;
         action.inc_amount();
-        Ok(equip)
+        Ok::<_, LuaError>(equip)
     };
 
     let mut ships = ships
         .into_iter()
         .map(make_secretary)
-        .collect::<LuaResult<Vec<_>>>()?;
+        .try_collect_fixed_array()?;
 
     action.finish();
 

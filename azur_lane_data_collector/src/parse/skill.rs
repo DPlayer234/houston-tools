@@ -6,7 +6,7 @@ use azur_lane::skill::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
-use crate::intl_util::IterExt as _;
+use crate::intl_util::{IterExt as _, TryIterExt};
 use crate::{context, convert_al, CONFIG};
 
 /// Loads a skill from the Lua state.
@@ -119,10 +119,10 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
         }
     }
 
-    let skills = skill_ids
+    let skills: Vec<_> = skill_ids
         .into_iter()
         .map(|id| load_skill(lua, id))
-        .collect::<LuaResult<Vec<_>>>()?;
+        .try_collect()?;
 
     macro_rules! stat_bonus {
         ($index:literal) => {{
@@ -312,7 +312,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
             let weapons = weapons
                 .into_iter()
                 .map(|id| load_weapon(lua, id))
-                .collect::<LuaResult<Vec<_>>>()?
+                .try_collect::<Vec<_>>()?
                 .into_iter()
                 .flatten()
                 .collect_fixed_array();

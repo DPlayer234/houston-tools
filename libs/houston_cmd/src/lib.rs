@@ -140,7 +140,7 @@ pub mod private;
 mod reply;
 
 pub use ::houston_cmd_macros::{chat_command, context_command, sub_command};
-pub use args::{ChoiceArg, MessageContextArg, SlashArg, UserContextArg};
+pub use args::{ChoiceArg, FromStrArg, MessageContextArg, SlashArg, UserContextArg};
 pub use context::Context;
 pub use error::Error;
 pub use framework::Framework;

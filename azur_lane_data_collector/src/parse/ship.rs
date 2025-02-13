@@ -2,7 +2,7 @@ use azur_lane::ship::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, TruncatingInto as _};
 
-use crate::intl_util::IterExt as _;
+use crate::intl_util::{IterExt as _, TryIterExt};
 use crate::model::*;
 use crate::{context, convert_al, enhance, parse};
 
@@ -123,7 +123,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             .into_iter()
             .enumerate()
             .map(|(index, equip)| {
-                Ok(ShadowEquip {
+                Ok::<_, LuaError>(ShadowEquip {
                     name: equip.name,
                     efficiency: {
                         let e: Option<f64> = equipment_proficiency.get(4 + index)?;
@@ -132,8 +132,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
                     weapons: equip.weapons,
                 })
             })
-            .collect::<LuaResult<Vec<_>>>()?
-            .trunc_into(),
+            .try_collect_fixed_array()?,
         depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?
             .trunc_into(),
         skills: parse::skill::load_skills(lua, buff_list)?.trunc_into(),
