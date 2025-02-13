@@ -10,7 +10,7 @@ impl super::Module for Module {
         true
     }
 
-    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = super::HCommand> {
+    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         [
             slashies::bot_stats::bot_stats(),
             slashies::coin::coin(),

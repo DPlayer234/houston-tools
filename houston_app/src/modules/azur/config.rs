@@ -12,6 +12,8 @@ use super::GameData;
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     data_path: Arc<Path>,
+    #[serde(default)]
+    pub early_load: bool,
 
     #[serde(default)]
     pub wiki_urls: WikiUrls,

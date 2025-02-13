@@ -9,7 +9,7 @@ impl super::Module for Module {
         super::perks::Module.enabled(config) || super::starboard::Module.enabled(config)
     }
 
-    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         [slashies::profile_context(), slashies::profile()]
     }
 }

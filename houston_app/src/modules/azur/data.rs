@@ -50,10 +50,9 @@ impl GameData {
         // the error is just a short description of the error
         fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
             use anyhow::Context as _;
-            let f = fs::File::open(data_path.join("main.json"))
-                .context("Failed to read Azur Lane data.")?;
+            let f = fs::File::open(data_path.join("main.json")).context("cannot read file")?;
             let f = io::BufReader::new(f);
-            let data = serde_json::from_reader(f).context("Failed to parse Azur Lane data.")?;
+            let data = serde_json::from_reader(f).context("cannot parse fail")?;
             Ok(data)
         }
 

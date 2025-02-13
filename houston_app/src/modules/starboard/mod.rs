@@ -1,4 +1,5 @@
 use std::char;
+use std::sync::Arc;
 
 use bson::doc;
 use mongodb::options::ReturnDocument;
@@ -28,18 +29,8 @@ impl super::Module for Module {
         GatewayIntents::GUILD_MESSAGE_REACTIONS | GatewayIntents::GUILD_MESSAGES
     }
 
-    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         [slashies::starboard()]
-    }
-
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
-        use crate::helper::bson::update_indices;
-        Box::pin(async move {
-            use model::*;
-            update_indices(Message::collection(db), Message::indices()).await?;
-            update_indices(Score::collection(db), Score::indices()).await?;
-            Ok(())
-        })
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
@@ -55,6 +46,15 @@ impl super::Module for Module {
 
         log::info!("Starboard is enabled: {} guild(s)", config.starboard.len());
 
+        Ok(())
+    }
+
+    async fn db_init(self, _data: Arc<HBotData>, db: mongodb::Database) -> Result {
+        use model::*;
+
+        use crate::helper::bson::update_indices;
+        update_indices(Message::collection(&db), Message::indices()).await?;
+        update_indices(Score::collection(&db), Score::indices()).await?;
         Ok(())
     }
 }

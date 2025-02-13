@@ -1,9 +1,9 @@
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
-use crate::modules::DbInitFn;
+use crate::modules::{for_each_module, Module as _};
 use crate::prelude::*;
 
 mod app_emojis;
@@ -73,36 +73,60 @@ impl HBotData {
         HAppEmojis(self.app_emojis.get())
     }
 
-    /// Loads all app emojis.
-    ///
-    /// This doesn't return them. Use [`Self::app_emojis`].
-    pub async fn load_app_emojis(&self, ctx: &Http) -> Result {
+    /// Gets the cached current bot user.
+    pub fn current_user(&self) -> Result<&CurrentUser> {
+        self.current_user.get().context("current user not loaded")
+    }
+
+    /// Gets the database connection.
+    pub fn database(&self) -> Result<&mongodb::Database> {
+        self.database.get().context("database is not connected")
+    }
+
+    /// Gets the init data needed based on the enabled modules.
+    pub fn init(&self) -> Result<HInit> {
+        let config = self.config();
+        let mut startup = HInit::default();
+        for_each_module!(config, |m| {
+            m.validate(config)?;
+            startup.intents |= m.intents(config);
+            startup.commands.extend(m.commands(config));
+        });
+        Ok(startup)
+    }
+
+    /// Performs startup tasks, like connecting to a database and other needed
+    /// services. Tasks are run in sequence by default.
+    pub async fn startup(self: Arc<Self>) -> Result {
+        Arc::clone(&self).connect_database().await?;
+
+        for_each_module!(self.config(), |m| {
+            m.startup(Arc::clone(&self)).await?;
+        });
+
+        Ok(())
+    }
+
+    /// Called in ready to perform finalization with Discord state.
+    pub async fn ready(&self, http: &Http, ready: Ready) -> Result {
+        _ = self.current_user.set(ready.user);
+        self.load_app_emojis(http).await
+    }
+
+    async fn load_app_emojis(&self, http: &Http) -> Result {
         if self.app_emojis.get().is_none() {
             _ = self
                 .app_emojis
-                .set(app_emojis::HAppEmojiStore::load_and_update(&self.config, ctx).await?);
+                .set(app_emojis::HAppEmojiStore::load_and_update(self.config(), http).await?);
+
             log::info!("Loaded App Emojis.");
         }
 
         Ok(())
     }
 
-    /// Gets the cached current bot user.
-    pub fn current_user(&self) -> Result<&CurrentUser> {
-        self.current_user.get().context("current user not loaded")
-    }
-
-    /// Sets the current bot user.
-    pub fn set_current_user(&self, user: CurrentUser) -> Result {
-        let res = self.current_user.set(user);
-        res.ok().context("current user already set")
-    }
-
-    /// Connects to the database and other needed services.
-    ///
-    /// Called in a separate task during init.
-    pub async fn connect(&self, inits: impl IntoIterator<Item = DbInitFn>) -> Result {
-        if let Some(uri) = &self.config.mongodb_uri {
+    async fn connect_database(self: Arc<Self>) -> Result {
+        if let Some(uri) = &self.config().mongodb_uri {
             let client = mongodb::Client::with_uri_str(uri)
                 .await
                 .context("failed to connect to database cluster")?;
@@ -111,24 +135,28 @@ impl HBotData {
                 .default_database()
                 .context("no default database specified")?;
 
-            for init in inits {
-                init(&db).await?;
-            }
-
             self.database
-                .set(db)
-                .expect("do not call connect more than once");
+                .set(db.clone())
+                .expect("can only connect to database once");
+
+            for_each_module!(self.config(), |m| {
+                m.db_init(Arc::clone(&self), db.clone()).await?;
+            });
 
             log::info!("Connected to MongoDB.");
         }
 
         Ok(())
     }
+}
 
-    /// Gets the database connection.
-    pub fn database(&self) -> Result<&mongodb::Database> {
-        self.database.get().context("database is not connected")
-    }
+/// Data needed for bot startup.
+#[derive(Debug, Default)]
+pub struct HInit {
+    /// Intents used by this app.
+    pub intents: GatewayIntents,
+    /// Commands to register.
+    pub commands: Vec<houston_cmd::model::Command>,
 }
 
 pub struct Ephemeral;

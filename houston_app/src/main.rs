@@ -20,7 +20,6 @@ async fn main() -> anyhow::Result<()> {
     use serenity::prelude::*;
 
     use crate::build::{GIT_HASH, VERSION};
-    use crate::helper::sync::OnceReset;
     use crate::prelude::*;
 
     // run the program and clean up
@@ -49,23 +48,18 @@ async fn main() -> anyhow::Result<()> {
 
         log::info!(target: "houston_app::version", "Houston Tools v{VERSION} - {GIT_HASH}");
 
-        let mut init = modules::Info::new();
-        init.load(&config.bot)?;
-
         let bot_data = Arc::new(HBotData::new(config.bot));
+        let init = bot_data.init()?;
 
-        let event_handler = HEventHandler {
-            ready: OnceReset::new(),
-        };
-
+        let event_handler = HEventHandler;
         let framework = Framework::new()
             .commands(init.commands)
             .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
             .on_error(|err| Box::pin(slashies::error_handler(err)))
             .auto_register();
 
-        let connect = bot_data.connect(init.db_init);
-        let discord = async {
+        let startup = Arc::clone(&bot_data).startup();
+        let discord = async move {
             let mut client = Client::builder(config.discord.token, init.intents)
                 .activity(ActivityData::custom(
                     // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
@@ -83,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
                 .context("discord client shut down unexpectedly")
         };
 
-        tokio::try_join!(connect, discord)?;
+        tokio::try_join!(discord, startup)?;
         Ok(())
     }
 
@@ -106,9 +100,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     /// Type to handle various Discord events.
-    struct HEventHandler {
-        ready: OnceReset,
-    }
+    struct HEventHandler;
 
     #[serenity::async_trait]
     impl EventHandler for HEventHandler {
@@ -116,14 +108,9 @@ async fn main() -> anyhow::Result<()> {
             let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
-            if self.ready.set() {
-                let data = ctx.data_ref::<HContextData>();
-                _ = data.set_current_user(ready.user);
-
-                if let Err(why) = ready_setup(&ctx, data).await {
-                    self.ready.reset();
-                    log::error!("Failure in ready: {why:?}");
-                }
+            let data = ctx.data_ref::<HContextData>();
+            if let Err(why) = data.ready(&ctx.http, ready).await {
+                log::error!("Failure in ready: {why:?}");
             }
         }
 
@@ -151,11 +138,6 @@ async fn main() -> anyhow::Result<()> {
             modules::perks::dispatch_check_perks(&ctx);
             modules::starboard::reaction_add(ctx, reaction).await;
         }
-    }
-
-    async fn ready_setup(ctx: &Context, data: &HBotData) -> Result {
-        data.load_app_emojis(&ctx.http).await?;
-        Ok(())
     }
 
     fn profile() -> Result<Cow<'static, str>> {

@@ -1,4 +1,6 @@
-use serenity::futures::future::always_ready;
+use std::sync::Arc;
+
+use houston_cmd::model::Command;
 use serenity::prelude::*;
 
 use crate::prelude::*;
@@ -12,9 +14,9 @@ pub mod profile;
 pub mod starboard;
 
 mod prelude {
+    pub use houston_cmd::model::Command;
     pub use serenity::prelude::*;
 
-    pub(super) use super::HCommand;
     pub use super::Module as _;
     pub use crate::config::HBotConfig;
     pub use crate::prelude::*;
@@ -35,41 +37,34 @@ mod model_prelude {
     pub use crate::prelude::*;
 }
 
-pub type DbInitFn = fn(&mongodb::Database) -> mongodb::BoxFuture<'_, Result>;
-type HCommand = houston_cmd::model::Command;
-
-/// Initialization data.
-pub struct Info {
-    /// Intents used by this app.
-    pub intents: GatewayIntents,
-    /// Commands to register.
-    pub commands: Vec<HCommand>,
-    /// DB initializer functions.
-    pub db_init: Vec<DbInitFn>,
-}
-
-impl Info {
-    pub fn new() -> Self {
-        Self {
-            intents: GatewayIntents::empty(),
-            commands: Vec::new(),
-            db_init: Vec::new(),
+/// Run an expression against every enabled module.
+///
+/// Syntax is:
+///
+/// ```ignore
+/// for_each_module!(&config, |m| do_stuff(m));
+/// ```
+macro_rules! for_each_module {
+    (@inner $module:expr, $config:expr, |$var:ident| $body:expr) => {{
+        let $var = $module;
+        if $crate::modules::Module::enabled(&$var, $config) {
+            $body
         }
-    }
-
-    pub fn load(&mut self, config: &config::HBotConfig) -> Result {
-        core::Module.apply(self, config)?;
-        azur::Module.apply(self, config)?;
-        minigame::Module.apply(self, config)?;
-        perks::Module.apply(self, config)?;
-        media_react::Module.apply(self, config)?;
-        profile::Module.apply(self, config)?;
-        starboard::Module.apply(self, config)?;
-        Ok(())
-    }
+    }};
+    ($config:expr, |$var:ident| $body:expr) => {{
+        $crate::modules::for_each_module!(@inner $crate::modules::core::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::azur::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::minigame::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::perks::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::media_react::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::profile::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::starboard::Module, $config, |$var| $body);
+    }};
 }
 
-pub trait Module {
+pub(crate) use for_each_module;
+
+pub trait Module: Sized {
     /// Whether the module is enabled.
     fn enabled(&self, config: &config::HBotConfig) -> bool;
 
@@ -80,7 +75,7 @@ pub trait Module {
     }
 
     /// Commands for this module.
-    fn commands(&self, config: &config::HBotConfig) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, config: &config::HBotConfig) -> impl IntoIterator<Item = Command> {
         _ = config;
         []
     }
@@ -91,22 +86,18 @@ pub trait Module {
         Ok(())
     }
 
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
-        _ = db;
-        Box::pin(always_ready(|| Ok(())))
+    /// Runs async startup code for this module.
+    async fn startup(self, data: Arc<HBotData>) -> Result {
+        _ = data;
+        Ok(())
     }
 
-    /// Applies the settings if enabled.
-    fn apply(&self, init: &mut Info, config: &config::HBotConfig) -> Result {
-        if self.enabled(config) {
-            self.validate(config)?;
-            init.intents |= self.intents(config);
-            init.commands.extend(self.commands(config));
-
-            if config.mongodb_uri.is_some() {
-                init.db_init.push(Self::db_init);
-            }
-        }
+    /// Provides a function to call to initialize the database.
+    ///
+    /// This will generally create indices on related collection.
+    async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
+        _ = data;
+        _ = db;
         Ok(())
     }
 }

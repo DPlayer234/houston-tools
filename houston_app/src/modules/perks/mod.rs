@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bson::{doc, Bson};
 use chrono::prelude::*;
 
@@ -27,7 +29,7 @@ impl super::Module for Module {
         GatewayIntents::GUILD_MESSAGES
     }
 
-    fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = HCommand> {
+    fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         let perks = config.perks().unwrap();
         let mut c = vec![
             slashies::perk_admin::perk_admin(),
@@ -59,20 +61,8 @@ impl super::Module for Module {
         c
     }
 
-    fn db_init(db: &mongodb::Database) -> mongodb::BoxFuture<'_, Result> {
-        use crate::helper::bson::update_indices;
-        Box::pin(async move {
-            use model::*;
-            update_indices(Wallet::collection(db), Wallet::indices()).await?;
-            update_indices(ActivePerk::collection(db), ActivePerk::indices()).await?;
-            update_indices(UniqueRole::collection(db), UniqueRole::indices()).await?;
-            update_indices(Birthday::collection(db), Birthday::indices()).await?;
-            Ok(())
-        })
-    }
-
     fn validate(&self, config: &HBotConfig) -> Result {
-        anyhow::ensure!(config.mongodb_uri.is_some(), "perks requires a mongodb_uri",);
+        anyhow::ensure!(config.mongodb_uri.is_some(), "perks requires a mongodb_uri");
 
         let perks = config.perks().unwrap();
         log::info!("Perks are enabled.");
@@ -81,6 +71,17 @@ impl super::Module for Module {
             log::trace!("Rainbow Role is enabled: {} guild(s)", r.guilds.len());
         }
 
+        Ok(())
+    }
+
+    async fn db_init(self, _data: Arc<HBotData>, db: mongodb::Database) -> Result {
+        use model::*;
+
+        use crate::helper::bson::update_indices;
+        update_indices(Wallet::collection(&db), Wallet::indices()).await?;
+        update_indices(ActivePerk::collection(&db), ActivePerk::indices()).await?;
+        update_indices(UniqueRole::collection(&db), UniqueRole::indices()).await?;
+        update_indices(Birthday::collection(&db), Birthday::indices()).await?;
         Ok(())
     }
 }
