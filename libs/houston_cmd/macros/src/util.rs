@@ -1,5 +1,5 @@
 use darling::util::SpannedValue;
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::fold::Fold;
 use syn::spanned::Spanned;
 use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue};
@@ -43,10 +43,40 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<SpannedValue<String>> 
     res
 }
 
-pub struct FoldLifetimeAsStatic;
-impl Fold for FoldLifetimeAsStatic {
-    fn fold_lifetime(&mut self, _i: syn::Lifetime) -> syn::Lifetime {
-        syn::parse_quote! { 'static }
+pub struct ReplaceLifetimes {
+    l: Option<syn::Lifetime>,
+}
+
+impl ReplaceLifetimes {
+    pub fn omit() -> Self {
+        Self { l: None }
+    }
+
+    #[expect(dead_code, reason = "maybe useful later")]
+    pub fn new(l: &str) -> Self {
+        Self {
+            l: Some(syn::Lifetime::new(l, Span::call_site())),
+        }
+    }
+
+    fn resolve(&self, i: Option<syn::Lifetime>) -> Option<syn::Lifetime> {
+        if i.as_ref().is_none_or(|i| i.ident != "static") {
+            self.l.clone()
+        } else {
+            i
+        }
+    }
+}
+
+impl Fold for ReplaceLifetimes {
+    fn fold_type_reference(&mut self, mut i: syn::TypeReference) -> syn::TypeReference {
+        i.lifetime = self.resolve(i.lifetime);
+        syn::fold::fold_type_reference(self, i)
+    }
+
+    fn fold_lifetime(&mut self, i: syn::Lifetime) -> syn::Lifetime {
+        self.resolve(Some(i))
+            .unwrap_or_else(|| syn::Lifetime::new("'_", Span::call_site()))
     }
 }
 

@@ -1,6 +1,6 @@
 use houston_cmd::{Context, Error, SlashArg, UserContextArg};
 
-use crate::helper::discord::PartialRef;
+use crate::helper::discord::Partial;
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -35,7 +35,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
 #[derive(Debug, Clone, Copy)]
 pub struct SlashMember<'a> {
     pub user: &'a User,
-    pub member: PartialRef<'a, Member>,
+    pub member: Partial<&'a Member>,
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
@@ -44,7 +44,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
             ResolvedValue::User(user, Some(member)) => {
                 return Ok(Self {
                     user,
-                    member: PartialRef::Partial(member),
+                    member: Partial::Partial(member),
                 })
             },
             // delegate to this method to get the correct error
@@ -69,7 +69,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
         Ok(Self {
             user,
-            member: PartialRef::Partial(member),
+            member: Partial::Partial(member),
         })
     }
 }
@@ -92,14 +92,14 @@ impl<'a> SlashMember<'a> {
         let member = ctx.member().context("member must be present")?;
         Ok(Self {
             user: ctx.user(),
-            member: PartialRef::Full(member),
+            member: Partial::Full(member),
         })
     }
 
     pub fn nick(&self) -> Option<&str> {
         match self.member {
-            PartialRef::Full(m) => m.nick.as_deref(),
-            PartialRef::Partial(m) => m.nick.as_deref(),
+            Partial::Full(m) => m.nick.as_deref(),
+            Partial::Partial(m) => m.nick.as_deref(),
         }
     }
 
@@ -109,9 +109,9 @@ impl<'a> SlashMember<'a> {
 
     pub fn face(&self) -> String {
         match self.member {
-            PartialRef::Full(m) => m.face(),
+            Partial::Full(m) => m.face(),
             // PartialMember has no guild avatar
-            PartialRef::Partial(_) => self.user.face(),
+            Partial::Partial(_) => self.user.face(),
         }
     }
 }

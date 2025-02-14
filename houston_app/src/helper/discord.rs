@@ -34,17 +34,14 @@ pub trait WithPartial {
     type Partial;
 }
 
-#[derive(Debug)]
-pub enum PartialRef<'a, T: WithPartial> {
-    Full(&'a T),
-    Partial(&'a T::Partial),
+impl<'a, T: WithPartial> WithPartial for &'a T {
+    type Partial = &'a T::Partial;
 }
 
-impl<T: WithPartial> Copy for PartialRef<'_, T> {}
-impl<T: WithPartial> Clone for PartialRef<'_, T> {
-    fn clone(&self) -> Self {
-        *self
-    }
+#[derive(Debug, Clone, Copy)]
+pub enum Partial<T: WithPartial> {
+    Full(T),
+    Partial(T::Partial),
 }
 
 impl WithPartial for Member {

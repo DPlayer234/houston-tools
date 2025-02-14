@@ -3,11 +3,14 @@ use darling::FromMeta;
 use proc_macro2::{Span, TokenStream};
 use quote::TokenStreamExt;
 use syn::ext::IdentExt;
+use syn::fold::Fold;
 use syn::spanned::Spanned;
 use syn::{FnArg, ItemFn, Pat, Type};
 
 use crate::args::ParameterArgs;
-use crate::util::{ensure_span, ensure_spanned, extract_description, quote_map_option};
+use crate::util::{
+    ensure_span, ensure_spanned, extract_description, quote_map_option, ReplaceLifetimes,
+};
 
 struct Parameter {
     span: Span,
@@ -84,6 +87,8 @@ pub fn to_command_option_command(
 
 fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
     let mut parameters = Vec::new();
+
+    let mut fold_type = ReplaceLifetimes::omit();
     for input in func.sig.inputs.iter_mut().skip(1) {
         let input = match input {
             FnArg::Typed(x) => x,
@@ -118,7 +123,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
             span,
             name,
             args,
-            ty: input.ty.clone(),
+            ty: fold_type.fold_type((*input.ty).clone()).into(),
         });
     }
 

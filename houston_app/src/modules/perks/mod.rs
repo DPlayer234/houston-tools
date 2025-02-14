@@ -113,9 +113,13 @@ async fn check_perks_core(ctx: Context) -> Result {
         return Ok(());
     }
 
-    // we hold this lock for the entire process
-    // so we can avoid others racing within this method
-    let mut last_check = perks.last_check.try_write()?;
+    // we hold this lock for the entire process so we can avoid others racing within
+    // this method. exit here on error since it means multiple threads got past
+    // the `read` above and hit this, but that's fine
+    let Ok(mut last_check) = perks.last_check.try_write() else {
+        return Ok(());
+    };
+
     *last_check = now;
 
     // handle updates to the effects in parallel

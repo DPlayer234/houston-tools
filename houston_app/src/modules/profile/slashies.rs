@@ -19,10 +19,10 @@ pub async fn profile_context(ctx: Context<'_>, member: SlashMember<'_>) -> Resul
 
 /// View a member's server profile.
 #[chat_command(contexts = "Guild", integration_types = "Guild")]
-pub async fn profile(
-    ctx: Context<'_>,
+pub async fn profile<'ctx>(
+    ctx: Context<'ctx>,
     /// The member to view the profile of.
-    member: Option<SlashMember<'_>>,
+    member: Option<SlashMember<'ctx>>,
     /// Whether to show the response only to yourself.
     ephemeral: Option<bool>,
 ) -> Result {
