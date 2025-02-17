@@ -1,4 +1,5 @@
 use super::MutStrLike;
+use crate::iter::ConstIter;
 
 /// Given a `SNAKE_CASE` string, converts it to title case (i.e. `Snake Case`).
 ///
@@ -28,10 +29,11 @@ pub fn to_titlecase<S: MutStrLike + ?Sized>(value: &mut S) {
 /// Given an ASCII or UTF-8 [`u8`] slice representing a `SNAKE_CASE` string,
 /// converts it to title case (i.e. `Snake Case`). The slice is mutated
 /// in-place.
-fn to_titlecase_u8(slice: &mut [u8]) {
+pub const fn to_titlecase_u8(slice: &mut [u8]) {
     let mut is_start = true;
 
-    for item in slice {
+    let mut iter = ConstIter::new(slice);
+    while let Some(item) = iter.next() {
         (*item, is_start) = titlecase_transform(*item, is_start);
     }
 }
@@ -89,8 +91,11 @@ macro_rules! titlecase {
             const N: usize = INPUT.len();
 
             // Include length in constant for next call.
-            const CLONE: [u8; N] = *$crate::mem::as_sized(INPUT);
-            const RESULT: [u8; N] = $crate::text::private::to_titlecase_u8_array(CLONE);
+            const RESULT: [u8; N] = {
+                let mut value = *$crate::mem::as_sized(INPUT);
+                $crate::text::private::to_titlecase_u8(&mut value);
+                value
+            };
             &RESULT as &[u8]
         }
     };

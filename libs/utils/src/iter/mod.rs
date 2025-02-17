@@ -1,5 +1,7 @@
+mod const_iter;
 mod vec_chunks;
 
+pub use const_iter::ConstIter;
 pub use vec_chunks::VecChunks;
 
 pub trait IteratorExt: Iterator {

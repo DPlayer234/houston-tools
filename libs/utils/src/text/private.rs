@@ -3,26 +3,9 @@
 
 use std::ptr;
 
+pub use super::titlecase_impl::to_titlecase_u8;
 use super::InlineStr;
-
-/// Given an ASCII or UTF-8 [`u8`] array representing a `SNAKE_CASE` string,
-/// converts it to title case (i.e. `Snake Case`).
-///
-/// This function is generally not useful and exists primarily to support the
-/// [`titlecase`](crate::titlecase) macro.
-#[must_use]
-pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u8; LEN] {
-    let mut is_start = true;
-
-    let mut index = 0usize;
-    while index < LEN {
-        (value[index], is_start) =
-            super::titlecase_impl::titlecase_transform(value[index], is_start);
-        index += 1;
-    }
-
-    value
-}
+use crate::iter::ConstIter;
 
 /// Counts the total length of all [`str`] slices.
 ///
@@ -33,12 +16,11 @@ pub const fn to_titlecase_u8_array<const LEN: usize>(mut value: [u8; LEN]) -> [u
 pub const fn count_str_const(slices: &[&str]) -> usize {
     let mut offset = 0usize;
 
-    let mut slice_index = 0usize;
-    while slice_index < slices.len() {
+    let mut iter = ConstIter::new(slices);
+    while let Some(slice) = iter.next() {
         offset = offset
-            .checked_add(slices[slice_index].len())
+            .checked_add(slice.len())
             .expect("total length must not overflow");
-        slice_index += 1;
     }
 
     offset
@@ -57,9 +39,8 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     let mut out = [0u8; N];
     let mut offset = 0usize;
 
-    let mut slice_index = 0usize;
-    while slice_index < slices.len() {
-        let slice = slices[slice_index].as_bytes();
+    let mut iter = ConstIter::new(slices);
+    while let Some(slice) = iter.next() {
         assert!(
             offset + slice.len() <= N,
             "N was shorter than total input length"
@@ -72,7 +53,6 @@ pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
         }
 
         offset += slice.len();
-        slice_index += 1;
     }
 
     assert!(offset == N, "total input length must be N");
