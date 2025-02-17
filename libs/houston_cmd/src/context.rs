@@ -4,7 +4,7 @@ use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
 use serenity::model::prelude::*;
 
-use crate::framework::ResolvedOption;
+use crate::args::ResolvedOption;
 use crate::reply::{CreateReply, UNSENT};
 use crate::ReplyHandle;
 
