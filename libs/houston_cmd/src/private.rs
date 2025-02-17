@@ -2,10 +2,12 @@
 //!
 //! Exposed for use by macros.
 
+use ::serenity::model::application::ResolvedValue;
 pub use serenity::all as serenity;
-use serenity::ResolvedOption;
 
-use crate::{Context, Error, SlashArg};
+use crate::args::SlashArg;
+use crate::context::Context;
+use crate::error::Error;
 
 /// Helper trait to handle [`Option`] parameters uniformly.
 ///
@@ -23,18 +25,16 @@ pub trait SlashArgOption<'ctx>: Sized {
 
     /// Tries to extract the argument value.
     ///
-    /// `f` is a predicate to match the correct option.
+    /// If passed [`Some`], behaves like [`Self::Inner::extract`], though
+    /// wrapping the output in [`Some`].
     ///
-    /// If the parameter is found, behaves like [`Self::Inner::extract`], though
-    /// wrapping the optional parameters in [`Some`].
-    ///
-    /// If the parameter isn't found, returns `Some(None)` for optional
-    /// parameters and otherwise returns an error.
+    /// If passed [`None`], returns `Ok(None)` for optional parameters and
+    /// otherwise returns an error.
     ///
     /// [`Self::Inner::extract`]: SlashArg::extract
     fn try_extract(
         ctx: &Context<'ctx>,
-        f: impl FnMut(&ResolvedOption<'ctx>) -> bool,
+        resolved: Option<&ResolvedValue<'ctx>>,
     ) -> Result<Self, Error<'ctx>>;
 }
 
@@ -42,12 +42,13 @@ impl<'ctx, T: SlashArg<'ctx>> SlashArgOption<'ctx> for T {
     const REQUIRED: bool = true;
     type Required = Self;
 
+    #[inline]
     fn try_extract(
         ctx: &Context<'ctx>,
-        mut f: impl FnMut(&ResolvedOption<'ctx>) -> bool,
+        resolved: Option<&ResolvedValue<'ctx>>,
     ) -> Result<Self, Error<'ctx>> {
-        match ctx.options().iter().find(move |o| f(o)) {
-            Some(o) => Self::extract(ctx, &o.value),
+        match resolved {
+            Some(o) => Self::extract(ctx, o),
             None => Err(Error::structure_mismatch(
                 *ctx,
                 "a required parameter is missing",
@@ -60,12 +61,13 @@ impl<'ctx, T: SlashArg<'ctx>> SlashArgOption<'ctx> for Option<T> {
     const REQUIRED: bool = false;
     type Required = T;
 
+    #[inline]
     fn try_extract(
         ctx: &Context<'ctx>,
-        mut f: impl FnMut(&ResolvedOption<'ctx>) -> bool,
+        resolved: Option<&ResolvedValue<'ctx>>,
     ) -> Result<Self, Error<'ctx>> {
-        match ctx.options().iter().find(move |o| f(o)) {
-            Some(o) => T::extract(ctx, &o.value).map(Some),
+        match resolved {
+            Some(o) => T::extract(ctx, o).map(Some),
             None => Ok(None),
         }
     }

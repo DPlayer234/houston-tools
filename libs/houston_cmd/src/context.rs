@@ -4,31 +4,55 @@ use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
 use serenity::model::prelude::*;
 
-use crate::reply::CreateReply;
+use crate::framework::ResolvedOption;
+use crate::reply::{CreateReply, UNSENT};
 use crate::ReplyHandle;
 
 /// The context for a command invocation.
 #[derive(Debug, Clone, Copy)]
 pub struct Context<'a> {
-    pub(crate) reply_state: &'a AtomicUsize,
     /// The serenity context that triggered this command.
     pub serenity: &'a SerenityContext,
     /// The command interaction that this context corresponds to.
     pub interaction: &'a CommandInteraction,
-    pub(crate) options: &'a [ResolvedOption<'a>],
+    /// Additional internal state.
+    pub(crate) inner: &'a ContextInner<'a>,
+}
+
+/// Crate internal state for the context.
+///
+/// Present to avoid bloating the inline-size of the context struct. Plus, the
+/// `reply_state` field need to be held by reference anyways, so the only extra
+/// indirection caused by this is for `options`.
+#[derive(Debug)]
+pub struct ContextInner<'a> {
+    pub reply_state: AtomicUsize,
+    pub options: &'a [ResolvedOption<'a>],
+}
+
+impl<'a> ContextInner<'a> {
+    pub fn with_options(options: &'a [ResolvedOption<'a>]) -> Self {
+        Self {
+            reply_state: AtomicUsize::new(UNSENT),
+            options,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self::with_options(&[])
+    }
 }
 
 impl<'a> Context<'a> {
     pub(crate) fn new(
-        reply_state: &'a AtomicUsize,
         serenity: &'a SerenityContext,
         interaction: &'a CommandInteraction,
+        inner: &'a ContextInner<'a>,
     ) -> Self {
         Self {
-            reply_state,
             serenity,
             interaction,
-            options: &[],
+            inner,
         }
     }
 
@@ -61,7 +85,19 @@ impl<'a> Context<'a> {
 
     /// Gets the resolved options.
     pub fn options(self) -> &'a [ResolvedOption<'a>] {
-        self.options
+        self.inner.options
+    }
+
+    /// Gets the resolved value for an option by its name.
+    ///
+    /// If no option with that name was specified, returns [`None`].
+    #[inline]
+    pub fn option_value(self, name: &str) -> Option<&'a ResolvedValue<'a>> {
+        self.inner
+            .options
+            .iter()
+            .find(move |o| o.name == name)
+            .map(|o| &o.value)
     }
 
     /// Defers the response, specifying whether it is ephemeral.

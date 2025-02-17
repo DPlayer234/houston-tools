@@ -143,7 +143,7 @@ pub use ::houston_cmd_macros::{chat_command, context_command, sub_command};
 pub use args::{ChoiceArg, FromStrArg, MessageContextArg, SlashArg, UserContextArg};
 pub use context::Context;
 pub use error::Error;
-pub use framework::Framework;
+pub use framework::{Framework, ResolvedOption};
 pub use reply::{CreateReply, EditReply, ReplyHandle};
 
 pub type BoxFuture<'a, T> = serenity::futures::future::BoxFuture<'a, T>;

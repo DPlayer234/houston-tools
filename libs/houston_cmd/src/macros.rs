@@ -2,7 +2,8 @@
 #[macro_export]
 macro_rules! parse_slash_argument {
     ($ctx:expr, $name:literal, $ty:ty) => {{
-        <$ty as $crate::private::SlashArgOption<'_>>::try_extract(&$ctx, |o| o.name == $name)
+        let value = $ctx.option_value($name);
+        <$ty as $crate::private::SlashArgOption<'_>>::try_extract(&$ctx, value)
     }};
 }
 

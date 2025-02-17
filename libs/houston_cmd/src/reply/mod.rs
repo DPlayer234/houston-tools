@@ -11,16 +11,20 @@ mod create;
 mod edit;
 mod handle;
 
-pub async fn defer(ctx: Context<'_>, ephemeral: bool) -> serenity::Result<()> {
-    let state = ctx.reply_state.load(Ordering::Relaxed);
+pub const UNSENT: usize = 0;
+const DEFER: usize = 1;
+const SENT: usize = 2;
 
-    if state == 0 {
+pub async fn defer(ctx: Context<'_>, ephemeral: bool) -> serenity::Result<()> {
+    let state = ctx.inner.reply_state.load(Ordering::Relaxed);
+
+    if state == UNSENT {
         let reply = CreateInteractionResponse::Defer(
             CreateInteractionResponseMessage::new().ephemeral(ephemeral),
         );
 
         ctx.interaction.create_response(ctx.http(), reply).await?;
-        ctx.reply_state.store(1, Ordering::Relaxed);
+        ctx.inner.reply_state.store(DEFER, Ordering::Relaxed);
     }
 
     Ok(())
@@ -30,19 +34,20 @@ pub async fn send_reply<'ctx>(
     ctx: Context<'ctx>,
     reply: CreateReply<'_>,
 ) -> serenity::Result<ReplyHandle<'ctx>> {
-    let state = ctx.reply_state.load(Ordering::Relaxed);
+    let state = ctx.inner.reply_state.load(Ordering::Relaxed);
 
     let handle = match state {
-        0 => {
+        UNSENT => {
             let reply = reply.into_interaction_response();
             let reply = CreateInteractionResponse::Message(reply);
             ctx.interaction.create_response(ctx.http(), reply).await?;
-            ctx.reply_state.store(2, Ordering::Relaxed);
+            ctx.inner.reply_state.store(SENT, Ordering::Relaxed);
             ReplyHandle::original(ctx)
         },
-        1 => {
+        DEFER => {
             let reply = reply.into_interaction_edit();
             ctx.interaction.edit_response(ctx.http(), reply).await?;
+            ctx.inner.reply_state.store(SENT, Ordering::Relaxed);
             ReplyHandle::original(ctx)
         },
         _ => {

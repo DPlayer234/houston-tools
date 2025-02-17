@@ -1,14 +1,13 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::mem::take;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serenity::builder::CreateInteractionResponse;
 use serenity::framework::Framework as SerenityFramework;
 use serenity::gateway::client::{Context as SerenityContext, FullEvent};
 use serenity::model::prelude::*;
 
-use crate::context::Context;
+use crate::context::{Context, ContextInner};
 use crate::error::Error;
 use crate::model::{Command, CommandOptionData, Invoke, SubCommandData};
 use crate::BoxFuture;
@@ -127,36 +126,36 @@ impl Framework {
     }
 
     async fn run_command(&self, ctx: &SerenityContext, interaction: &CommandInteraction) {
-        let reply_state = AtomicUsize::new(0);
-        let mut ctx = Context::new(&reply_state, ctx, interaction);
-
         let (command, options) = match self.find_command(interaction) {
             Ok(r) => r,
             Err(why) => {
+                let ctx_inner = ContextInner::empty();
+                let ctx = Context::new(ctx, interaction, &ctx_inner);
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
             },
         };
 
-        ctx.options = &options;
+        let ctx_inner = ContextInner::with_options(&options);
+        let ctx = Context::new(ctx, interaction, &ctx_inner);
         if let Err(why) = self.run_command_or(ctx, command).await {
             self.handle_error(why).await;
         }
     }
 
     async fn run_autocomplete(&self, ctx: &SerenityContext, interaction: &CommandInteraction) {
-        let reply_state = AtomicUsize::new(0);
-        let mut ctx = Context::new(&reply_state, ctx, interaction);
-
         let (command, options) = match self.find_command(interaction) {
             Ok(r) => r,
             Err(why) => {
+                let ctx_inner = ContextInner::empty();
+                let ctx = Context::new(ctx, interaction, &ctx_inner);
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
             },
         };
 
-        ctx.options = &options;
+        let ctx_inner = ContextInner::with_options(&options);
+        let ctx = Context::new(ctx, interaction, &ctx_inner);
         if let Err(why) = self.run_autocomplete_or(ctx, command).await {
             self.handle_error(why).await;
         }
@@ -265,36 +264,136 @@ impl Framework {
     ) -> Result<(&SubCommandData, Vec<ResolvedOption<'ctx>>), &'static str> {
         let data = &interaction.data;
         let name = data.name.as_str();
-        let mut options = data.options();
 
         // find the root command
         let root = self.commands.get(name).ok_or("unknown command")?;
+        let mut resolver = CommandOptionResolver::new(data);
 
         // traverse the command tree to find the correct sub command
         let mut command = &root.data;
-        while let Some(ResolvedOption {
-            name,
-            value:
-                ResolvedValue::SubCommand(next_options) | ResolvedValue::SubCommandGroup(next_options),
-            ..
-        }) = options.first_mut()
-        {
+        while let Some(name) = resolver.sub_command() {
             let CommandOptionData::Group(group) = &command.data else {
                 return Err("found arguments when command was expected");
             };
 
-            let Some(next_command) = group.sub_commands.iter().find(|c| *c.name == **name) else {
+            let Some(next_command) = group.sub_commands.iter().find(|c| *c.name == *name) else {
                 return Err("unknown sub-command");
             };
 
             command = next_command;
-            options = take(next_options).into_vec();
         }
 
         let CommandOptionData::Command(command) = &command.data else {
             return Err("found group where command was expected");
         };
 
+        let options = resolver.options()?;
         Ok((command, options))
+    }
+}
+
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct ResolvedOption<'a> {
+    pub name: &'a str,
+    pub value: ResolvedValue<'a>,
+}
+
+/// Internal helper to resolve options for a command.
+///
+/// This essentially just exists to save a few allocations done by serenity's
+/// built-in command data resolution.
+///
+/// Call [`Self::sub_command`] until you receive [`None`] to descend into the
+/// tree and find the right command, then call [`Self::options`] to resolve the
+/// arguments to the command.
+struct CommandOptionResolver<'a> {
+    opts: &'a [CommandDataOption],
+    resolved: &'a CommandDataResolved,
+}
+
+impl<'a> CommandOptionResolver<'a> {
+    fn new(data: &'a CommandData) -> Self {
+        Self {
+            opts: &data.options,
+            resolved: &data.resolved,
+        }
+    }
+
+    /// Tries to descend into next sub command or sub command group. If another
+    /// is found, returns [`Some`] with the command name.
+    ///
+    /// If there are no further sub commands specified, returns [`None`].
+    fn sub_command(&mut self) -> Option<&'a str> {
+        let cmd = self.opts.first()?;
+        match &cmd.value {
+            CommandDataOptionValue::SubCommand(opts)
+            | CommandDataOptionValue::SubCommandGroup(opts) => {
+                self.opts = opts;
+                Some(&cmd.name)
+            },
+            _ => None,
+        }
+    }
+
+    /// Resolves the options for the command. This is supposed to be called
+    /// after descending the tree.
+    ///
+    /// Returns an error if there are further sub commands or if a command value
+    /// must be rejected.
+    fn options(self) -> Result<Vec<ResolvedOption<'a>>, &'static str> {
+        let resolved = self.resolved;
+        self.opts
+            .iter()
+            .map(|o| {
+                let value = match &o.value {
+                    CommandDataOptionValue::SubCommand(_) => {
+                        return Err("SubCommand cannot be an argument")
+                    },
+                    CommandDataOptionValue::SubCommandGroup(_) => {
+                        return Err("SubCommandGroup cannot be an argument")
+                    },
+                    CommandDataOptionValue::Autocomplete { kind, value } => {
+                        ResolvedValue::Autocomplete { kind: *kind, value }
+                    },
+                    CommandDataOptionValue::Boolean(v) => ResolvedValue::Boolean(*v),
+                    CommandDataOptionValue::Integer(v) => ResolvedValue::Integer(*v),
+                    CommandDataOptionValue::Number(v) => ResolvedValue::Number(*v),
+                    CommandDataOptionValue::String(v) => ResolvedValue::String(v),
+                    CommandDataOptionValue::Attachment(id) => resolved
+                        .attachments
+                        .get(id)
+                        .map(ResolvedValue::Attachment)
+                        .ok_or("attachment could not be resolved")?,
+                    CommandDataOptionValue::Channel(id) => resolved
+                        .channels
+                        .get(id)
+                        .map(ResolvedValue::Channel)
+                        .ok_or("channel could not be resolved")?,
+                    CommandDataOptionValue::User(id) => resolved
+                        .users
+                        .get(id)
+                        .map(|u| ResolvedValue::User(u, resolved.members.get(id)))
+                        .ok_or("user could not be resolved")?,
+                    CommandDataOptionValue::Role(id) => resolved
+                        .roles
+                        .get(id)
+                        .map(ResolvedValue::Role)
+                        .ok_or("role could not be resolved")?,
+                    CommandDataOptionValue::Mentionable(_) => {
+                        return Err("Mentionable is not supported")
+                    },
+                    CommandDataOptionValue::Unknown(_) => {
+                        return Err("Unknown value kind is not supported")
+                    },
+                    _ => return Err("unexpected CommandDataOptionValue variant"),
+                };
+
+                Ok(ResolvedOption {
+                    name: &o.name,
+                    value,
+                })
+            })
+            .collect()
     }
 }
