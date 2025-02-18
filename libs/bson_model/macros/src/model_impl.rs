@@ -46,6 +46,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     }
 
     let args = ModelArgs {
+        vis: &input.vis,
         ty_name: &input.ident,
         partial_name: format_ident!("{}Partial", input.ident),
         filter_name: format_ident!("{}Filter", input.ident),
@@ -75,6 +76,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
         sort_name,
         internals_name,
         fields,
+        ..
     } = args;
 
     let field_methods = fields.iter()
@@ -127,24 +129,21 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
         });
 
     Ok(quote::quote! {
-        impl #ty_name {
-            /// Create an empty partial entity.
-            pub fn partial() -> #partial_name {
+        #[automatically_derived]
+        impl bson_model::ModelDocument for #ty_name {
+            type Partial = #partial_name;
+            type Filter = #filter_name;
+            type Sort = #sort_name;
+
+            fn partial() -> #partial_name {
                 #partial_name::new()
             }
 
-            /// Create a new update builder.
-            pub fn update() -> bson_model::Update<#partial_name> {
-                bson_model::Update::new()
-            }
-
-            /// Create a new filter builder.
-            pub fn filter() -> #filter_name {
+            fn filter() -> #filter_name {
                 #filter_name::new()
             }
 
-            /// Create a new sort builder.
-            pub fn sort() -> #sort_name {
+            fn sort() -> #sort_name {
                 #sort_name::new()
             }
         }
@@ -161,6 +160,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
 
 fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     let ModelArgs {
+        vis,
         ty_name,
         partial_name,
         internals_name,
@@ -203,7 +203,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     Ok(quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
         #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
-        pub struct #partial_name {
+        #vis struct #partial_name {
             #( #field_decls )*
         }
 
@@ -237,6 +237,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
 
 fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     let ModelArgs {
+        vis,
         ty_name,
         internals_name,
         filter_name,
@@ -279,7 +280,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     Ok(quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
         #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
-        pub struct #filter_name {
+        #vis struct #filter_name {
             #( #field_decls )*
         }
 
@@ -313,6 +314,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
 
 fn emit_sort(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     let ModelArgs {
+        vis,
         ty_name,
         sort_name,
         fields,
@@ -338,7 +340,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
     Ok(quote::quote! {
         #[doc = concat!("A sort builder for [`", stringify!(#ty_name), "`].")]
         #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
-        pub struct #sort_name {
+        #vis struct #sort_name {
             doc: bson_model::private::bson::Document,
         }
 

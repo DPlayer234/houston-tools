@@ -8,6 +8,7 @@ use crate::prelude::*;
 pub mod args;
 
 pub mod prelude {
+    pub use bson_model::ModelDocument as _;
     pub use houston_cmd::{chat_command, context_command, Context};
 
     pub use super::args::*;

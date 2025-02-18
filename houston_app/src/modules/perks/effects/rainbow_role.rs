@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use bson_model::ModelDocument as _;
 use chrono::prelude::*;
 
 use super::*;

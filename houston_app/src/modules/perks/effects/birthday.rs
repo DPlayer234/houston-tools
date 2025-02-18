@@ -1,7 +1,7 @@
 use std::slice;
 
 use anyhow::Context as _;
-use bson_model::Filter;
+use bson_model::{Filter, ModelDocument as _};
 use chrono::prelude::*;
 use utils::text::write_str::*;
 

@@ -14,6 +14,8 @@ mod test;
 pub use context::{ButtonContext, ModalContext};
 
 pub mod prelude {
+    pub use bson_model::ModelDocument as _;
+
     pub use super::{
         ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ModalContext, ToCustomData,
     };

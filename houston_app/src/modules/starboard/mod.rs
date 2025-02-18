@@ -1,7 +1,7 @@
 use std::char;
 use std::sync::Arc;
 
-use bson_model::Filter;
+use bson_model::{Filter, ModelDocument as _};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use utils::text::write_str::*;

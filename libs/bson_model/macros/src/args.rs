@@ -44,6 +44,7 @@ pub struct FieldArgs<'a> {
 }
 
 pub struct ModelArgs<'a> {
+    pub vis: &'a syn::Visibility,
     pub ty_name: &'a syn::Ident,
     pub partial_name: syn::Ident,
     pub filter_name: syn::Ident,
