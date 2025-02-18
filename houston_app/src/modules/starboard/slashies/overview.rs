@@ -1,4 +1,6 @@
 use bson::doc;
+use bson_model::Filter;
+use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
 use crate::helper::bson::id_as_i64;
@@ -45,22 +47,18 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
 
     ctx.defer_as(ephemeral).await?;
 
-    let filter = doc! {
-        "board": {
-            "$in": guild_config.board_db_keys(),
-        },
-    };
-
     let top_posts = model::Message::collection(db)
         .aggregate([
             doc! {
-                "$match": filter.clone(),
+                "$match": model::Message::filter()
+                    .board(Filter::in_(guild_config.boards.keys().copied()))
+                    .into_document()?,
             },
             doc! {
-                "$sort": {
-                    "max_reacts": -1,
-                    "message": -1,
-                },
+                "$sort": model::Message::sort()
+                    .max_reacts(Desc)
+                    .message(Desc)
+                    .into_document(),
             },
             doc! {
                 "$group": {
@@ -80,13 +78,15 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
     let top_users = model::Score::collection(db)
         .aggregate([
             doc! {
-                "$match": filter,
+                "$match": model::Score::filter()
+                    .board(Filter::in_(guild_config.boards.keys().copied()))
+                    .into_document()?,
             },
             doc! {
-                "$sort": {
-                    "score": -1,
-                    "post_count": -1,
-                },
+                "$sort": model::Score::sort()
+                    .score(Desc)
+                    .post_count(Desc)
+                    .into_document(),
             },
             doc! {
                 "$group": {

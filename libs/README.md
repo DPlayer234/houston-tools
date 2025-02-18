@@ -1,7 +1,7 @@
 # Houston Tools Library Crates
 
 Versioned via semver, so you _could_ depend on them.
-Except `azur_lane` and `houston_cmd`. I consider these to be somewhat internal so these _may_ be a bit funky in terms of versioning.
+Except `azur_lane`, `bson_model`, and `houston_cmd`. I consider these to be somewhat internal so these _may_ be a bit funky in terms of versioning.
 
 Do however note that versions are only incremented when there's changes after a "release".
 
@@ -10,6 +10,10 @@ Please also refer to the documentation in the crate if you intend to use these.
 ## `azur_lane`
 
 Partial data model for Azur Lane game data. This is essentially the data the Azur Lane Data Collector collects.
+
+## `bson_model`
+
+Provides a typed interface to create filters, updates, and sorts for MongoDB BSON documents via a derive macro.
 
 ## `houston_cmd`
 

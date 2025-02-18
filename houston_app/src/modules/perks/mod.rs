@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use bson::{doc, Bson};
+use bson_model::Filter;
 use chrono::prelude::*;
 
 use super::prelude::*;
-use crate::helper::bson::doc_object_id;
 
 pub mod buttons;
 pub mod config;
@@ -137,11 +136,9 @@ async fn check_perks_core(ctx: Context) -> Result {
     let db = data.database()?;
 
     // search for expiring perks
-    let filter = doc! {
-        "until": {
-            "$lt": Bson::DateTime(now.into()),
-        },
-    };
+    let filter = model::ActivePerk::filter()
+        .until(Filter::Lt(now))
+        .into_document()?;
 
     let mut query = model::ActivePerk::collection(db).find(filter).await?;
 
@@ -150,7 +147,7 @@ async fn check_perks_core(ctx: Context) -> Result {
         perk.effect.disable(args).await?;
 
         model::ActivePerk::collection(db)
-            .delete_one(doc_object_id!(perk))
+            .delete_one(perk.self_filter())
             .await?;
     }
 

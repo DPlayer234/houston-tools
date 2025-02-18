@@ -300,6 +300,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bson_model"
+version = "0.1.0"
+dependencies = [
+ "bson",
+ "bson_model_macros",
+ "serde",
+]
+
+[[package]]
+name = "bson_model_macros"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "bstr"
 version = "1.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1096,6 +1115,7 @@ dependencies = [
  "base64 0.22.1",
  "bitflags 2.8.0",
  "bson",
+ "bson_model",
  "bytes",
  "chrono",
  "config",

@@ -1,7 +1,6 @@
-use bson::doc;
+use bson_model::Filter;
 use utils::text::write_str::*;
 
-use crate::helper::bson::bson_id;
 use crate::modules::perks::DayOfYear;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
@@ -81,10 +80,10 @@ async fn perks_unique_role(ctx: Context<'_>, member: SlashMember<'_>) -> Result<
     let db = data.database()?;
     let guild_id = ctx.require_guild_id()?;
 
-    let filter = doc! {
-        "guild": bson_id!(guild_id),
-        "user": bson_id!(member.user.id),
-    };
+    let filter = model::UniqueRole::filter()
+        .guild(guild_id)
+        .user(member.user.id)
+        .into_document()?;
 
     let unique_role = model::UniqueRole::collection(db).find_one(filter).await?;
 
@@ -101,9 +100,9 @@ async fn perks_birthday(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
     let data = ctx.data_ref();
     let db = data.database()?;
 
-    let filter = doc! {
-        "user": bson_id!(member.user.id),
-    };
+    let filter = model::Birthday::filter()
+        .user(member.user.id)
+        .into_document()?;
 
     let birthday = model::Birthday::collection(db).find_one(filter).await?;
 
@@ -125,10 +124,10 @@ async fn perks_collectible_info(
         return Ok(None);
     };
 
-    let filter = doc! {
-        "guild": bson_id!(guild_id),
-        "user": bson_id!(member.user.id),
-    };
+    let filter = model::Wallet::filter()
+        .guild(guild_id)
+        .user(member.user.id)
+        .into_document()?;
 
     let wallet = model::Wallet::collection(db)
         .find_one(filter)
@@ -167,12 +166,10 @@ async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
         return Ok(None);
     };
 
-    let filter = doc! {
-        "user": bson_id!(member.user.id),
-        "board": {
-            "$in": guild_config.board_db_keys(),
-        },
-    };
+    let filter = model::Score::filter()
+        .user(member.user.id)
+        .board(Filter::in_(guild_config.boards.keys().copied()))
+        .into_document()?;
 
     let mut query = model::Score::collection(db).find(filter).await?;
 

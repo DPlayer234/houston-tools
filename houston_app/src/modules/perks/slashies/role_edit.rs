@@ -1,8 +1,5 @@
 use std::str::FromStr;
 
-use bson::doc;
-
-use crate::helper::bson::bson_id;
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::slashies::prelude::*;
@@ -28,10 +25,10 @@ pub async fn role_edit(
 
     ctx.defer_as(Ephemeral).await?;
 
-    let filter = doc! {
-        "guild": bson_id!(guild_id),
-        "user": bson_id!(ctx.user().id),
-    };
+    let filter = UniqueRole::filter()
+        .guild(guild_id)
+        .user(ctx.user().id)
+        .into_document()?;
 
     let unique = UniqueRole::collection(db)
         .find_one(filter)

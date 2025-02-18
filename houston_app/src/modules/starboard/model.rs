@@ -1,9 +1,10 @@
 use super::BoardId;
 use crate::modules::model_prelude::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Message {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     pub board: BoardId,
     #[serde(with = "id_as_i64")]
     pub channel: ChannelId,
@@ -19,9 +20,10 @@ pub struct Message {
     pub pin_messages: Vec<MessageId>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Score {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     pub board: BoardId,
     #[serde(with = "id_as_i64")]
     pub user: UserId,
@@ -36,6 +38,12 @@ fn name(name: &str) -> IndexOptions {
 }
 
 impl Message {
+    pub fn self_filter(&self) -> Document {
+        doc! {
+            "_id": self.id,
+        }
+    }
+
     pub fn collection(db: &Database) -> Collection<Self> {
         db.collection("starboard.messages")
     }
@@ -44,18 +52,11 @@ impl Message {
         vec![
             IndexModel::builder()
                 .options(name("board-message"))
-                .keys(doc! {
-                    "board": 1,
-                    "message": 1,
-                })
+                .keys(Self::sort().board(Asc).message(Asc))
                 .build(),
             IndexModel::builder()
                 .options(name("top-posts-sort"))
-                .keys(doc! {
-                    "board": 1,
-                    "max_reacts": 1,
-                    "message": 1,
-                })
+                .keys(Self::sort().board(Asc).max_reacts(Asc).message(Asc))
                 .build(),
         ]
     }
@@ -70,18 +71,11 @@ impl Score {
         vec![
             IndexModel::builder()
                 .options(name("board-user"))
-                .keys(doc! {
-                    "board": 1,
-                    "user": 1,
-                })
+                .keys(Self::sort().board(Asc).user(Asc))
                 .build(),
             IndexModel::builder()
                 .options(name("top-sort"))
-                .keys(doc! {
-                    "board": 1,
-                    "score": 1,
-                    "post_count": 1,
-                })
+                .keys(Self::sort().board(Asc).score(Asc).post_count(Asc))
                 .build(),
         ]
     }

@@ -1,9 +1,7 @@
 use anyhow::Context as _;
-use bson::doc;
 use chrono::prelude::*;
 
 use super::*;
-use crate::helper::bson::bson_id;
 use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
 use crate::modules::perks::model::*;
 
@@ -119,10 +117,10 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry> {
 async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> {
     let db = ctx.data_ref::<HContextData>().database()?;
 
-    let filter = doc! {
-        "guild": bson_id!(guild_id),
-        "effect": bson::ser::to_bson(&Effect::RainbowRole)?,
-    };
+    let filter = ActivePerk::filter()
+        .guild(guild_id)
+        .effect(Effect::RainbowRole)
+        .into_document()?;
 
     let exists = ActivePerk::collection(db).find_one(filter).await?.is_some();
 

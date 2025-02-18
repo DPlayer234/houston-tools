@@ -1,4 +1,4 @@
-use bson::{doc, Document};
+use bson::Document;
 use chrono::Utc;
 use serenity::prelude::*;
 use utils::iter::IteratorExt as _;
@@ -8,7 +8,6 @@ use utils::text::write_str::*;
 use crate::buttons::prelude::*;
 use crate::fmt::discord::TimeMentionable;
 use crate::fmt::time::HumanDuration;
-use crate::helper::bson::bson_id;
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
@@ -37,11 +36,11 @@ const BREAK: &str = "\
     \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}";
 
 // used for wallet and active perks
-fn filter(guild_id: GuildId, user_id: UserId) -> Document {
-    doc! {
-        "guild": bson_id!(guild_id),
-        "user": bson_id!(user_id),
-    }
+fn filter(guild_id: GuildId, user_id: UserId) -> Result<Document> {
+    Ok(Wallet::filter()
+        .guild(guild_id)
+        .user(user_id)
+        .into_document()?)
 }
 
 fn base_shop_embed<'new>(perks: &Config, wallet: &Wallet) -> CreateEmbed<'new> {
@@ -71,12 +70,12 @@ impl View {
         let db = data.database()?;
 
         let wallet = Wallet::collection(db)
-            .find_one(filter(guild_id, user_id))
+            .find_one(filter(guild_id, user_id)?)
             .await?
             .unwrap_or_default();
 
         let active = ActivePerk::collection(db)
-            .find(filter(guild_id, user_id))
+            .find(filter(guild_id, user_id)?)
             .await?
             .try_collect::<Vec<_>>()
             .await?;
@@ -189,7 +188,7 @@ impl View {
         let info = effect.info(perks);
 
         let wallet = Wallet::collection(db)
-            .find_one(filter(guild_id, user_id))
+            .find_one(filter(guild_id, user_id)?)
             .await?
             .unwrap_or_default();
 
@@ -253,7 +252,7 @@ impl View {
         let info = item.info(perks);
 
         let wallet = Wallet::collection(db)
-            .find_one(filter(guild_id, user_id))
+            .find_one(filter(guild_id, user_id)?)
             .await?
             .unwrap_or_default();
 
@@ -410,5 +409,30 @@ impl ButtonArgsReply for View {
         let reply = self.create_reply(ctx.serenity, guild_id, user_id).await?;
         ctx.edit(reply.into()).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filter_eq() {
+        let guild_id = GuildId::new(1);
+        let user_id = UserId::new(2);
+
+        let filter_active_perk = ActivePerk::filter()
+            .guild(guild_id)
+            .user(user_id)
+            .into_document()
+            .unwrap();
+
+        let filter_wallet = Wallet::filter()
+            .guild(guild_id)
+            .user(user_id)
+            .into_document()
+            .unwrap();
+
+        assert_eq!(filter_active_perk, filter_wallet);
     }
 }

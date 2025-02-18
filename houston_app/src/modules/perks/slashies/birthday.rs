@@ -1,9 +1,7 @@
-use bson::doc;
 use chrono::*;
 use mongodb::options::ReturnDocument;
 
 use crate::buttons::ToCustomData;
-use crate::helper::bson::bson_id;
 use crate::modules::perks::config::BirthdayRegionConfig;
 use crate::modules::perks::model::*;
 use crate::modules::perks::DayOfYear;
@@ -29,9 +27,7 @@ pub mod birthday {
 
         ctx.defer_as(Ephemeral).await?;
 
-        let filter = doc! {
-            "user": bson_id!(ctx.user().id),
-        };
+        let filter = Birthday::filter().user(ctx.user().id).into_document()?;
 
         let birthday = Birthday::collection(db).find_one(filter).await?;
 
@@ -86,9 +82,7 @@ pub mod birthday {
 
         ctx.defer_as(Ephemeral).await?;
 
-        let filter = doc! {
-            "user": bson_id!(ctx.user().id),
-        };
+        let filter = Birthday::filter().user(ctx.user().id).into_document()?;
 
         let birthday = Birthday::collection(db).find_one(filter).await?;
 
@@ -134,15 +128,11 @@ pub mod birthday {
 
         let region_info = get_region(ctx, region)?;
 
-        let filter = doc! {
-            "user": bson_id!(ctx.user().id),
-        };
+        let filter = Birthday::filter().user(ctx.user().id).into_document()?;
 
-        let update = doc! {
-            "$set": {
-                "region": i32::from(region),
-            },
-        };
+        let update = Birthday::update()
+            .set(|b| b.region(region))
+            .into_document()?;
 
         let birthday = Birthday::collection(db)
             .find_one_and_update(filter, update)

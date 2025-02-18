@@ -1,4 +1,4 @@
-use bson::doc;
+use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
@@ -31,14 +31,12 @@ impl View {
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
 
-        let filter = doc! {
-            "board": self.board.get(),
-        };
+        let filter = model::Score::filter().board(self.board).into_document()?;
 
-        let sort = doc! {
-            "score": -1,
-            "post_count": -1,
-        };
+        let sort = model::Score::sort()
+            .score(Desc)
+            .post_count(Desc)
+            .into_document();
 
         let offset = u64::from(PAGE_SIZE) * u64::from(self.page);
         let mut cursor = model::Score::collection(db)
@@ -74,9 +72,7 @@ impl View {
 
         let has_more = index >= u64::from(PAGE_SIZE);
         let page_count = if has_more {
-            let filter = doc! {
-                "board": self.board.get(),
-            };
+            let filter = model::Score::filter().board(self.board).into_document()?;
 
             model::Score::collection(db)
                 .count_documents(filter)

@@ -3,29 +3,6 @@ use bson::Document;
 use mongodb::options::IndexOptions;
 use mongodb::{Collection, IndexModel};
 
-/// Converts a Discord ID to a [`Bson`](bson::Bson) value.
-macro_rules! bson_id {
-    ($expr:expr) => {{
-        #[allow(clippy::cast_possible_wrap)]
-        let value = $expr.get() as i64;
-        ::bson::Bson::Int64(value)
-    }};
-}
-
-/// Creates a BSON document with the same `_id` as the provided object.
-macro_rules! doc_object_id {
-    ($expr:expr) => {
-        #[allow(clippy::used_underscore_binding)]
-        {
-            ::bson::doc! {
-                "_id": $expr._id
-            }
-        }
-    };
-}
-
-pub(crate) use {bson_id, doc_object_id};
-
 /// Creates the specified indices.
 ///
 /// If there is a spec mismatch, drop and recreates the affected indices.

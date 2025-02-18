@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bson::Bson;
 use indexmap::IndexMap;
 
 use crate::prelude::*;
@@ -48,15 +47,6 @@ mod board_order_fix {
         let mut map = <IndexMap<BoardId, StarboardEntry>>::deserialize(deserializer)?;
         map.sort_unstable_by(|k1, v1, k2, v2| v1.sort.cmp(&v2.sort).reverse().then(k1.cmp(k2)));
         Ok(map)
-    }
-}
-
-impl StarboardGuild {
-    /// Gets the BSON database keys for this guild.
-    ///
-    /// This is intended to be used with an `$in` filter.
-    pub fn board_db_keys(&self) -> Bson {
-        self.boards.keys().map(|b| b.get()).collect()
     }
 }
 

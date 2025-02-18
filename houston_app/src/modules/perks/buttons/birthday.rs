@@ -1,8 +1,6 @@
-use bson::doc;
 use mongodb::options::ReturnDocument;
 
 use crate::buttons::prelude::*;
-use crate::helper::bson::bson_id;
 use crate::modules::perks::model::*;
 use crate::modules::perks::DayOfYear;
 
@@ -29,17 +27,15 @@ impl ButtonArgsReply for Set {
 
         let db = ctx.data.database()?;
 
-        let filter = doc! {
-            "user": bson_id!(user_id),
-        };
+        let filter = Birthday::filter().user(user_id).into_document()?;
 
-        let update = doc! {
-            "$setOnInsert": {
-                "user": bson_id!(user_id),
-                "region": i32::from(self.region),
-                "day_of_year": bson::ser::to_bson(&self.day_of_year)?,
-            },
-        };
+        let update = Birthday::update()
+            .set_on_insert(|b| {
+                b.user(user_id)
+                    .region(self.region)
+                    .day_of_year(self.day_of_year)
+            })
+            .into_document()?;
 
         let birthday = Birthday::collection(db)
             .find_one_and_update(filter, update)

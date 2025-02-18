@@ -1,12 +1,15 @@
+use bson_model::Filter;
+
 use super::effects::Effect;
 use super::items::Item;
 use super::DayOfYear;
 use crate::data::HArgError;
 use crate::modules::model_prelude::*;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ModelDocument)]
 pub struct Wallet {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     #[serde(with = "id_as_i64")]
     pub guild: GuildId,
     #[serde(with = "id_as_i64")]
@@ -22,9 +25,10 @@ pub struct Wallet {
     pub crab: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct ActivePerk {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     #[serde(with = "id_as_i64")]
     pub guild: GuildId,
     #[serde(with = "id_as_i64")]
@@ -35,9 +39,10 @@ pub struct ActivePerk {
     pub state: Option<Bson>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct UniqueRole {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     #[serde(with = "id_as_i64")]
     pub guild: GuildId,
     #[serde(with = "id_as_i64")]
@@ -46,9 +51,10 @@ pub struct UniqueRole {
     pub role: RoleId,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Birthday {
-    pub _id: ObjectId,
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     #[serde(with = "id_as_i64")]
     pub user: UserId,
     pub region: u16,
@@ -67,15 +73,18 @@ impl Wallet {
     pub fn indices() -> Vec<IndexModel> {
         vec![IndexModel::builder()
             .options(name("guild-user"))
-            .keys(doc! {
-                "guild": 1,
-                "user": 1,
-            })
+            .keys(Self::sort().guild(Asc).user(Asc))
             .build()]
     }
 }
 
 impl ActivePerk {
+    pub fn self_filter(&self) -> Document {
+        doc! {
+            "_id": self.id,
+        }
+    }
+
     pub fn collection(db: &Database) -> Collection<Self> {
         db.collection("perks.active_perks")
     }
@@ -84,24 +93,15 @@ impl ActivePerk {
         vec![
             IndexModel::builder()
                 .options(name("guild-user-effect"))
-                .keys(doc! {
-                    "guild": 1,
-                    "user": 1,
-                    "effect": 1,
-                })
+                .keys(Self::sort().guild(Asc).user(Asc).effect(Asc))
                 .build(),
             IndexModel::builder()
                 .options(name("guild-effect"))
-                .keys(doc! {
-                    "guild": 1,
-                    "effect": 1,
-                })
+                .keys(Self::sort().guild(Asc).effect(Asc))
                 .build(),
             IndexModel::builder()
                 .options(name("until"))
-                .keys(doc! {
-                    "until": 1,
-                })
+                .keys(Self::sort().until(Asc))
                 .build(),
         ]
     }
@@ -115,10 +115,7 @@ impl UniqueRole {
     pub fn indices() -> Vec<IndexModel> {
         vec![IndexModel::builder()
             .options(name("guild-user"))
-            .keys(doc! {
-                "guild": 1,
-                "user": 1,
-            })
+            .keys(Self::sort().guild(Asc).user(Asc))
             .build()]
     }
 }
@@ -132,16 +129,11 @@ impl Birthday {
         vec![
             IndexModel::builder()
                 .options(name("user"))
-                .keys(doc! {
-                    "user": 1,
-                })
+                .keys(Self::sort().user(Asc))
                 .build(),
             IndexModel::builder()
                 .options(name("region-day_of_year"))
-                .keys(doc! {
-                    "region": 1,
-                    "day_of_year": 1,
-                })
+                .keys(Self::sort().region(Asc).day_of_year(Asc))
                 .build(),
         ]
     }
@@ -168,16 +160,26 @@ pub trait WalletExt {
 
 macro_rules! make_item_accessors {
     ($($item:ident => $field:ident,)*) => {
-        fn item_to_key(item: Item) -> &'static str {
-            match item {
-                $( Item::$item => stringify!($field), )*
-            }
-        }
-
         impl Wallet {
             pub fn item(&self, item: Item) -> i64 {
                 match item {
                     $( Item::$item => self.$field, )*
+                }
+            }
+        }
+
+        impl WalletPartial {
+            pub fn item(self, item: Item, amount: i64) -> Self {
+                match item {
+                    $( Item::$item => self.$field(amount), )*
+                }
+            }
+        }
+
+        impl WalletFilter {
+            pub fn item(self, item: Item, amount: impl Into<Filter<i64>>) -> Self {
+                match item {
+                    $( Item::$item => self.$field(amount), )*
                 }
             }
         }
@@ -199,22 +201,15 @@ impl WalletExt for Collection<Wallet> {
         item: Item,
         amount: i64,
     ) -> Result<Wallet> {
-        let key = item_to_key(item);
+        let filter = Wallet::filter()
+            .guild(guild_id)
+            .user(user_id)
+            .into_document()?;
 
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(user_id),
-        };
-
-        let update = doc! {
-            "$setOnInsert": {
-                "guild": bson_id!(guild_id),
-                "user": bson_id!(user_id),
-            },
-            "$inc": {
-                key: amount,
-            },
-        };
+        let update = Wallet::update()
+            .set_on_insert(|w| w.guild(guild_id).user(user_id))
+            .inc(|w| w.item(item, amount))
+            .into_document()?;
 
         let doc = self
             .find_one_and_update(filter, update)
@@ -234,21 +229,15 @@ impl WalletExt for Collection<Wallet> {
         amount: i64,
         perks: &super::config::Config,
     ) -> Result<Wallet> {
-        let key = item_to_key(item);
+        let filter = Wallet::filter()
+            .guild(guild_id)
+            .user(user_id)
+            .item(item, Filter::Gte(amount))
+            .into_document()?;
 
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(user_id),
-            key: {
-                "$gte": amount,
-            }
-        };
-
-        let update = doc! {
-            "$inc": {
-                key: -amount,
-            },
-        };
+        let update = Wallet::update()
+            .inc(|w| w.item(item, -amount))
+            .into_document()?;
 
         let doc = self
             .find_one_and_update(filter, update)
@@ -286,11 +275,11 @@ pub trait ActivePerkExt {
 }
 
 fn active_perk_filter(guild_id: GuildId, user_id: UserId, effect: Effect) -> Result<Document> {
-    Ok(doc! {
-        "guild": bson_id!(guild_id),
-        "user": bson_id!(user_id),
-        "effect": bson::ser::to_bson(&effect)?,
-    })
+    Ok(ActivePerk::filter()
+        .guild(guild_id)
+        .user(user_id)
+        .effect(effect)
+        .into_document()?)
 }
 
 impl ActivePerkExt for Collection<ActivePerk> {
@@ -302,15 +291,13 @@ impl ActivePerkExt for Collection<ActivePerk> {
         until: DateTime<Utc>,
     ) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
-        let update = doc! {
-            "$setOnInsert": filter.clone(),
-            "$set": {
-                "until": Bson::DateTime(until.into()),
-            },
-        };
+
+        let update = ActivePerk::update()
+            .set_on_insert(|a| a.guild(guild_id).user(user_id).effect(effect))
+            .set(|a| a.until(until))
+            .into_document()?;
 
         self.update_one(filter, update).upsert(true).await?;
-
         Ok(())
     }
 

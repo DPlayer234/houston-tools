@@ -1,7 +1,5 @@
-use bson::doc;
 use utils::text::write_str::*;
 
-use crate::helper::bson::bson_id;
 use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
 use crate::slashies::prelude::*;
@@ -20,10 +18,10 @@ pub async fn wallet(
 
     ctx.defer_as(ephemeral).await?;
 
-    let filter = doc! {
-        "user": bson_id!(ctx.user().id),
-        "guild": bson_id!(guild_id),
-    };
+    let filter = Wallet::filter()
+        .guild(guild_id)
+        .user(ctx.user().id)
+        .into_document()?;
 
     let wallet = Wallet::collection(db)
         .find_one(filter)

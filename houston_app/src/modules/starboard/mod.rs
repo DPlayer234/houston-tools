@@ -1,14 +1,13 @@
 use std::char;
 use std::sync::Arc;
 
-use bson::doc;
+use bson_model::Filter;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use utils::text::write_str::*;
 
 use super::prelude::*;
 use crate::fmt::replace_holes;
-use crate::helper::bson::{bson_id, doc_object_id};
 use crate::helper::is_unique_set;
 
 pub mod buttons;
@@ -126,7 +125,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         .iter()
         .find(|b| b.1.emoji.equivalent_to(&reaction.emoji));
 
-    let Some((board_id, board)) = board else {
+    let Some((&board_id, board)) = board else {
         return Ok(());
     };
 
@@ -186,23 +185,21 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             }
         }
 
-        let filter = doc! {
-            "board": board_id.get(),
-            "message": bson_id!(message.id),
-        };
+        let filter = model::Message::filter()
+            .board(board_id)
+            .message(message.id)
+            .into_document()?;
 
-        let update = doc! {
-            "$setOnInsert": {
-                "board": board_id.get(),
-                "channel": bson_id!(message.channel_id),
-                "message": bson_id!(message.id),
-                "user": bson_id!(message.author.id),
-                "pinned": false,
-            },
-            "$max": {
-                "max_reacts": now_reacts,
-            },
-        };
+        let update = model::Message::update()
+            .set_on_insert(|m| {
+                m.board(board_id)
+                    .channel(message.channel_id)
+                    .message(message.id)
+                    .user(message.author.id)
+                    .pinned(false)
+            })
+            .max(|m| m.max_reacts(now_reacts))
+            .into_document()?;
 
         let record = model::Message::collection(db)
             .find_one_and_update(filter.clone(), update)
@@ -216,11 +213,9 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         // this just for my sanity
         if now_reacts >= required_reacts && !pinned {
             // update the record to be pinned
-            let update = doc! {
-                "$set": {
-                    "pinned": true,
-                },
-            };
+            let update = model::Message::update()
+                .set(|w| w.pinned(true))
+                .into_document()?;
 
             let record = model::Message::collection(db)
                 .find_one_and_update(filter.clone(), update)
@@ -242,21 +237,15 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
     if score_increase > 0 {
         // update the user's score if it has increased
-        let filter = doc! {
-            "board": board_id.get(),
-            "user": bson_id!(message.author.id),
-        };
+        let filter = model::Score::filter()
+            .board(board_id)
+            .user(message.author.id)
+            .into_document()?;
 
-        let update = doc! {
-            "$setOnInsert": {
-                "board": board_id.get(),
-                "user": bson_id!(message.author.id),
-            },
-            "$inc": {
-                "score": score_increase,
-                "post_count": i64::from(new_post),
-            },
-        };
+        let update = model::Score::update()
+            .set_on_insert(|s| s.board(board_id).user(message.author.id))
+            .inc(|s| s.score(score_increase).post_count(i64::from(new_post)))
+            .into_document()?;
 
         model::Score::collection(db)
             .update_one(filter, update)
@@ -316,12 +305,10 @@ async fn message_delete_inner(
     let db = data.database()?;
 
     // look for all boards with the message and iterate the entries
-    let filter = doc! {
-        "board": {
-            "$in": guild_config.board_db_keys(),
-        },
-        "message": bson_id!(message_id),
-    };
+    let filter = model::Message::filter()
+        .board(Filter::in_(guild_config.boards.keys().copied()))
+        .message(message_id)
+        .into_document()?;
 
     let mut query = model::Message::collection(db).find(filter).await?;
 
@@ -332,21 +319,18 @@ async fn message_delete_inner(
             continue;
         };
 
-        let filter = doc! {
-            "board": item.board.get(),
-            "user": bson_id!(item.user),
-        };
+        let filter = model::Score::filter()
+            .board(item.board)
+            .user(item.user)
+            .into_document()?;
 
-        let update = doc! {
-            "$inc": {
-                "score": -item.max_reacts,
-                "post_count": -1,
-            },
-        };
+        let update = model::Score::update()
+            .inc(|s| s.score(-item.max_reacts).post_count(-1))
+            .into_document()?;
 
         // delete the message tracking entry
         model::Message::collection(db)
-            .delete_one(doc_object_id!(item))
+            .delete_one(item.self_filter())
             .await?;
 
         log::info!("Deleted message {} score in {}.", message_id, board.emoji);
@@ -437,7 +421,7 @@ async fn pin_message_to_board(
         let forward = CreateMessage::new().reference_message(forward);
         let forward = board.channel.send_message(&ctx.http, forward).await?.id;
 
-        pin_messages = vec![bson_id!(notice), bson_id!(forward)];
+        pin_messages = vec![notice, forward];
         log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
     } else {
         // nsfw-to-sfw
@@ -454,7 +438,7 @@ async fn pin_message_to_board(
         let notice = notice.embed(forward);
         let notice = board.channel.send_message(&ctx.http, notice).await?.id;
 
-        pin_messages = vec![bson_id!(notice)];
+        pin_messages = vec![notice];
         log::info!(
             "Pinned message {} to {}. (Link)",
             message.id,
@@ -463,11 +447,9 @@ async fn pin_message_to_board(
     }
 
     // also associate what messages are the pins
-    let update = doc! {
-        "$set": {
-            "pin_messages": pin_messages,
-        },
-    };
+    let update = model::Message::update()
+        .set(|m| m.pin_messages(pin_messages))
+        .into_document()?;
 
     model::Message::collection(db)
         .update_one(filter, update)

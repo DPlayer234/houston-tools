@@ -1,7 +1,7 @@
 use std::slice;
 
 use anyhow::Context as _;
-use bson::doc;
+use bson_model::Filter;
 use chrono::prelude::*;
 use utils::text::write_str::*;
 
@@ -95,9 +95,8 @@ impl Shape for Birthday {
         };
 
         'regions: for (region_id, region) in birthday.regions.iter().enumerate() {
-            #[allow(clippy::cast_possible_wrap)]
-            #[allow(clippy::cast_possible_truncation)]
-            let region_id = region_id as i32;
+            #[expect(clippy::cast_possible_truncation)]
+            let region_id = region_id as u16;
 
             // calculate the correct date with the current time and offset
             let today = now
@@ -126,12 +125,10 @@ impl Shape for Birthday {
             let days = DayOfYear::search_days(today);
             log::trace!("Check: {} on {today} as {days:?}", region.name);
 
-            let filter = doc! {
-                "region": region_id,
-                "day_of_year": {
-                    "$in": bson::ser::to_bson(&days)?,
-                },
-            };
+            let filter = model::Birthday::filter()
+                .region(region_id)
+                .day_of_year(Filter::in_(days))
+                .into_document()?;
 
             // for all users with a birthday, try to enable the perk per guild
             let mut user_entries = model::Birthday::collection(db).find(filter).await?;

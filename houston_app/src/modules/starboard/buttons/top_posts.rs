@@ -1,4 +1,4 @@
-use bson::doc;
+use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
@@ -31,14 +31,12 @@ impl View {
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
 
-        let filter = doc! {
-            "board": self.board.get(),
-        };
+        let filter = model::Message::filter().board(self.board).into_document()?;
 
-        let sort = doc! {
-            "max_reacts": -1,
-            "message": -1,
-        };
+        let sort = model::Message::sort()
+            .max_reacts(Desc)
+            .message(Desc)
+            .into_document();
 
         let offset = u64::from(PAGE_SIZE) * u64::from(self.page);
         let mut cursor = model::Message::collection(db)
@@ -76,9 +74,7 @@ impl View {
 
         let has_more = index >= u64::from(PAGE_SIZE);
         let page_count = if has_more {
-            let filter = doc! {
-                "board": self.board.get(),
-            };
+            let filter = model::Message::filter().board(self.board).into_document()?;
 
             model::Message::collection(db)
                 .count_documents(filter)

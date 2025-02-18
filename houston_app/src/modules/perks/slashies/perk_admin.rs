@@ -3,7 +3,6 @@ use chrono::*;
 use utils::text::write_str::*;
 
 use crate::fmt::discord::TimeMentionable;
-use crate::helper::bson::bson_id;
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
@@ -111,10 +110,10 @@ pub mod perk_admin {
         let db = data.database()?;
         ctx.defer_as(Ephemeral).await?;
 
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(member.user.id),
-        };
+        let filter = ActivePerk::filter()
+            .guild(guild_id)
+            .user(member.user.id)
+            .into_document()?;
 
         let mut query = ActivePerk::collection(db).find(filter).await?;
 
@@ -192,21 +191,16 @@ pub mod perk_admin {
         let db = data.database()?;
         ctx.defer_as(Ephemeral).await?;
 
-        let filter = doc! {
-            "guild": bson_id!(guild_id),
-            "user": bson_id!(member.user.id),
-        };
+        let filter = UniqueRole::filter()
+            .guild(guild_id)
+            .user(member.user.id)
+            .into_document()?;
 
         let description = if let Some(role) = role {
-            let update = doc! {
-                "$setOnInsert": {
-                    "guild": bson_id!(guild_id),
-                    "user": bson_id!(member.user.id),
-                },
-                "$set": {
-                    "role": bson_id!(role.id),
-                },
-            };
+            let update = UniqueRole::update()
+                .set_on_insert(|u| u.guild(guild_id).user(member.user.id))
+                .set(|u| u.role(role.id))
+                .into_document()?;
 
             UniqueRole::collection(db)
                 .update_one(filter, update)
