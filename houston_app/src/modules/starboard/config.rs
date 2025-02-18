@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bson::{doc, Bson};
+use bson::Bson;
 use indexmap::IndexMap;
 
 use crate::prelude::*;

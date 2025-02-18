@@ -231,70 +231,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             // pin the message if the update just now changed the value
             if !record.pinned {
                 new_post = true;
-
-                let notice = board
-                    .notices
-                    .choose(&mut thread_rng())
-                    .map(String::as_str)
-                    .unwrap_or("{user}, your post made it! Wow!");
-
-                let notice = replace_holes(notice, |out, n| match n {
-                    "user" => write_str!(out, "<@{}>", message.author.id),
-                    _ => out.push(char::REPLACEMENT_CHARACTER),
-                });
-
-                let notice = CreateMessage::new().content(notice);
-
-                let pin_messages;
-
-                // unless it's nsfw-to-sfw, actually forward the message
-                // otherwise, generate an embed with a link
-                if is_forwarding_allowed(&ctx, &message, board)
-                    .await
-                    .unwrap_or(false)
-                {
-                    let mut forward = MessageReference::from(&message);
-                    forward.kind = MessageReferenceKind::Forward;
-
-                    let forward = CreateMessage::new().reference_message(forward);
-
-                    let notice = board.channel.send_message(&ctx.http, notice).await?.id;
-                    let forward = board.channel.send_message(&ctx.http, forward).await?.id;
-                    pin_messages = vec![bson_id!(notice), bson_id!(forward)];
-                    log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
-                } else {
-                    // nsfw-to-sfw
-                    let forward = format!(
-                        "🔞 https://discord.com/channels/{}/{}/{}",
-                        guild_id, message.channel_id, message.id,
-                    );
-
-                    let forward = CreateEmbed::new()
-                        .description(forward)
-                        .color(data.config().embed_color)
-                        .timestamp(message.timestamp);
-
-                    let notice = notice.embed(forward);
-
-                    let notice = board.channel.send_message(&ctx.http, notice).await?.id;
-                    pin_messages = vec![bson_id!(notice)];
-                    log::info!(
-                        "Pinned message {} to {}. (Link)",
-                        message.id,
-                        board.emoji.name()
-                    );
-                }
-
-                // also associate what messages are the pins
-                let update = doc! {
-                    "$set": {
-                        "pin_messages": pin_messages,
-                    },
-                };
-
-                model::Message::collection(db)
-                    .update_one(filter, update)
-                    .await?;
+                pin_message_to_board(&ctx, &message, guild_id, board, filter).await?;
             }
         }
 
@@ -458,6 +395,83 @@ async fn message_delete_inner(
         }
     }
 
+    Ok(())
+}
+
+async fn pin_message_to_board(
+    ctx: &Context,
+    message: &Message,
+    guild_id: GuildId,
+    board: &config::StarboardEntry,
+    filter: bson::Document,
+) -> Result {
+    let data = ctx.data_ref::<HContextData>();
+    let db = data.database()?;
+
+    // unless it's nsfw-to-sfw, actually forward the message
+    // otherwise, generate an embed with a link
+    let can_forward = is_forwarding_allowed(ctx, message, board)
+        .await
+        .unwrap_or(false);
+
+    let notice = board
+        .notices
+        .choose(&mut thread_rng())
+        .map(String::as_str)
+        .unwrap_or("{user}, your post made it! Wow!");
+
+    let notice = replace_holes(notice, |out, n| match n {
+        "user" => write_str!(out, "<@{}>", message.author.id),
+        _ => out.push(char::REPLACEMENT_CHARACTER),
+    });
+
+    let notice = CreateMessage::new().content(notice);
+
+    let pin_messages;
+    if can_forward {
+        let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+
+        let mut forward = MessageReference::from(message);
+        forward.kind = MessageReferenceKind::Forward;
+
+        let forward = CreateMessage::new().reference_message(forward);
+        let forward = board.channel.send_message(&ctx.http, forward).await?.id;
+
+        pin_messages = vec![bson_id!(notice), bson_id!(forward)];
+        log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
+    } else {
+        // nsfw-to-sfw
+        let forward = format!(
+            "🔞 https://discord.com/channels/{}/{}/{}",
+            guild_id, message.channel_id, message.id,
+        );
+
+        let forward = CreateEmbed::new()
+            .description(forward)
+            .color(data.config().embed_color)
+            .timestamp(message.timestamp);
+
+        let notice = notice.embed(forward);
+        let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+
+        pin_messages = vec![bson_id!(notice)];
+        log::info!(
+            "Pinned message {} to {}. (Link)",
+            message.id,
+            board.emoji.name()
+        );
+    }
+
+    // also associate what messages are the pins
+    let update = doc! {
+        "$set": {
+            "pin_messages": pin_messages,
+        },
+    };
+
+    model::Message::collection(db)
+        .update_one(filter, update)
+        .await?;
     Ok(())
 }
 
