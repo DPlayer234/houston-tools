@@ -1,12 +1,14 @@
 use darling::ast::NestedMeta;
-use darling::FromMeta;
+use darling::{FromDeriveInput, FromMeta};
 use proc_macro2::TokenStream;
-use quote::format_ident;
+use quote::{format_ident, ToTokens};
 use syn::{Data, Fields};
 
-use crate::args::{FieldArgs, FieldSerdeMeta, FieldSerdeMetaOuter, ModelArgs};
+use crate::args::{FieldArgs, FieldMeta, FieldSerdeMeta, ModelArgs, ModelMeta};
 
 pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
+    let model_meta = ModelMeta::from_derive_input(&input)?;
+
     let Data::Struct(data) = input.data else {
         return Err(syn::Error::new_spanned(
             input,
@@ -21,7 +23,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         ));
     };
 
-    let mut parsed = Vec::new();
+    let mut parsed_fields = Vec::new();
 
     for field in &mut fields.named {
         let Some(ident) = field.ident.as_ref() else {
@@ -36,14 +38,19 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             .drain(..)
             .map(|attr| NestedMeta::Meta(attr.meta))
             .collect();
-        let attrs = FieldSerdeMetaOuter::from_list(&attrs)?;
+        let attrs = FieldMeta::from_list(&attrs)?;
 
-        parsed.push(FieldArgs {
+        parsed_fields.push(FieldArgs {
             name: ident,
             ty: &field.ty,
             args: FieldSerdeMeta::merge(attrs.serde),
         });
     }
+
+    let default_derive = [
+        syn::parse_quote!(::std::fmt::Debug),
+        syn::parse_quote!(::std::clone::Clone),
+    ];
 
     let args = ModelArgs {
         vis: &input.vis,
@@ -51,14 +58,19 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         partial_name: format_ident!("{}Partial", input.ident),
         filter_name: format_ident!("{}Filter", input.ident),
         sort_name: format_ident!("{}Sort", input.ident),
-        internals_name: format_ident!("__{}Internals", input.ident),
-        fields: parsed,
+        internals_name: format_ident!("__{}_model_document_internals", input.ident),
+        fields: parsed_fields,
+        derive: model_meta
+            .derive
+            .as_deref()
+            .map(Vec::as_slice)
+            .unwrap_or(&default_derive),
     };
 
-    let internals = emit_internals(&args)?;
-    let update = emit_partial(&args)?;
-    let filter = emit_filter(&args)?;
-    let sort = emit_sort(&args)?;
+    let internals = emit_internals(&args);
+    let update = emit_partial(&args);
+    let filter = emit_filter(&args);
+    let sort = emit_sort(&args);
 
     Ok(quote::quote! {
         #internals
@@ -68,7 +80,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     })
 }
 
-fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
+fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         ty_name,
         partial_name,
@@ -96,7 +108,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
                 });
 
             quote::quote! {
-                pub(super) fn #update_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> Result<S::Ok, S::Error>
+                pub(super) fn #update_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                 where
                     S: bson_model::private::serde::ser::Serializer,
                 {
@@ -106,13 +118,13 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
                     }
                 }
 
-                pub(super) fn #filter_with_name<S>(field: &::std::option::Option<bson_model::Filter<#ty>>, serializer: S) -> Result<S::Ok, S::Error>
+                pub(super) fn #filter_with_name<S>(field: &::std::option::Option<bson_model::Filter<#ty>>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                 where
                     S: bson_model::private::serde::ser::Serializer,
                 {
                     struct With;
                     impl bson_model::private::SerdeWith<#ty> for With {
-                        fn serialize<S>(&self, value: &#ty, serializer: S) -> Result<S::Ok, S::Error>
+                        fn serialize<S>(&self, value: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                         where
                             S: bson_model::private::serde::Serializer,
                         {
@@ -121,14 +133,14 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
                     }
 
                     match field {
-                        ::std::option::Option::Some(value) => bson_model::private::wrap_filter_with(value, serializer, With),
+                        ::std::option::Option::Some(value) => bson_model::private::serialize_filter_with(value, serializer, With),
                         ::std::option::Option::None => serializer.serialize_none(),
                     }
                 }
             }
         });
 
-    Ok(quote::quote! {
+    quote::quote! {
         #[automatically_derived]
         impl bson_model::ModelDocument for #ty_name {
             type Partial = #partial_name;
@@ -155,16 +167,17 @@ fn emit_internals(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
             use super::*;
             #( #field_methods )*
         }
-    })
+    }
 }
 
-fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
+fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
         partial_name,
         internals_name,
         fields,
+        derive,
         ..
     } = args;
 
@@ -200,9 +213,12 @@ fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
         }
     });
 
-    Ok(quote::quote! {
+    let into_document = emit_into_document(partial_name);
+
+    quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
-        #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
+        #[derive(::std::default::Default, bson_model::private::serde::Serialize #(,#derive)*)]
+        #[non_exhaustive]
         #vis struct #partial_name {
             #( #field_decls )*
         }
@@ -217,31 +233,18 @@ fn emit_partial(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
             #( #field_methods )*
         }
 
-        impl #partial_name {
-            /// Tries to serialize this value into a BSON document.
-            pub fn into_document(self) -> bson_model::private::bson::ser::Result<bson_model::private::bson::Document> {
-                bson_model::private::bson::to_document(&self)
-            }
-        }
-
-        #[automatically_derived]
-        impl TryFrom<#partial_name> for bson_model::private::bson::Document {
-            type Error = bson_model::private::bson::ser::Error;
-
-            fn try_from(value: #partial_name) -> Result<Self, Self::Error> {
-                value.into_document()
-            }
-        }
-    })
+        #into_document
+    }
 }
 
-fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
+fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
         internals_name,
         filter_name,
         fields,
+        derive,
         ..
     } = args;
 
@@ -277,9 +280,12 @@ fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
         }
     });
 
-    Ok(quote::quote! {
+    let into_document = emit_into_document(filter_name);
+
+    quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
-        #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
+        #[derive(::std::default::Default, bson_model::private::serde::Serialize #(, #derive)*)]
+        #[non_exhaustive]
         #vis struct #filter_name {
             #( #field_decls )*
         }
@@ -294,25 +300,11 @@ fn emit_filter(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
             #( #field_methods )*
         }
 
-        impl #filter_name {
-            /// Tries to serialize this value into a BSON document.
-            pub fn into_document(self) -> bson_model::private::bson::ser::Result<bson_model::private::bson::Document> {
-                bson_model::private::bson::to_document(&self)
-            }
-        }
-
-        #[automatically_derived]
-        impl TryFrom<#filter_name> for bson_model::private::bson::Document {
-            type Error = bson_model::private::bson::ser::Error;
-
-            fn try_from(value: #filter_name) -> Result<Self, Self::Error> {
-                value.into_document()
-            }
-        }
-    })
+        #into_document
+    }
 }
 
-fn emit_sort(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
+fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
@@ -331,18 +323,19 @@ fn emit_sort(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
             /// The order of function calls impacts the sort!
             #[must_use]
             pub fn #name(mut self, #name: bson_model::Sort) -> Self {
-                self.doc.insert(#rename, #name);
+                self.0.insert(#rename, #name);
                 self
             }
         }
     });
 
-    Ok(quote::quote! {
+    quote::quote! {
         #[doc = concat!("A sort builder for [`", stringify!(#ty_name), "`].")]
-        #[derive(Default, Debug, Clone, PartialEq, bson_model::private::serde::Serialize)]
-        #vis struct #sort_name {
-            doc: bson_model::private::bson::Document,
-        }
+        ///
+        /// This represents a thin wrapper around a [`Document`](bson_model::private::bson::Document) to retain the used sort priority.
+        #[derive(::std::default::Default, ::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, bson_model::private::serde::Serialize)]
+        #[serde(transparent)]
+        #vis struct #sort_name(bson_model::private::bson::Document);
 
         impl #sort_name {
             /// Create a new value.
@@ -357,15 +350,35 @@ fn emit_sort(args: &ModelArgs<'_>) -> syn::Result<TokenStream> {
         impl #sort_name {
             /// Gets the serialized BSON document.
             pub fn into_document(self) -> bson_model::private::bson::Document {
-                self.doc
+                self.0
             }
         }
 
         #[automatically_derived]
-        impl From<#sort_name> for Document {
+        impl From<#sort_name> for bson_model::private::bson::Document {
             fn from(value: #sort_name) -> Self {
                 value.into_document()
             }
         }
-    })
+    }
+}
+
+fn emit_into_document(ty_name: impl ToTokens) -> TokenStream {
+    quote::quote! {
+        impl #ty_name {
+            /// Tries to serialize this value into a BSON document.
+            pub fn into_document(self) -> bson_model::private::bson::ser::Result<bson_model::private::bson::Document> {
+                bson_model::private::bson::to_document(&self)
+            }
+        }
+
+        #[automatically_derived]
+        impl TryFrom<#ty_name> for bson_model::private::bson::Document {
+            type Error = bson_model::private::bson::ser::Error;
+
+            fn try_from(value: #ty_name) -> Result<Self, Self::Error> {
+                value.into_document()
+            }
+        }
+    }
 }

@@ -79,8 +79,9 @@
 //! - Adding or removing `#[serde(flatten)]` or `#[serde(skip)]`.
 //!
 //! Do note that even the format-compatible changes aren't necessarily
-//! _foward_-compatible. This is important to consider because it means that old
-//! applications will not be able to handle new data, even if the inverse works.
+//! _forward_-compatible. This is important to consider because it means that
+//! old applications will not be able to handle new data, even if the inverse
+//! works.
 //!
 //! ## Attribution
 //!

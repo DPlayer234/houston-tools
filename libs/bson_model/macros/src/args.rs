@@ -1,8 +1,9 @@
+use darling::util::PathList;
 use syn::{Ident, Path};
 
 #[derive(Debug, darling::FromMeta)]
 #[darling(allow_unknown_fields)]
-pub struct FieldSerdeMetaOuter {
+pub struct FieldMeta {
     #[darling(multiple)]
     pub serde: Vec<FieldSerdeMeta>,
 }
@@ -13,6 +14,12 @@ pub struct FieldSerdeMeta {
     pub rename: Option<Ident>,
     pub with: Option<Path>,
     pub serialize_with: Option<Path>,
+}
+
+#[derive(Debug, darling::FromDeriveInput)]
+#[darling(attributes(model))]
+pub struct ModelMeta {
+    pub derive: Option<PathList>,
 }
 
 impl FieldSerdeMeta {
@@ -51,4 +58,5 @@ pub struct ModelArgs<'a> {
     pub sort_name: syn::Ident,
     pub internals_name: syn::Ident,
     pub fields: Vec<FieldArgs<'a>>,
+    pub derive: &'a [Path],
 }

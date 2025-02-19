@@ -1,11 +1,18 @@
+use std::ops::Not;
+
+use bson::doc;
 use bson::oid::ObjectId;
-use bson::{doc, Document};
 use bson_model::{Filter, ModelDocument, Sort};
 use bson_model_macros as _;
 use serde::{Deserialize, Serialize, Serializer};
 
-fn serialize_inverse<S: Serializer>(value: &i64, serializer: S) -> Result<S::Ok, S::Error> {
-    (!value).serialize(serializer)
+fn serialize_inverse<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    T: Not + Copy,
+    S: Serializer,
+    T::Output: Serialize,
+{
+    (!*value).serialize(serializer)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
@@ -18,6 +25,13 @@ struct Example {
     // ensure that renaming works
     #[serde(rename = "game_score")]
     score: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
+struct ForFilter {
+    basic: i32,
+    #[serde(serialize_with = "serialize_inverse")]
+    with: i32,
 }
 
 #[test]
@@ -133,4 +147,51 @@ fn update() {
             },
         }
     )
+}
+
+#[test]
+fn serialize_filter() {
+    macro_rules! sub {
+        ($fn:ident, $name:literal, $input:tt, $output:tt) => {{
+            let f = ForFilter::filter()
+                .basic(Filter::$fn($input))
+                .with(Filter::$fn($input))
+                .into_document()
+                .unwrap();
+
+            assert_eq!(
+                f,
+                doc! {
+                    "basic": {
+                        $name: $input,
+                    },
+                    "with": {
+                        $name: $output,
+                    },
+                }
+            );
+        }};
+    }
+
+    let f_eq = ForFilter::filter()
+        .basic(64)
+        .with(64)
+        .into_document()
+        .unwrap();
+
+    assert_eq!(
+        f_eq,
+        doc! {
+            "basic": 64i32,
+            "with": !64i32,
+        }
+    );
+
+    sub!(Ne, "$ne", 64i32, (!64i32));
+    sub!(Gt, "$gt", 64i32, (!64i32));
+    sub!(Gte, "$gte", 64i32, (!64i32));
+    sub!(Lt, "$lt", 64i32, (!64i32));
+    sub!(Lte, "$lte", 64i32, (!64i32));
+    sub!(in_, "$in", [64i32, 42i32], [!64i32, !42i32]);
+    sub!(not_in, "$nin", [64i32, 42i32], [!64i32, !42i32]);
 }

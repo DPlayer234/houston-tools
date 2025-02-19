@@ -1,49 +1,40 @@
 use serde::Serialize;
 
 /// Represents a MongoDB filter condition for a field.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Filter<T> {
-    /// `$ne`
-    #[serde(rename = "$ne")]
-    Ne(T),
-    /// `$gt`
-    #[serde(rename = "$gt")]
-    Gt(T),
-    /// `$gte`
-    #[serde(rename = "$gte")]
-    Gte(T),
-    /// `$lt`
-    #[serde(rename = "$lt")]
-    Lt(T),
-    /// `$lte`
-    #[serde(rename = "$lte")]
-    Lte(T),
-    /// `$in`
-    #[serde(rename = "$in")]
-    In(Vec<T>),
-    /// `$nin`
-    #[serde(rename = "$nin")]
-    NotIn(Vec<T>),
-    /// `$exists`
-    #[serde(rename = "$exists")]
-    Exists(bool),
-
     /// `$eq`
     ///
     /// Serialized as untagged.
-    #[serde(untagged)]
     Eq(T),
+
+    /// `$ne`
+    Ne(T),
+    /// `$gt`
+    Gt(T),
+    /// `$gte`
+    Gte(T),
+    /// `$lt`
+    Lt(T),
+    /// `$lte`
+    Lte(T),
+    /// `$in`
+    In(Vec<T>),
+    /// `$nin`
+    NotIn(Vec<T>),
+    /// `$exists`
+    Exists(bool),
 }
 
 impl<T> Filter<T> {
     /// `$in`
     pub fn in_(values: impl IntoIterator<Item = T>) -> Self {
-        Self::In(Vec::from_iter(values))
+        Self::In(values.into_iter().collect())
     }
 
     /// `$nin`
     pub fn not_in(values: impl IntoIterator<Item = T>) -> Self {
-        Self::NotIn(Vec::from_iter(values))
+        Self::NotIn(values.into_iter().collect())
     }
 
     /// Maps the filter to by-ref values.
@@ -80,5 +71,14 @@ impl<T> Filter<T> {
 impl<T> From<T> for Filter<T> {
     fn from(value: T) -> Self {
         Self::Eq(value)
+    }
+}
+
+impl<T: Serialize> Serialize for Filter<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        crate::private::serialize_filter_with(self, serializer, ())
     }
 }
