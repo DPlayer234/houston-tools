@@ -136,7 +136,6 @@ This comes with the following configuration:
 cash_name = "$"
 # optional. the minimum time between perk checks. defaults to 3 minutes.
 # the default is usually fine and you shouldn't need to adjust it.
-# DO NOT reduce this below 2 minutes (00:02:00) if rainbow role is enabled or you may hit rate limits.
 check_interval = "00:03:00"
 
 [[bot.starboard.1293210831923974204.boards.1]]
@@ -171,7 +170,8 @@ prize_roles = [
 ]
 
 # rainbow enables rainbow roles.
-# the color will only cycle when an event is received, at most once every 3 minutes.
+# the color cycle is dependent on `check_interval`
+# the check interval must not be below (00:02:00) if rainbow role is enabled or you may hit rate limits.
 [bot.perks.rainbow]
 cost = 20
 # duration is specified as HH:MM:SS.

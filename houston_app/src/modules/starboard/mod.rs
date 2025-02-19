@@ -226,7 +226,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             // pin the message if the update just now changed the value
             if !record.pinned {
                 new_post = true;
-                pin_message_to_board(&ctx, &message, guild_id, board, filter).await?;
+                pin_message_to_board(&ctx, &message, guild_id, guild_config, board, filter).await?;
             }
         }
 
@@ -386,6 +386,7 @@ async fn pin_message_to_board(
     ctx: &Context,
     message: &Message,
     guild_id: GuildId,
+    guild_config: &config::StarboardGuild,
     board: &config::StarboardEntry,
     filter: bson::Document,
 ) -> Result {
@@ -397,6 +398,13 @@ async fn pin_message_to_board(
     let can_forward = is_forwarding_allowed(ctx, message, board)
         .await
         .unwrap_or(false);
+
+    // guard sending the pin messages per-guild so they don't interleave. this
+    // shouldn't lead to much contention (and even then this code isn't hot).
+    // ideally, this would be per-channel, but there isn't a good, easy place to
+    // store that. the await isn't further down so the `CreateMessage` doesn't need
+    // to be lifted into the Future and allocations live for less time.
+    let pin_guard = guild_config.pin_lock.acquire().await?;
 
     let notice = board
         .notices
@@ -422,7 +430,11 @@ async fn pin_message_to_board(
         let forward = board.channel.send_message(&ctx.http, forward).await?.id;
 
         pin_messages = vec![notice, forward];
-        log::info!("Pinned message {} to {}.", message.id, board.emoji.name());
+        log::info!(
+            "Pinned message {} to {}. (Forward)",
+            message.id,
+            board.emoji.name()
+        );
     } else {
         // nsfw-to-sfw
         let forward = format!(
@@ -445,6 +457,9 @@ async fn pin_message_to_board(
             board.emoji.name()
         );
     }
+
+    // release the semaphore here so the db operation won't delay it
+    drop(pin_guard);
 
     // also associate what messages are the pins
     let update = model::Message::update()

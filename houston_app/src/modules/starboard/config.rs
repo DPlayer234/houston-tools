@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use indexmap::IndexMap;
+use tokio::sync::Semaphore;
 
 use crate::prelude::*;
 
@@ -28,12 +29,19 @@ impl From<i64> for BoardId {
     }
 }
 
+fn pin_lock() -> Semaphore {
+    Semaphore::new(1)
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardGuild {
     #[serde(default)]
     pub remove_score_on_delete: bool,
     #[serde(with = "board_order_fix")]
     pub boards: IndexMap<BoardId, StarboardEntry>,
+
+    #[serde(skip, default = "pin_lock")]
+    pub pin_lock: Semaphore,
 }
 
 mod board_order_fix {
