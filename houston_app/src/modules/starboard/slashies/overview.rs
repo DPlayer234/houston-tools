@@ -1,6 +1,6 @@
 use bson::doc;
-use bson_model::Filter;
 use bson_model::Sort::Desc;
+use bson_model::{Filter, ModelDocument};
 use utils::text::write_str::*;
 
 use crate::fmt::discord::MessageLink;
@@ -8,7 +8,7 @@ use crate::helper::bson::id_as_i64;
 use crate::modules::starboard::{model, BoardId};
 use crate::slashies::prelude::*;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, ModelDocument)]
 struct TopScore {
     #[serde(rename = "_id")]
     board: BoardId,
@@ -20,7 +20,7 @@ struct TopScore {
     post_count: i64,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, ModelDocument)]
 struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,
@@ -63,11 +63,12 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
             },
             doc! {
                 "$group": {
-                    "_id": "$board",
-                    "channel": { "$first": "$channel" },
-                    "message": { "$first": "$message" },
-                    "user": { "$first": "$user" },
-                    "max_reacts": { "$max": "$max_reacts" },
+                    // board is the group key/_id field
+                    TopMessage::fields().board(): model::Message::fields().board(),
+                    TopMessage::fields().channel(): { "$first": model::Message::fields().channel() },
+                    TopMessage::fields().message(): { "$first": model::Message::fields().message() },
+                    TopMessage::fields().user(): { "$first": model::Message::fields().user() },
+                    TopMessage::fields().max_reacts(): { "$max": model::Message::fields().max_reacts() },
                 },
             },
         ])
@@ -91,10 +92,11 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
             },
             doc! {
                 "$group": {
-                    "_id": "$board",
-                    "user": { "$first": "$user" },
-                    "score": { "$max": "$score" },
-                    "post_count": { "$first": "$post_count" },
+                    // board is the group key/_id field
+                    TopScore::fields().board(): model::Score::fields().board(),
+                    TopScore::fields().user(): { "$first": model::Score::fields().user() },
+                    TopScore::fields().score(): { "$max": model::Score::fields().score() },
+                    TopScore::fields().post_count(): { "$first": model::Score::fields().post_count() },
                 },
             },
         ])

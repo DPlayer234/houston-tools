@@ -56,6 +56,7 @@ pub struct ModelArgs<'a> {
     pub partial_name: syn::Ident,
     pub filter_name: syn::Ident,
     pub sort_name: syn::Ident,
+    pub fields_name: syn::Ident,
     pub internals_name: syn::Ident,
     pub fields: Vec<FieldArgs<'a>>,
     pub derive: &'a [Path],

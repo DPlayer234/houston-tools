@@ -58,6 +58,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         partial_name: format_ident!("{}Partial", input.ident),
         filter_name: format_ident!("{}Filter", input.ident),
         sort_name: format_ident!("{}Sort", input.ident),
+        fields_name: format_ident!("{}Fields", input.ident),
         internals_name: format_ident!("__{}_model_document_internals", input.ident),
         fields: parsed_fields,
         derive: model_meta
@@ -71,12 +72,14 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let update = emit_partial(&args);
     let filter = emit_filter(&args);
     let sort = emit_sort(&args);
+    let fields = emit_fields(&args);
 
     Ok(quote::quote! {
         #internals
         #update
         #filter
         #sort
+        #fields
     })
 }
 
@@ -86,6 +89,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
         partial_name,
         filter_name,
         sort_name,
+        fields_name,
         internals_name,
         fields,
         ..
@@ -146,6 +150,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
             type Partial = #partial_name;
             type Filter = #filter_name;
             type Sort = #sort_name;
+            type Fields = #fields_name;
 
             fn partial() -> #partial_name {
                 #partial_name::new()
@@ -157,6 +162,10 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
 
             fn sort() -> #sort_name {
                 #sort_name::new()
+            }
+
+            fn fields() -> #fields_name {
+                #fields_name (())
             }
         }
 
@@ -359,6 +368,39 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
             fn from(value: #sort_name) -> Self {
                 value.into_document()
             }
+        }
+    }
+}
+
+fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
+    let ModelArgs {
+        vis,
+        fields_name,
+        fields,
+        ..
+    } = args;
+
+    let field_methods = fields.iter().map(|field| {
+        let FieldArgs { name, args, .. } = field;
+        let rename = args.rename.as_ref().unwrap_or(name).to_string();
+        let expr_name = "$".to_owned() + &rename;
+
+        quote::quote! {
+            #[doc = concat!("Gets the BSON `", stringify!(#name), "` field.")]
+            pub const fn #name(self) -> bson_model::ModelField {
+                const {
+                    bson_model::ModelField::new(#expr_name)
+                }
+            }
+        }
+    });
+
+    quote::quote! {
+        #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::marker::Copy)]
+        #vis struct #fields_name(());
+
+        impl #fields_name {
+            #( #field_methods )*
         }
     }
 }
