@@ -70,6 +70,7 @@ impl<Tz: TimeZone> TimeMentionable for DateTime<Tz> {
     }
 }
 
+/// Formattable mention for a date and/or time.
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct TimeMention {
@@ -80,6 +81,62 @@ pub struct TimeMention {
 impl Display for TimeMention {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "<t:{}:{}>", self.timestamp, self.format)
+    }
+}
+
+/// Formattable message link.
+///
+/// The alternate format only prints the tail of the link.
+#[derive(Debug, Clone)]
+pub struct MessageLink {
+    guild_id: Option<GuildId>,
+    channel_id: ChannelId,
+    message_id: MessageId,
+}
+
+impl MessageLink {
+    /// Creates a new link from the components.
+    pub fn new(
+        guild_id: impl Into<Option<GuildId>>,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Self {
+        Self {
+            guild_id: guild_id.into(),
+            channel_id,
+            message_id,
+        }
+    }
+
+    /// Sets the guild ID.
+    pub fn guild_id(mut self, guild_id: impl Into<Option<GuildId>>) -> Self {
+        self.guild_id = guild_id.into();
+        self
+    }
+}
+
+impl From<&Message> for MessageLink {
+    /// Creates a message link to the given message.
+    ///
+    /// This might be lacking the guild ID, so use [`Self::guild_id`] if you
+    /// have that at hand.
+    fn from(value: &Message) -> Self {
+        Self::new(value.guild_id, value.channel_id, value.id)
+    }
+}
+
+impl Display for MessageLink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        if !f.alternate() {
+            f.write_str("https://discord.com/channels/")?;
+        }
+
+        match self.guild_id {
+            Some(guild_id) => write!(f, "{guild_id}/")?,
+            None => f.write_str("@me/")?,
+        }
+
+        write!(f, "{}/{}", self.channel_id, self.message_id)
     }
 }
 

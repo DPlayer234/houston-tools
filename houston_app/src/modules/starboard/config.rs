@@ -88,14 +88,6 @@ impl StarboardEmoji {
         &self.0
     }
 
-    pub fn name(&self) -> &str {
-        match self.as_emoji() {
-            ReactionType::Custom { name, .. } => name.as_ref().expect("always set").as_str(),
-            ReactionType::Unicode(unicode) => unicode.as_str(),
-            _ => panic!("never set to invalid"),
-        }
-    }
-
     pub fn equivalent_to(&self, reaction: &ReactionType) -> bool {
         match (self.as_emoji(), reaction) {
             (

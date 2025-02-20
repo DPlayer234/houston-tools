@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::fmt::discord::{get_unique_username, TimeMentionable};
+use crate::fmt::discord::{get_unique_username, MessageLink, TimeMentionable};
 use crate::slashies::prelude::*;
 
 /// Creates a copyable, quotable version of the message.
@@ -43,20 +43,8 @@ impl<'a> QuoteTarget<'a> {
 
 impl fmt::LowerHex for QuoteTarget<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let channel_id = self.channel_id;
-        let message_id = self.message.id;
-
-        if let Some(guild_id) = self.guild_id {
-            write!(
-                f,
-                "https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
-            )
-        } else {
-            write!(
-                f,
-                "https://discord.com/channels/@me/{channel_id}/{message_id}"
-            )
-        }
+        let l = MessageLink::new(self.guild_id, self.channel_id, self.message.id);
+        fmt::Display::fmt(&l, f)
     }
 }
 

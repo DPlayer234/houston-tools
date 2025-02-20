@@ -148,6 +148,13 @@ async fn check_perks_core(ctx: Context) -> Result {
     while let Some(perk) = query.next().await {
         let perk = perk.context("failed to get next expired perk")?;
 
+        log::debug!(
+            "Trying to disable perk {:?} for {} in {}.",
+            perk.effect,
+            perk.user,
+            perk.guild
+        );
+
         let args = effects::Args::new(&ctx, perk.guild, perk.user);
         perk.effect.disable(args).await?;
 

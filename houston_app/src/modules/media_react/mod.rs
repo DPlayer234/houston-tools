@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::prelude::*;
 use super::starboard::config::StarboardEmoji;
+use crate::fmt::discord::MessageLink;
 
 pub struct Module;
 
@@ -23,8 +24,10 @@ pub struct MediaChannelEntry {
 }
 
 pub async fn message(ctx: Context, new_message: Message) {
+    let message_link = MessageLink::from(&new_message);
+
     if let Err(why) = message_inner(ctx, new_message).await {
-        log::error!("Message handling failed: {why:?}");
+        log::error!("Message handling failed for {message_link:#}: {why:?}");
     }
 }
 
@@ -84,7 +87,7 @@ fn has_media_content(content: &str) -> bool {
 
     fn is_media_link_match(content: &str, prefix: &str, index: usize) -> bool {
         // if a '<' comes first, this is masked and we ignore it
-        if index != 0 && content.as_bytes()[index - 1] == b'<' {
+        if content.as_bytes().get(index.wrapping_sub(1)) == Some(&b'<') {
             return false;
         }
 

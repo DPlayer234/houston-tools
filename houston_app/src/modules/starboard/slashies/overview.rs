@@ -3,6 +3,7 @@ use bson_model::Filter;
 use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
+use crate::fmt::discord::MessageLink;
 use crate::helper::bson::id_as_i64;
 use crate::modules::starboard::{model, BoardId};
 use crate::slashies::prelude::*;
@@ -24,13 +25,13 @@ struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,
     #[serde(with = "id_as_i64")]
-    pub channel: ChannelId,
+    channel: ChannelId,
     #[serde(with = "id_as_i64")]
-    pub message: MessageId,
+    message: MessageId,
     #[serde(with = "id_as_i64")]
-    pub user: UserId,
+    user: UserId,
     #[serde(default)]
-    pub max_reacts: i64,
+    max_reacts: i64,
 }
 
 pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
@@ -113,10 +114,8 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
         match top_posts.iter().find(|t| t.board == *id) {
             Some(top_post) => writeln_str!(
                 value,
-                "https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
-                guild,
-                top_post.channel,
-                top_post.message,
+                "{} by <@{}>: {} {}",
+                MessageLink::new(guild, top_post.channel, top_post.message),
                 top_post.user,
                 top_post.max_reacts,
                 board.emoji,

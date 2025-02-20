@@ -2,6 +2,7 @@ use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
+use crate::fmt::discord::MessageLink;
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{get_board, model, BoardId};
@@ -57,11 +58,9 @@ impl View {
             index += 1;
             writeln_str!(
                 description,
-                "{}. https://discord.com/channels/{}/{}/{} by <@{}>: {} {}",
+                "{}. {} by <@{}>: {} {}",
                 offset + index,
-                self.guild,
-                item.channel,
-                item.message,
+                MessageLink::new(self.guild, item.channel, item.message),
                 item.user,
                 item.max_reacts,
                 board.emoji.as_emoji(),

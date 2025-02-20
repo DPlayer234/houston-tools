@@ -7,6 +7,7 @@ use rand::prelude::*;
 use utils::text::write_str::*;
 
 use super::prelude::*;
+use crate::fmt::discord::MessageLink;
 use crate::fmt::replace_holes;
 use crate::helper::is_unique_set;
 
@@ -73,8 +74,11 @@ fn get_board(
 }
 
 pub async fn reaction_add(ctx: Context, reaction: Reaction) {
+    let message_link =
+        MessageLink::new(reaction.guild_id, reaction.channel_id, reaction.message_id);
+
     if let Err(why) = reaction_add_inner(ctx, reaction).await {
-        log::error!("Reaction handling failed: {why:?}");
+        log::error!("Reaction handling failed for {message_link:#}: {why:?}");
     }
 }
 
@@ -88,8 +92,10 @@ pub async fn message_delete(
         return;
     };
 
+    let message_link = MessageLink::new(guild_id, channel_id, message_id);
+
     if let Err(why) = message_delete_inner(ctx, guild_id, channel_id, message_id).await {
-        log::error!("Message delete handling failed: {why:?}");
+        log::error!("Message delete handling failed for {message_link:#}: {why:?}");
     }
 }
 
@@ -150,7 +156,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
     let db = data.database()?;
     let mut new_post = false;
-    let score_increase = {
+    let score_increase;
+    {
         // update the message document, if we have enough reacts
         let required_reacts = i64::from(board.reacts);
 
@@ -162,6 +169,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             now_reacts -= 1;
         }
 
+        // check the reacts once here already so we don't ask discord for the reacting
+        // user even when there is no chance that it matters
         if now_reacts < required_reacts {
             return Ok(());
         }
@@ -183,10 +192,19 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
         if has_self_reaction {
             now_reacts -= 1;
-            if now_reacts < required_reacts {
-                return Ok(());
-            }
         }
+
+        // this block is important because it otherwise pins every message
+        if now_reacts < required_reacts {
+            return Ok(());
+        }
+
+        let message_link = MessageLink::from(&message).guild_id(guild_id);
+        log::debug!(
+            "Trying update {message_link:#} in `{}` with {} total reacts.",
+            board.name,
+            now_reacts
+        );
 
         let filter = model::Message::filter()
             .board(board_id)
@@ -213,9 +231,19 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
         let (pinned, old_reacts) = record.map(|r| (r.pinned, r.max_reacts)).unwrap_or_default();
 
+        // the score is the new amount compared to the old one
+        // if it's now less, we return it as zero
+        score_increase = now_reacts.saturating_sub(old_reacts).max(0);
+
+        log::debug!(
+            "Score for {message_link:#} in `{}` increased by {}.",
+            board.name,
+            score_increase
+        );
+
         // we already checked that we have the required reacts,
-        // this just for my sanity
-        if now_reacts >= required_reacts && !pinned {
+        // so as long it wasn't already pinned, we can do that now
+        if !pinned {
             // update the record to be pinned
             let update = model::Message::update()
                 .set(|w| w.pinned(true))
@@ -234,10 +262,6 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                 pin_message_to_board(&ctx, &message, guild_id, guild_config, board, filter).await?;
             }
         }
-
-        // the score is the new amount compared to the old one
-        // if it's now less, we return it as zero
-        now_reacts.saturating_sub(old_reacts)
     };
 
     if score_increase > 0 {
@@ -259,10 +283,10 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             .context("failed to update user score")?;
 
         log::trace!(
-            "{} gained {} {}.",
+            "{} gained {} `{}`.",
             message.author.name,
             score_increase,
-            board.emoji.name()
+            board.name
         );
 
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
@@ -291,7 +315,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 async fn message_delete_inner(
     ctx: Context,
     guild_id: GuildId,
-    _channel_id: ChannelId,
+    channel_id: ChannelId,
     message_id: MessageId,
 ) -> Result {
     let data = ctx.data_ref::<HContextData>();
@@ -316,14 +340,27 @@ async fn message_delete_inner(
         .message(message_id)
         .into_document()?;
 
-    let mut query = model::Message::collection(db).find(filter).await?;
+    let mut query = model::Message::collection(db)
+        .find(filter)
+        .await
+        .context("failed to begin message query")?;
 
-    while let Some(item) = query.try_next().await? {
+    while let Some(item) = query.next().await {
+        let item = item.context("failed to get next deletion entry")?;
+
         // we need the board info, skip if we don't know it
         let board = guild_config.boards.get(&item.board);
         let Some(board) = board else {
             continue;
         };
+
+        let message_link = MessageLink::new(guild_id, channel_id, message_id);
+        log::debug!(
+            "Trying delete of {message_link:#} by {} in `{}` with {} reacts.",
+            item.user,
+            board.name,
+            item.max_reacts
+        );
 
         let filter = model::Score::filter()
             .board(item.board)
@@ -337,16 +374,13 @@ async fn message_delete_inner(
         // delete the message tracking entry
         model::Message::collection(db)
             .delete_one(item.self_filter())
-            .await?;
+            .await
+            .context("failed to delete message entry")?;
 
-        log::info!("Deleted message {} score in {}.", message_id, board.emoji);
-
-        // update the user score
-        model::Score::collection(db)
-            .update_one(filter, update)
-            .await?;
-
-        log::trace!("{} lost {} {}.", item.user, item.max_reacts, board.emoji);
+        log::info!(
+            "Deleted message {message_link:#} score in `{}`.",
+            board.name
+        );
 
         // delete the associated pins
         for pin_id in item.pin_messages {
@@ -357,11 +391,20 @@ async fn message_delete_inner(
 
             if let Err(why) = res {
                 log::warn!(
-                    "Failed to delete message {pin_id} in {}: {why:?}",
-                    board.emoji
+                    "Failed to delete message {:#} in `{}`: {why:?}",
+                    MessageLink::new(guild_id, board.channel, pin_id),
+                    board.name
                 );
             }
         }
+
+        // update the user score
+        model::Score::collection(db)
+            .update_one(filter, update)
+            .await
+            .context("failed to reduce user score")?;
+
+        log::trace!("{} lost {} `{}`.", item.user, item.max_reacts, board.name);
 
         // also remove cash if it's configured
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
@@ -428,6 +471,7 @@ async fn pin_message_to_board(
     });
 
     let notice = CreateMessage::new().content(notice);
+    let message_link = MessageLink::from(message).guild_id(guild_id);
 
     let pin_messages;
     if can_forward {
@@ -451,17 +495,12 @@ async fn pin_message_to_board(
 
         pin_messages = vec![notice, forward];
         log::info!(
-            "Pinned message {} to {}. (Forward)",
-            message.id,
-            board.emoji.name()
+            "Pinned message {message_link:#} to `{}`. (Forward)",
+            board.name
         );
     } else {
         // nsfw-to-sfw
-        let forward = format!(
-            "🔞 https://discord.com/channels/{}/{}/{}",
-            guild_id, message.channel_id, message.id,
-        );
-
+        let forward = format!("🔞 {message_link}");
         let forward = CreateEmbed::new()
             .description(forward)
             .color(data.config().embed_color)
@@ -477,9 +516,8 @@ async fn pin_message_to_board(
 
         pin_messages = vec![notice];
         log::info!(
-            "Pinned message {} to {}. (Link)",
-            message.id,
-            board.emoji.name()
+            "Pinned message {message_link:#} to `{}`. (Link)",
+            board.name
         );
     }
 

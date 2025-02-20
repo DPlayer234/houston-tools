@@ -188,7 +188,7 @@ pub mod handler {
         };
 
         let args = ButtonArgs::from_custom_id(custom_id)?;
-        log::trace!("{}: {:?}", interaction.user.name, args);
+        log::info!("{}: {:?}", interaction.user.name, args);
 
         args.reply(ButtonContext {
             reply_state,
@@ -220,7 +220,7 @@ pub mod handler {
         reply_state: &AtomicBool,
     ) -> Result {
         let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
-        log::trace!("{}: {:?}", interaction.user.name, args);
+        log::info!("{}: {:?}", interaction.user.name, args);
 
         args.modal_reply(ModalContext {
             reply_state,
