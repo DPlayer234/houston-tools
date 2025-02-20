@@ -3,7 +3,7 @@ pub use std::borrow::Cow;
 pub use anyhow::Context as _;
 pub use houston_cmd::{CreateReply, EditReply};
 pub use serenity::builder::*;
-pub use serenity::futures::TryStreamExt as _;
+pub use serenity::futures::{StreamExt as _, TryStreamExt as _};
 pub use serenity::model::prelude::*;
 
 pub(crate) use crate::config;

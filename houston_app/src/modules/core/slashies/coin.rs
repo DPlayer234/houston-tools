@@ -14,10 +14,10 @@ pub async fn coin(
 ) -> Result {
     const EDGE_TOSS_CHANCE: f64 = 1f64 / 6000f64;
     let content = {
-        let mut rng = thread_rng();
-        if rng.gen_bool(EDGE_TOSS_CHANCE) {
+        let mut rng = rand::rng();
+        if rng.random_bool(EDGE_TOSS_CHANCE) {
             "## Edge?!"
-        } else if rng.gen_bool(0.5f64) {
+        } else if rng.random_bool(0.5f64) {
             "### Heads!"
         } else {
             "### Tails!"

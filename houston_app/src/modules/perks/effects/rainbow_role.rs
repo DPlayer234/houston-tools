@@ -25,7 +25,9 @@ impl Shape for RainbowRole {
                 role.role,
                 Some("enabled rainbow role perk"),
             )
-            .await?;
+            .await
+            .context("could not add rainbow role")?;
+
         Ok(())
     }
 
@@ -42,7 +44,7 @@ impl Shape for RainbowRole {
                 )
                 .await;
 
-            super::ok_allowed_discord_error(result)?;
+            super::ok_allowed_discord_error(result).context("could not remove rainbow role")?;
         }
 
         Ok(())
@@ -80,7 +82,11 @@ impl Shape for RainbowRole {
                     .colour(color)
                     .audit_log_reason("rainbow role cycle");
 
-                let role = guild.edit_role(&ctx.http, entry.role, edit).await?;
+                let role = guild
+                    .edit_role(&ctx.http, entry.role, edit)
+                    .await
+                    .context("could not update rainbow role color")?;
+
                 log::trace!(
                     "Updated rainbow role {} to color #{:06X}",
                     role.name,
@@ -123,7 +129,11 @@ async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> 
         .effect(Effect::RainbowRole)
         .into_document()?;
 
-    let exists = ActivePerk::collection(db).find_one(filter).await?.is_some();
+    let exists = ActivePerk::collection(db)
+        .find_one(filter)
+        .await
+        .context("failed to check whether a rainbow role is active")?
+        .is_some();
 
     Ok(exists)
 }

@@ -34,7 +34,8 @@ impl Shape for Birthday {
                     role,
                     Some("it's their birthday"),
                 )
-                .await?;
+                .await
+                .context("could not add birthday role")?;
         }
 
         for &(item, amount) in &config.gifts {
@@ -58,7 +59,11 @@ impl Shape for Birthday {
                 .content(message)
                 .allowed_mentions(allowed_mentions);
 
-            notice.channel.send_message(&args.ctx.http, message).await?;
+            notice
+                .channel
+                .send_message(&args.ctx.http, message)
+                .await
+                .context("could not send birthday notice")?;
         }
 
         Ok(())
@@ -78,7 +83,8 @@ impl Shape for Birthday {
                     )
                     .await;
 
-                super::ok_allowed_discord_error(result)?;
+                super::ok_allowed_discord_error(result)
+                    .context("could not remove birthday role")?;
             }
         }
 
@@ -131,8 +137,13 @@ impl Shape for Birthday {
                 .into_document()?;
 
             // for all users with a birthday, try to enable the perk per guild
-            let mut user_entries = model::Birthday::collection(db).find(filter).await?;
-            while let Some(user_entry) = user_entries.try_next().await? {
+            let mut user_entries = model::Birthday::collection(db)
+                .find(filter)
+                .await
+                .context("failed to begin birthday query")?;
+
+            while let Some(user_entry) = user_entries.next().await {
+                let user_entry = user_entry.context("failed to get next birthday")?;
                 let user = user_entry.user;
 
                 'guild: for &guild in birthday.guilds.keys() {

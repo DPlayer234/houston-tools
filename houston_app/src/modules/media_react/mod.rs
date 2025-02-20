@@ -64,7 +64,8 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
     for emoji in &channel_config.emojis {
         new_message
             .react(&ctx.http, emoji.as_emoji().clone())
-            .await?;
+            .await
+            .context("could not add media reaction")?;
     }
 
     Ok(())

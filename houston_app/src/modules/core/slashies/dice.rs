@@ -1,7 +1,7 @@
 use std::num::NonZero;
 use std::str::FromStr;
 
-use rand::distributions::Uniform;
+use rand::distr::Uniform;
 use rand::prelude::*;
 use smallvec::SmallVec;
 use utils::text::write_str::*;
@@ -38,7 +38,7 @@ pub async fn dice(
 
 fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     let mut content = String::new();
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     // 32 bits are enough (max allowed input is 255*65535)
     // so we won't ever exceed the needed space
@@ -47,7 +47,8 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     for &d in sets {
         write_str!(content, "- **{}d{}:**", d.count, d.faces);
 
-        let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()));
+        let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()))
+            .expect("faces cannot be 0 so the range is always valid");
         let mut local_sum = 0u32;
         for _ in 0..d.count.get() {
             let roll = rng.sample(sample);

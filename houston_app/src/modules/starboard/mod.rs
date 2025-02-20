@@ -131,7 +131,10 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
     // avoid using the cache here even if it is enabled
     // we want to ensure that we have the fresh current state
-    let message = reaction.message(&ctx.http).await?;
+    let message = reaction
+        .message(&ctx.http)
+        .await
+        .context("could not load full message")?;
 
     // cannot starboard yourself
     // there are checks further down to ignore the user's reaction later on
@@ -205,7 +208,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             .find_one_and_update(filter.clone(), update)
             .upsert(true)
             .return_document(ReturnDocument::Before)
-            .await?;
+            .await
+            .context("failed to update message max_reacts")?;
 
         let (pinned, old_reacts) = record.map(|r| (r.pinned, r.max_reacts)).unwrap_or_default();
 
@@ -220,7 +224,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             let record = model::Message::collection(db)
                 .find_one_and_update(filter.clone(), update)
                 .return_document(ReturnDocument::Before)
-                .await?
+                .await
+                .context("failed to update message pin state")?
                 .context("expected to find record that was just created")?;
 
             // pin the message if the update just now changed the value
@@ -250,7 +255,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         model::Score::collection(db)
             .update_one(filter, update)
             .upsert(true)
-            .await?;
+            .await
+            .context("failed to update user score")?;
 
         log::trace!(
             "{} gained {} {}.",
@@ -404,11 +410,15 @@ async fn pin_message_to_board(
     // ideally, this would be per-channel, but there isn't a good, easy place to
     // store that. the await isn't further down so the `CreateMessage` doesn't need
     // to be lifted into the Future and allocations live for less time.
-    let pin_guard = guild_config.pin_lock.acquire().await?;
+    let pin_guard = guild_config
+        .pin_lock
+        .acquire()
+        .await
+        .expect("pin_lock should never be closed");
 
     let notice = board
         .notices
-        .choose(&mut thread_rng())
+        .choose(&mut rand::rng())
         .map(String::as_str)
         .unwrap_or("{user}, your post made it! Wow!");
 
@@ -421,13 +431,23 @@ async fn pin_message_to_board(
 
     let pin_messages;
     if can_forward {
-        let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+        let notice = board
+            .channel
+            .send_message(&ctx.http, notice)
+            .await
+            .context("could not send pin notice")?
+            .id;
 
         let mut forward = MessageReference::from(message);
         forward.kind = MessageReferenceKind::Forward;
 
         let forward = CreateMessage::new().reference_message(forward);
-        let forward = board.channel.send_message(&ctx.http, forward).await?.id;
+        let forward = board
+            .channel
+            .send_message(&ctx.http, forward)
+            .await
+            .context("could not send pin forward")?
+            .id;
 
         pin_messages = vec![notice, forward];
         log::info!(
@@ -448,7 +468,12 @@ async fn pin_message_to_board(
             .timestamp(message.timestamp);
 
         let notice = notice.embed(forward);
-        let notice = board.channel.send_message(&ctx.http, notice).await?.id;
+        let notice = board
+            .channel
+            .send_message(&ctx.http, notice)
+            .await
+            .context("could not send pin notice+link")?
+            .id;
 
         pin_messages = vec![notice];
         log::info!(
@@ -468,7 +493,8 @@ async fn pin_message_to_board(
 
     model::Message::collection(db)
         .update_one(filter, update)
-        .await?;
+        .await
+        .context("failed to set message pin_messages")?;
     Ok(())
 }
 
@@ -502,7 +528,12 @@ async fn has_reaction_by_user(
 
     // since we only grab 1 user at most, use `ArrayVec` to avoid an allocation
     let request = Request::new(route, LightMethod::Get).params(&params);
-    let reacted_users: ArrayVec<User, 1> = ctx.http.fire(request).await?;
+    let reacted_users: ArrayVec<User, 1> = ctx
+        .http
+        .fire(request)
+        .await
+        .context("could not get user self-react")?;
+
     Ok(reacted_users.first().is_some_and(|u| u.id == user_id))
 }
 
@@ -510,7 +541,7 @@ async fn is_forwarding_allowed(
     ctx: &Context,
     message: &Message,
     board: &config::StarboardEntry,
-) -> Result<bool> {
+) -> serenity::Result<bool> {
     let source = message
         .channel_id
         .to_guild_channel(ctx, message.guild_id)

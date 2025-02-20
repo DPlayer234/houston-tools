@@ -140,15 +140,21 @@ async fn check_perks_core(ctx: Context) -> Result {
         .until(Filter::Lt(now))
         .into_document()?;
 
-    let mut query = model::ActivePerk::collection(db).find(filter).await?;
+    let mut query = model::ActivePerk::collection(db)
+        .find(filter)
+        .await
+        .context("failed to begin expired perk query")?;
 
-    while let Some(perk) = query.try_next().await? {
+    while let Some(perk) = query.next().await {
+        let perk = perk.context("failed to get next expired perk")?;
+
         let args = effects::Args::new(&ctx, perk.guild, perk.user);
         perk.effect.disable(args).await?;
 
         model::ActivePerk::collection(db)
             .delete_one(perk.self_filter())
-            .await?;
+            .await
+            .context("failed to delete expired perk")?;
     }
 
     Ok(())

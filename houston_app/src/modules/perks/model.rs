@@ -215,7 +215,8 @@ impl WalletExt for Collection<Wallet> {
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::After)
             .upsert(true)
-            .await?
+            .await
+            .context("failed to add items to wallet")?
             .context("cannot return none after upsert")?;
 
         Ok(doc)
@@ -242,7 +243,8 @@ impl WalletExt for Collection<Wallet> {
         let doc = self
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::Before)
-            .await?
+            .await
+            .context("failed to try to take items from wallet")?
             .ok_or_else(|| {
                 HArgError::new(format!(
                     "You need {} {} to do this.",
@@ -297,14 +299,19 @@ impl ActivePerkExt for Collection<ActivePerk> {
             .set(|a| a.until(until))
             .into_document()?;
 
-        self.update_one(filter, update).upsert(true).await?;
+        self.update_one(filter, update)
+            .upsert(true)
+            .await
+            .context("failed to set perk enabled in db")?;
         Ok(())
     }
 
     async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
-        self.delete_one(filter).await?;
+        self.delete_one(filter)
+            .await
+            .context("failed to set perk disabled in db")?;
         Ok(())
     }
 
@@ -316,7 +323,10 @@ impl ActivePerkExt for Collection<ActivePerk> {
     ) -> Result<Option<ActivePerk>> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
-        let doc = self.find_one(filter).await?;
+        let doc = self
+            .find_one(filter)
+            .await
+            .context("failed to check enabled perk")?;
         Ok(doc)
     }
 }

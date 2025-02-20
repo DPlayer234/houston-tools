@@ -34,7 +34,8 @@ impl Shape for Collectible {
                         role,
                         Some(&format!("hit {need} collectible threshold")),
                     )
-                    .await?;
+                    .await
+                    .context("could not add collectible role")?;
 
                 if let Some(notice) = &guild_config.notice {
                     let message = replace_holes(&notice.text, |out, n| match n {
@@ -52,7 +53,11 @@ impl Shape for Collectible {
                         .content(message)
                         .allowed_mentions(allowed_mentions);
 
-                    notice.channel.send_message(&args.ctx.http, message).await?;
+                    notice
+                        .channel
+                        .send_message(&args.ctx.http, message)
+                        .await
+                        .context("could not send collectible role notice")?;
                 }
             }
         }
