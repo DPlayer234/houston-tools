@@ -1,11 +1,11 @@
 //! Provides access to Unity class/object data.
 
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::{Cursor, Seek as _, SeekFrom};
 
 use crate::error::Error;
 use crate::object::ObjectRef;
 use crate::serialized_file::TypeTreeNode;
-use crate::{BinReadEndian, SeekRead};
+use crate::{BinReadEndian as _, SeekRead as _};
 
 mod asset_bundle;
 mod class_id;

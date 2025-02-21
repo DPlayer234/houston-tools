@@ -1,5 +1,5 @@
 use darling::ast::NestedMeta;
-use darling::{FromDeriveInput, FromMeta};
+use darling::{FromDeriveInput as _, FromMeta as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use syn::{Data, Fields};
@@ -26,6 +26,19 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let mut parsed_fields = Vec::new();
 
     for field in &mut fields.named {
+        let args: Vec<_> = field
+            .attrs
+            .drain(..)
+            .map(|attr| NestedMeta::Meta(attr.meta))
+            .collect();
+        let args = FieldMeta::from_list(&args)?;
+        let args = FieldSerdeMeta::merge(args.serde);
+
+        // exclude non-serialized fields from the output
+        if args.has_skip() {
+            continue;
+        }
+
         let Some(ident) = field.ident.as_ref() else {
             return Err(syn::Error::new_spanned(
                 field,
@@ -33,17 +46,10 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             ));
         };
 
-        let attrs: Vec<_> = field
-            .attrs
-            .drain(..)
-            .map(|attr| NestedMeta::Meta(attr.meta))
-            .collect();
-        let attrs = FieldMeta::from_list(&attrs)?;
-
         parsed_fields.push(FieldArgs {
             name: ident,
             ty: &field.ty,
-            args: FieldSerdeMeta::merge(attrs.serde),
+            args,
         });
     }
 

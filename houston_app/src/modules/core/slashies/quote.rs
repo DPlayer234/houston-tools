@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::fmt::discord::{MessageLink, TimeMentionable, get_unique_username};
+use crate::fmt::discord::{MessageLink, TimeMentionable as _, get_unique_username};
 use crate::slashies::prelude::*;
 
 /// Creates a copyable, quotable version of the message.

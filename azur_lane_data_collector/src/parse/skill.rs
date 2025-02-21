@@ -6,7 +6,7 @@ use azur_lane::skill::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
-use crate::intl_util::{IterExt as _, TryIterExt};
+use crate::intl_util::{IterExt as _, TryIterExt as _};
 use crate::{CONFIG, context, convert_al};
 
 /// Loads a skill from the Lua state.
@@ -748,12 +748,12 @@ fn merge_attacks(attacks: &mut Vec<SkillAttack>) {
     }
 }
 
-/// Calls our "require_buff" Lua helper to get buff data.
+/// Calls our `require_buff` Lua helper to get buff data.
 fn require_buff_data(lua: &Lua, buff_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_buff", buff_id)
 }
 
-/// Calls our "require_skill" Lua helper to get skill data.
+/// Calls our `require_skill` Lua helper to get skill data.
 fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
     lua.globals().call_function("require_skill", skill_id)
 }

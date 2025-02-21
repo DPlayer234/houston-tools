@@ -2,7 +2,7 @@ use bson::doc;
 use chrono::*;
 use utils::text::write_str::*;
 
-use crate::fmt::discord::TimeMentionable;
+use crate::fmt::discord::TimeMentionable as _;
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;

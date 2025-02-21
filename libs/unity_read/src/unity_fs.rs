@@ -8,14 +8,14 @@ use std::cell::Cell;
 use std::fmt;
 use std::io::{Cursor, SeekFrom};
 
-use binrw::{BinRead, NullString, binread};
+use binrw::{BinRead as _, NullString, binread};
 use modular_bitfield::specifiers::*;
 use modular_bitfield::{BitfieldSpecifier, bitfield};
 use num_enum::TryFromPrimitive;
 
 use crate::error::Error;
 use crate::serialized_file::SerializedFile;
-use crate::{FromInt, SeekRead};
+use crate::{FromInt as _, SeekRead};
 
 // Since UnityFsFile stores a `dyn SeekRead`, it cannot be `Send` and `Sync`.
 // While that would be nice, short of requiring it for *every* reader there is

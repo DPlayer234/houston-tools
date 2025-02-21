@@ -1,7 +1,7 @@
 use darling::util::SpannedValue;
 use proc_macro2::{Span, TokenStream};
 use syn::fold::Fold;
-use syn::spanned::Spanned;
+use syn::spanned::Spanned as _;
 use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue};
 
 pub fn quote_map_option<T>(value: Option<T>, f: impl FnOnce(T) -> TokenStream) -> TokenStream {

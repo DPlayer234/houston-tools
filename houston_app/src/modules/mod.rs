@@ -35,7 +35,7 @@ mod model_prelude {
     pub use serde::{Deserialize, Serialize};
     pub use serenity::model::id::*;
 
-    pub(crate) use crate::helper::bson::id_as_i64;
+    pub use crate::helper::bson::id_as_i64;
     pub use crate::prelude::*;
 }
 

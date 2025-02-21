@@ -1,8 +1,8 @@
 //! Provides access to UnityFS object information.
 
-use num_enum::FromPrimitive;
+use num_enum::FromPrimitive as _;
 
-use crate::FromInt;
+use crate::FromInt as _;
 use crate::classes::{ClassID, UnityClass};
 use crate::error::Error;
 use crate::serialized_file::{SerializedFile, SerializedType};

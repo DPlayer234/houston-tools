@@ -26,7 +26,7 @@ pub static CONFIG: LazyLock<Config> =
 /// A group of ships.
 #[derive(Debug)]
 pub struct ShipGroup {
-    /// The ID of the group, aka "group_type".
+    /// The ID of the group, aka `group_type`.
     pub id: u32,
     /// The IDs of the members.
     pub members: Vec<u32>,
@@ -39,9 +39,9 @@ pub struct ShipGroup {
 pub struct ShipSet<'a> {
     /// The ship ID. Not the group's.
     pub id: u32,
-    /// The "ship_data_template" entry.
+    /// The `ship_data_template` entry.
     pub template: LuaTable,
-    /// The "ship_data_statistics" entry.
+    /// The `ship_data_statistics` entry.
     pub statistics: LuaTable,
     /// The associated strengthen data.
     pub strengthen: Strengthen<'a>,
@@ -56,18 +56,18 @@ pub struct ShipSet<'a> {
 pub struct SkinSet {
     /// The skin ID.
     pub skin_id: u32,
-    /// The "ship_skin_template" entry.
+    /// The `ship_skin_template` entry.
     pub template: LuaTable,
-    /// The "ship_skin_words" entry.
+    /// The `ship_skin_words` entry.
     pub words: LuaTable,
-    /// The "ship_skin_words_extra" entry.
+    /// The `ship_skin_words_extra` entry.
     pub words_extra: Option<LuaTable>,
 }
 
 /// The strengthen data.
 #[derive(Debug)]
 pub enum Strengthen<'a> {
-    /// Normal. Holds the "ship_data_strengthen" entry.
+    /// Normal. Holds the `ship_data_strengthen` entry.
     Normal(LuaTable),
     /// Research.
     Blueprint(BlueprintStrengthen<'a>),
@@ -78,29 +78,29 @@ pub enum Strengthen<'a> {
 /// Strengthen data for a research ship.
 #[derive(Debug)]
 pub struct BlueprintStrengthen<'a> {
-    /// The "ship_data_blueprint" entry.
+    /// The `ship_data_blueprint` entry.
     pub data: LuaTable,
-    /// A reference to "ship_strengthen_blueprint".
+    /// A reference to `ship_strengthen_blueprint`.
     pub effect_lookup: &'a LuaTable,
 }
 
 /// Strengthen data for a META ship.
 #[derive(Debug)]
 pub struct MetaStrengthen<'a> {
-    /// The "ship_strengthen_meta" entry.
+    /// The `ship_strengthen_meta` entry.
     pub data: LuaTable,
-    /// A reference to "ship_meta_repair".
+    /// A reference to `ship_meta_repair`.
     pub repair_lookup: &'a LuaTable,
-    /// A reference to "ship_meta_repair_effect".
+    /// A reference to `ship_meta_repair_effect`.
     pub repair_effect_lookup: &'a LuaTable,
 }
 
 /// Retrofit data some ship.
 #[derive(Debug)]
 pub struct Retrofit<'a> {
-    /// The "ship_data_trans" entry.
+    /// The `ship_data_trans` entry.
     pub data: LuaTable,
-    /// A reference to "transform_data_template".
+    /// A reference to `transform_data_template`.
     pub list_lookup: &'a LuaTable,
 }
 
@@ -111,7 +111,7 @@ pub struct Retrofit<'a> {
 pub struct AugmentSet {
     /// The augment's ID.
     pub id: u32,
-    /// The "spweapon_data_statistics" entry.
+    /// The `spweapon_data_statistics` entry.
     pub statistics: LuaTable,
 }
 

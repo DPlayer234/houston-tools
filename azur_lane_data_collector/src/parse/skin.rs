@@ -2,7 +2,7 @@ use azur_lane::ship::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
-use crate::intl_util::{IterExt as _, TryIterExt};
+use crate::intl_util::{IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al};
 

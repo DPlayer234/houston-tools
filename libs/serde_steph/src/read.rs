@@ -162,7 +162,7 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
 
     #[inline(never)]
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>> {
-        use std::io::Read;
+        use std::io::Read as _;
 
         // don't allocate too much or incorrect data could lead to a DoS
         let capacity = len.min(0x1000);

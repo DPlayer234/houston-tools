@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use std::borrow::Borrow as _;
 
 use azur_lane::ship::*;
 use mlua::prelude::*;

@@ -2,7 +2,7 @@ use std::fmt;
 use std::num::NonZero;
 
 use arrayvec::ArrayVec;
-use chrono::{Datelike, Month, NaiveDate};
+use chrono::{Datelike as _, Month, NaiveDate};
 
 use crate::modules::model_prelude::*;
 

@@ -4,7 +4,7 @@ use serenity::http::Http;
 
 use super::HBotConfig;
 use crate::helper::discord::unicode_emoji;
-use crate::modules::Module;
+use crate::modules::Module as _;
 use crate::prelude::*;
 
 macro_rules! generate {
@@ -144,7 +144,7 @@ async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Resu
 }
 
 fn png_to_data_url(png: &[u8]) -> String {
-    use base64::engine::Config;
+    use base64::engine::Config as _;
     use base64::prelude::*;
 
     const PREFIX: &str = "data:image/png;base64,";

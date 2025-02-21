@@ -1,8 +1,8 @@
 use std::mem::take;
 
-use darling::FromMeta;
+use darling::FromMeta as _;
 use proc_macro2::TokenStream;
-use syn::ext::IdentExt;
+use syn::ext::IdentExt as _;
 use syn::{Attribute, Item, ItemMod, Meta};
 
 use super::command_emit::to_command_option_command;

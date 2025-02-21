@@ -53,8 +53,8 @@ pub mod id_as_u64 {
     // LEB128 isn't really efficient for Discord IDs so circumvent that by encoding
     // them as byte arrays. we also need an override anyways because serenity tries
     // to deserialize them as any and that's no good.
-    use serde::de::Error;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::de::Error as _;
+    use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
 
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
     where

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::Write as _;
 use std::mem::take;
 use std::path::Path;
 use std::{fs, io};
@@ -9,7 +9,7 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{DefinitionData, juustagram};
 use clap::Parser;
-use intl_util::{FixedArrayExt as _, TryIterExt};
+use intl_util::{FixedArrayExt as _, TryIterExt as _};
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 

@@ -1,12 +1,12 @@
 //! Structs for using serialized files within UnityFS.
 
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read as _};
 
 use binrw::{BinRead, NullString, binread};
 
 use crate::error::Error;
 use crate::object::{ObjectInfo, ObjectRef};
-use crate::{BinReadEndian, FromInt, SeekRead};
+use crate::{BinReadEndian as _, FromInt as _, SeekRead as _};
 
 /// Information about the serialized files.
 #[derive(Debug, Clone, Default)]

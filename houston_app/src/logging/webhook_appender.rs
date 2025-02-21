@@ -9,7 +9,7 @@
 //! message size. This probably shouldn't be used for all logging messages but
 //! just a subset, i.e. filtered to just warnings and errors.
 
-use std::io::{self, Write};
+use std::io::{self, Write as _};
 use std::sync::Arc;
 use std::time::Duration;
 

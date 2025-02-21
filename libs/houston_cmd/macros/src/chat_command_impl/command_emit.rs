@@ -1,10 +1,10 @@
-use darling::FromMeta;
+use darling::FromMeta as _;
 use darling::ast::NestedMeta;
 use proc_macro2::{Span, TokenStream};
-use quote::TokenStreamExt;
-use syn::ext::IdentExt;
-use syn::fold::Fold;
-use syn::spanned::Spanned;
+use quote::TokenStreamExt as _;
+use syn::ext::IdentExt as _;
+use syn::fold::Fold as _;
+use syn::spanned::Spanned as _;
 use syn::{FnArg, ItemFn, Pat, Type};
 
 use crate::args::ParameterArgs;

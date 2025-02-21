@@ -45,7 +45,7 @@ pub struct StarboardGuild {
 }
 
 mod board_order_fix {
-    use serde::de::{Deserialize, Deserializer};
+    use serde::de::{Deserialize as _, Deserializer};
 
     use super::*;
 

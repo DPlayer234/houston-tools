@@ -273,7 +273,7 @@ mod test {
         ($fn:ident, $Type:ident) => {
             #[test]
             fn $fn() {
-                use std::str::FromStr;
+                use std::str::FromStr as _;
 
                 use super::$Type;
 

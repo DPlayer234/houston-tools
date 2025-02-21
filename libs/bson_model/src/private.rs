@@ -1,6 +1,6 @@
 //! Internal details for use by the proc-macro expansion.
 
-use serde::ser::SerializeSeq;
+use serde::ser::SerializeSeq as _;
 use serde::{Serialize, Serializer};
 pub use {bson, serde};
 

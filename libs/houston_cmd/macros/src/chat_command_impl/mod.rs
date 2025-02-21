@@ -1,4 +1,4 @@
-use darling::FromMeta;
+use darling::FromMeta as _;
 use proc_macro2::TokenStream;
 use syn::{ItemFn, ItemMod};
 

@@ -1,7 +1,7 @@
-use darling::FromMeta;
+use darling::FromMeta as _;
 use darling::ast::NestedMeta;
 use proc_macro2::TokenStream;
-use syn::ext::IdentExt;
+use syn::ext::IdentExt as _;
 use syn::{Data, Fields};
 
 use crate::util::ensure_spanned;

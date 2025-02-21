@@ -1,4 +1,4 @@
-use darling::util::PathList;
+use darling::util::{Flag, PathList};
 use syn::{Ident, Path};
 
 #[derive(Debug, darling::FromMeta)]
@@ -14,6 +14,12 @@ pub struct FieldSerdeMeta {
     pub rename: Option<Ident>,
     pub with: Option<Path>,
     pub serialize_with: Option<Path>,
+    // - not checking for conditional skips because this code shouldn't accidentally exclude those
+    //   from updates/filters (plus it'd be extra effort to)
+    // - not checking `skip_deserializing` because the data might not be deserializable but
+    //   serializable and relevant for updates/filters
+    pub skip: Flag,
+    pub skip_serializing: Flag,
 }
 
 #[derive(Debug, darling::FromDeriveInput)]
@@ -27,17 +33,23 @@ impl FieldSerdeMeta {
         self.with.is_some() || self.serialize_with.is_some()
     }
 
-    pub fn merge(mut many: Vec<Self>) -> Self {
-        let mut result = many.pop().unwrap_or_default();
-        for item in many {
-            if item.rename.is_some() {
-                result.rename = item.rename;
+    pub fn has_skip(&self) -> bool {
+        self.skip.is_present() || self.skip_serializing.is_present()
+    }
+
+    pub fn merge(many: Vec<Self>) -> Self {
+        let mut iter = many.into_iter();
+        let mut result = iter.next().unwrap_or_default();
+        for next in iter {
+            result.rename = result.rename.or(next.rename);
+            result.with = result.with.or(next.with);
+            result.serialize_with = result.serialize_with.or(next.serialize_with);
+
+            if !result.skip.is_present() {
+                result.skip = next.skip;
             }
-            if item.with.is_some() {
-                result.with = item.with;
-            }
-            if item.serialize_with.is_some() {
-                result.serialize_with = item.serialize_with;
+            if !result.skip_serializing.is_present() {
+                result.skip_serializing = next.skip_serializing;
             }
         }
         result

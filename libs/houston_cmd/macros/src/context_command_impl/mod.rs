@@ -1,6 +1,6 @@
-use darling::FromMeta;
+use darling::FromMeta as _;
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
+use syn::spanned::Spanned as _;
 use syn::{FnArg, ItemFn};
 
 use crate::any_command_impl::to_command_shared;

@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     /// at that stage error reporting is already screwed so this doesn't make it
     /// any worse.
     fn on_panic(info: &panic::PanicHookInfo<'_>) {
-        use std::io::{Write, stdout};
+        use std::io::{Write as _, stdout};
 
         let backtrace = backtrace::Backtrace::new();
         let thread = std::thread::current();

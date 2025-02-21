@@ -1,4 +1,4 @@
-//! # Short Transport Encoding PBinary HFormat
+//! # Short Transport Encoding Pbinary Hformat
 //!
 //! _Can you tell this isn't supposed to be an acronym?_
 //!

@@ -41,7 +41,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
     Ok(())
 }
 
-/// "effect_attr" adds a flat amount of base stats.
+/// `effect_attr` adds a flat amount of base stats.
 fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
         let attr: String = v.get(1).with_context(context!(
@@ -56,7 +56,7 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
     })
 }
 
-/// "change_skill" replaces the skill with a given ID with another one.
+/// `change_skill` replaces the skill with a given ID with another one.
 fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
     let from_id: u32 = effect.get(1)?;
     let to_id: u32 = effect.get(2)?;
@@ -68,7 +68,7 @@ fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<
     Ok(())
 }
 
-/// "effect_base" and "effect_preload" *replace* components of the ship's
+/// `effect_base` and `effect_preload` *replace* components of the ship's
 /// equipment slots.
 fn replace_equip_slot_part(
     lua: &Lua,
@@ -94,7 +94,7 @@ fn replace_equip_slot_part(
     Ok(())
 }
 
-/// "effect_equipment_proficiency" adds efficiency to some gear slot.
+/// `effect_equipment_proficiency` adds efficiency to some gear slot.
 fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
     let index: usize = effect.get(1)?;
     let amount: f64 = effect.get(2)?;

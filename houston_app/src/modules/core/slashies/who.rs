@@ -2,7 +2,7 @@ use bitflags::Flags;
 use utils::text::write_str::*;
 use utils::titlecase;
 
-use crate::fmt::discord::{TimeMentionable, get_unique_username};
+use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.

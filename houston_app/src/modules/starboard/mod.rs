@@ -291,7 +291,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
             use super::perks::Item;
-            use super::perks::model::{Wallet, WalletExt};
+            use super::perks::model::{Wallet, WalletExt as _};
 
             let amount = score_increase
                 .saturating_mul(board.cash_gain.into())
@@ -409,7 +409,7 @@ async fn message_delete_inner(
         // also remove cash if it's configured
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
             use super::perks::Item;
-            use super::perks::model::{Wallet, WalletExt};
+            use super::perks::model::{Wallet, WalletExt as _};
 
             let amount = item
                 .max_reacts
@@ -545,7 +545,7 @@ async fn has_reaction_by_user(
 ) -> Result<bool> {
     use arrayvec::ArrayVec;
     use serenity::http::{LightMethod, Request, Route};
-    use to_arraystring::ToArrayString;
+    use to_arraystring::ToArrayString as _;
 
     let after = UserId::new(user_id.get().saturating_sub(1));
     let after_str = after.to_arraystring();

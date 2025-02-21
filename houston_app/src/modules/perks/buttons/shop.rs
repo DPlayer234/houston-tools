@@ -6,7 +6,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
-use crate::fmt::discord::TimeMentionable;
+use crate::fmt::discord::TimeMentionable as _;
 use crate::fmt::time::HumanDuration;
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};

@@ -12,3 +12,5 @@ standard-macro-braces = [
     { name = "utils::join", brace = "(" },
     { name = "utils::join_path", brace = "(" },
 ]
+
+doc-valid-idents = ["..", "MongoDB", "UnityFS"]

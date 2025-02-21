@@ -66,8 +66,8 @@ where
 
 /// Serializes a Discord ID as an [`i64`].
 pub mod id_as_i64 {
-    use serde::de::Error;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::de::Error as _;
+    use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
 
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
     where
