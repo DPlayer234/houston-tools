@@ -81,6 +81,18 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
         .collect()
 }
 
+struct SkillId(u32);
+
+impl FromLua for SkillId {
+    fn from_lua(value: LuaValue, lua: &Lua) -> LuaResult<Self> {
+        match value {
+            LuaValue::Table(t) => t.get(1),
+            _ => u32::from_lua(value, lua),
+        }
+        .map(SkillId)
+    }
+}
+
 /// Loads a piece of equipment from the Lua state.
 pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
@@ -98,11 +110,10 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     let template: Option<LuaTable> = equip_data_template
         .get(equip_id)
         .with_context(context!("equip template for id {equip_id}"))?;
-
     let weapon_ids: Vec<u32> = statistics
         .get("weapon_id")
         .with_context(context!("weapon_id for equip with id {equip_id}"))?;
-    let skill_ids: Vec<u32> = statistics
+    let skill_ids: Vec<SkillId> = statistics
         .get("skill_id")
         .with_context(context!("skill_id for equip with id {equip_id}"))?;
     let name: String = statistics
@@ -121,7 +132,7 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     let skills: Vec<_> = skill_ids
         .into_iter()
-        .map(|id| load_skill(lua, id))
+        .map(|SkillId(id)| load_skill(lua, id))
         .try_collect()?;
 
     macro_rules! stat_bonus {
