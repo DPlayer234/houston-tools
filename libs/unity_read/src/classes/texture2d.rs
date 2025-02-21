@@ -4,7 +4,7 @@ use num_enum::FromPrimitive;
 use super::StreamingInfo;
 use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
-use crate::{define_unity_class, FromInt};
+use crate::{FromInt, define_unity_class};
 
 define_unity_class! {
     /// Data for Unity's Texture2D class.

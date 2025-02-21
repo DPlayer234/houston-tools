@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use serenity::builder::*;
 use serenity::model::prelude::*;
 
+use crate::BoxFuture;
 use crate::context::Context;
 use crate::error::Error;
-use crate::BoxFuture;
 
 /// Function to execute for a [`Invoke::ChatInput`] command.
 ///

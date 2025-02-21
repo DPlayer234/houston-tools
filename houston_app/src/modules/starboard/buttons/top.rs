@@ -4,7 +4,7 @@ use utils::text::write_str::*;
 use crate::buttons::prelude::*;
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
-use crate::modules::starboard::{get_board, model, BoardId};
+use crate::modules::starboard::{BoardId, get_board, model};
 
 // View the leaderboards.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

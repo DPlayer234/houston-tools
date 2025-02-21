@@ -290,8 +290,8 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         );
 
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
-            use super::perks::model::{Wallet, WalletExt};
             use super::perks::Item;
+            use super::perks::model::{Wallet, WalletExt};
 
             let amount = score_increase
                 .saturating_mul(board.cash_gain.into())
@@ -408,8 +408,8 @@ async fn message_delete_inner(
 
         // also remove cash if it's configured
         if board.any_cash_gain() && super::perks::Module.enabled(data.config()) {
-            use super::perks::model::{Wallet, WalletExt};
             use super::perks::Item;
+            use super::perks::model::{Wallet, WalletExt};
 
             let amount = item
                 .max_reacts

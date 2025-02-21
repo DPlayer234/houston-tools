@@ -107,9 +107,53 @@ pub trait ModelDocument {
 /// `$group` or `$project` clauses.
 ///
 /// Obtain instances of this type via [`ModelDocument::fields()`].
+///
+/// # Examples
+///
+/// ```
+/// use bson::oid::ObjectId;
+/// use bson_model::{Filter, ModelDocument};
+/// use serde::{Deserialize, Serialize};
+///
+/// #[derive(Debug, Clone, Deserialize, Serialize, ModelDocument)]
+/// struct Pizza {
+///     #[serde(rename = "_id")]
+///     id: ObjectId,
+///     name: String,
+///     size: String,
+///     quantity: i32,
+/// }
+///
+/// #[derive(Debug, Clone, Deserialize, ModelDocument)]
+/// struct Totals {
+///     #[serde(rename = "_id")]
+///     name: ObjectId,
+///     total_quantity: i32,
+/// }
+///
+/// // count the amount of each type of medium-size pizzas
+/// let steps = [
+///     bson::doc! {
+///         "$match": Pizza::filter()
+///             .size("medium".to_owned())
+///             .into_document()?,
+///     },
+///     bson::doc! {
+///         "$group": {
+///             // a $group stage must have an _id field -- the Totals::name here
+///             Totals::fields().name(): Pizza::fields().name(),
+///             Totals::fields().total_quantity(): {
+///                 "$sum": Pizza::fields().quantity(),
+///             }
+///         }
+///     },
+/// ];
+/// # Ok::<_, bson::ser::Error>(())
+/// ```
 #[derive(Clone, Copy)]
 #[must_use]
 pub struct ModelField {
+    // safety invariant: begins with `$`
     expr: &'static str,
     _unsafe: (),
 }

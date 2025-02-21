@@ -4,8 +4,8 @@
 //! configuration.
 
 use log4rs::config::Deserialize;
-use log4rs::encode::pattern::PatternEncoder;
 use log4rs::encode::Encode;
+use log4rs::encode::pattern::PatternEncoder;
 
 fn default_time() -> bool {
     true

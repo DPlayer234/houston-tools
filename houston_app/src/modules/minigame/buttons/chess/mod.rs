@@ -24,7 +24,7 @@ mod game;
 #[cfg(test)]
 mod tests;
 
-use game::{new_board, Board, Piece, Pos, N};
+use game::{Board, N, Piece, Pos, new_board};
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct View {

@@ -4,7 +4,7 @@ use azur_lane::ship::*;
 use mlua::prelude::*;
 
 use crate::intl_util::FixedArrayExt as _;
-use crate::{parse, Retrofit};
+use crate::{Retrofit, parse};
 
 /// Applies the full retrofit template to the ship data.
 pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -> LuaResult<()> {

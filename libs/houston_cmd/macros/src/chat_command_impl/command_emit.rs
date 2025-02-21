@@ -1,5 +1,5 @@
-use darling::ast::NestedMeta;
 use darling::FromMeta;
+use darling::ast::NestedMeta;
 use proc_macro2::{Span, TokenStream};
 use quote::TokenStreamExt;
 use syn::ext::IdentExt;
@@ -9,7 +9,7 @@ use syn::{FnArg, ItemFn, Pat, Type};
 
 use crate::args::ParameterArgs;
 use crate::util::{
-    ensure_span, ensure_spanned, extract_description, quote_map_option, ReplaceLifetimes,
+    ReplaceLifetimes, ensure_span, ensure_spanned, extract_description, quote_map_option,
 };
 
 struct Parameter {
@@ -93,7 +93,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
         let input = match input {
             FnArg::Typed(x) => x,
             FnArg::Receiver(receiver) => {
-                return Err(syn::Error::new_spanned(receiver, "invalid self argument"))
+                return Err(syn::Error::new_spanned(receiver, "invalid self argument"));
             },
         };
 

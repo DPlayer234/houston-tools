@@ -242,7 +242,7 @@ mod test {
         ($fn:ident, $Type:ident) => {
             #[test]
             fn $fn() {
-                use super::{$Type, OutOfRange};
+                use super::{OutOfRange, $Type};
 
                 let valid = <$Type<1, 10>>::new(4, 6);
                 let inverse = <$Type<1, 10>>::new(5, 4);

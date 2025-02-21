@@ -3,8 +3,8 @@
 
 use std::ptr;
 
-pub use super::titlecase_impl::to_titlecase_u8;
 use super::InlineStr;
+pub use super::titlecase_impl::to_titlecase_u8;
 use crate::iter::ConstIter;
 
 /// Counts the total length of all [`str`] slices.

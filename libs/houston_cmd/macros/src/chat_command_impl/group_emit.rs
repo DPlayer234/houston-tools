@@ -53,7 +53,7 @@ pub fn to_command_option_group(
                 return Err(syn::Error::new_spanned(
                     item,
                     "only `use`, `fn`, and `mod` items are allowed in a #[chat_command]",
-                ))
+                ));
             },
         }
     }

@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::Cursor;
 
-use image::{imageops, ImageFormat};
+use image::{ImageFormat, imageops};
 use unity_read::classes::{ClassID, Texture2D};
 use unity_read::unity_fs::{UnityFsData, UnityFsFile};
 

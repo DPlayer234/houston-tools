@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     /// at that stage error reporting is already screwed so this doesn't make it
     /// any worse.
     fn on_panic(info: &panic::PanicHookInfo<'_>) {
-        use std::io::{stdout, Write};
+        use std::io::{Write, stdout};
 
         let backtrace = backtrace::Backtrace::new();
         let thread = std::thread::current();
@@ -144,8 +144,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     fn profile() -> Result<Cow<'static, str>> {
-        use std::env::var;
         use std::env::VarError::NotPresent;
+        use std::env::var;
 
         match var("HOUSTON_PROFILE") {
             Ok(value) => Ok(value.into()),

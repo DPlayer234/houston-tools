@@ -119,6 +119,6 @@ pub mod ser;
 #[cfg(test)]
 mod tests;
 
-pub use de::{from_reader, from_slice, Deserializer};
+pub use de::{Deserializer, from_reader, from_slice};
 pub use error::{Error, Result};
-pub use ser::{to_vec, to_writer, Serializer};
+pub use ser::{Serializer, to_vec, to_writer};

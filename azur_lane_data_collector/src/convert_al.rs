@@ -3,10 +3,10 @@
 // allowed to be explicit about the intended source value
 #![allow(clippy::wildcard_in_or_patterns)]
 
+use azur_lane::Faction;
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
-use azur_lane::Faction;
 
 /// Converts an ID to a faction.
 pub fn to_faction(num: u32) -> Faction {

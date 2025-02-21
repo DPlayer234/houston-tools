@@ -51,10 +51,10 @@ impl<'a> CommandOptionResolver<'a> {
             .map(|o| {
                 let value = match &o.value {
                     CommandDataOptionValue::SubCommand(_) => {
-                        return Err("SubCommand cannot be an argument")
+                        return Err("SubCommand cannot be an argument");
                     },
                     CommandDataOptionValue::SubCommandGroup(_) => {
-                        return Err("SubCommandGroup cannot be an argument")
+                        return Err("SubCommandGroup cannot be an argument");
                     },
                     CommandDataOptionValue::Autocomplete { kind, value } => {
                         ResolvedValue::Autocomplete { kind: *kind, value }
@@ -84,10 +84,10 @@ impl<'a> CommandOptionResolver<'a> {
                         .map(ResolvedValue::Role)
                         .ok_or("role could not be resolved")?,
                     CommandDataOptionValue::Mentionable(_) => {
-                        return Err("Mentionable is not supported")
+                        return Err("Mentionable is not supported");
                     },
                     CommandDataOptionValue::Unknown(_) => {
-                        return Err("Unknown value kind is not supported")
+                        return Err("Unknown value kind is not supported");
                     },
                     _ => return Err("unexpected CommandDataOptionValue variant"),
                 };

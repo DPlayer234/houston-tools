@@ -1,6 +1,6 @@
+use azur_lane::Faction;
 use azur_lane::equip::{AugmentRarity, EquipKind, EquipRarity};
 use azur_lane::ship::{HullType, ShipRarity};
-use azur_lane::Faction;
 
 macro_rules! make_choice {
     ($NewType:ident for $OrigType:ident { $($(#[$attr:meta])* $name:ident),* $(,)? }) => {

@@ -7,7 +7,7 @@ use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
 
 use crate::intl_util::{IterExt as _, TryIterExt};
-use crate::{context, convert_al, CONFIG};
+use crate::{CONFIG, context, convert_al};
 
 /// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {

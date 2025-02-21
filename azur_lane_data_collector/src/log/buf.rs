@@ -8,7 +8,7 @@
 //! option.
 
 use std::fmt;
-use std::io::{stderr, IoSlice, LineWriter, Result, Stderr, Write};
+use std::io::{IoSlice, LineWriter, Result, Stderr, Write, stderr};
 use std::sync::{Mutex, MutexGuard};
 
 /// Provides a line-buffered wrapper around [`stderr`].

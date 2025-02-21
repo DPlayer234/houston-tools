@@ -1,7 +1,7 @@
 use utils::text::write_str::*;
 
-use crate::modules::perks::model::Wallet;
 use crate::modules::perks::Item;
+use crate::modules::perks::model::Wallet;
 use crate::slashies::prelude::*;
 
 /// View your server wallet.

@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
-use crate::modules::{for_each_module, Module as _};
+use crate::modules::{Module as _, for_each_module};
 use crate::prelude::*;
 
 mod app_emojis;

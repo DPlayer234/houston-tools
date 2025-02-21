@@ -6,8 +6,8 @@ use utils::text::write_str::*;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
-use crate::modules::azur::config::WikiUrls;
 use crate::modules::azur::LoadedConfig;
+use crate::modules::azur::config::WikiUrls;
 
 /// View general ship details.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -268,9 +268,7 @@ impl View {
             n.floor() as u32
         }
         macro_rules! s {
-            ($val:expr) => {{
-                f($val.calc(u32::from(self.level), affinity))
-            }};
+            ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
         }
 
         let content = if ship.hull_type.team_type() != TeamType::Submarine {

@@ -45,7 +45,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
                 return Ok(Self {
                     user,
                     member: Partial::Partial(member),
-                })
+                });
             },
             // delegate to this method to get the correct error
             _ => drop(<&PartialMember as SlashArg>::extract(ctx, resolved)?),

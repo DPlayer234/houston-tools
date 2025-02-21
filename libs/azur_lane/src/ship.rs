@@ -8,7 +8,7 @@ use small_fixed_array::{FixedArray, FixedString};
 
 use crate::equip::*;
 use crate::skill::*;
-use crate::{define_data_enum, Faction};
+use crate::{Faction, define_data_enum};
 
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]

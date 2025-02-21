@@ -7,7 +7,7 @@ use half::f16;
 use super::StreamingInfo;
 use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
-use crate::{define_unity_class, FromInt};
+use crate::{FromInt, define_unity_class};
 
 define_unity_class! {
     pub class Mesh = "Mesh" {

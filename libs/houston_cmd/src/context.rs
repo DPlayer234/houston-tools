@@ -4,9 +4,9 @@ use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
 use serenity::model::prelude::*;
 
+use crate::ReplyHandle;
 use crate::args::ResolvedOption;
 use crate::reply::{CreateReply, UNSENT};
-use crate::ReplyHandle;
 
 /// The context for a command invocation.
 #[derive(Debug, Clone, Copy)]

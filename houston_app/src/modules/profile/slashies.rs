@@ -1,8 +1,8 @@
 use bson_model::Filter;
 use utils::text::write_str::*;
 
-use crate::modules::perks::DayOfYear;
 use crate::modules::Module as _;
+use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;
 
 /// View a member's server profile.
@@ -113,7 +113,7 @@ async fn perks_collectible_info(
     ctx: Context<'_>,
     member: SlashMember<'_>,
 ) -> Result<Option<String>> {
-    use crate::modules::perks::{model, Item};
+    use crate::modules::perks::{Item, model};
 
     let data = ctx.data_ref();
     let db = data.database()?;

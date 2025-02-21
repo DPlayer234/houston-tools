@@ -584,7 +584,7 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
 #[cfg(test)]
 mod test {
-    use super::{norm_str, MatchIter, Search};
+    use super::{MatchIter, Search, norm_str};
 
     type TSearch = Search<u8>;
 

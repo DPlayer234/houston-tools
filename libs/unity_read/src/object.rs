@@ -2,10 +2,10 @@
 
 use num_enum::FromPrimitive;
 
+use crate::FromInt;
 use crate::classes::{ClassID, UnityClass};
 use crate::error::Error;
 use crate::serialized_file::{SerializedFile, SerializedType};
-use crate::FromInt;
 
 /// Internal struct with object data.
 #[derive(Debug, Clone)]

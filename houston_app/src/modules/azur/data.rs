@@ -11,7 +11,7 @@ use azur_lane::ship::*;
 use bytes::Bytes;
 use dashmap::DashMap;
 use serenity::small_fixed_array::TruncatingInto as _;
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 use utils::fuzzy::Search;
 
 type IndexVec = SmallVec<[usize; 2]>;

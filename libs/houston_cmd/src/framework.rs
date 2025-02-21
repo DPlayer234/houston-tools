@@ -7,11 +7,11 @@ use serenity::framework::Framework as SerenityFramework;
 use serenity::gateway::client::{Context as SerenityContext, FullEvent};
 use serenity::model::prelude::*;
 
+use crate::BoxFuture;
 use crate::args::{CommandOptionResolver, ResolvedOption};
 use crate::context::{Context, ContextInner};
 use crate::error::Error;
 use crate::model::{Command, CommandOptionData, Invoke, SubCommandData};
-use crate::BoxFuture;
 
 type PreCommandFn = fn(Context<'_>) -> BoxFuture<'_, ()>;
 type OnErrorFn = fn(Error<'_>) -> BoxFuture<'_, ()>;

@@ -2,9 +2,9 @@ use chrono::*;
 use mongodb::options::ReturnDocument;
 
 use crate::buttons::ToCustomData;
+use crate::modules::perks::DayOfYear;
 use crate::modules::perks::config::BirthdayRegionConfig;
 use crate::modules::perks::model::*;
-use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;
 
 /// Manage your birthday.

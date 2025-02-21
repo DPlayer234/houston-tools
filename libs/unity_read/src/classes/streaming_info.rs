@@ -4,7 +4,7 @@ use super::UnityClass;
 use crate::error::Error;
 use crate::serialized_file::TypeTreeNode;
 use crate::unity_fs::UnityFsFile;
-use crate::{define_unity_class, FromInt};
+use crate::{FromInt, define_unity_class};
 
 define_unity_class! {
     /// Streaming information for resources.

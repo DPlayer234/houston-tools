@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use utils::text::write_str::*;
 
-use crate::fmt::discord::{get_unique_username, TimeMentionable};
+use crate::fmt::discord::{TimeMentionable, get_unique_username};
 use crate::helper::time::get_startup_time;
 use crate::slashies::prelude::*;
 

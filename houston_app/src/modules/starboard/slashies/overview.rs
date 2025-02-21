@@ -5,7 +5,7 @@ use utils::text::write_str::*;
 
 use crate::fmt::discord::MessageLink;
 use crate::helper::bson::id_as_i64;
-use crate::modules::starboard::{model, BoardId};
+use crate::modules::starboard::{BoardId, model};
 use crate::slashies::prelude::*;
 
 #[derive(Debug, serde::Deserialize, ModelDocument)]

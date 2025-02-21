@@ -169,9 +169,11 @@ impl View {
             .iter()
             .chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
 
-        let nav_row = CreateActionRow::buttons(vec![CreateButton::new(self.back.to_custom_id())
-            .emoji('⏪')
-            .label("Back")]);
+        let nav_row = CreateActionRow::buttons(vec![
+            CreateButton::new(self.back.to_custom_id())
+                .emoji('⏪')
+                .label("Back"),
+        ]);
 
         let (embed, row) = self.edit_with_skills(skills, embed);
         EditReply::clear()
@@ -287,8 +289,8 @@ impl ButtonMessage for View {
 
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
-    use utils::text::write_str::*;
     use utils::text::InlineStr;
+    use utils::text::write_str::*;
 
     let mut buf = String::new();
     write_join_map(

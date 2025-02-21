@@ -63,7 +63,7 @@ pub fn get_startup_time() -> DateTime<Utc> {
 /// Tries to parse a date time from some default formats, in the context of a
 /// specific time zone.
 pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
-    use chrono::format::{parse_and_remainder, Parsed};
+    use chrono::format::{Parsed, parse_and_remainder};
 
     let formats = &*FORMATS;
 
@@ -154,8 +154,8 @@ pub mod serde_time_delta {
     use std::fmt;
 
     use chrono::TimeDelta;
-    use serde::de::Error;
     use serde::Deserializer;
+    use serde::de::Error;
 
     struct Visitor;
 

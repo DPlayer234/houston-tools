@@ -20,7 +20,7 @@ use log4rs::config::{Deserialize, Deserializers};
 use log4rs::encode::{self, Encode, EncoderConfig, Style};
 use serenity::http::Http;
 use serenity::secrets::SecretString;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use crate::prelude::*;

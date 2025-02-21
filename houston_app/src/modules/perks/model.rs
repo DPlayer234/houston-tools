@@ -1,8 +1,8 @@
 use bson_model::Filter;
 
+use super::DayOfYear;
 use super::effects::Effect;
 use super::items::Item;
-use super::DayOfYear;
 use crate::data::HArgError;
 use crate::modules::model_prelude::*;
 
@@ -71,10 +71,12 @@ impl Wallet {
     }
 
     pub fn indices() -> Vec<IndexModel> {
-        vec![IndexModel::builder()
-            .options(name("guild-user"))
-            .keys(Self::sort().guild(Asc).user(Asc))
-            .build()]
+        vec![
+            IndexModel::builder()
+                .options(name("guild-user"))
+                .keys(Self::sort().guild(Asc).user(Asc))
+                .build(),
+        ]
     }
 }
 
@@ -113,10 +115,12 @@ impl UniqueRole {
     }
 
     pub fn indices() -> Vec<IndexModel> {
-        vec![IndexModel::builder()
-            .options(name("guild-user"))
-            .keys(Self::sort().guild(Asc).user(Asc))
-            .build()]
+        vec![
+            IndexModel::builder()
+                .options(name("guild-user"))
+                .keys(Self::sort().guild(Asc).user(Asc))
+                .build(),
+        ]
     }
 }
 

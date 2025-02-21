@@ -31,7 +31,7 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStr
             return Err(syn::Error::new(
                 args_span,
                 "must specify `user` or `message`",
-            ))
+            ));
         },
     };
 
@@ -69,7 +69,7 @@ fn to_command_option_command(
 
     let arg = match arg {
         FnArg::Receiver(receiver) => {
-            return Err(syn::Error::new_spanned(receiver, "invalid self argument"))
+            return Err(syn::Error::new_spanned(receiver, "invalid self argument"));
         },
         FnArg::Typed(x) => x,
     };

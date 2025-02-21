@@ -8,9 +8,9 @@ use std::cell::Cell;
 use std::fmt;
 use std::io::{Cursor, SeekFrom};
 
-use binrw::{binread, BinRead, NullString};
+use binrw::{BinRead, NullString, binread};
 use modular_bitfield::specifiers::*;
-use modular_bitfield::{bitfield, BitfieldSpecifier};
+use modular_bitfield::{BitfieldSpecifier, bitfield};
 use num_enum::TryFromPrimitive;
 
 use crate::error::Error;

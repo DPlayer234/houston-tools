@@ -4,7 +4,7 @@ use small_fixed_array::{FixedString, TruncatingInto as _};
 
 use super::skin::to_main_screen;
 use crate::intl_util::IterExt as _;
-use crate::{context, CONFIG};
+use crate::{CONFIG, context};
 
 pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSecretary> {
     let id: u32 = data.get("id")?;

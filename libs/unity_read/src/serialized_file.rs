@@ -2,7 +2,7 @@
 
 use std::io::{Cursor, Read};
 
-use binrw::{binread, BinRead, NullString};
+use binrw::{BinRead, NullString, binread};
 
 use crate::error::Error;
 use crate::object::{ObjectInfo, ObjectRef};

@@ -5,7 +5,7 @@ use small_fixed_array::{FixedArray, FixedString};
 
 use crate::ship::*;
 use crate::skill::*;
-use crate::{define_data_enum, Faction};
+use crate::{Faction, define_data_enum};
 
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]

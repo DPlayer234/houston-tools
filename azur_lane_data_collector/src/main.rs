@@ -7,7 +7,7 @@ use std::{fs, io};
 use azur_lane::equip::*;
 use azur_lane::secretary::*;
 use azur_lane::ship::*;
-use azur_lane::{juustagram, DefinitionData};
+use azur_lane::{DefinitionData, juustagram};
 use clap::Parser;
 use intl_util::{FixedArrayExt as _, TryIterExt};
 use mlua::prelude::*;

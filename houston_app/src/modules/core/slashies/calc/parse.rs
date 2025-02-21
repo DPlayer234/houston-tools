@@ -322,10 +322,7 @@ fn merge_expr_pairs(mut pairs: Vec<ValuePair>) -> f64 {
 
             // merge cells if the left-hand priority is greater or equal than the right
             // or if the right hand operator is None
-            if rhs
-                .operator
-                .map_or(true, |r| kind.priority() >= r.priority())
-            {
+            if rhs.operator.is_none_or(|r| kind.priority() >= r.priority()) {
                 // copy the values out since we'll need to put them elsewhere
                 let lhs_value = lhs.value;
                 let rhs_value = rhs.value;

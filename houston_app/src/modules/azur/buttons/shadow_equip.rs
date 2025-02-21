@@ -2,8 +2,8 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
-use super::ship::View as ShipView;
 use super::AzurParseError;
+use super::ship::View as ShipView;
 use crate::buttons::prelude::*;
 use crate::modules::azur::LoadedConfig;
 

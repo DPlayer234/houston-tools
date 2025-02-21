@@ -26,7 +26,7 @@ mod model_prelude {
     pub use anyhow::Context as _;
     pub use bson::oid::ObjectId;
     pub use bson::serde_helpers::chrono_datetime_as_bson_datetime;
-    pub use bson::{doc, Bson, Document};
+    pub use bson::{Bson, Document, doc};
     pub use bson_model::ModelDocument;
     pub use bson_model::Sort::Asc;
     pub use chrono::{DateTime, Utc};
