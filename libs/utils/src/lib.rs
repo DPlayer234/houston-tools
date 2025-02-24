@@ -112,9 +112,6 @@ macro_rules! impl_op_via_assign {
     ($Lhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
         $crate::impl_op_via_assign!($Lhs, Rhs=$Lhs, [$($TrAssign)*]::$assign, [$($Tr)*]::$inline);
     };
-    (copy $Lhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
-        $crate::impl_op_via_assign!(copy $Lhs, Rhs=$Lhs, [$($TrAssign)*]::$assign, [$($Tr)*]::$inline);
-    };
     ($Lhs:ty, Rhs=$Rhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
         impl $($Tr)*<$Rhs> for $Lhs {
             type Output = $Lhs;
@@ -142,6 +139,9 @@ macro_rules! impl_op_via_assign {
                 $($TrAssign)*::$assign(self, &rhs);
             }
         }
+    };
+    (copy $Lhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
+        $crate::impl_op_via_assign!(copy $Lhs, Rhs=$Lhs, [$($TrAssign)*]::$assign, [$($Tr)*]::$inline);
     };
     (copy $Lhs:ty, Rhs=$Rhs:ty, [$($TrAssign:tt)*] :: $assign:ident, [$($Tr:tt)*] :: $inline:ident) => {
         $crate::impl_op_via_assign!($Lhs, Rhs=$Rhs, [$($TrAssign)*]::$assign, [$($Tr)*]::$inline);
@@ -246,27 +246,6 @@ macro_rules! impl_op_via_assign {
 /// ```
 #[macro_export]
 macro_rules! impl_debug {
-    // the colon after the type is needed since $ty can't be followed by $tt or `(`
-    // applied to enums for consistency, even though it isn't needed there
-    // we can't match the type with $tt because that excludes the generics
-    ($(for [$($bound:tt)*])? struct $Ty:ty: $($body:tt)?) => {
-        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                match self {
-                    Self $($body)? => $crate::impl_debug!(@bodystart f, stringify!($Ty), $($body)?)
-                }
-            }
-        }
-    };
-
-    ($(for [$($bound:tt)*])? enum $Ty:ty: { $($body:tt)* }) => {
-        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                $crate::impl_debug!(@enum self, f, () () $($body)*)
-            }
-        }
-    };
-
     // handling for "struct bodies", i.e. differentiating between struct/tuple/unit syntax
     (@bodystart $f:expr, $name:expr, { $($body:tt)* }) => {
         $crate::impl_debug!(@struct ($f.debug_struct($name)) $($body)*)
@@ -330,6 +309,27 @@ macro_rules! impl_debug {
             ($($out,)* $crate::impl_debug!(@bodystart $f, stringify!($Var), $var_body))
             $($($body)*)?
         )
+    };
+
+    // the colon after the type is needed since $ty can't be followed by $tt or `(`
+    // applied to enums for consistency, even though it isn't needed there
+    // we can't match the type with $tt because that excludes the generics
+    ($(for [$($bound:tt)*])? struct $Ty:ty: $($body:tt)?) => {
+        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                match self {
+                    Self $($body)? => $crate::impl_debug!(@bodystart f, stringify!($Ty), $($body)?)
+                }
+            }
+        }
+    };
+
+    ($(for [$($bound:tt)*])? enum $Ty:ty: { $($body:tt)* }) => {
+        impl $(<$($bound)*>)? ::std::fmt::Debug for $Ty {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                $crate::impl_debug!(@enum self, f, () () $($body)*)
+            }
+        }
     };
 }
 

@@ -33,6 +33,15 @@ pub struct SerializedType {
     is_stripped_type: bool,
     script_type_index: Option<u16>,
     script_id: Option<[u8; 16]>,
+
+    /// This field is kinda complex. Despite being a list, it does represent a
+    /// tree. Iterating the nodes, and checking the [`TypeTreeNode::level`]:
+    ///
+    /// - an increase means that the node is a child of the previous one
+    /// - staying on the same level means it is a property for the parent
+    /// - decreasing means the sub-object is done
+    ///
+    /// This is just how UnityFS encodes these in the archive.
     pub type_tree: Vec<TypeTreeNode>,
 }
 
