@@ -132,10 +132,16 @@ async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
 
 #[inline(never)]
 async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Result<ReactionType> {
-    let map = serde_json::json!({
-        "name": name,
-        "image": png_to_data_url(image_data),
-    });
+    #[derive(serde::Serialize)]
+    struct CreateEmoji {
+        name: &'static str,
+        image: String,
+    }
+
+    let map = CreateEmoji {
+        name,
+        image: png_to_data_url(image_data),
+    };
 
     let emoji = ctx.create_application_emoji(&map).await?;
 

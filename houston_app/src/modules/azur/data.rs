@@ -46,20 +46,12 @@ pub struct GameData {
 impl GameData {
     /// Constructs extended data from definitions.
     pub fn load_from(data_path: Arc<Path>) -> anyhow::Result<Self> {
-        // loads the actual definition file from disk
-        // the error is just a short description of the error
-        fn load_definitions(data_path: &Path) -> anyhow::Result<azur_lane::DefinitionData> {
-            use anyhow::Context as _;
-            let f = fs::File::open(data_path.join("main.json")).context("cannot read file")?;
-            let f = io::BufReader::new(f);
-            let data = serde_json::from_reader(f).context("cannot parse fail")?;
-            Ok(data)
-        }
+        use anyhow::Context as _;
 
         // this function should ensure we don't deal with empty paths, absolute or
         // rooted paths, or ones that refer to parent directories to detect
-        // potential path traversal attacks when loading untrusted data. note:
-        // we only log this, we don't abort.
+        // potential path traversal attacks when loading untrusted data.
+        // note: we only log this, we don't abort.
         fn is_path_sus(path: &Path) -> bool {
             path.components()
                 .any(|p| !matches!(p, Component::Normal(_)))
@@ -79,7 +71,12 @@ impl GameData {
             }
         }
 
-        let data = load_definitions(&data_path)?;
+        // loads the actual definition file from disk
+        let data: azur_lane::DefinitionData = {
+            let f = fs::File::open(data_path.join("main.json")).context("cannot read file")?;
+            let f = io::BufReader::new(f);
+            serde_json::from_reader(f).context("cannot parse file")?
+        };
 
         let ships = data.ships.into_boxed_slice();
         let equips = data.equips.into_boxed_slice();
