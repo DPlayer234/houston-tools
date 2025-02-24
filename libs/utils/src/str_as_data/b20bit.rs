@@ -46,7 +46,7 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     }
 
     #[inline]
-    fn write_half_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; 3]) -> fmt::Result {
+    fn write_half_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; 2]) -> fmt::Result {
         let code = half_chunk_to_code(chunk);
         writer.write_char(code_to_char(code))
     }
@@ -67,8 +67,8 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
 
     match *iter.remainder() {
         [] => {},
-        [a] => write_half_chunk(&mut writer, [a, 0, 0])?,
-        [a, b] => write_half_chunk(&mut writer, [a, b, 0])?,
+        [a] => write_half_chunk(&mut writer, [a, 0])?,
+        [a, b] => write_half_chunk(&mut writer, [a, b])?,
         // the high 4 bits of `c` are in the 2nd half of the chunk
         [a, b, c] => write_chunk(&mut writer, [a, b, c, 0, 0])?,
         [a, b, c, d] => write_chunk(&mut writer, [a, b, c, d, 0])?,
@@ -112,7 +112,7 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
                 (None, SkipLast::Two) => &chunk[..3],
             })?;
         } else {
-            let chunk = code_to_half_chunk(c1);
+            let chunk = code_to_half_chunk(c1)?;
             writer.write_all(match skip_last {
                 // we never encode anything like this
                 SkipLast::Zero => return Err(Error::LenMismatch),
@@ -161,11 +161,12 @@ fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
 }
 
 fn pack_code(prefix: u16, suffix: u8) -> u32 {
+    debug_assert!(suffix <= 0xF, "suffix must be at most 4 bits");
     u32::from(prefix) | (u32::from(suffix) << 16)
 }
 
-fn half_chunk_to_code(chunk: [u8; 3]) -> u32 {
-    pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), chunk[2] & 0xF)
+fn half_chunk_to_code(chunk: [u8; 2]) -> u32 {
+    pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), 0)
 }
 
 fn chunk_to_codes(chunk: [u8; 5]) -> [u32; 2] {
@@ -184,10 +185,15 @@ fn unpack_code(code: u32) -> (u16, u8) {
     (code as u16, (code >> 16) as u8)
 }
 
-fn code_to_half_chunk(code: u32) -> [u8; 3] {
+fn code_to_half_chunk(code: u32) -> Result<[u8; 2], Error> {
     let (prefix, suffix) = unpack_code(code);
-    let prefix = prefix.to_le_bytes();
-    [prefix[0], prefix[1], suffix]
+    if suffix == 0 {
+        Ok(prefix.to_le_bytes())
+    } else {
+        // consider this a length mismatch
+        // the code in question is only invalid because the data has the wrong length
+        Err(Error::LenMismatch)
+    }
 }
 
 fn codes_to_chunk(codes: [u32; 2]) -> [u8; 5] {
