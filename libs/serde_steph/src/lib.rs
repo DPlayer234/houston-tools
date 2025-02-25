@@ -102,7 +102,7 @@
 //! your concerns require something closer to a binary JSON.
 //!
 //! In the end, pick one that matches your needs ([`postcard`] supports
-//! `!#[no_std]`). Or the one you think has the funniest name.
+//! `#![no_std]`). Or the one you think has the funniest name.
 //!
 //! [BARE]: <https://baremessages.org/>
 //! [CBOR]: <https://cbor.io/>

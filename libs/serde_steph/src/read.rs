@@ -170,7 +170,7 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
         let limit = u64::try_from(len).map_err(|_| eof())?;
         (&mut self.inner).take(limit).read_to_end(&mut buf)?;
 
-        if buf.len() != len {
+        if buf.len() == len {
             Ok(buf)
         } else {
             Err(eof())

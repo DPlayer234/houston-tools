@@ -224,3 +224,80 @@ fn collect_str() {
         "must have written string"
     );
 }
+
+#[test]
+fn round_trip_io_read() {
+    use std::io::Cursor;
+
+    mod force_byte_buf {
+        use std::fmt;
+
+        use serde::{Deserializer, Serializer, de};
+
+        pub fn serialize<S>(value: &[u8], serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(value)
+        }
+
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct ByteVisitor;
+
+            impl de::Visitor<'_> for ByteVisitor {
+                type Value = Vec<u8>;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("bytes")
+                }
+
+                fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    Ok(v)
+                }
+            }
+
+            deserializer.deserialize_byte_buf(ByteVisitor)
+        }
+    }
+
+    #[derive(Debug, PartialEq, Deserialize, Serialize)]
+    struct Test<'a> {
+        int: u32,
+        #[serde(borrow)]
+        cow: Cow<'a, [u8]>,
+        #[serde(with = "force_byte_buf")]
+        vec: Vec<u8>,
+    }
+
+    let source = Test {
+        int: 0x780,
+        cow: Cow::Borrowed(b"abcde"),
+        vec: b"ABCDEFG".to_vec(),
+    };
+
+    let buf = to_vec(&source).unwrap();
+    let buf = buf.as_slice();
+
+    let from_slice: Test<'_> = from_slice(buf).unwrap();
+    let from_reader: Test<'_> = Deserializer::from_reader(Cursor::new(buf))
+        .read_to_end()
+        .unwrap();
+
+    assert_eq!(from_slice, source);
+    assert_eq!(from_reader, source);
+
+    assert_eq!(from_slice.int, 0x780);
+    assert!(matches!(from_slice.cow, Cow::Borrowed(b"abcde")));
+    assert_eq!(from_slice.vec, b"ABCDEFG");
+
+    assert_eq!(from_reader.int, 0x780);
+    assert!(matches!(from_reader.cow, Cow::Owned(_)));
+    assert_eq!(*from_reader.cow, *b"abcde");
+    assert_eq!(from_reader.vec, b"ABCDEFG");
+}
