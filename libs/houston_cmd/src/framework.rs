@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serenity::builder::CreateInteractionResponse;
-use serenity::framework::Framework as SerenityFramework;
+use serenity::futures::future::always_ready;
 use serenity::gateway::client::{Context as SerenityContext, FullEvent};
 use serenity::model::prelude::*;
 
@@ -29,18 +29,23 @@ pub struct Framework {
     auto_register: AtomicBool,
 }
 
-#[serenity::async_trait]
-impl SerenityFramework for Framework {
-    async fn dispatch(&self, ctx: &SerenityContext, event: &FullEvent) {
+// expanded `#[async_trait]` impl so the different branch futures can be boxed
+// independently. this avoids always allocating the size of the biggest future.
+impl serenity::framework::Framework for Framework {
+    fn dispatch<'s: 'f, 'c: 'f, 'e: 'f, 'f>(
+        &'s self,
+        ctx: &'c SerenityContext,
+        event: &'e FullEvent,
+    ) -> BoxFuture<'f, ()> {
         match event {
-            FullEvent::Ready { .. } => self.register_commands(ctx).await,
+            FullEvent::Ready { .. } => Box::pin(self.register_commands(ctx)),
             FullEvent::InteractionCreate {
                 interaction: Interaction::Command(interaction),
-            } => self.run_command(ctx, interaction).await,
+            } => Box::pin(self.run_command(ctx, interaction)),
             FullEvent::InteractionCreate {
                 interaction: Interaction::Autocomplete(interaction),
-            } => self.run_autocomplete(ctx, interaction).await,
-            _ => {},
+            } => Box::pin(self.run_autocomplete(ctx, interaction)),
+            _ => Box::pin(always_ready(|| {})),
         }
     }
 }
