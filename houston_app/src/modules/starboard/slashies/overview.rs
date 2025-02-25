@@ -109,11 +109,11 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
         .title("Starboard Overview")
         .color(data.config().embed_color);
 
-    for (id, board) in &guild_config.boards {
+    for board in guild_config.boards.values() {
         let mut value = String::with_capacity(256);
 
         value.push_str("- **Top Post:** ");
-        match top_posts.iter().find(|t| t.board == *id) {
+        match top_posts.iter().find(|t| t.board == board.id) {
             Some(top_post) => writeln_str!(
                 value,
                 "{} by <@{}>: {} {}",
@@ -126,7 +126,7 @@ pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
         }
 
         value.push_str("- **Top Poster:** ");
-        match top_users.iter().find(|t| t.board == *id) {
+        match top_users.iter().find(|t| t.board == board.id) {
             Some(top_user) => write_str!(
                 value,
                 "<@{}>: {} {} from {} post(s)",

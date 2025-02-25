@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "2.9.0"
+version = "2.10.0"
 edition.workspace = true
 rust-version.workspace = true
 
@@ -22,6 +22,7 @@ bson = { version = "2.13.0", features = ["chrono-0_4"] }
 bytes = "1.10.0"
 chrono = { version = "0.4.39", default-features = false }
 dashmap = "6.1.0"
+extract_map = "0.2.0"
 indexmap = { version = "2.7.1", features = ["serde"] }
 log = { version = "0.4.25", features = ["serde"] }
 mongodb = "3.2.1"

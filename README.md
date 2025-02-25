@@ -83,9 +83,10 @@ Furthermore, for each board, it will track a leaderboard score.
 Starboard must be configured:
 
 ```toml
-# the first numeric key is the guild id.
-# the second is the board id.
-[bot.starboard.1293210831923974204.boards.1]
+# the first numeric key here is the guild id.
+[[bot.starboard.1293210831923974204.boards]]
+# the id is important!
+id = 1
 name = "starboard"
 channel = 1305620816272166962
 emoji = "⭐"
@@ -95,7 +96,8 @@ notices = [
     "{user}, the stars aligned.",
 ]
 
-[bot.starboard.1293210831923974204.boards.2]
+[[bot.starboard.1293210831923974204.boards]]
+id = 2
 name = "ripboard"
 channel = 1305620834450407606
 emoji = "wowie:1305835613790146631"
@@ -115,6 +117,8 @@ The board channel is not required to be unique and multiple boards may use the s
 Also note that messages in nsfw channels are still tracked for sfw board channels. In this case, a small embed with a message link will be posted instead of a forward. If the board channel itself is nsfw, it will always be a forward.
 
 The name is purely cosmetic and may be displayed in places where a channel name may be expected but channel mentions aren't valid.
+
+The order that the boards are declared in will be used for display, like in the overview or during auto-complete of board names.
 
 The following commands will be enabled:
 

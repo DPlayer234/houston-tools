@@ -128,10 +128,10 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 
     let board = guild_config
         .boards
-        .iter()
-        .find(|b| b.1.emoji.equivalent_to(&reaction.emoji));
+        .values()
+        .find(|b| b.emoji.equivalent_to(&reaction.emoji));
 
-    let Some((&board_id, board)) = board else {
+    let Some(board) = board else {
         return Ok(());
     };
 
@@ -207,13 +207,13 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         );
 
         let filter = model::Message::filter()
-            .board(board_id)
+            .board(board.id)
             .message(message.id)
             .into_document()?;
 
         let update = model::Message::update()
             .set_on_insert(|m| {
-                m.board(board_id)
+                m.board(board.id)
                     .channel(message.channel_id)
                     .message(message.id)
                     .user(message.author.id)
@@ -267,12 +267,12 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
     if score_increase > 0 {
         // update the user's score if it has increased
         let filter = model::Score::filter()
-            .board(board_id)
+            .board(board.id)
             .user(message.author.id)
             .into_document()?;
 
         let update = model::Score::update()
-            .set_on_insert(|s| s.board(board_id).user(message.author.id))
+            .set_on_insert(|s| s.board(board.id).user(message.author.id))
             .inc(|s| s.score(score_increase).post_count(i64::from(new_post)))
             .into_document()?;
 

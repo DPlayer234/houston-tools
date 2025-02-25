@@ -91,16 +91,16 @@ async fn autocomplete_board<'a>(
             // get the config for this guild and flatten into the board iter
             .get(&guild_id)
             .into_iter()
-            .flat_map(|g| &g.boards)
+            .flat_map(|g| g.boards.values())
             // filter to ones whose name contains the input
             // if the input is empty, that's all of them
-            .filter(|(_, board)| board.name.contains(partial))
+            .filter(|board| board.name.contains(partial))
             // map it to an autocomplete choice with the board id as the value
-            .map(|(id, board)| {
+            .map(|board| {
                 AutocompleteChoice::new(
                     board.name.as_str(),
                     #[allow(clippy::cast_sign_loss)]
-                    AutocompleteValue::Integer(id.get() as u64),
+                    AutocompleteValue::Integer(board.id.get() as u64),
                 )
             })
             .collect();

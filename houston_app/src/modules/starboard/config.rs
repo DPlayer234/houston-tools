@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use indexmap::IndexMap;
+use extract_map::ExtractKey;
 use tokio::sync::Semaphore;
 
+use crate::helper::index_extract_map::IndexExtractMap;
 use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;
@@ -23,6 +24,12 @@ impl BoardId {
     }
 }
 
+impl ExtractKey<BoardId> for StarboardEntry {
+    fn extract_key(&self) -> &BoardId {
+        &self.id
+    }
+}
+
 impl From<i64> for BoardId {
     fn from(value: i64) -> Self {
         Self::new(value)
@@ -37,29 +44,15 @@ fn pin_lock() -> Semaphore {
 pub struct StarboardGuild {
     #[serde(default)]
     pub remove_score_on_delete: bool,
-    #[serde(with = "board_order_fix")]
-    pub boards: IndexMap<BoardId, StarboardEntry>,
+    pub boards: IndexExtractMap<BoardId, StarboardEntry>,
 
     #[serde(skip, default = "pin_lock")]
     pub pin_lock: Semaphore,
 }
 
-mod board_order_fix {
-    use serde::de::{Deserialize as _, Deserializer};
-
-    use super::*;
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
-    ) -> Result<IndexMap<BoardId, StarboardEntry>, D::Error> {
-        let mut map = <IndexMap<BoardId, StarboardEntry>>::deserialize(deserializer)?;
-        map.sort_unstable_by(|k1, v1, k2, v2| v1.sort.cmp(&v2.sort).reverse().then(k1.cmp(k2)));
-        Ok(map)
-    }
-}
-
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardEntry {
+    pub id: BoardId,
     pub name: String,
     pub channel: ChannelId,
     pub emoji: StarboardEmoji,
@@ -70,8 +63,6 @@ pub struct StarboardEntry {
     pub cash_gain: i32,
     #[serde(default)]
     pub cash_pin_gain: i32,
-    #[serde(default)]
-    pub sort: i8,
 }
 
 impl StarboardEntry {

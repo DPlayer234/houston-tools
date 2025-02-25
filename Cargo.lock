@@ -1107,7 +1107,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.9.0"
+version = "2.10.0"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -1121,6 +1121,7 @@ dependencies = [
  "chrono",
  "config",
  "dashmap",
+ "extract_map",
  "houston_cmd",
  "indexmap 2.7.1",
  "log",
