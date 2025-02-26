@@ -124,7 +124,7 @@ impl Shape for Birthday {
                 .checked_sub_signed(region.time_offset)
                 .context("birthday time offset breaks end time")?
                 .checked_add_signed(birthday.duration)
-                .context("tomorrow does not exist")?;
+                .context("birthday duration breaks end time")?;
 
             let db = data.database()?;
 

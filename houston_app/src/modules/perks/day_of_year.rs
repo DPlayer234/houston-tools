@@ -6,7 +6,7 @@ use chrono::{Datelike as _, Month, NaiveDate};
 
 use crate::modules::model_prelude::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DayOfYear(NonZero<u16>);
 
 impl DayOfYear {
@@ -55,21 +55,33 @@ impl DayOfYear {
         let num = NonZero::new(ordinal)?;
         Some(Self(num))
     }
+
+    fn fmt_month_day(f: &mut fmt::Formatter<'_>, month: Month, day: u32) -> fmt::Result {
+        let suffix = match (day % 10, (10..=20).contains(&day)) {
+            (1, false) => "st",
+            (2, false) => "nd",
+            (3, false) => "rd",
+            _ => "th",
+        };
+
+        let month = month.name();
+        write!(f, "{month} {day}{suffix}")
+    }
+}
+
+impl fmt::Debug for DayOfYear {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.into_month_day() {
+            Some((month, day)) => Self::fmt_month_day(f, month, day),
+            None => f.debug_tuple("DayOfYear").field(&self.0).finish(),
+        }
+    }
 }
 
 impl fmt::Display for DayOfYear {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.into_month_day() {
-            Some((month, day)) => {
-                let suffix = match (day % 10, (10..=20).contains(&day)) {
-                    (1, false) => "st",
-                    (2, false) => "nd",
-                    (3, false) => "rd",
-                    _ => "th",
-                };
-
-                write!(f, "{} {day}{suffix}", month.name())
-            },
+            Some((month, day)) => Self::fmt_month_day(f, month, day),
             None => f.write_str("<invalid>"),
         }
     }
