@@ -44,8 +44,14 @@ impl super::Module for Module {
             "starboard requires a mongodb_uri",
         );
 
-        log::info!("Starboard is enabled: {} guild(s)", config.starboard.len());
+        let guilds = config.starboard.len();
+        let boards = config
+            .starboard
+            .values()
+            .map(|v| v.boards.len())
+            .sum::<usize>();
 
+        log::info!("Starboard is enabled: {guilds} guild(s), {boards} board(s)");
         Ok(())
     }
 

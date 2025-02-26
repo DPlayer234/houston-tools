@@ -285,10 +285,10 @@ Provides access to data collected by the Azur Lane Data Collector via commands o
 # relative or absolute path to the data produced by the Azur Lane Data Collector
 # that is, this points to the folder with `main.json`
 data_data = "azur_lane_data"
-# optional. defaults to false
+# optional. defaults to true
 # if true, loads the data on startup.
 # if false, loads it the first time it's needed.
-early_load = false
+early_load = true
 ```
 
 The following commands will be enabled:

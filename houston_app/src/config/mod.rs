@@ -3,6 +3,10 @@ use serde::Deserialize;
 use serenity::model::Color;
 use serenity::secrets::Token;
 
+mod emoji;
+
+pub use emoji::HEmoji;
+
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
     pub discord: HDiscordConfig,
@@ -40,7 +44,11 @@ pub struct HBotConfig {
 
 impl HBotConfig {
     pub fn azur(&self) -> anyhow::Result<crate::modules::azur::LoadedConfig<'_>> {
-        self.azur.as_ref().context("azur must be enabled")?.load()
+        self.azur_raw()?.load()
+    }
+
+    pub fn azur_raw(&self) -> anyhow::Result<&crate::modules::azur::Config> {
+        self.azur.as_ref().context("azur must be enabled")
     }
 
     pub fn perks(&self) -> anyhow::Result<&crate::modules::perks::Config> {

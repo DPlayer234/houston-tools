@@ -91,6 +91,18 @@ where
     }
 }
 
+impl<K, V, S> IndexExtractMap<K, V, S> {
+    /// Gets the number of the elements in the map.
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Returns an iterator to the values of the map, in their order.
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.inner.iter().map(Value::get_ref)
+    }
+}
+
 // minimal set of functions i need
 impl<K, V, S> IndexExtractMap<K, V, S>
 where
@@ -105,11 +117,6 @@ where
         Q: ?Sized + Hash + Equivalent<K>,
     {
         self.inner.get(Key::from_ref(key)).map(Value::get_ref)
-    }
-
-    /// Returns an iterator to the values of the map, in their order.
-    pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.inner.iter().map(Value::get_ref)
     }
 
     /// Returns an iterator to the keys of the map, in their order.

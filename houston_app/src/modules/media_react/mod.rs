@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use super::prelude::*;
-use super::starboard::config::StarboardEmoji;
+use crate::config::HEmoji;
 use crate::fmt::discord::MessageLink;
+use crate::helper::is_unique_set;
 
 pub struct Module;
 
@@ -14,13 +15,28 @@ impl super::Module for Module {
     fn intents(&self, _config: &config::HBotConfig) -> GatewayIntents {
         GatewayIntents::MESSAGE_CONTENT
     }
+
+    fn validate(&self, config: &config::HBotConfig) -> Result {
+        for (channel, entry) in &config.media_react {
+            anyhow::ensure!(
+                is_unique_set(entry.emojis.iter()),
+                "media react channel {channel} has duplicate emojis"
+            );
+        }
+
+        log::info!(
+            "Media reacts are enabled: {} channel(s)",
+            config.media_react.len()
+        );
+        Ok(())
+    }
 }
 
 pub type Config = HashMap<ChannelId, MediaChannelEntry>;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MediaChannelEntry {
-    pub emojis: Vec<StarboardEmoji>,
+    pub emojis: Vec<HEmoji>,
 }
 
 pub async fn message(ctx: Context, new_message: Message) {

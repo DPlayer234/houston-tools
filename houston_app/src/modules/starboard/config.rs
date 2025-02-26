@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::fmt;
 
 use extract_map::ExtractKey;
 use tokio::sync::Semaphore;
 
+use crate::config::HEmoji;
 use crate::helper::index_extract_map::IndexExtractMap;
 use crate::prelude::*;
 
@@ -55,7 +55,7 @@ pub struct StarboardEntry {
     pub id: BoardId,
     pub name: String,
     pub channel: ChannelId,
-    pub emoji: StarboardEmoji,
+    pub emoji: HEmoji,
     pub reacts: u32,
     #[serde(default = "Vec::new")]
     pub notices: Vec<String>,
@@ -68,75 +68,5 @@ pub struct StarboardEntry {
 impl StarboardEntry {
     pub fn any_cash_gain(&self) -> bool {
         self.cash_gain != 0 || self.cash_pin_gain != 0
-    }
-}
-
-#[derive(Debug)]
-pub struct StarboardEmoji(ReactionType);
-
-impl StarboardEmoji {
-    pub fn as_emoji(&self) -> &ReactionType {
-        &self.0
-    }
-
-    pub fn equivalent_to(&self, reaction: &ReactionType) -> bool {
-        match (self.as_emoji(), reaction) {
-            (
-                ReactionType::Custom { id: self_id, .. },
-                ReactionType::Custom { id: other_id, .. },
-            ) => self_id == other_id,
-            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => {
-                self_name == other_name
-            },
-            _ => false,
-        }
-    }
-}
-
-impl fmt::Display for StarboardEmoji {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for StarboardEmoji {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use std::fmt;
-
-        use serenity::small_fixed_array::FixedString;
-
-        struct Visitor;
-
-        impl serde::de::Visitor<'_> for Visitor {
-            type Value = StarboardEmoji;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("string for emoji")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let emoji = if let Some((name, id)) = v.split_once(':') {
-                    let id = id.parse().map_err(|_| E::custom("invalid emoji id"))?;
-                    let name = Some(FixedString::from_str_trunc(name));
-                    ReactionType::Custom {
-                        animated: false,
-                        id,
-                        name,
-                    }
-                } else {
-                    ReactionType::Unicode(FixedString::from_str_trunc(v))
-                };
-
-                Ok(StarboardEmoji(emoji))
-            }
-        }
-
-        deserializer.deserialize_str(Visitor)
     }
 }

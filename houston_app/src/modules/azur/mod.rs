@@ -22,9 +22,7 @@ impl super::Module for Module {
     }
 
     async fn startup(self, data: Arc<HBotData>) -> Result {
-        // don't use `data.config().azur()` since that would load the data
-        let azur = data.config().azur.as_ref();
-        let azur = azur.expect("must have azur enabled");
+        let azur = data.config().azur_raw().unwrap();
         if azur.early_load {
             // load the data on its own thread if requested
             let load = move || _ = data.config().azur();

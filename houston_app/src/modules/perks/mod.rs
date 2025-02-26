@@ -62,14 +62,7 @@ impl super::Module for Module {
 
     fn validate(&self, config: &HBotConfig) -> Result {
         anyhow::ensure!(config.mongodb_uri.is_some(), "perks requires a mongodb_uri");
-
-        let perks = config.perks().unwrap();
         log::info!("Perks are enabled.");
-
-        if let Some(r) = &perks.rainbow {
-            log::trace!("Rainbow Role is enabled: {} guild(s)", r.guilds.len());
-        }
-
         Ok(())
     }
 

@@ -9,10 +9,14 @@ use utils::join;
 
 use super::GameData;
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     data_path: Arc<Path>,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub early_load: bool,
 
     #[serde(default)]
@@ -35,6 +39,11 @@ impl Config {
     /// longer block and reuse the results.
     pub fn load(&self) -> anyhow::Result<LoadedConfig<'_>> {
         LoadedConfig::new(self)
+    }
+
+    /// Whether the game data has been loaded before.
+    pub fn loaded(&self) -> bool {
+        self.game_data.get().is_some()
     }
 
     /// Gets or loads the game data.
