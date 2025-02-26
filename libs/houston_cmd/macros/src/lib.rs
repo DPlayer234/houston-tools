@@ -33,7 +33,7 @@ pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenSt
 /// _option_.
 ///
 /// This is intended for use when you want to programatically create command
-/// groups.
+/// groups or to be later `use`d in a command group.
 #[proc_macro_attribute]
 pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
     chat_command_impl::sub_entry_point(args.into(), item.into())

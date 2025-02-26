@@ -48,15 +48,8 @@ pub mod starboard {
         Ok(())
     }
 
-    /// Shows an overview of all boards.
     #[sub_command]
-    async fn overview(
-        ctx: Context<'_>,
-        /// Whether to show the response only to yourself.
-        ephemeral: Option<bool>,
-    ) -> Result {
-        overview::overview(ctx, ephemeral).await
-    }
+    use overview::overview;
 }
 
 fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {

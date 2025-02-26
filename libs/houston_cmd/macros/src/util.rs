@@ -14,6 +14,16 @@ pub fn quote_map_option<T>(value: Option<T>, f: impl FnOnce(T) -> TokenStream) -
     }
 }
 
+pub fn warning(span: Span, text: &str) -> TokenStream {
+    quote::quote_spanned! {span=>
+        const _: () = {
+            #[deprecated(note = #text)]
+            const W: () = ();
+            W
+        };
+    }
+}
+
 pub fn extract_description(attrs: &[Attribute]) -> Option<SpannedValue<String>> {
     let ident = quote::format_ident!("doc");
 

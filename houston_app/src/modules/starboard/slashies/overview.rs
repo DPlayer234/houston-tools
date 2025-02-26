@@ -34,7 +34,13 @@ struct TopMessage {
     max_reacts: i64,
 }
 
-pub async fn overview(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
+/// Shows an overview of all boards.
+#[sub_command]
+pub async fn overview(
+    ctx: Context<'_>,
+    /// Whether to show the response only to yourself.
+    ephemeral: Option<bool>,
+) -> Result {
     let guild = ctx.require_guild_id()?;
     let data = ctx.data_ref();
     let db = data.database()?;

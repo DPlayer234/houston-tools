@@ -95,11 +95,56 @@
 //! returns the command tree. As such, this `mod` actually inherits its `super`
 //! scope, as if it contained `use super::*`.
 //!
-//! Sub-commands have to be attributed with `#[sub_command]` and may also be
-//! nested groups. Items other than sub-commands and `use` items are not allowed
-//! directly inside a group.
+//! Also, note that `#[sub_command]` within a `#[chat_command] mod` is matched
+//! by name and does not refer to [`houston_cmd::sub_command`](sub_command). It
+//! does however use the same context.
 //!
-//! Additionally, as the last example showed, you may specify additional values
+//! You _may_ put any item within a command group declaration, but only items
+//! attributed with `#[sub_command]` will be part of the returning tree. Pay
+//! attention to unused code warnings! Each group must have at least one
+//! `#[sub_command]` item.
+//!
+//! It is also possible to import a sub-command with a `use` statement
+//! attributed with `#[sub_command]`, which allows splitting command groups
+//! across multiple files:
+//!
+//! ```no_run
+//! # use houston_cmd::*;
+//! # use serenity::all::PartialMember;
+//! /// Admin commands.
+//! #[chat_command(
+//!     contexts = "Guild",
+//!     integration_types = "Guild",
+//! )]
+//! mod admin {
+//!     // any valid use syntax is allowed, except glob imports and renamed imports
+//!     // but each distinct use has to resolve to a sub-command
+//!     #[sub_command]
+//!     use {ban, kick};
+//! }
+//!
+//! /// Bans a server member.
+//! #[sub_command]
+//! async fn ban(
+//!     ctx: Context<'_>,
+//!     /// The member to ban.
+//!     user: &PartialMember,
+//! ) -> Result<(), serenity::Error> {
+//!     todo!()
+//! }
+//!
+//! /// Kicks a server member.
+//! #[sub_command]
+//! async fn kick(
+//!     ctx: Context<'_>,
+//!     /// The member to kick.
+//!     user: &PartialMember,
+//! ) -> Result<(), serenity::Error> {
+//!     todo!()
+//! }
+//! ```
+//!
+//! Additionally, as the some examples showed, you may specify additional values
 //! in `#[chat_command]` and `#[context_command]`:
 //!
 //! | Name                         | Meaning |

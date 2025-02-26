@@ -1,8 +1,8 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Visibility};
 
 use crate::args::AnyCommandArgs;
-use crate::util::quote_map_option;
+use crate::util::{quote_map_option, warning};
 
 pub fn to_command_shared(
     vis: &Visibility,
@@ -10,15 +10,12 @@ pub fn to_command_shared(
     command_option: TokenStream,
     args: AnyCommandArgs,
 ) -> syn::Result<TokenStream> {
-    let warning = (args.contexts.is_none() || args.integration_types.is_none())
-        .then(|| quote::quote! {
-            #[allow(clippy::let_unit_binding)]
-            const _: () = {
-                #[deprecated(note = "specify both `contexts` and `integration_types`, discord's defaults can be faulty")]
-                const W: () = ();
-                _ = W;
-            };
-        });
+    let warning = (args.contexts.is_none() || args.integration_types.is_none()).then(|| {
+        warning(
+            Span::call_site(),
+            "specify both `contexts` and `integration_types`, discord's defaults can be faulty",
+        )
+    });
 
     let contexts = quote_map_option(args.contexts, |c| {
         let c = c.into_iter();
