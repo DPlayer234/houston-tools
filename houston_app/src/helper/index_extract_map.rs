@@ -3,7 +3,7 @@
 //! Currently only used for some configuration values, so it has only a small
 //! set of needed functions and can only be constructed by deserialization.
 
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher, RandomState};
 use std::marker::PhantomData;
 use std::{fmt, mem};
 
@@ -12,10 +12,11 @@ use indexmap::{Equivalent, IndexSet};
 use serde::Deserialize;
 use serde::de::{Deserializer, Error as _, SeqAccess, Visitor};
 
-/// Insert-order preserving map whose values store their own keys.
+/// Insert-order preserving map whose values store their own keys, exposed via
+/// [`ExtractKey`].
 #[derive(Debug, Clone)]
-pub struct IndexExtractMap<K, V> {
-    inner: IndexSet<Value<K, V>>,
+pub struct IndexExtractMap<K, V, S = RandomState> {
+    inner: IndexSet<Value<K, V>, S>,
 }
 
 /// Transparent wrapper around a value together with the intended key type.
@@ -37,28 +38,41 @@ impl<K, V> Value<K, V> {
     }
 }
 
-impl<K: Hash + Eq, V: ExtractKey<K>> Hash for Value<K, V> {
+impl<K, V> Hash for Value<K, V>
+where
+    K: Hash + Eq,
+    V: ExtractKey<K>,
+{
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.extract_key().hash(state);
     }
 }
 
-impl<K: Hash + Eq, V: ExtractKey<K>> PartialEq for Value<K, V> {
+impl<K, V> PartialEq for Value<K, V>
+where
+    K: Hash + Eq,
+    V: ExtractKey<K>,
+{
     fn eq(&self, other: &Self) -> bool {
         self.0.extract_key() == other.0.extract_key()
     }
 }
 
-impl<K: Hash + Eq, V: ExtractKey<K>> Eq for Value<K, V> {}
+impl<K, V> Eq for Value<K, V>
+where
+    K: Hash + Eq,
+    V: ExtractKey<K>,
+{
+}
 
 /// Transparent new-type wrapper around a key.
 ///
 /// Needed to implement [`Equivalent`] in terms of [`ExtractKey`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[repr(transparent)]
-struct Key<K>(K);
+struct Key<K: ?Sized>(K);
 
-impl<K> Key<K> {
+impl<K: ?Sized> Key<K> {
     /// Turns a reference to `K` into one to [`Key<K>`].
     fn from_ref(v: &K) -> &Self {
         // SAFETY: `Key<V>` is a transparent wrapper around `V`
@@ -66,26 +80,39 @@ impl<K> Key<K> {
     }
 }
 
-impl<K: Hash + Eq, V: ExtractKey<K>> Equivalent<Value<K, V>> for Key<K> {
+impl<Q, K, V> Equivalent<Value<K, V>> for Key<Q>
+where
+    Q: ?Sized + Hash + Equivalent<K>,
+    K: Hash + Eq,
+    V: ExtractKey<K>,
+{
     fn equivalent(&self, key: &Value<K, V>) -> bool {
-        self.0 == *key.0.extract_key()
+        self.0.equivalent(key.0.extract_key())
     }
 }
 
 // minimal set of functions i need
-impl<K: Hash + Eq, V: ExtractKey<K>> IndexExtractMap<K, V> {
+impl<K, V, S> IndexExtractMap<K, V, S>
+where
+    K: Hash + Eq,
+    V: ExtractKey<K>,
+    S: BuildHasher,
+{
     /// Gets a reference to the value stored in the set, if it is present, else
     /// `None`.
-    pub fn get(&self, key: &K) -> Option<&V> {
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        Q: ?Sized + Hash + Equivalent<K>,
+    {
         self.inner.get(Key::from_ref(key)).map(Value::get_ref)
     }
 
-    /// Returns an iterator to the values of the map.
+    /// Returns an iterator to the values of the map, in their order.
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.inner.iter().map(Value::get_ref)
     }
 
-    /// Returns an iterator to the keys of the map.
+    /// Returns an iterator to the keys of the map, in their order.
     ///
     /// This is equivalent to: `map.values().map(|v| v.extract_key())`
     pub fn keys(&self) -> impl Iterator<Item = &K> {
@@ -93,23 +120,25 @@ impl<K: Hash + Eq, V: ExtractKey<K>> IndexExtractMap<K, V> {
     }
 }
 
-impl<'de, K, V> Deserialize<'de> for IndexExtractMap<K, V>
+impl<'de, K, V, S> Deserialize<'de> for IndexExtractMap<K, V, S>
 where
     K: Hash + Eq,
     V: ExtractKey<K> + Deserialize<'de>,
+    S: BuildHasher + Default,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct MapVisitor<K, V>(PhantomData<IndexExtractMap<K, V>>);
+        struct MapVisitor<K, V, S>(PhantomData<IndexExtractMap<K, V, S>>);
 
-        impl<'de, K, V> Visitor<'de> for MapVisitor<K, V>
+        impl<'de, K, V, S> Visitor<'de> for MapVisitor<K, V, S>
         where
             K: Hash + Eq,
             V: ExtractKey<K> + Deserialize<'de>,
+            S: BuildHasher + Default,
         {
-            type Value = IndexExtractMap<K, V>;
+            type Value = IndexExtractMap<K, V, S>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("list of starboards")
@@ -119,7 +148,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut map = IndexSet::new();
+                let mut map = IndexSet::with_hasher(S::default());
                 while let Some(item) = seq.next_element::<V>()? {
                     if !map.insert(Value::new(item)) {
                         return Err(A::Error::custom("duplicate starboard id"));
@@ -132,5 +161,70 @@ where
         }
 
         deserializer.deserialize_seq(MapVisitor(PhantomData))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Equivalent as _, ExtractKey, IndexExtractMap, Key, Value};
+
+    #[derive(Debug, Clone, PartialEq)]
+    struct Item {
+        name: String,
+        value: i32,
+    }
+
+    impl ExtractKey<String> for Item {
+        fn extract_key(&self) -> &String {
+            &self.name
+        }
+    }
+
+    #[test]
+    fn key_equality() {
+        let key_value = "alice";
+
+        let item = Item {
+            name: key_value.to_owned(),
+            value: 32,
+        };
+
+        let value = Value::new(item);
+        let key = Key::from_ref(value.get_ref().extract_key());
+        let hash = utils::hash_default(&value);
+
+        assert!(key.equivalent(&value), "{key:?}.equivalent(&{value:?})");
+        assert_eq!(utils::hash_default(key), hash);
+
+        assert!(
+            Key::from_ref(key_value).equivalent(&value),
+            "Key::from_ref({key_value:?}).equivalent(&{value:?})"
+        );
+        assert_eq!(utils::hash_default(Key::from_ref(key_value)), hash);
+    }
+
+    #[test]
+    fn map_entries() {
+        let alice = Item {
+            name: "alice".to_owned(),
+            value: 32,
+        };
+        let bob = Item {
+            name: "bob".to_owned(),
+            value: 28,
+        };
+
+        let map = IndexExtractMap {
+            inner: indexmap::indexset! {
+                Value::new(alice.clone()),
+                Value::new(bob.clone()),
+            },
+        };
+
+        assert_eq!(map.get("alice"), Some(&alice));
+        assert_eq!(map.get("bob"), Some(&bob));
+
+        assert_eq!(map.get(&alice.name), Some(&alice));
+        assert_eq!(map.get(&bob.name), Some(&bob));
     }
 }
