@@ -44,7 +44,7 @@
 //! - `hello-world`
 //! - `(hELLO)(wORLD)`
 
-use std::cmp;
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::ptr::{self, NonNull};
 use std::vec::IntoIter as VecIntoIter;
@@ -264,11 +264,16 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let match_count = total * self.min_match_score;
 
         results.retain(|r| f64::from(r.count) >= match_count);
-        results.sort_unstable();
+
+        // sort by count desc
+        // then by len asc
+        // then by index asc
+        results.sort_unstable_by_key(|r| (Reverse(r.count), r.len, r.index));
 
         // copy as MatchInfo; TrustedLen should avoid redundant allocations
         // original code here already allocated, and it's fine perf-wise
-        let results = results.iter().map(|m| m.discard()).collect();
+        // don't use `into_iter`, that's not TrustedLen!
+        let results = results.iter().map(|m| m.info()).collect();
 
         // SAFETY: every index in `results` is a valid index into `values`
         // as guaranteed by the type invariants; indices come from `match_map`.
@@ -320,12 +325,7 @@ struct MatchInfo {
 }
 
 /// A sortable [`MatchInfo`], with an additional `len` field.
-///
-/// Used during search so the results can be
-/// - sorted by `count` desc,
-/// - then by `len` asc,
-/// - then by `index` asc.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 struct MatchInfoLen {
     count: MatchIndex,
     index: MatchIndex,
@@ -334,30 +334,11 @@ struct MatchInfoLen {
 
 impl MatchInfoLen {
     /// Discards the `len` and creates a [`MatchInfo`].
-    fn discard(self) -> MatchInfo {
+    fn info(self) -> MatchInfo {
         MatchInfo {
             index: self.index,
             count: self.count,
         }
-    }
-}
-
-impl Ord for MatchInfoLen {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        // sort by count desc
-        // then by len asc
-        // then by index asc
-        self.count
-            .cmp(&other.count)
-            .reverse()
-            .then_with(|| self.len.cmp(&other.len))
-            .then_with(|| self.index.cmp(&other.index))
-    }
-}
-
-impl PartialOrd for MatchInfoLen {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }
 

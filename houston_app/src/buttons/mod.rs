@@ -419,20 +419,10 @@ impl<T: ButtonMessage> ButtonArgsReply for T {
 pub struct CustomData(encoding::Buf);
 
 impl CustomData {
-    /// Gets an empty value.
-    #[cfg(test)]
-    pub const EMPTY: Self = Self(encoding::Buf::new_const());
-
     /// Converts this instance to a component custom ID.
     #[must_use]
     pub fn to_custom_id(&self) -> String {
         encoding::encode_custom_id(&self.0)
-    }
-
-    /// Converts this instance to [`ButtonArgs`].
-    #[cfg(test)]
-    fn to_button_args(&self) -> Result<ButtonArgs> {
-        encoding::read_button_args(&self.0)
     }
 
     /// Creates an instance from [`ButtonArgs`].
@@ -441,6 +431,17 @@ impl CustomData {
         let mut buf = encoding::Buf::new();
         encoding::write_button_args(&mut buf, args);
         Self(buf)
+    }
+}
+
+#[cfg(test)]
+impl CustomData {
+    /// Gets an empty value.
+    pub const EMPTY: Self = Self(encoding::Buf::new_const());
+
+    /// Converts this instance to [`ButtonArgs`].
+    fn to_button_args(&self) -> Result<ButtonArgs> {
+        encoding::read_button_args(&self.0)
     }
 }
 

@@ -1,26 +1,34 @@
-use std::collections::HashMap;
-
 use super::prelude::*;
-use crate::config::HEmoji;
+use crate::config::HBotConfig;
 use crate::fmt::discord::MessageLink;
 use crate::helper::is_unique_set;
+
+pub mod config;
+
+pub use config::Config;
+use config::MediaCheck;
 
 pub struct Module;
 
 impl super::Module for Module {
-    fn enabled(&self, config: &super::config::HBotConfig) -> bool {
+    fn enabled(&self, config: &HBotConfig) -> bool {
         !config.media_react.is_empty()
     }
 
-    fn intents(&self, _config: &config::HBotConfig) -> GatewayIntents {
+    fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
         GatewayIntents::MESSAGE_CONTENT
     }
 
-    fn validate(&self, config: &config::HBotConfig) -> Result {
-        for (channel, entry) in &config.media_react {
+    fn validate(&self, config: &HBotConfig) -> Result {
+        for (channel, entries) in &config.media_react {
             anyhow::ensure!(
-                is_unique_set(entry.emojis.iter()),
+                is_unique_set(entries.iter().map(|e| &e.emoji)),
                 "media react channel {channel} has duplicate emojis"
+            );
+
+            anyhow::ensure!(
+                entries.len() <= 20,
+                "media react channel {channel} has more than 20 emojis"
             );
         }
 
@@ -30,13 +38,6 @@ impl super::Module for Module {
         );
         Ok(())
     }
-}
-
-pub type Config = HashMap<ChannelId, MediaChannelEntry>;
-
-#[derive(Debug, serde::Deserialize)]
-pub struct MediaChannelEntry {
-    pub emojis: Vec<HEmoji>,
 }
 
 pub async fn message(ctx: Context, new_message: Message) {
@@ -60,31 +61,22 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
     let data = ctx.data_ref::<HContextData>();
 
     // grab the config for the current channel
-    let channel_config = data.config().media_react.get(&new_message.channel_id);
+    let entries = data.config().media_react.get(&new_message.channel_id);
 
-    let Some(channel_config) = channel_config else {
+    let Some(entries) = entries else {
         return Ok(());
     };
 
-    // if there is an attachment or the content has media links,
-    // attach the emoji to the message
-    // CMBK: check message snapshots when forwarding is fully implemented
-    let has_media = !new_message.attachments.is_empty()
-        || new_message
-            .message_reference
-            .as_ref()
-            .is_some_and(|m| m.kind == MessageReferenceKind::Forward)
-        || has_media_content(&new_message.content);
-
-    if !has_media {
-        return Ok(());
-    }
-
-    for emoji in &channel_config.emojis {
-        new_message
-            .react(&ctx.http, emoji.as_emoji().clone())
-            .await
-            .context("could not add media reaction")?;
+    let mut check = MediaChecker::new(&new_message);
+    for entry in entries {
+        // if there is an attachment or the content has media links, attach the emoji to
+        // the message. nested message snapshots (forwards) are checked the same way
+        if check.with(entry.condition) {
+            new_message
+                .react(&ctx.http, entry.emoji.as_emoji().clone())
+                .await
+                .context("could not add media reaction")?;
+        }
     }
 
     Ok(())
@@ -92,6 +84,54 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
 
 fn is_normal_message(kind: MessageType) -> bool {
     matches!(kind, MessageType::Regular | MessageType::InlineReply)
+}
+
+/// Provides a way to check whether a message or its snapshots have media, given
+/// the check condition, avoiding repeated content checks if possible but only
+/// actually performing them if they are needed.
+#[derive(Debug)]
+struct MediaChecker<'a> {
+    message: &'a Message,
+    normal: Option<bool>,
+    forward: Option<bool>,
+}
+
+impl<'a> MediaChecker<'a> {
+    fn new(message: &'a Message) -> Self {
+        Self {
+            message,
+            normal: None,
+            forward: None,
+        }
+    }
+
+    fn with(&mut self, condition: MediaCheck) -> bool {
+        if self.message.message_snapshots.is_empty() {
+            condition.normal.select(|| self.normal())
+        } else {
+            condition.forward.select(|| self.forward())
+        }
+    }
+
+    fn normal(&mut self) -> bool {
+        fn normal_content(m: &Message) -> bool {
+            !m.attachments.is_empty() || has_media_content(&m.content)
+        }
+
+        *self
+            .normal
+            .get_or_insert_with(|| normal_content(self.message))
+    }
+
+    fn forward(&mut self) -> bool {
+        fn forward_content(m: &MessageSnapshot) -> bool {
+            !m.attachments.is_empty() || has_media_content(&m.content)
+        }
+
+        *self
+            .forward
+            .get_or_insert_with(|| self.message.message_snapshots.iter().any(forward_content))
+    }
 }
 
 fn has_media_content(content: &str) -> bool {

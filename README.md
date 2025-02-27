@@ -276,6 +276,40 @@ The following commands are supported in context menus:
 |:-------------- |:----------- |
 | Server Profile | (User) Equivalent to `/profile`. |
 
+## Media React
+
+Media-react has the bot automatically react to messages in certain channels. The intent is to react to "media" posts, such as images or videos, in combination with the starboard. Only normal messages, replies, and forwards from users (not bots) will ever be reacted to.
+
+```toml
+# the numeric key is the channel id
+# you may specify this section multiple times per channel
+[[bot.media_react.1305620816272166962]]
+# the emoji to add
+emoji = "⭐"
+
+# optional. defines the condition for messages to get this reaction.
+# possible values are:
+# - "content" (default): includes a link or attachments
+# - "always": reacts to all messages
+# - "never": never reacts to messages
+# `normal` defines the condition for regular messages
+# `forward` defines the condition for messages forwarded to the channel
+condition.normal = "content"
+condition.forward = "content"
+# you may also set both values at once like this:
+#   condition = "content"
+
+# as an example, on the same channel, always react to forwards with a different emoji
+[[bot.media_react.1305620816272166962]]
+emoji = "wowie:1305835613790146631"
+condition.normal = "never"
+condition.forward = "always"
+```
+
+There may be up to 20 emojis per channel. The "emoji" value is declared in the same way as starboard emojis, that is each value must be unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631".
+
+Emojis are added in declaration order. For example, the above would always put "⭐", then "wowie".
+
 ## Azur Lane
 
 Provides access to data collected by the Azur Lane Data Collector via commands on the bot. To enable this, specify the directory with the collected data:
