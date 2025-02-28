@@ -5,19 +5,19 @@ use crate::buttons::prelude::*;
 ///
 /// Its [`ButtonArgsReply`] implementation will always return an error.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct None {
+pub struct Noop {
     key: u16,
     value: u16,
 }
 
-impl None {
+impl Noop {
     /// Create a new sentinel value.
     pub const fn new(key: u16, value: u16) -> Self {
         Self { key, value }
     }
 }
 
-impl ButtonArgsReply for None {
+impl ButtonArgsReply for Noop {
     async fn reply(self, _ctx: ButtonContext<'_>) -> Result {
         anyhow::bail!("this button is not intended to be used");
     }

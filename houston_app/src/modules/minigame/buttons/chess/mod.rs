@@ -99,11 +99,11 @@ impl View {
 
                 row.push(
                     if action == Action::Idle {
-                        use crate::modules::core::buttons::None;
+                        use crate::modules::core::buttons::Noop;
 
                         let key = ptr::from_ref(&self.action) as u16;
                         let value = flat_index(pos);
-                        CreateButton::new(None::new(key, value).to_custom_id()).disabled(true)
+                        CreateButton::new(Noop::new(key, value).to_custom_id()).disabled(true)
                     } else {
                         self.new_button(|s| &mut s.action, action, |_| flat_index(pos))
                     }
@@ -133,10 +133,10 @@ impl View {
                 };
 
                 row.push({
-                    use crate::modules::core::buttons::None;
+                    use crate::modules::core::buttons::Noop;
 
                     let value = flat_index(pos);
-                    CreateButton::new(None::new(0, value).to_custom_id())
+                    CreateButton::new(Noop::new(0, value).to_custom_id())
                         .disabled(true)
                         .emoji(icon.clone())
                         .style(ButtonStyle::Secondary)

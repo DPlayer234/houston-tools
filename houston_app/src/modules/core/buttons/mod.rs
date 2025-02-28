@@ -1,9 +1,9 @@
 //! Common button arg types.
 
 mod delete;
-mod none;
+mod noop;
 mod page;
 
 pub use delete::Delete;
-pub use none::None;
+pub use noop::Noop;
 pub use page::ToPage;

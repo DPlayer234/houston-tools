@@ -27,7 +27,7 @@ macro_rules! round_trip_test {
     };
 }
 
-round_trip_test!(round_trip_args_none, None => core_mod::buttons::None::new(12345, 6789));
+round_trip_test!(round_trip_args_none, Noop => core_mod::buttons::Noop::new(12345, 6789));
 round_trip_test!(round_trip_args_ship, AzurShip => azur::buttons::ship::View::new(9999));
 round_trip_test!(round_trip_args_augment, AzurAugment => azur::buttons::augment::View::new(9999));
 round_trip_test!(round_trip_args_skill, AzurSkill => { use azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), CustomData::EMPTY) });

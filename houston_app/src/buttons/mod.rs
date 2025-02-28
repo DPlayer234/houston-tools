@@ -90,7 +90,7 @@ macro_rules! define_button_args {
 // anywhere other than the bottom and don't reorder them!
 define_button_args! {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-    None(core_mod::buttons::None),
+    Noop(core_mod::buttons::Noop),
     /// Open the ship detail view.
     AzurShip(azur::buttons::ship::View),
     /// Open the augment detail view.
@@ -309,7 +309,7 @@ pub trait ToCustomData {
             // It isn't used in any way other than as a discriminator.
             let sentinel_key = ptr::from_ref(field_ref) as u16;
 
-            let sentinel = core_mod::buttons::None::new(sentinel_key, sentinel(value));
+            let sentinel = core_mod::buttons::Noop::new(sentinel_key, sentinel(value));
             let custom_id = sentinel.to_custom_id();
             CreateButton::new(custom_id).disabled(true)
         } else {
