@@ -71,7 +71,10 @@ impl View {
         skin: &'a ShipSkin,
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
         let words = match &skin.words_extra {
-            Some(words) if self.extra => words,
+            Some(words) if self.extra => {
+                self.try_redirect_to_non_empty_part(words);
+                words
+            },
             _ => {
                 self.extra = false;
                 &skin.words
@@ -100,21 +103,11 @@ impl View {
         }
 
         components.push(CreateActionRow::buttons(vec![
-            self.button_with_part(ViewPart::Info, words)
-                .label("1")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Main1, words)
-                .label("2")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Main2, words)
-                .label("3")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Affinity, words)
-                .label("4")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Combat, words)
-                .label("5")
-                .style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Info, words, "1", "< 1 >"),
+            self.button_with_part(ViewPart::Main1, words, "2", "< 2 >"),
+            self.button_with_part(ViewPart::Main2, words, "3", "< 3 >"),
+            self.button_with_part(ViewPart::Affinity, words, "4", "< 4 >"),
+            self.button_with_part(ViewPart::Combat, words, "5", "< 5 >"),
         ]));
 
         if ship.skins.len() > 1 {
@@ -142,10 +135,24 @@ impl View {
     }
 
     /// Creates a button that redirects to a different viewed part.
-    fn button_with_part<'a>(&mut self, part: ViewPart, words: &ShipSkinWords) -> CreateButton<'a> {
-        let disabled = self.part == part || !part.has_texts(words);
-        self.new_button(|s| &mut s.part, part, |u| u as u16)
-            .disabled(disabled)
+    fn button_with_part<'a>(
+        &mut self,
+        part: ViewPart,
+        words: &ShipSkinWords,
+        label: &'a str,
+        active_label: &'a str,
+    ) -> CreateButton<'a> {
+        let button = self
+            .new_button(|s| &mut s.part, part, |u| u as u16)
+            .style(ButtonStyle::Secondary)
+            .label(label);
+        if !part.has_texts(words) {
+            button.disabled(true)
+        } else if self.part == part {
+            button.label(active_label)
+        } else {
+            button
+        }
     }
 
     /// Creates a button that redirects to a different skin's lines.
@@ -158,6 +165,16 @@ impl View {
         // overflow.
         #[allow(clippy::cast_possible_truncation)]
         self.new_select_option(&skin.name, |s| &mut s.skin_index, index as u8)
+    }
+
+    /// Attempts to change to a part that has texts, if the view isn't already
+    /// on one.
+    fn try_redirect_to_non_empty_part(&mut self, words: &ShipSkinWords) {
+        if !self.part.has_texts(words) {
+            if let Some(part) = first_non_empty_part(words) {
+                self.part = part;
+            }
+        }
     }
 
     fn resolve<'a>(
@@ -177,6 +194,23 @@ impl View {
 
         Ok((azur, ship, skin))
     }
+}
+
+fn first_non_empty_part(words: &ShipSkinWords) -> Option<ViewPart> {
+    macro_rules! check {
+        ($part:expr) => {
+            if $part.has_texts(words) {
+                return Some($part);
+            }
+        };
+    }
+
+    check!(ViewPart::Info);
+    check!(ViewPart::Main1);
+    check!(ViewPart::Main2);
+    check!(ViewPart::Affinity);
+    check!(ViewPart::Combat);
+    None
 }
 
 /// Higher-order macro to share code logic for [`ViewPart`] functions.
