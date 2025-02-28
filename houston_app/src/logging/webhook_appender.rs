@@ -35,15 +35,15 @@ const FLUSH_TIME_LIMIT: Duration = Duration::from_secs(5);
 
 #[derive(Debug)]
 pub struct WebhookAppender {
-    sender: Sender<LogData>,
+    sender: Sender<Msg>,
     encoder: Box<dyn Encode>,
 }
 
 impl Append for WebhookAppender {
     fn append(&self, record: &Record<'_>) -> Result {
-        let mut buf = LogData::default();
+        let mut buf = LogBuf::default();
         self.encoder.encode(&mut buf, record)?;
-        self.sender.try_send(buf)?;
+        self.sender.try_send(Msg::Log(buf.buf.to_vec()))?;
         Ok(())
     }
 
@@ -72,18 +72,28 @@ impl WebhookClient {
     }
 }
 
-const LOG_DATA_SIZE: usize = 256;
+// Discord messages are limited to 2000 characters.
+// we use 1984 instead of 2000 to also consider a little bit of extra space we
+// use for formatting. when a message would exceed this limit, it's re-queued
+// instead of being added to the batch.
+const LOG_LIMIT: usize = 1984;
 
-/// Represents a single log message to be written to the webhook.
+const LOG_BUF_SIZE: usize = LOG_LIMIT / 2;
+
+/// A temporary buffer for messages to write to the webhook.
 #[derive(Debug, Default)]
-struct LogData {
+struct LogBuf {
     /// The buffer of data to write to the webhook.
-    buf: ArrayVec<u8, LOG_DATA_SIZE>,
-    /// A semaphore permit to release after the message is written.
-    notify: Option<OwnedSemaphorePermit>,
+    buf: ArrayVec<u8, LOG_BUF_SIZE>,
 }
 
-impl io::Write for LogData {
+#[derive(Debug)]
+enum Msg {
+    Log(Vec<u8>),
+    Notify(OwnedSemaphorePermit),
+}
+
+impl io::Write for LogBuf {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.write_all(buf)?;
         Ok(buf.len())
@@ -109,7 +119,7 @@ impl io::Write for LogData {
     }
 }
 
-impl encode::Write for LogData {
+impl encode::Write for LogBuf {
     fn set_style(&mut self, style: &Style) -> io::Result<()> {
         use log4rs::encode::Color;
 
@@ -138,13 +148,40 @@ impl encode::Write for LogData {
     }
 }
 
-async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config: InnerConfig) {
-    // Discord messages are limited to 2000 characters.
-    // to avoid hitting this limit, don't batch more if we can't guarantee
-    // that the next log message can still fit. we use 1984 instead of 2000
-    // to also consider a little bit of extra space we use for formatting.
-    const SIZE_CAP: usize = 1984 - LOG_DATA_SIZE;
+/// Helper for batching receives.
+#[derive(Debug)]
+struct BatchReceiver {
+    receiver: Receiver<Msg>,
+    next_data: Option<Vec<u8>>,
+    config: InnerConfig,
+    count: usize,
+}
 
+impl BatchReceiver {
+    /// Take the first item and reset the count.
+    ///
+    /// Returns [`None`] when the receiver is closed and exhausted.
+    async fn first(&mut self) -> Option<Msg> {
+        self.count = 1;
+        match self.next_data.take() {
+            Some(data) => Some(Msg::Log(data)),
+            None => self.receiver.recv().await,
+        }
+    }
+
+    /// Takes another item for the batch, with respect to the limits.
+    ///
+    /// Does not increase the count itself.
+    async fn take_batch(&mut self) -> Option<Msg> {
+        if self.count >= self.config.batch_size {
+            return None;
+        }
+
+        try_recv_timeout(&mut self.receiver, self.config.batch_time).await
+    }
+}
+
+async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerConfig) {
     // we will reuse this buffer for _every_ posted message
     let mut text = String::new();
 
@@ -153,34 +190,43 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
     #[allow(clippy::collection_is_never_read, reason = "used to delay drop")]
     let mut flush = Vec::new();
 
-    // this loop will exit when the sender is dropped
-    while let Some(data) = receiver.recv().await {
-        // the permit of `data` is implicitly dropped
-        if data.buf.is_empty() {
+    let mut batch = BatchReceiver {
+        receiver,
+        config,
+        next_data: None,
+        count: 0,
+    };
+
+    // this loop will exit when the sender is dropped and exhausted
+    while let Some(data) = batch.first().await {
+        // the permit in `Msg::Notify` is implicitly dropped
+        let Msg::Log(buf) = data else {
             continue;
-        }
+        };
 
         // make sure there's enough space for at least the first message in the batch
-        text.reserve(data.buf.len() + 16);
+        text.reserve(buf.len() + 16);
         text.push_str("```ansi\n");
 
-        push_str_lossy(&mut text, &data.buf);
+        push_str_lossy(&mut text, &buf);
 
         // push additional messages into the buffer if allowed & possible
-        if config.batch_size > 1 {
-            let mut count = 1usize;
-            while let Some(mut data) = try_recv_timeout(&mut receiver, config.batch_time).await {
+        while let Some(data) = batch.take_batch().await {
+            match data {
+                // write the additional log message
+                Msg::Log(buf) => {
+                    // if there is not enough space left, handle it in the next iteration
+                    if text.len() + buf.len() > LOG_LIMIT {
+                        batch.next_data = Some(buf);
+                        break;
+                    }
+
+                    // push the text and increase the batch count
+                    push_str_lossy(&mut text, &buf);
+                    batch.count += 1;
+                },
                 // take out the permit to drop it later
-                if let Some(sem) = data.notify.take() {
-                    flush.push(sem);
-                }
-
-                count += 1;
-                push_str_lossy(&mut text, &data.buf);
-
-                if text.len() > SIZE_CAP || count >= config.batch_size {
-                    break;
-                }
+                Msg::Notify(notify) => flush.push(notify),
             }
         }
 
@@ -195,7 +241,7 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
                 webhook.id,
                 None,
                 webhook.token.expose_secret(),
-                config.wait,
+                batch.config.wait,
                 Vec::new(),
                 &ExecuteWebhook::new().content(&text),
             )
@@ -208,12 +254,13 @@ async fn worker(webhook: WebhookClient, mut receiver: Receiver<LogData>, config:
             eprintln!("webhook appender failed: {why:?}");
         }
 
+        // drop all obtained permits to notify queuers
         flush.clear();
     }
 }
 
 /// Equivalent to `receiver.recv()` but using a timeout.
-async fn try_recv_timeout(receiver: &mut Receiver<LogData>, timeout: Duration) -> Option<LogData> {
+async fn try_recv_timeout(receiver: &mut Receiver<Msg>, timeout: Duration) -> Option<Msg> {
     let task = receiver.recv();
     tokio::time::timeout(timeout, task).await.ok().flatten()
 }
@@ -231,7 +278,7 @@ fn push_str_lossy(target: &mut String, buf: &[u8]) {
     }
 }
 
-fn try_flush(sender: &Sender<LogData>) {
+fn try_flush(sender: &Sender<Msg>) {
     // we're not _too_ concerned about the efficiency of this code
     // it really only runs on exit, so the only concern is really
     // "doesn't block other threads"
@@ -241,11 +288,7 @@ fn try_flush(sender: &Sender<LogData>) {
         tokio::runtime::Handle::current().block_on(async {
             let semaphore = Arc::new(Semaphore::new(1));
             let notify = Arc::clone(&semaphore).acquire_owned().await?;
-
-            let msg = LogData {
-                buf: ArrayVec::new(),
-                notify: Some(notify),
-            };
+            let msg = Msg::Notify(notify);
 
             // we essentially wait until the semaphore lets us grab another permit
             // this should happen when `notify` of the `msg` is dropped,

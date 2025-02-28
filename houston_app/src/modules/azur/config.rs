@@ -58,7 +58,9 @@ impl Config {
     }
 
     fn load_game_data(&self) -> Option<GameData> {
-        GameData::load_from(Arc::clone(&self.data_path))
+        // this may take a few seconds to load up
+        let data_path = Arc::clone(&self.data_path);
+        tokio::task::block_in_place(|| GameData::load_from(data_path))
             .inspect(|_| log::info!("Loaded Azur Lane data."))
             .inspect_err(|why| log::error!("Failed to load Azur Lane data: {why:?}"))
             .ok()
