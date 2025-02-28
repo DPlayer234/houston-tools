@@ -25,6 +25,8 @@ pub struct FieldSerdeMeta {
 #[derive(Debug, darling::FromDeriveInput)]
 #[darling(attributes(model))]
 pub struct ModelMeta {
+    #[darling(rename = "crate")]
+    pub crate_: Option<Path>,
     pub derive: Option<PathList>,
 }
 
@@ -71,5 +73,6 @@ pub struct ModelArgs<'a> {
     pub fields_name: syn::Ident,
     pub internals_name: syn::Ident,
     pub fields: Vec<FieldArgs<'a>>,
+    pub crate_: Path,
     pub derive: &'a [Path],
 }
