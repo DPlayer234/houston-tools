@@ -27,6 +27,8 @@ pub struct AnyCommandArgs {
     pub integration_types: Option<Punctuated<Ident, Token![|]>>,
     #[darling(default)]
     pub nsfw: bool,
+    #[darling(flatten)]
+    pub common: CommonArgs,
 }
 
 #[derive(Debug, darling::FromMeta)]
@@ -40,7 +42,33 @@ pub struct ParameterArgs {
     pub max_length: Option<LitInt>,
 }
 
+#[derive(Debug, darling::FromMeta)]
+pub struct TopSubCommandArgs {
+    pub name: Option<String>,
+    #[darling(flatten)]
+    pub common: CommonArgs,
+}
+
 #[derive(Debug, Default, darling::FromMeta)]
 pub struct SubCommandArgs {
     pub name: Option<String>,
+}
+
+fn default_crate() -> Path {
+    syn::parse_quote!(::houston_cmd)
+}
+
+#[derive(Debug, darling::FromDeriveInput)]
+#[darling(attributes(choice_arg))]
+pub struct CommonDeriveArgs {
+    #[darling(rename = "crate")]
+    #[darling(default = "default_crate")]
+    pub crate_: Path,
+}
+
+#[derive(Debug, darling::FromMeta)]
+pub struct CommonArgs {
+    #[darling(rename = "crate")]
+    #[darling(default = "default_crate")]
+    pub crate_: Path,
 }

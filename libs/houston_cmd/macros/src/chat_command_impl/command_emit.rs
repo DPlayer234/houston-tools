@@ -7,7 +7,7 @@ use syn::fold::Fold as _;
 use syn::spanned::Spanned as _;
 use syn::{FnArg, ItemFn, Pat, Type};
 
-use crate::args::ParameterArgs;
+use crate::args::{CommonArgs, ParameterArgs};
 use crate::util::{
     ReplaceLifetimes, ensure_span, ensure_spanned, extract_description, quote_map_option,
 };
@@ -22,6 +22,7 @@ struct Parameter {
 pub fn to_command_option_command(
     func: &mut ItemFn,
     name: Option<String>,
+    args: &CommonArgs,
 ) -> syn::Result<TokenStream> {
     if func.sig.asyncness.is_none() {
         return Err(syn::Error::new_spanned(
@@ -42,9 +43,13 @@ pub fn to_command_option_command(
     ensure_span!(description.span(), (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
     ensure_spanned!(&func.sig.inputs, (0..=25).contains(&parameters.len()) => "there must be at most 25 parameters");
 
+    let CommonArgs { crate_ } = args;
     let description = &*description;
 
-    let param_data: Vec<_> = parameters.iter().map(to_command_parameter).collect();
+    let param_data: Vec<_> = parameters
+        .iter()
+        .map(|p| to_command_parameter(p, args))
+        .collect();
 
     let param_idents: Vec<_> = parameters
         .iter()
@@ -52,28 +57,31 @@ pub fn to_command_option_command(
         .map(|(index, _)| quote::format_ident!("param_{index}"))
         .collect();
 
-    let param_quotes = parameters.iter().zip(&param_idents).map(|(param, param_ident)| {
-        let param_name = &param.name;
-        let param_ty = &*param.ty;
-        quote::quote_spanned! {param.span=>
-            let #param_ident = ::houston_cmd::parse_slash_argument!(ctx, #param_name, #param_ty)?;
-        }
-    });
+    let param_quotes = parameters
+        .iter()
+        .zip(&param_idents)
+        .map(|(param, param_ident)| {
+            let param_name = &param.name;
+            let param_ty = &*param.ty;
+            quote::quote_spanned! {param.span=>
+                let #param_ident = #crate_::parse_slash_argument!(ctx, #param_name, #param_ty)?;
+            }
+        });
 
     Ok(quote::quote_spanned! {func.sig.output.span()=>
-        ::houston_cmd::model::CommandOption {
+        #crate_::model::CommandOption {
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(#description),
-            data: ::houston_cmd::model::CommandOptionData::Command(::houston_cmd::model::SubCommandData {
+            data: #crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData {
                 invoke: {
                     #func
 
-                    ::houston_cmd::model::Invoke::ChatInput(|ctx| ::std::boxed::Box::pin(async move {
+                    #crate_::model::Invoke::ChatInput(|ctx| ::std::boxed::Box::pin(async move {
                         #( #param_quotes )*
 
                         match #func_ident (ctx, #(#param_idents),*).await {
                             ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
-                            ::std::result::Result::Err(e) => ::std::result::Result::Err(::houston_cmd::Error::command(ctx, e)),
+                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }
                     }))
                 },
@@ -130,7 +138,7 @@ fn extract_parameters(func: &mut ItemFn) -> syn::Result<Vec<Parameter>> {
     Ok(parameters)
 }
 
-fn to_command_parameter(p: &Parameter) -> TokenStream {
+fn to_command_parameter(p: &Parameter, args: &CommonArgs) -> TokenStream {
     let name = &p.name;
     let description = p.args.doc.trim();
     let ty = &*p.ty;
@@ -153,8 +161,9 @@ fn to_command_parameter(p: &Parameter) -> TokenStream {
         setter.append_all(quote::quote_spanned! {m.span()=> .max_length(#m) });
     }
 
+    let CommonArgs { crate_ } = args;
     quote::quote! {
-        ::houston_cmd::create_slash_argument!((
+        #crate_::create_slash_argument!((
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(#description),
             autocomplete: #autocomplete

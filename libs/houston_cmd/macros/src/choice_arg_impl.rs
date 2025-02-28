@@ -1,9 +1,10 @@
-use darling::FromMeta as _;
 use darling::ast::NestedMeta;
+use darling::{FromDeriveInput as _, FromMeta as _};
 use proc_macro2::TokenStream;
 use syn::ext::IdentExt as _;
 use syn::{Data, Fields};
 
+use crate::args::CommonDeriveArgs;
 use crate::util::ensure_spanned;
 
 #[derive(Debug, darling::FromMeta)]
@@ -12,6 +13,9 @@ struct VariantArgs {
 }
 
 pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
+    let args = CommonDeriveArgs::from_derive_input(&input)?;
+    let crate_ = args.crate_;
+
     let Data::Enum(data) = input.data else {
         return Err(syn::Error::new_spanned(input, "choice args must be enums"));
     };
@@ -48,11 +52,11 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
 
     Ok(quote::quote! {
         #[automatically_derived]
-        impl ::houston_cmd::ChoiceArg for #enum_ident {
-            fn list() -> ::std::borrow::Cow<'static, [::houston_cmd::model::Choice]> {
+        impl #crate_::ChoiceArg for #enum_ident {
+            fn list() -> ::std::borrow::Cow<'static, [#crate_::model::Choice]> {
                 ::std::borrow::Cow::Borrowed(&[
                     #(
-                        ::houston_cmd::model::Choice {
+                        #crate_::model::Choice {
                             name: ::std::borrow::Cow::Borrowed(#names)
                         },
                     )*

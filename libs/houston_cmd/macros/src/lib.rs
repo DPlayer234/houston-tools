@@ -42,7 +42,7 @@ pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream
 }
 
 /// Derives [`ChoiceArg`] for an enum.
-#[proc_macro_derive(ChoiceArg, attributes(name))]
+#[proc_macro_derive(ChoiceArg, attributes(name, choice_arg))]
 pub fn derive_choice_arg(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
     choice_arg_impl::entry_point(input)

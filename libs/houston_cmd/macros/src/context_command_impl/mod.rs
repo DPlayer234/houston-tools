@@ -4,7 +4,7 @@ use syn::spanned::Spanned as _;
 use syn::{FnArg, ItemFn};
 
 use crate::any_command_impl::to_command_shared;
-use crate::args::ContextCommandArgs;
+use crate::args::{CommonArgs, ContextCommandArgs};
 
 enum ContextKind {
     User,
@@ -35,7 +35,7 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStr
         },
     };
 
-    let command_option = to_command_option_command(&func, args.name, kind)?;
+    let command_option = to_command_option_command(&func, args.name, kind, &args.main.common)?;
     to_command_shared(&func.vis, &func.sig.ident, command_option, args.main)
 }
 
@@ -43,6 +43,7 @@ fn to_command_option_command(
     func: &ItemFn,
     name: String,
     kind: ContextKind,
+    args: &CommonArgs,
 ) -> syn::Result<TokenStream> {
     let (kind_variant, kind_trait, kind_args) = match kind {
         ContextKind::User => (
@@ -74,22 +75,23 @@ fn to_command_option_command(
         FnArg::Typed(x) => x,
     };
 
+    let CommonArgs { crate_ } = args;
     let arg_ty = &arg.ty;
 
     Ok(quote::quote_spanned! {func.sig.output.span()=>
-        ::houston_cmd::model::CommandOption {
+        #crate_::model::CommandOption {
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(""),
-            data: ::houston_cmd::model::CommandOptionData::Command(::houston_cmd::model::SubCommandData {
+            data: #crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData {
                 invoke: {
                     #func
 
-                    ::houston_cmd::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
-                        let arg = <#arg_ty as ::houston_cmd:: #kind_trait <'_>>::extract(&ctx, #kind_args)?;
+                    #crate_::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
+                        let arg = <#arg_ty as #crate_:: #kind_trait <'_>>::extract(&ctx, #kind_args)?;
 
                         match #func_ident (ctx, arg).await {
                             ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
-                            ::std::result::Result::Err(e) => ::std::result::Result::Err(::houston_cmd::Error::command(ctx, e)),
+                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }
                     }))
                 },

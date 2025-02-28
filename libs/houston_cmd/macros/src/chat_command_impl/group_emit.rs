@@ -8,12 +8,13 @@ use syn::spanned::Spanned as _;
 use syn::{Attribute, Item, ItemMod, ItemUse, Meta, UseTree, Visibility};
 
 use super::command_emit::to_command_option_command;
-use crate::args::SubCommandArgs;
+use crate::args::{CommonArgs, SubCommandArgs};
 use crate::util::{ensure_span, ensure_spanned, extract_description, warning};
 
 pub fn to_command_option_group(
     module: &mut ItemMod,
     name: Option<String>,
+    args: &CommonArgs,
 ) -> syn::Result<TokenStream> {
     let content = match module.content.as_mut() {
         Some(content) => &mut content.1,
@@ -37,8 +38,8 @@ pub fn to_command_option_group(
         match item {
             Item::Fn(mut item) => {
                 if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                    let args = parse_sub_command_args(&attr.meta)?;
-                    let tokens = to_command_option_command(&mut item, args.name)?;
+                    let sub_args = parse_sub_command_args(&attr.meta)?;
+                    let tokens = to_command_option_command(&mut item, sub_args.name, args)?;
                     sub_commands.push(tokens);
                 } else {
                     other_items.push(Item::Fn(item))
@@ -46,8 +47,8 @@ pub fn to_command_option_group(
             },
             Item::Mod(mut item) => {
                 if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                    let args = parse_sub_command_args(&attr.meta)?;
-                    let tokens = to_command_option_group(&mut item, args.name)?;
+                    let sub_args = parse_sub_command_args(&attr.meta)?;
+                    let tokens = to_command_option_group(&mut item, sub_args.name, args)?;
                     sub_commands.push(tokens);
                 } else {
                     other_items.push(Item::Mod(item))
@@ -80,15 +81,17 @@ pub fn to_command_option_group(
     ensure_span!(description.span(), (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
     ensure_spanned!(module, (1..=25).contains(&sub_commands.len()) => "there must be 1 to 25 sub commands");
 
+    let CommonArgs { crate_ } = args;
     let description = &*description;
+
     Ok(quote::quote! {{
         #(#warnings)*
         #(#other_items)*
 
-        ::houston_cmd::model::CommandOption {
+        #crate_::model::CommandOption {
             name: ::std::borrow::Cow::Borrowed(#name),
             description: ::std::borrow::Cow::Borrowed(#description),
-            data: ::houston_cmd::model::CommandOptionData::Group(::houston_cmd::model::GroupData {
+            data: #crate_::model::CommandOptionData::Group(#crate_::model::GroupData {
                 // this const-block is necessary to satisfy the compiler when the list
                 // involves function calls in place of a sub-command struct literal
                 sub_commands: ::std::borrow::Cow::Borrowed(const { &[
