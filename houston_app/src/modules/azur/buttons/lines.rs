@@ -3,7 +3,7 @@ use utils::text::write_str::*;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
-use crate::fmt::JoinNatural;
+use crate::fmt::Join;
 use crate::helper::discord::create_string_select_menu_row;
 use crate::modules::azur::{GameData, LoadedConfig};
 
@@ -338,56 +338,42 @@ impl ButtonMessage for View {
 
 /// Creates a label for a couple line.
 fn get_label_for_ship_couple_encourage(game_data: &GameData, opt: &ShipCoupleEncourage) -> String {
-    fn fmt_sortie_count<'a>(
+    fn fmt_sortie_count<T>(
         label: &str,
         amount: u32,
-        iter: impl Iterator<Item = &'a str>,
+        items: &[T],
+        to_name: impl Fn(&T) -> &str,
     ) -> String {
         let plural = if amount != 1 { "s" } else { "" };
-        format!(
-            "Sortie with {} more {}{}{}",
-            amount,
-            JoinNatural::or(iter),
-            label,
-            plural,
-        )
-    }
-
-    fn fmt_ships_count<'a>(amount: u32, iter: impl Iterator<Item = &'a str>) -> String {
-        format!("Sortie with {} of {}", amount, JoinNatural::or(iter))
-    }
-
-    fn fmt_ships_all<'a>(iter: impl Iterator<Item = &'a str>) -> String {
-        format!("Sortie with {}", JoinNatural::and(iter))
+        let fmt = Join::OR.display_as(items, to_name);
+        format!("Sortie with {amount} more {fmt}{label}{plural}")
     }
 
     match &opt.condition {
         ShipCouple::ShipGroup(ship_ids) => {
-            let ships = ship_ids
-                .iter()
-                .filter_map(|&id| game_data.ship_by_id(id))
-                .map(|ship| ship.name.as_str());
+            let get_name = |&id| {
+                game_data
+                    .ship_by_id(id)
+                    .map_or("<unknown>", |s| s.name.as_str())
+            };
 
-            if ship_ids.len() == opt.amount {
-                fmt_ships_all(ships)
+            let amount = opt.amount;
+            if ship_ids.len() == amount {
+                let fmt = Join::AND.display_as(ship_ids, get_name);
+                format!("Sortie with {fmt}")
             } else {
-                fmt_ships_count(opt.amount, ships)
+                let fmt = Join::OR.display_as(ship_ids, get_name);
+                format!("Sortie with {amount} of {fmt}")
             }
         },
         ShipCouple::HullType(hull_types) => {
-            let hull_types = hull_types.iter().map(|hull_type| hull_type.designation());
-
-            fmt_sortie_count("", opt.amount, hull_types)
+            fmt_sortie_count("", opt.amount, hull_types, |h| h.designation())
         },
         ShipCouple::Rarity(rarities) => {
-            let rarities = rarities.iter().map(|rarity| rarity.name());
-
-            fmt_sortie_count(" ship", opt.amount, rarities)
+            fmt_sortie_count(" ship", opt.amount, rarities, |r| r.name())
         },
         ShipCouple::Faction(factions) => {
-            let factions = factions.iter().map(|faction| faction.name());
-
-            fmt_sortie_count(" ship", opt.amount, factions)
+            fmt_sortie_count(" ship", opt.amount, factions, |f| f.name())
         },
         ShipCouple::Illustrator => {
             format!(

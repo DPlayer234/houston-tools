@@ -3,6 +3,7 @@ use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
+use crate::fmt::Join;
 
 /// Views an augment.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -69,11 +70,8 @@ impl View {
 
     fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<SimpleEmbedFieldCreate<'a>> {
         (!equip.hull_disallowed.is_empty()).then(|| {
-            let mut text = "> ".to_owned();
-            let designations = equip.hull_disallowed.iter().map(|h| h.designation());
-
-            crate::fmt::write_join(&mut text, designations, ", ")
-                .expect("writing to String cannot fail");
+            let fmt = Join::COMMA.display_as(&equip.hull_disallowed, |h| h.designation());
+            let text = format!("> {fmt}");
 
             ("Cannot be equipped by:", text, false)
         })

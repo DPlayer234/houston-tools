@@ -4,6 +4,7 @@ use utils::text::truncate;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
+use crate::fmt::Join;
 use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.
@@ -64,13 +65,8 @@ impl View {
 
         components.push(match &augment.usability {
             AugmentUsability::HullTypes(hull_types) => {
-                let mut label = "For: ".to_owned();
-                crate::fmt::write_join(
-                    &mut label,
-                    hull_types.iter().map(|h| h.designation()),
-                    ", ",
-                )
-                .expect("writing to String cannot fail");
+                let fmt = Join::COMMA.display_as(hull_types, |h| h.designation());
+                let label = format!("For: {fmt}");
 
                 CreateButton::new("=dummy-usability")
                     .label(truncate(label, 80))
