@@ -162,12 +162,31 @@ pub struct BirthdayRegionConfig {
 pub struct BirthdayGuildConfig {
     pub role: Option<RoleId>,
     pub notice: Option<BirthdayNotice>,
-    #[serde(default)]
-    pub gifts: Vec<(Item, u32)>,
+    #[serde(with = "check_gifts", default)]
+    pub gifts: Vec<(Item, i64)>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayNotice {
     pub channel: ChannelId,
     pub text: String,
+}
+
+mod check_gifts {
+    use serde::de::{Deserialize as _, Deserializer, Error as _};
+
+    use super::Item;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<(Item, i64)>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = <Vec<(Item, i64)>>::deserialize(deserializer)?;
+
+        for &(_, amount) in &v {
+            u32::try_from(amount).map_err(|_| D::Error::custom("birthday gift must fit in u32"))?;
+        }
+
+        Ok(v)
+    }
 }

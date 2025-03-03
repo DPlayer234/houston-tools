@@ -4,6 +4,7 @@ use super::DayOfYear;
 use super::effects::Effect;
 use super::items::Item;
 use crate::data::HArgError;
+use crate::fmt::Join;
 use crate::modules::model_prelude::*;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ModelDocument)]
@@ -148,16 +149,14 @@ pub trait WalletExt {
         &self,
         guild_id: GuildId,
         user_id: UserId,
-        item: Item,
-        amount: i64,
+        items: &[(Item, i64)],
     ) -> Result<Wallet>;
 
     async fn take_items(
         &self,
         guild_id: GuildId,
         user_id: UserId,
-        item: Item,
-        amount: i64,
+        items: &[(Item, i64)],
         perks: &super::config::Config,
     ) -> Result<Wallet>;
 }
@@ -178,12 +177,24 @@ macro_rules! make_item_accessors {
                     $( Item::$item => self.$field(amount), )*
                 }
             }
+
+            pub fn item_mut(&mut self, item: Item) -> &mut i64 {
+                match item {
+                    $( Item::$item => self.$field.get_or_insert_default(), )*
+                }
+            }
         }
 
         impl WalletFilter {
             pub fn item(self, item: Item, amount: impl Into<Filter<i64>>) -> Self {
                 match item {
                     $( Item::$item => self.$field(amount), )*
+                }
+            }
+
+            pub fn item_mut(&mut self, item: Item) -> &mut Option<Filter<i64>> {
+                match item {
+                    $( Item::$item => &mut self.$field, )*
                 }
             }
         }
@@ -202,18 +213,21 @@ impl WalletExt for Collection<Wallet> {
         &self,
         guild_id: GuildId,
         user_id: UserId,
-        item: Item,
-        amount: i64,
+        items: &[(Item, i64)],
     ) -> Result<Wallet> {
         let filter = Wallet::filter()
             .guild(guild_id)
             .user(user_id)
             .into_document()?;
 
-        let update = Wallet::update()
-            .set_on_insert(|w| w.guild(guild_id).user(user_id))
-            .inc(|w| w.item(item, amount))
-            .into_document()?;
+        let mut update = Wallet::update().set_on_insert(|w| w.guild(guild_id).user(user_id));
+        let inc = update.inc.get_or_insert_default();
+
+        for &(item, amount) in items {
+            *inc.item_mut(item) += amount;
+        }
+
+        let update = update.into_document()?;
 
         let doc = self
             .find_one_and_update(filter, update)
@@ -230,35 +244,41 @@ impl WalletExt for Collection<Wallet> {
         &self,
         guild_id: GuildId,
         user_id: UserId,
-        item: Item,
-        amount: i64,
+        items: &[(Item, i64)],
         perks: &super::config::Config,
     ) -> Result<Wallet> {
-        let filter = Wallet::filter()
-            .guild(guild_id)
-            .user(user_id)
-            .item(item, Filter::Gte(amount))
-            .into_document()?;
+        let mut update = Wallet::update();
+        let mut filter = Wallet::filter().guild(guild_id).user(user_id);
+        let inc = update.inc.get_or_insert_default();
 
-        let update = Wallet::update()
-            .inc(|w| w.item(item, -amount))
-            .into_document()?;
+        for &(item, amount) in items {
+            let filter = filter.item_mut(item);
+            anyhow::ensure!(filter.is_none(), "duplicate Item in `Wallet::take_items`");
+
+            *filter = Some(Filter::Gte(amount));
+            *inc.item_mut(item) = -amount;
+        }
+
+        let filter = filter.into_document()?;
+        let update = update.into_document()?;
 
         let doc = self
             .find_one_and_update(filter, update)
             .return_document(ReturnDocument::Before)
             .await
             .context("failed to try to take items from wallet")?
-            .ok_or_else(|| {
-                HArgError::new(format!(
-                    "You need {} {} to do this.",
-                    amount,
-                    item.info(perks).name,
-                ))
-            })?;
+            .ok_or_else(|| item_take_error(items, perks))?;
 
         Ok(doc)
     }
+}
+
+fn item_take_error(items: &[(Item, i64)], perks: &super::config::Config) -> HArgError {
+    let fmt = Join::AND.display_with(items, |(item, amount), f| {
+        write!(f, "{amount} {}", item.info(perks).name)
+    });
+
+    HArgError::new(format!("You need {fmt} to do this."))
 }
 
 pub trait ActivePerkExt {

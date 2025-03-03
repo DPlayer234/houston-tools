@@ -44,7 +44,7 @@ pub async fn role_edit(
     }
 
     Wallet::collection(db)
-        .take_items(guild_id, ctx.user().id, Item::RoleEdit, 1, perks)
+        .take_items(guild_id, ctx.user().id, &[(Item::RoleEdit, 1)], perks)
         .await?;
 
     match guild_id.edit_role(ctx.http(), unique.role, edit).await {
@@ -63,7 +63,7 @@ pub async fn role_edit(
         },
         Err(_) => {
             Wallet::collection(db)
-                .add_items(guild_id, ctx.user().id, Item::RoleEdit, 1)
+                .add_items(guild_id, ctx.user().id, &[(Item::RoleEdit, 1)])
                 .await?;
 
             let embed = CreateEmbed::new()

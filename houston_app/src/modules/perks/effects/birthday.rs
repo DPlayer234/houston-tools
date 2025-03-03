@@ -38,11 +38,10 @@ impl Shape for Birthday {
                 .context("could not add birthday role")?;
         }
 
-        for &(item, amount) in &config.gifts {
-            Wallet::collection(db)
-                .add_items(args.guild_id, args.user_id, item, amount.into())
-                .await?;
-        }
+        // add the gifts
+        Wallet::collection(db)
+            .add_items(args.guild_id, args.user_id, &config.gifts)
+            .await?;
 
         if let Some(notice) = &config.notice {
             let message = replace_holes(&notice.text, |out, n| match n {

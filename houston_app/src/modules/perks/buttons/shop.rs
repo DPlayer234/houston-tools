@@ -334,7 +334,7 @@ impl View {
         let st = effect.price(perks).context("effect cannot be bought")?;
 
         Wallet::collection(db)
-            .take_items(guild_id, user_id, Item::Cash, st.cost.into(), perks)
+            .take_items(guild_id, user_id, &[(Item::Cash, st.cost.into())], perks)
             .await?;
 
         let until = Utc::now()
@@ -367,12 +367,12 @@ impl View {
 
         let cost = i64::from(st.cost) * i64::from(mult);
         Wallet::collection(db)
-            .take_items(guild_id, user_id, Item::Cash, cost, perks)
+            .take_items(guild_id, user_id, &[(Item::Cash, cost)], perks)
             .await?;
 
         let amount = i64::from(st.amount) * i64::from(mult);
         let wallet = Wallet::collection(db)
-            .add_items(guild_id, user_id, item, amount)
+            .add_items(guild_id, user_id, &[(item, amount)])
             .await?;
 
         let owned = wallet.item(item);

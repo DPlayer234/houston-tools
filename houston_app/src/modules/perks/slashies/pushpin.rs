@@ -26,7 +26,7 @@ pub async fn pushpin_pin(ctx: Context<'_>, message: &Message) -> Result {
         ctx.defer_as(Ephemeral).await?;
 
         Wallet::collection(db)
-            .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
+            .take_items(guild_id, ctx.user().id, &[(Item::Pushpin, 1)], perks)
             .await?;
 
         match message
@@ -48,7 +48,7 @@ pub async fn pushpin_pin(ctx: Context<'_>, message: &Message) -> Result {
             },
             Err(_) => {
                 Wallet::collection(db)
-                    .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
+                    .add_items(guild_id, ctx.user().id, &[(Item::Pushpin, 1)])
                     .await?;
 
                 let embed = CreateEmbed::new()
@@ -87,7 +87,7 @@ pub async fn pushpin_unpin(ctx: Context<'_>, message: &Message) -> Result {
         ctx.defer_as(Ephemeral).await?;
 
         Wallet::collection(db)
-            .take_items(guild_id, ctx.user().id, Item::Pushpin, 1, perks)
+            .take_items(guild_id, ctx.user().id, &[(Item::Pushpin, 1)], perks)
             .await?;
 
         match message
@@ -109,7 +109,7 @@ pub async fn pushpin_unpin(ctx: Context<'_>, message: &Message) -> Result {
             },
             Err(_) => {
                 Wallet::collection(db)
-                    .add_items(guild_id, ctx.user().id, Item::Pushpin, 1)
+                    .add_items(guild_id, ctx.user().id, &[(Item::Pushpin, 1)])
                     .await?;
 
                 let embed = CreateEmbed::new()

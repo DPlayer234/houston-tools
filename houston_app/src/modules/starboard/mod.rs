@@ -308,7 +308,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
                 });
 
             Wallet::collection(db)
-                .add_items(guild_id, message.author.id, Item::Cash, amount)
+                .add_items(guild_id, message.author.id, &[(Item::Cash, amount)])
                 .await?;
 
             log::trace!("{} gained {} cash.", message.author.name, amount);
@@ -427,7 +427,7 @@ async fn message_delete_inner(
                 });
 
             Wallet::collection(db)
-                .add_items(guild_id, item.user, Item::Cash, -amount)
+                .add_items(guild_id, item.user, &[(Item::Cash, -amount)])
                 .await?;
 
             log::trace!("{} lost {} cash.", item.user, amount);

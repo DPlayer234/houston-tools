@@ -159,7 +159,7 @@ pub mod perk_admin {
         ctx.defer_as(Ephemeral).await?;
 
         let wallet = Wallet::collection(db)
-            .add_items(guild_id, member.user.id, item, amount.into())
+            .add_items(guild_id, member.user.id, &[(item, amount.into())])
             .await?;
 
         let description = format!(
