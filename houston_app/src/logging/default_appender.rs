@@ -13,6 +13,8 @@ use log4rs::append::Append;
 use log4rs::config::{Deserialize, Deserializers};
 use log4rs::encode::{self, Encode, EncoderConfig, Style};
 
+use super::WRITE_BUF_SIZE;
+
 #[derive(Debug)]
 pub struct DefaultAppender {
     encoder: Box<dyn Encode>,
@@ -60,10 +62,13 @@ impl Deserialize for DefaultAppenderDeserializer {
     }
 }
 
+/// Stack-buffered writer.
+///
+/// If a write exceeds the capacity, its buffer is flushed to stderr first.
 #[derive(Debug)]
 struct ConsoleWriter {
     color: bool,
-    buf: ArrayVec<u8, 400>,
+    buf: ArrayVec<u8, WRITE_BUF_SIZE>,
 }
 
 impl io::Write for ConsoleWriter {

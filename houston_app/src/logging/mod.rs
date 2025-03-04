@@ -5,6 +5,10 @@ mod default_pattern;
 mod target_filter;
 mod webhook_appender;
 
+// stack buffer size used for custom appenders.
+// 1 KiB should be sufficient for most messages.
+const WRITE_BUF_SIZE: usize = 0x400;
+
 pub fn deserializers() -> Deserializers {
     let mut d = Deserializers::new();
     d.insert("default", default_appender::DefaultAppenderDeserializer);

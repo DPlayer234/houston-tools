@@ -23,6 +23,7 @@ use serenity::secrets::SecretString;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
+use super::WRITE_BUF_SIZE;
 use crate::prelude::*;
 
 // set a time limit for flushing so we don't block the app unnecessarily.
@@ -41,7 +42,7 @@ pub struct WebhookAppender {
 
 impl Append for WebhookAppender {
     fn append(&self, record: &Record<'_>) -> Result {
-        let mut buf = LogBuf::default();
+        let mut buf = LogWriter::default();
         self.encoder.encode(&mut buf, record)?;
         self.sender.try_send(Msg::Log(buf.buf.to_vec()))?;
         Ok(())
@@ -76,15 +77,15 @@ impl WebhookClient {
 // we use 1984 instead of 2000 to also consider a little bit of extra space we
 // use for formatting. when a message would exceed this limit, it's re-queued
 // instead of being added to the batch.
-const LOG_LIMIT: usize = 1984;
-
-const LOG_BUF_SIZE: usize = LOG_LIMIT / 2;
+const BATCH_TEXT_LIMIT: usize = 1984;
 
 /// A temporary buffer for messages to write to the webhook.
+///
+/// Message data in excess of the capacity is discarded.
 #[derive(Debug, Default)]
-struct LogBuf {
+struct LogWriter {
     /// The buffer of data to write to the webhook.
-    buf: ArrayVec<u8, LOG_BUF_SIZE>,
+    buf: ArrayVec<u8, WRITE_BUF_SIZE>,
 }
 
 #[derive(Debug)]
@@ -93,7 +94,7 @@ enum Msg {
     Notify(OwnedSemaphorePermit),
 }
 
-impl io::Write for LogBuf {
+impl io::Write for LogWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.write_all(buf)?;
         Ok(buf.len())
@@ -119,7 +120,7 @@ impl io::Write for LogBuf {
     }
 }
 
-impl encode::Write for LogBuf {
+impl encode::Write for LogWriter {
     fn set_style(&mut self, style: &Style) -> io::Result<()> {
         use log4rs::encode::Color;
 
@@ -216,7 +217,7 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
                 // write the additional log message
                 Msg::Log(buf) => {
                     // if there is not enough space left, handle it in the next iteration
-                    if text.len() + buf.len() > LOG_LIMIT {
+                    if text.len() + buf.len() > BATCH_TEXT_LIMIT {
                         batch.next_data = Some(buf);
                         break;
                     }
