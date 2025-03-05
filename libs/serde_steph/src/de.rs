@@ -492,14 +492,23 @@ fn ensure_remainder_zero<T>(value: T, len: usize) -> Result<T> {
 /// Provides access to a sequence with length prefix.
 struct ListAccess<'a, R> {
     deserializer: &'a mut Deserializer<R>,
-    // don't use for size hints. this may come from the deserialized data,
-    // and if used as a size hint, could trigger a massive allocation.
+    // don't blindly use this for size hints. this may come from the deserialized data,
+    // and if used as-is as a size hint, could trigger a massive allocation.
+    // that doesn't even need "malicious" input, it could just be wrong.
     len: &'a mut usize,
 }
 
 /// Provides access to an enum.
 struct EnumAccess<'a, R> {
     deserializer: &'a mut Deserializer<R>,
+}
+
+impl<R> ListAccess<'_, R> {
+    fn cautious_size_hint(&self) -> Option<usize> {
+        // we probably won't encounter absurdly large types, so this is defensive
+        // enough... probably. hopefully.
+        Some((*self.len).min(1024))
+    }
 }
 
 impl<'de, R: Read<'de>> de::SeqAccess<'de> for ListAccess<'_, R> {
@@ -515,6 +524,10 @@ impl<'de, R: Read<'de>> de::SeqAccess<'de> for ListAccess<'_, R> {
             *self.len -= 1;
             Ok(Some(seed.deserialize(&mut *self.deserializer)?))
         }
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        self.cautious_size_hint()
     }
 }
 
@@ -538,6 +551,10 @@ impl<'de, R: Read<'de>> de::MapAccess<'de> for ListAccess<'_, R> {
         V: de::DeserializeSeed<'de>,
     {
         seed.deserialize(&mut *self.deserializer)
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        self.cautious_size_hint()
     }
 }
 
