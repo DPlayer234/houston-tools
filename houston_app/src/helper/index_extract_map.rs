@@ -111,7 +111,7 @@ where
     S: BuildHasher,
 {
     /// Gets a reference to the value stored in the set, if it is present, else
-    /// `None`.
+    /// [`None`].
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
         Q: ?Sized + Hash + Equivalent<K>,
@@ -148,17 +148,18 @@ where
             type Value = IndexExtractMap<K, V, S>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("list of starboards")
+                formatter.write_str("sequence of keyed values")
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: SeqAccess<'de>,
             {
-                let mut map = IndexSet::with_hasher(S::default());
+                let cap = size_hint_cautious::<V>(seq.size_hint());
+                let mut map = IndexSet::with_capacity_and_hasher(cap, S::default());
                 while let Some(item) = seq.next_element::<V>()? {
                     if !map.insert(Value::new(item)) {
-                        return Err(A::Error::custom("duplicate starboard id"));
+                        return Err(A::Error::custom("duplicate key in sequence"));
                     }
                 }
 
@@ -169,6 +170,13 @@ where
 
         deserializer.deserialize_seq(MapVisitor(PhantomData))
     }
+}
+
+// taken from how serde deals with size hints also
+fn size_hint_cautious<T>(hint: Option<usize>) -> usize {
+    // basically allocate only up to 1 MB upfront
+    const MAX: usize = 1024 * 1024;
+    MAX.checked_div(size_of::<T>()).min(hint).unwrap_or(0)
 }
 
 #[cfg(test)]
