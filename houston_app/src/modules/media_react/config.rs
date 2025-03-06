@@ -3,7 +3,25 @@ use std::collections::HashMap;
 use crate::config::HEmoji;
 use crate::prelude::*;
 
-pub type Config = HashMap<ChannelId, Vec<MediaReactEntry>>;
+pub type Config = HashMap<ChannelId, MediaReactChannel>;
+
+fn default_with_threads() -> bool {
+    true
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct MediaReactChannel {
+    pub emojis: Vec<MediaReactEntry>,
+    #[serde(default = "default_with_threads")]
+    pub with_threads: bool,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(from = "MediaReactEntryDe")]
+pub struct MediaReactEntry {
+    pub emoji: HEmoji,
+    pub condition: MediaCheck,
+}
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -35,17 +53,6 @@ pub struct MediaCheck {
     pub forward: Condition,
 }
 
-impl From<MediaCheckDe> for MediaCheck {
-    fn from(value: MediaCheckDe) -> Self {
-        let (normal, forward) = match value {
-            MediaCheckDe::Specific { normal, forward } => (normal, forward),
-            MediaCheckDe::Same(condition) => (condition, condition),
-        };
-
-        Self { normal, forward }
-    }
-}
-
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 #[serde(untagged)]
 enum MediaCheckDe {
@@ -58,10 +65,35 @@ enum MediaCheckDe {
     Same(Condition),
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct MediaReactEntry {
-    pub emoji: HEmoji,
+impl From<MediaCheckDe> for MediaCheck {
+    fn from(value: MediaCheckDe) -> Self {
+        let (normal, forward) = match value {
+            MediaCheckDe::Specific { normal, forward } => (normal, forward),
+            MediaCheckDe::Same(condition) => (condition, condition),
+        };
 
-    #[serde(default)]
-    pub condition: MediaCheck,
+        Self { normal, forward }
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+enum MediaReactEntryDe {
+    Emoji(HEmoji),
+    Full {
+        emoji: HEmoji,
+        #[serde(default)]
+        condition: MediaCheck,
+    },
+}
+
+impl From<MediaReactEntryDe> for MediaReactEntry {
+    fn from(value: MediaReactEntryDe) -> Self {
+        let (emoji, condition) = match value {
+            MediaReactEntryDe::Emoji(emoji) => (emoji, MediaCheck::default()),
+            MediaReactEntryDe::Full { emoji, condition } => (emoji, condition),
+        };
+
+        Self { emoji, condition }
+    }
 }

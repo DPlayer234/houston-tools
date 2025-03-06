@@ -282,10 +282,18 @@ Media-react has the bot automatically react to messages in certain channels. The
 
 ```toml
 # the numeric key is the channel id
-# you may specify this section multiple times per channel
-[[bot.media_react.1305620816272166962]]
-# the emoji to add
-emoji = "⭐"
+# the channel _may_ be a text channel, thread, or forum
+[bot.media_react.1305620816272166962]
+# the emojis to add
+emojis = ["⭐"]
+# optional. default to true.
+# if true, this configuration will also apply to threads in this channel.
+with_threads = true
+
+# alternatively, you may define extended information for each reaction
+[[bot.media_react.1305620834450407606.emojis]]
+# the emoji. same as if this section was just a string
+emoji = "wowie:1305835613790146631"
 
 # optional. defines the condition for messages to get this reaction.
 # possible values are:
@@ -298,17 +306,11 @@ condition.normal = "content"
 condition.forward = "content"
 # you may also set both values at once like this:
 #   condition = "content"
-
-# as an example, on the same channel, always react to forwards with a different emoji
-[[bot.media_react.1305620816272166962]]
-emoji = "wowie:1305835613790146631"
-condition.normal = "never"
-condition.forward = "always"
 ```
 
 There may be up to 20 emojis per channel. The "emoji" value is declared in the same way as starboard emojis, that is each value must be unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631".
 
-Emojis are added in declaration order. For example, the above would always put "⭐", then "wowie".
+Emojis are added in declaration order.
 
 ## Azur Lane
 

@@ -20,6 +20,7 @@ async fn main() -> anyhow::Result<()> {
     use serenity::prelude::*;
 
     use crate::build::{GIT_HASH, VERSION};
+    use crate::data::cache::Cache;
     use crate::prelude::*;
 
     // run the program and clean up
@@ -68,9 +69,10 @@ async fn main() -> anyhow::Result<()> {
                     // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
                     config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
                 ))
-                .data(Arc::clone(&bot_data))
+                .raw_event_handler::<Cache>(Arc::clone(&bot_data.cache))
                 .framework(framework)
                 .event_handler(event_handler)
+                .data(Arc::clone(&bot_data))
                 .await
                 .context("failed to build discord client")?;
 
@@ -112,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
             log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
             let data = ctx.data_ref::<HContextData>();
-            if let Err(why) = data.ready(&ctx.http, ready).await {
+            if let Err(why) = data.ready(&ctx.http).await {
                 log::error!("Failure in ready: {why:?}");
             }
         }

@@ -627,7 +627,7 @@ fn load_special_secretaries(
 
     action.finish();
 
-    ships.sort_unstable_by_key(|t| (t.id));
+    ships.sort_unstable_by_key(|t| t.id);
     Ok(ships)
 }
 

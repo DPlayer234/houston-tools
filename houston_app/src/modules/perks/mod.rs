@@ -25,7 +25,7 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILD_MESSAGES
+        GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES
     }
 
     fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = Command> {

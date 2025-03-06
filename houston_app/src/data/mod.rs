@@ -7,8 +7,10 @@ use crate::modules::{Module as _, for_each_module};
 use crate::prelude::*;
 
 mod app_emojis;
+pub mod cache;
 
 pub use app_emojis::HAppEmojis;
+use cache::Cache;
 
 /// A general color that can be used for embeds indicating errors.
 pub const ERROR_EMBED_COLOR: Color = Color::new(0xCF_00_25);
@@ -41,10 +43,10 @@ impl HArgError {
 pub struct HBotData {
     /// The bot configuration.
     config: HBotConfig,
-    /// The current bot user.
-    current_user: OnceLock<CurrentUser>,
     /// The loaded application emojis.
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
+    /// The Discord cache.
+    pub cache: Arc<Cache>,
     /// Database connection.
     database: OnceLock<mongodb::Database>,
 }
@@ -55,8 +57,8 @@ impl HBotData {
     pub fn new(config: HBotConfig) -> Self {
         Self {
             config,
-            current_user: OnceLock::new(),
             app_emojis: OnceLock::new(),
+            cache: Arc::default(),
             database: OnceLock::new(),
         }
     }
@@ -71,11 +73,6 @@ impl HBotData {
     #[must_use]
     pub fn app_emojis(&self) -> HAppEmojis<'_> {
         HAppEmojis(self.app_emojis.get())
-    }
-
-    /// Gets the cached current bot user.
-    pub fn current_user(&self) -> Result<&CurrentUser> {
-        self.current_user.get().context("current user not loaded")
     }
 
     /// Gets the database connection.
@@ -108,8 +105,7 @@ impl HBotData {
     }
 
     /// Called in ready to perform finalization with Discord state.
-    pub async fn ready(&self, http: &Http, ready: Ready) -> Result {
-        _ = self.current_user.set(ready.user);
+    pub async fn ready(&self, http: &Http) -> Result {
         self.load_app_emojis(http).await
     }
 
@@ -151,12 +147,22 @@ impl HBotData {
 }
 
 /// Data needed for bot startup.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct HInit {
     /// Intents used by this app.
     pub intents: GatewayIntents,
     /// Commands to register.
     pub commands: Vec<houston_cmd::model::Command>,
+}
+
+impl Default for HInit {
+    fn default() -> Self {
+        Self {
+            // default isn't empty but non_privileged
+            intents: GatewayIntents::empty(),
+            commands: Vec::new(),
+        }
+    }
 }
 
 pub struct Ephemeral;

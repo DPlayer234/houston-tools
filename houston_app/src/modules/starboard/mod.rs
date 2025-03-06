@@ -26,7 +26,9 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILD_MESSAGE_REACTIONS | GatewayIntents::GUILD_MESSAGES
+        GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+            | GatewayIntents::GUILD_MESSAGES
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {
@@ -445,12 +447,9 @@ async fn pin_message_to_board(
     board: &config::StarboardEntry,
     filter: bson::Document,
 ) -> Result {
-    let data = ctx.data_ref::<HContextData>();
-    let db = data.database()?;
-
     // unless it's nsfw-to-sfw, actually forward the message
     // otherwise, generate an embed with a link
-    let can_forward = is_forwarding_allowed(ctx, message, board)
+    let can_forward = is_forwarding_allowed(ctx, message, guild_id, board)
         .await
         .unwrap_or(false);
 
@@ -506,6 +505,8 @@ async fn pin_message_to_board(
         );
     } else {
         // nsfw-to-sfw
+        let data = ctx.data_ref::<HContextData>();
+
         let forward = format!("🔞 {message_link}");
         let forward = CreateEmbed::new()
             .description(forward)
@@ -534,6 +535,9 @@ async fn pin_message_to_board(
     let update = model::Message::update()
         .set(|m| m.pin_messages(pin_messages))
         .into_document()?;
+
+    let data = ctx.data_ref::<HContextData>();
+    let db = data.database()?;
 
     model::Message::collection(db)
         .update_one(filter, update)
@@ -584,23 +588,26 @@ async fn has_reaction_by_user(
 async fn is_forwarding_allowed(
     ctx: &Context,
     message: &Message,
+    guild_id: GuildId,
     board: &config::StarboardEntry,
 ) -> serenity::Result<bool> {
-    let source = message
-        .channel_id
-        .to_guild_channel(ctx, message.guild_id)
+    let data = ctx.data_ref::<HContextData>();
+    let cache = data.cache.as_ref();
+
+    let target = cache
+        .super_channel(&ctx.http, guild_id, board.channel)
         .await?;
 
-    if !source.nsfw {
+    // can always forward to nsfw
+    if target.nsfw {
         return Ok(true);
     }
 
-    let target = board
-        .channel
-        .to_guild_channel(ctx, message.guild_id)
+    let source = cache
+        .super_channel(&ctx.http, guild_id, message.channel_id)
         .await?;
 
-    // at this point, the source channel is nsfw,
-    // so to allow forwarding, the target must also be nsfw
-    Ok(target.nsfw)
+    // at this point we know that the target channel isn't nsfw,
+    // so we can forward if the source channel isn't either
+    Ok(!source.nsfw)
 }

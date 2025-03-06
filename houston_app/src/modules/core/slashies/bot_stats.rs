@@ -32,7 +32,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
          **Ping:** {elapsed} ms"
     );
 
-    let current_user = data.current_user()?;
+    let current_user = data.cache.current_user()?;
     let author = get_unique_username(current_user);
     let author_icon = current_user.face();
 
@@ -98,12 +98,16 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
         writeln_str!(modules, "**starboard:** guilds: {guilds}, boards: {boards}");
     }
 
-    let embed = CreateEmbed::new()
+    let mut embed = CreateEmbed::new()
         .author(author)
         .footer(footer)
         .color(config.embed_color)
         .description(description)
         .field("Modules", modules, false);
+
+    if let Some(stats) = data.cache.stats() {
+        embed = embed.field("Cache", stats, false);
+    }
 
     ctx.send(CreateReply::new().embed(embed)).await?;
     Ok(())

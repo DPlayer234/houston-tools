@@ -6,7 +6,7 @@ use crate::helper::is_unique_set;
 pub mod config;
 
 pub use config::Config;
-use config::MediaCheck;
+use config::{MediaCheck, MediaReactChannel};
 
 pub struct Module;
 
@@ -16,18 +16,20 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::MESSAGE_CONTENT
+        GatewayIntents::GUILDS | GatewayIntents::MESSAGE_CONTENT
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
-        for (channel, entries) in &config.media_react {
+        for (channel, channel_config) in &config.media_react {
+            let emojis = &channel_config.emojis;
+
             anyhow::ensure!(
-                is_unique_set(entries.iter().map(|e| &e.emoji)),
+                is_unique_set(emojis.iter().map(|e| &e.emoji)),
                 "media react channel {channel} has duplicate emojis"
             );
 
             anyhow::ensure!(
-                entries.len() <= 20,
+                emojis.len() <= 20,
                 "media react channel {channel} has more than 20 emojis"
             );
         }
@@ -58,17 +60,14 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
         return Ok(());
     }
 
-    let data = ctx.data_ref::<HContextData>();
-
     // grab the config for the current channel
-    let entries = data.config().media_react.get(&new_message.channel_id);
-
-    let Some(entries) = entries else {
+    let entries = find_channel_config(&ctx, new_message.guild_id, new_message.channel_id).await?;
+    let Some(channel_config) = entries else {
         return Ok(());
     };
 
     let mut check = MediaChecker::new(&new_message);
-    for entry in entries {
+    for entry in &channel_config.emojis {
         // if there is an attachment or the content has media links, attach the emoji to
         // the message. nested message snapshots (forwards) are checked the same way
         if check.with(entry.condition) {
@@ -80,6 +79,39 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
     }
 
     Ok(())
+}
+
+async fn find_channel_config(
+    ctx: &Context,
+    guild_id: Option<GuildId>,
+    channel_id: ChannelId,
+) -> Result<Option<&MediaReactChannel>> {
+    let data = ctx.data_ref::<HContextData>();
+
+    // first, attempt to get the config for the exact channel id
+    if let Some(entries) = data.config().media_react.get(&channel_id) {
+        return Ok(Some(entries));
+    }
+
+    // the following code is only applicable to guild channels
+    let Some(guild_id) = guild_id else {
+        return Ok(None);
+    };
+
+    // second, try if this is a thread
+    let thread = data
+        .cache
+        .thread_channel(&ctx.http, guild_id, channel_id)
+        .await?;
+
+    // if it is a thread, grab the parent channel's configuration
+    // filter it on whether threads are included
+    let entries = thread
+        .and_then(|t| t.parent_id)
+        .and_then(|i| data.config().media_react.get(&i))
+        .filter(|c| c.with_threads);
+
+    Ok(entries)
 }
 
 fn is_normal_message(kind: MessageType) -> bool {
