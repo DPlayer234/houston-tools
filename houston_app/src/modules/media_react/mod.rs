@@ -107,8 +107,7 @@ async fn find_channel_config(
     // if it is a thread, grab the parent channel's configuration
     // filter it on whether threads are included
     let entries = thread
-        .and_then(|t| t.parent_id)
-        .and_then(|i| data.config().media_react.get(&i))
+        .and_then(|t| data.config().media_react.get(&t.parent_id))
         .filter(|c| c.with_threads);
 
     Ok(entries)

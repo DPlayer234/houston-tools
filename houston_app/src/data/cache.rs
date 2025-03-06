@@ -1,8 +1,9 @@
 use std::mem;
+use std::ops::DerefMut;
 use std::sync::OnceLock;
 
 use dashmap::DashMap;
-use extract_map::ExtractMap;
+use extract_map::{ExtractKey, ExtractMap};
 use serenity::futures::future::{BoxFuture, always_ready};
 use serenity::gateway::client::{Context, RawEventHandler};
 use serenity::http::Http;
@@ -15,6 +16,9 @@ use crate::prelude::*;
 /// well as the current user.
 ///
 /// Requires the [`GatewayIntents::GUILDS`] intent.
+//
+// CMBK: edge-case "looses access to channels with threads"
+// the threads in question will stay in the cache, not sure how to solve that well
 #[derive(Default)]
 pub struct Cache {
     current_user: OnceLock<CurrentUser>,
@@ -23,27 +27,132 @@ pub struct Cache {
 
 #[derive(Default)]
 struct CachedGuild {
-    channels: ExtractMap<ChannelId, GuildChannel>,
-    threads: ExtractMap<ChannelId, GuildChannel>,
+    channels: ExtractMap<ChannelId, CachedChannel>,
+    threads: ExtractMap<ChannelId, CachedThread>,
 }
 
 utils::impl_debug!(struct Cache: { .. });
+
+/// Minimal cached information about a guild channel.
+#[derive(Debug, Clone)]
+pub struct CachedChannel {
+    pub id: ChannelId,
+    #[expect(dead_code, reason = "parallel, useful for debugging")]
+    pub kind: ChannelType,
+    pub guild_id: GuildId,
+    pub nsfw: bool,
+}
+
+/// Minimal cached information about a thread.
+#[derive(Debug, Clone)]
+pub struct CachedThread {
+    pub id: ChannelId,
+    pub kind: ChannelType,
+    pub guild_id: GuildId,
+    pub parent_id: ChannelId,
+}
+
+/// Cached Channel or Thread
+#[derive(Debug, Clone)]
+pub enum Ccot {
+    Channel(CachedChannel),
+    Thread(CachedThread),
+}
+
+impl Ccot {
+    pub fn guild_id(&self) -> GuildId {
+        match self {
+            Self::Channel(c) => c.guild_id,
+            Self::Thread(t) => t.guild_id,
+        }
+    }
+
+    pub fn channel(self) -> Option<CachedChannel> {
+        match self {
+            Self::Channel(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    pub fn thread(self) -> Option<CachedThread> {
+        match self {
+            Self::Thread(t) => Some(t),
+            _ => None,
+        }
+    }
+}
+
+impl ExtractKey<ChannelId> for CachedChannel {
+    fn extract_key(&self) -> &ChannelId {
+        &self.id
+    }
+}
+
+impl ExtractKey<ChannelId> for CachedThread {
+    fn extract_key(&self) -> &ChannelId {
+        &self.id
+    }
+}
+
+impl From<GuildChannel> for Ccot {
+    fn from(value: GuildChannel) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<&GuildChannel> for Ccot {
+    fn from(value: &GuildChannel) -> Self {
+        if is_thread(value.kind) {
+            Self::Thread(value.into())
+        } else {
+            Self::Channel(value.into())
+        }
+    }
+}
+
+impl From<&GuildChannel> for CachedChannel {
+    fn from(value: &GuildChannel) -> Self {
+        if is_thread(value.kind) {
+            log::warn!("Channel {} is actually a thread.", value.id);
+        }
+
+        Self {
+            id: value.id,
+            kind: value.kind,
+            guild_id: value.guild_id,
+            nsfw: value.nsfw,
+        }
+    }
+}
+
+impl From<&GuildChannel> for CachedThread {
+    fn from(value: &GuildChannel) -> Self {
+        if !is_thread(value.kind) {
+            log::warn!("Thread {} is actually a channel.", value.id);
+        }
+
+        let parent_id = match value.parent_id {
+            Some(parent_id) => parent_id,
+            None => {
+                log::warn!("Thread {} has no parent.", value.id);
+                ChannelId::default()
+            },
+        };
+
+        Self {
+            id: value.id,
+            kind: value.kind,
+            guild_id: value.guild_id,
+            parent_id,
+        }
+    }
+}
 
 fn is_thread(kind: ChannelType) -> bool {
     matches!(
         kind,
         ChannelType::NewsThread | ChannelType::PublicThread | ChannelType::PrivateThread
     )
-}
-
-impl CachedGuild {
-    pub fn get_map_for(&mut self, kind: ChannelType) -> &mut ExtractMap<ChannelId, GuildChannel> {
-        if is_thread(kind) {
-            &mut self.threads
-        } else {
-            &mut self.channels
-        }
-    }
 }
 
 impl Cache {
@@ -61,12 +170,13 @@ impl Cache {
         http: &Http,
         guild_id: GuildId,
         channel_id: ChannelId,
-    ) -> serenity::Result<GuildChannel> {
+    ) -> serenity::Result<Ccot> {
         if let Some(channel) = self.guild_channel_(guild_id, channel_id) {
             return Ok(channel);
         }
 
-        self.fetch_channel(http, channel_id).await
+        let channel = self.fetch_channel(http, channel_id).await?;
+        Ok(channel)
     }
 
     /// Gets the thread with a given ID in a guild.
@@ -77,17 +187,13 @@ impl Cache {
         http: &Http,
         guild_id: GuildId,
         channel_id: ChannelId,
-    ) -> serenity::Result<Option<GuildChannel>> {
+    ) -> serenity::Result<Option<CachedThread>> {
         if let Some(thread) = self.thread_channel_(guild_id, channel_id) {
             return Ok(thread);
         }
 
         let channel = self.fetch_channel(http, channel_id).await?;
-        if is_thread(channel.kind) {
-            Ok(Some(channel))
-        } else {
-            Ok(None)
-        }
+        Ok(channel.thread())
     }
 
     /// Gets the "super" guild channel for a given channel ID in a guild.
@@ -99,19 +205,18 @@ impl Cache {
         http: &Http,
         guild_id: GuildId,
         mut channel_id: ChannelId,
-    ) -> serenity::Result<GuildChannel> {
+    ) -> serenity::Result<CachedChannel> {
         if let Some(channel) = self.super_channel_(guild_id, &mut channel_id) {
             return Ok(channel);
         }
 
-        let mut channel = self.fetch_channel(http, channel_id).await?;
-        if let Some(parent_id) = channel.parent_id {
-            if is_thread(channel.kind) {
-                channel = self.fetch_channel(http, parent_id).await?;
-            }
+        match self.fetch_channel(http, channel_id).await? {
+            Ccot::Channel(channel) => Ok(channel),
+            Ccot::Thread(thread) => {
+                let channel = self.fetch_channel(http, thread.parent_id).await?;
+                Ok(channel.channel().ok_or(ModelError::InvalidChannelType)?)
+            },
         }
-
-        Ok(channel)
     }
 
     /// Provides a string with cache statistics.
@@ -125,7 +230,7 @@ impl Cache {
             let id = entry.key().get() % 1_000_000;
             writeln_str!(
                 out,
-                "**?{id}:** channels: {}, threads: {}",
+                "**?{id:06}:** channels: {}, threads: {}",
                 guild.channels.len(),
                 guild.threads.len()
             );
@@ -134,17 +239,21 @@ impl Cache {
         (!out.is_empty()).then_some(out)
     }
 
-    fn guild_channel_(&self, guild_id: GuildId, channel_id: ChannelId) -> Option<GuildChannel> {
-        let guild = self.guilds.get(&guild_id)?;
-        let channel = guild.channels.get(&channel_id);
-        channel.or_else(|| guild.threads.get(&channel_id)).cloned()
+    fn guild_channel_(&self, guild_id: GuildId, channel_id: ChannelId) -> Option<Ccot> {
+        let g = self.guilds.get(&guild_id)?;
+
+        if let Some(channel) = g.channels.get(&channel_id) {
+            return Some(Ccot::Channel(channel.clone()));
+        }
+
+        g.threads.get(&channel_id).map(|t| Ccot::Thread(t.clone()))
     }
 
     fn thread_channel_(
         &self,
         guild_id: GuildId,
         channel_id: ChannelId,
-    ) -> Option<Option<GuildChannel>> {
+    ) -> Option<Option<CachedThread>> {
         let guild = self.guilds.get(&guild_id)?;
         let channel = guild.channels.get(&channel_id);
         if channel.is_some() {
@@ -158,43 +267,35 @@ impl Cache {
         &self,
         guild_id: GuildId,
         channel_id: &mut ChannelId,
-    ) -> Option<GuildChannel> {
+    ) -> Option<CachedChannel> {
         let guild = self.guilds.get(&guild_id)?;
-        if let Some(parent_id) = guild.threads.get(channel_id).and_then(|t| t.parent_id) {
-            *channel_id = parent_id;
+        if let Some(thread) = guild.threads.get(channel_id) {
+            *channel_id = thread.parent_id;
         }
 
         guild.channels.get(channel_id).cloned()
     }
 
-    async fn fetch_channel(
-        &self,
-        http: &Http,
-        channel_id: ChannelId,
-    ) -> serenity::Result<GuildChannel> {
+    async fn fetch_channel(&self, http: &Http, channel_id: ChannelId) -> serenity::Result<Ccot> {
         log::warn!("Cache miss for channel: {channel_id}");
 
         let channel = http.get_channel(channel_id).await?;
         let channel = channel.guild().ok_or(ModelError::InvalidChannelType)?;
+        let channel = Ccot::from(&channel);
         self.update_channel(channel.clone());
         Ok(channel)
     }
 
-    fn update_channel(&self, channel: GuildChannel) {
-        let mut guild = self.guilds.entry(channel.guild_id).or_default();
-        guild.get_map_for(channel.kind).insert(channel);
-    }
-
-    fn remove_channel(&self, channel: &GuildChannel) {
-        if let Some(mut guild) = self.guilds.get_mut(&channel.guild_id) {
-            guild.get_map_for(channel.kind).remove(&channel.id);
+    fn update_channel(&self, channel: Ccot) {
+        let mut guild = self.guilds.entry(channel.guild_id()).or_default();
+        match channel {
+            Ccot::Channel(c) => _ = guild.channels.insert(c),
+            Ccot::Thread(t) => _ = guild.threads.insert(t),
         }
     }
 
-    fn remove_partial_channel(&self, channel: &PartialGuildChannel) {
-        if let Some(mut guild) = self.guilds.get_mut(&channel.guild_id) {
-            guild.get_map_for(channel.kind).remove(&channel.id);
-        }
+    fn insert_guild(&self, guild_id: GuildId) -> impl DerefMut<Target = CachedGuild> {
+        self.guilds.entry(guild_id).or_default()
     }
 
     fn remove_thread_if_private(&self, guild_id: GuildId, thread_id: ChannelId) {
@@ -245,19 +346,23 @@ impl CacheUpdate<ReadyEvent> for Cache {
 
 impl CacheUpdate<ChannelCreateEvent> for Cache {
     fn update(&self, value: &ChannelCreateEvent) {
-        self.update_channel(value.channel.clone());
+        let mut guild = self.insert_guild(value.channel.guild_id);
+        guild.channels.insert((&value.channel).into());
     }
 }
 
 impl CacheUpdate<ChannelDeleteEvent> for Cache {
     fn update(&self, value: &ChannelDeleteEvent) {
-        self.remove_channel(&value.channel);
+        if let Some(mut guild) = self.guilds.get_mut(&value.channel.guild_id) {
+            guild.channels.remove(&value.channel.id);
+        }
     }
 }
 
 impl CacheUpdate<ChannelUpdateEvent> for Cache {
     fn update(&self, value: &ChannelUpdateEvent) {
-        self.update_channel(value.channel.clone());
+        let mut guild = self.insert_guild(value.channel.guild_id);
+        guild.channels.insert((&value.channel).into());
     }
 }
 
@@ -267,9 +372,13 @@ impl CacheUpdate<GuildCreateEvent> for Cache {
             return;
         }
 
+        let Guild {
+            channels, threads, ..
+        } = &value.guild;
+
         let guild = CachedGuild {
-            channels: value.guild.channels.iter().cloned().collect(),
-            threads: value.guild.threads.iter().cloned().collect(),
+            channels: channels.iter().map(CachedChannel::from).collect(),
+            threads: threads.iter().map(CachedThread::from).collect(),
         };
 
         self.guilds.insert(value.guild.id, guild);
@@ -284,19 +393,23 @@ impl CacheUpdate<GuildDeleteEvent> for Cache {
 
 impl CacheUpdate<ThreadCreateEvent> for Cache {
     fn update(&self, value: &ThreadCreateEvent) {
-        self.update_channel(value.thread.clone());
+        let mut guild = self.insert_guild(value.thread.guild_id);
+        guild.threads.insert((&value.thread).into());
     }
 }
 
 impl CacheUpdate<ThreadDeleteEvent> for Cache {
     fn update(&self, value: &ThreadDeleteEvent) {
-        self.remove_partial_channel(&value.thread);
+        if let Some(mut guild) = self.guilds.get_mut(&value.thread.guild_id) {
+            guild.threads.remove(&value.thread.id);
+        }
     }
 }
 
 impl CacheUpdate<ThreadUpdateEvent> for Cache {
     fn update(&self, value: &ThreadUpdateEvent) {
-        self.update_channel(value.thread.clone());
+        let mut guild = self.insert_guild(value.thread.guild_id);
+        guild.threads.insert((&value.thread).into());
     }
 }
 
@@ -311,14 +424,14 @@ impl CacheUpdate<ThreadListSyncEvent> for Cache {
         if let Some(parents) = &value.channel_ids {
             // insert all threads back in which aren't updated
             for thread in threads {
-                if thread.parent_id.is_some_and(|p| !parents.contains(&p)) {
+                if !parents.contains(&thread.parent_id) {
                     guild.threads.insert(thread);
                 }
             }
         }
 
         for thread in &value.threads {
-            guild.threads.insert(thread.clone());
+            guild.threads.insert(thread.into());
         }
     }
 }
