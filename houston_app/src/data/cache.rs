@@ -1,4 +1,4 @@
-use std::mem;
+use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
 use std::sync::OnceLock;
 
@@ -29,6 +29,8 @@ pub struct Cache {
 struct CachedGuild {
     channels: ExtractMap<ChannelId, CachedChannel>,
     threads: ExtractMap<ChannelId, CachedThread>,
+    /// Tracks threads in a channel. The key is the parent channel ID.
+    threads_in: HashMap<ChannelId, HashSet<ChannelId>>,
 }
 
 utils::impl_debug!(struct Cache: { .. });
@@ -326,6 +328,26 @@ impl Cache {
     }
 }
 
+impl CachedGuild {
+    fn add_thread(&mut self, thread: CachedThread) {
+        // track the thread for the parent channel
+        self.threads_in
+            .entry(thread.parent_id)
+            .or_default()
+            .insert(thread.id);
+
+        self.threads.insert(thread);
+    }
+
+    fn remove_associated_threads(&mut self, parent_id: ChannelId) {
+        let thread_ids = self.threads_in.remove(&parent_id).unwrap_or_default();
+
+        for thread_id in thread_ids {
+            self.threads.remove(&thread_id);
+        }
+    }
+}
+
 impl RawEventHandler for Cache {
     fn raw_event<'s: 'f, 'e: 'f, 'f>(&'s self, _ctx: Context, ev: &'e Event) -> BoxFuture<'f, ()> {
         self.update_event(ev);
@@ -355,6 +377,10 @@ impl CacheUpdate<ChannelDeleteEvent> for Cache {
     fn update(&self, value: &ChannelDeleteEvent) {
         if let Some(mut guild) = self.guilds.get_mut(&value.channel.guild_id) {
             guild.channels.remove(&value.channel.id);
+
+            // make sure to remove associated threads
+            // they don't get their own delete event in this case
+            guild.remove_associated_threads(value.channel.id);
         }
     }
 }
@@ -376,10 +402,20 @@ impl CacheUpdate<GuildCreateEvent> for Cache {
             channels, threads, ..
         } = &value.guild;
 
-        let guild = CachedGuild {
+        let mut guild = CachedGuild {
             channels: channels.iter().map(CachedChannel::from).collect(),
             threads: threads.iter().map(CachedThread::from).collect(),
+            threads_in: HashMap::new(),
         };
+
+        // associate existing threads
+        for thread in &guild.threads {
+            guild
+                .threads_in
+                .entry(thread.parent_id)
+                .or_default()
+                .insert(thread.id);
+        }
 
         self.guilds.insert(value.guild.id, guild);
     }
@@ -394,7 +430,7 @@ impl CacheUpdate<GuildDeleteEvent> for Cache {
 impl CacheUpdate<ThreadCreateEvent> for Cache {
     fn update(&self, value: &ThreadCreateEvent) {
         let mut guild = self.insert_guild(value.thread.guild_id);
-        guild.threads.insert((&value.thread).into());
+        guild.add_thread((&value.thread).into());
     }
 }
 
@@ -402,6 +438,11 @@ impl CacheUpdate<ThreadDeleteEvent> for Cache {
     fn update(&self, value: &ThreadDeleteEvent) {
         if let Some(mut guild) = self.guilds.get_mut(&value.thread.guild_id) {
             guild.threads.remove(&value.thread.id);
+
+            // remove the thread from the parent channel set
+            if let Some(set) = guild.threads_in.get_mut(&value.thread.parent_id) {
+                set.remove(&value.thread.id);
+            }
         }
     }
 }
@@ -409,7 +450,7 @@ impl CacheUpdate<ThreadDeleteEvent> for Cache {
 impl CacheUpdate<ThreadUpdateEvent> for Cache {
     fn update(&self, value: &ThreadUpdateEvent) {
         let mut guild = self.insert_guild(value.thread.guild_id);
-        guild.threads.insert((&value.thread).into());
+        guild.add_thread((&value.thread).into());
     }
 }
 
@@ -417,21 +458,14 @@ impl CacheUpdate<ThreadListSyncEvent> for Cache {
     fn update(&self, value: &ThreadListSyncEvent) {
         let mut guild = self.guilds.entry(value.guild_id).or_default();
 
-        // move out the old thread cache
-        // if no `channel_ids` are specified, it needs to be cleared anyways
-        let threads = mem::take(&mut guild.threads);
-
         if let Some(parents) = &value.channel_ids {
-            // insert all threads back in which aren't updated
-            for thread in threads {
-                if !parents.contains(&thread.parent_id) {
-                    guild.threads.insert(thread);
-                }
+            for &channel_id in parents {
+                guild.remove_associated_threads(channel_id);
             }
         }
 
         for thread in &value.threads {
-            guild.threads.insert(thread.into());
+            guild.add_thread(thread.into());
         }
     }
 }
