@@ -339,6 +339,15 @@ impl CachedGuild {
         self.threads.insert(thread);
     }
 
+    fn remove_thread(&mut self, parent_id: ChannelId, thread_id: ChannelId) {
+        self.threads.remove(&thread_id);
+
+        // remove the thread from the parent channel set
+        if let Some(set) = self.threads_in.get_mut(&parent_id) {
+            set.remove(&thread_id);
+        }
+    }
+
     fn remove_associated_threads(&mut self, parent_id: ChannelId) {
         let thread_ids = self.threads_in.remove(&parent_id).unwrap_or_default();
 
@@ -437,20 +446,26 @@ impl CacheUpdate<ThreadCreateEvent> for Cache {
 impl CacheUpdate<ThreadDeleteEvent> for Cache {
     fn update(&self, value: &ThreadDeleteEvent) {
         if let Some(mut guild) = self.guilds.get_mut(&value.thread.guild_id) {
-            guild.threads.remove(&value.thread.id);
-
-            // remove the thread from the parent channel set
-            if let Some(set) = guild.threads_in.get_mut(&value.thread.parent_id) {
-                set.remove(&value.thread.id);
-            }
+            guild.remove_thread(value.thread.parent_id, value.thread.id);
         }
     }
 }
 
 impl CacheUpdate<ThreadUpdateEvent> for Cache {
     fn update(&self, value: &ThreadUpdateEvent) {
-        let mut guild = self.insert_guild(value.thread.guild_id);
-        guild.add_thread((&value.thread).into());
+        let Some(metadata) = &value.thread.thread_metadata else {
+            let id = value.thread.id;
+            log::warn!("Thread Update for {id} didn't have metadata.");
+            return;
+        };
+
+        let thread = CachedThread::from(&value.thread);
+        let mut guild = self.insert_guild(thread.guild_id);
+        if metadata.archived() {
+            guild.remove_thread(thread.parent_id, thread.id);
+        } else {
+            guild.add_thread(thread);
+        }
     }
 }
 
