@@ -140,18 +140,26 @@ impl Cache {
         g.threads.get(&channel_id).map(|t| Ccot::Thread(t.clone()))
     }
 
+    /// Returns:
+    /// - `Some(None)` for normal channels
+    /// - `Some(Some(_))` for threads
+    /// - `None` for cache misses
     fn thread_channel_(
         &self,
         guild_id: GuildId,
         channel_id: ChannelId,
     ) -> Option<Option<CachedThread>> {
         let guild = self.guilds.get(&guild_id)?;
-        let channel = guild.channels.get(&channel_id);
-        if channel.is_some() {
-            return None;
+
+        if guild.channels.get(&channel_id).is_some() {
+            return Some(None);
         }
 
-        Some(guild.threads.get(&channel_id).cloned())
+        if let Some(thread) = guild.threads.get(&channel_id) {
+            return Some(Some(thread.clone()));
+        }
+
+        None
     }
 
     fn super_channel_(
