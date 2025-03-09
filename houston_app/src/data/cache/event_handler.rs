@@ -53,7 +53,6 @@ impl Cache {
 impl Cache {
     fn update_ready(&self, value: &ReadyEvent) {
         self.current_user.get_or_init(|| value.ready.user.clone());
-        self.guilds.clear();
     }
 
     fn update_channel_create(&self, value: &ChannelCreateEvent) {
@@ -77,10 +76,7 @@ impl Cache {
     }
 
     fn update_guild_create(&self, value: &GuildCreateEvent) {
-        if value.guild.unavailable() {
-            return;
-        }
-
+        // only available guilds will send a create
         let Guild {
             channels, threads, ..
         } = &value.guild;
