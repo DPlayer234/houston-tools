@@ -34,13 +34,16 @@ pub mod starboard {
         /// What board to look for.
         #[autocomplete = "autocomplete_board"]
         board: u64,
+        /// Filter to posts by a specific user.
+        #[name = "by-user"]
+        by_user: Option<&User>,
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
         use super::buttons::top_posts::View;
 
         let (guild, board) = find_board(ctx, board)?;
-        let view = View::new(guild, board);
+        let view = View::new(guild, board, by_user.map(|u| u.id));
 
         ctx.defer_as(ephemeral).await?;
         ctx.send(view.create_reply(ctx.data_ref()).await?).await?;

@@ -1,9 +1,10 @@
+use bson::Document;
 use bson_model::Sort::Desc;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
 use crate::fmt::discord::MessageLink;
-use crate::helper::discord::id_as_u64;
+use crate::helper::discord::{id_as_u64, option_id_as_u64};
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 
@@ -14,14 +15,17 @@ pub struct View {
     pub guild: GuildId,
     pub board: BoardId,
     pub page: u16,
+    #[serde(with = "option_id_as_u64")]
+    pub by_user: Option<UserId>,
 }
 
 impl View {
-    pub fn new(guild: GuildId, board: BoardId) -> Self {
+    pub fn new(guild: GuildId, board: BoardId, by_user: Option<UserId>) -> Self {
         Self {
             guild,
             board,
             page: 0,
+            by_user,
         }
     }
 
@@ -32,7 +36,7 @@ impl View {
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
 
-        let filter = model::Message::filter().board(self.board).into_document()?;
+        let filter = self.message_filter()?;
 
         let sort = model::Message::sort()
             .max_reacts(Desc)
@@ -50,21 +54,31 @@ impl View {
         let mut description = String::new();
         let mut index = 0u64;
 
+        if let Some(by_user) = self.by_user {
+            writeln_str!(description, "-# By: <@{by_user}>");
+        }
+
         while let Some(item) = cursor.try_next().await? {
             if index >= u64::from(PAGE_SIZE) {
                 break;
             }
 
             index += 1;
-            writeln_str!(
-                description,
-                "{}. {} by <@{}>: {} {}",
-                offset + index,
-                MessageLink::new(self.guild, item.channel, item.message),
-                item.user,
-                item.max_reacts,
-                board.emoji.as_emoji(),
-            );
+
+            let rank = offset + index;
+            let link = MessageLink::new(self.guild, item.channel, item.message);
+            let max_reacts = item.max_reacts;
+            let emoji = &board.emoji;
+
+            if self.by_user.is_some() {
+                writeln_str!(description, "{rank}. {link}: {max_reacts} {emoji}");
+            } else {
+                writeln_str!(
+                    description,
+                    "{rank}. {link} by <@{}>: {max_reacts} {emoji}",
+                    item.user,
+                );
+            }
         }
 
         if self.page > 0 && description.is_empty() {
@@ -73,7 +87,7 @@ impl View {
 
         let has_more = index >= u64::from(PAGE_SIZE);
         let page_count = if has_more {
-            let filter = model::Message::filter().board(self.board).into_document()?;
+            let filter = self.message_filter()?;
 
             model::Message::collection(db)
                 .count_documents(filter)
@@ -85,7 +99,16 @@ impl View {
             self.page + 1
         };
 
-        let description = crate::fmt::written_or(description, "<None>");
+        let description = if self.by_user.is_some() {
+            if index == 0 {
+                writeln_str!(description, "<None>");
+            }
+
+            debug_assert!(!description.is_empty(), "should never be empty");
+            Cow::Owned(description)
+        } else {
+            crate::fmt::written_or(description, "<None>")
+        };
 
         let embed = CreateEmbed::new()
             .title(format!("{} Top Posts", board.emoji))
@@ -101,6 +124,15 @@ impl View {
         let reply = CreateReply::new().embed(embed).components(components);
 
         Ok(reply)
+    }
+
+    fn message_filter(&self) -> Result<Document> {
+        let mut filter = model::Message::filter().board(self.board);
+        if let Some(user) = self.by_user {
+            filter = filter.user(user);
+        }
+
+        Ok(filter.into_document()?)
     }
 }
 

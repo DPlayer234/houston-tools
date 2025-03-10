@@ -58,6 +58,16 @@ impl Message {
                 .options(name("top-posts-sort"))
                 .keys(Self::sort().board(Asc).max_reacts(Asc).message(Asc))
                 .build(),
+            IndexModel::builder()
+                .options(name("top-posts-user-sort"))
+                .keys(
+                    Self::sort()
+                        .board(Asc)
+                        .user(Asc)
+                        .max_reacts(Asc)
+                        .message(Asc),
+                )
+                .build(),
         ]
     }
 }
