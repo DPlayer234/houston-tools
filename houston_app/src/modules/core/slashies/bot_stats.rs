@@ -33,7 +33,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
     );
 
     let current_user = data.cache.current_user()?;
-    let author = get_unique_username(current_user);
+    let author = get_unique_username(&current_user);
     let author_icon = current_user.face();
 
     let author = CreateEmbedAuthor::new(author).icon_url(author_icon);

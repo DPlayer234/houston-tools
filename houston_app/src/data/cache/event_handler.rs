@@ -37,6 +37,7 @@ impl Cache {
             Event::ChannelUpdate(event) => self.update_channel_update(event),
             Event::GuildCreate(event) => self.update_guild_create(event),
             Event::GuildDelete(event) => self.update_guild_delete(event),
+            Event::UserUpdate(event) => self.update_user_update(event),
             Event::ThreadCreate(event) => self.update_thread_create(event),
             Event::ThreadUpdate(event) => self.update_thread_update(event),
             Event::ThreadDelete(event) => self.update_thread_delete(event),
@@ -52,7 +53,7 @@ impl Cache {
 /// Split out here just for clarity.
 impl Cache {
     fn update_ready(&self, value: &ReadyEvent) {
-        self.current_user.get_or_init(|| value.ready.user.clone());
+        self.set_current_user(value.ready.user.clone());
     }
 
     fn update_channel_create(&self, value: &ChannelCreateEvent) {
@@ -103,6 +104,10 @@ impl Cache {
         self.guilds.remove(&value.guild.id);
     }
 
+    fn update_user_update(&self, event: &UserUpdateEvent) {
+        self.set_current_user(event.current_user.clone());
+    }
+
     fn update_thread_create(&self, value: &ThreadCreateEvent) {
         // reasonably assume that only active threads can be created
         let mut guild = self.insert_guild(value.thread.guild_id);
@@ -148,12 +153,12 @@ impl Cache {
     }
 
     fn update_thread_members_update(&self, value: &ThreadMembersUpdateEvent) {
-        let Some(current_user) = self.current_user.get() else {
+        let Some(user_id) = self.current_user_id() else {
             log::warn!("Current User is unset.");
             return;
         };
 
-        if value.removed_member_ids.contains(&current_user.id) {
+        if value.removed_member_ids.contains(&user_id) {
             self.remove_thread_if_private(value.guild_id, value.id);
         }
     }

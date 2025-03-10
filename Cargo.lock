@@ -1107,9 +1107,10 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.10.1"
+version = "2.10.2"
 dependencies = [
  "anyhow",
+ "arc-swap",
  "arrayvec",
  "azur_lane",
  "backtrace",

@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
-use std::sync::OnceLock;
+use std::sync::Arc;
 
+use arc_swap::ArcSwapOption;
 use dashmap::DashMap;
 use extract_map::ExtractMap;
 use serenity::http::Http;
@@ -20,11 +21,11 @@ pub use model::{CachedChannel, CachedThread, Ccot};
 ///
 /// Requires the [`GatewayIntents::GUILDS`] intent.
 //
-// CMBK: edge-case "looses access to channels with threads"
+// CMBK: edge-case "loses access to channels with threads"
 // the threads in question will stay in the cache, not sure how to solve that well
 #[derive(Default)]
 pub struct Cache {
-    current_user: OnceLock<CurrentUser>,
+    current_user: ArcSwapOption<CurrentUser>,
     guilds: DashMap<GuildId, CachedGuild>,
 }
 
@@ -48,8 +49,10 @@ fn is_thread(kind: ChannelType) -> bool {
 /// API for accessing the cache.
 impl Cache {
     /// Gets the cached current bot user.
-    pub fn current_user(&self) -> Result<&CurrentUser> {
-        self.current_user.get().context("current user not loaded")
+    pub fn current_user(&self) -> Result<Arc<CurrentUser>> {
+        self.current_user
+            .load_full()
+            .context("current user not loaded")
     }
 
     /// Gets the guild channel with a given ID in a guild.
@@ -198,6 +201,16 @@ impl Cache {
     /// Gets or inserts a cached guild and returns a handle to it.
     fn insert_guild(&self, guild_id: GuildId) -> impl DerefMut<Target = CachedGuild> {
         self.guilds.entry(guild_id).or_default()
+    }
+
+    /// Gets the ID of the current user.
+    fn current_user_id(&self) -> Option<UserId> {
+        self.current_user.load().as_deref().map(|u| u.id)
+    }
+
+    /// Replaces the cached current user info.
+    fn set_current_user(&self, user: CurrentUser) {
+        self.current_user.store(Some(Arc::new(user)));
     }
 }
 
