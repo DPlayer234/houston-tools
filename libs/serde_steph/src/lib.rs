@@ -43,9 +43,10 @@
 //! - The `#[serde(skip_*)]` attributes will break deserialization.
 //!   `#[serde(skip)]` is fine because it's symmetrical, but adding/removing it
 //!   will change the format.
-//! - `#[serde(untagged)]` is unsupported.
-//! - Including `#[serde(flatten)]` forces (de)serialization as `map`, for both
-//!   the container and the field, so adding/removing it breaks compatability.
+//! - `#[serde(untagged)]` is unsupported because it omits data needed for
+//!   deserialization later.
+//! - `#[serde(flatten)]` is unsupported because it means the container does not
+//!   provide all data needed during serialization.
 //!
 //! ## Future Proofing
 //!
@@ -76,7 +77,7 @@
 //! - Changing the sign of an integer (i.e [`u16`] to [`i16`] is not OK). This
 //!   would not break deserialization but will change the value, even when the
 //!   old value would be in range for the new type.
-//! - Adding or removing `#[serde(flatten)]` or `#[serde(skip)]`.
+//! - Adding or removing `#[serde(skip)]`.
 //!
 //! Do note that even the format-compatible changes aren't necessarily
 //! _forward_-compatible. This is important to consider because it means that
