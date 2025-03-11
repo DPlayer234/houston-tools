@@ -72,7 +72,7 @@ impl ButtonMessage for View {
     }
 
     fn edit_modal_reply(mut self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
-        ToPage::set_page_from(&mut self.page, ctx.interaction);
+        self.page = ToPage::get_page(ctx.interaction)?;
         self.create(ctx.data).map(EditReply::from)
     }
 }

@@ -10,13 +10,12 @@ impl ToPage {
         Self(data)
     }
 
-    pub fn set_page_from(page: &mut u16, interaction: &ModalInteraction) {
-        if let Some(new_page) = Self::get_page(interaction) {
-            *page = new_page;
-        }
+    pub fn get_page(interaction: &ModalInteraction) -> Result<u16> {
+        Self::get_page_core(interaction)
+            .context("page expected in modal data but not found or invalid")
     }
 
-    pub fn get_page(interaction: &ModalInteraction) -> Option<u16> {
+    fn get_page_core(interaction: &ModalInteraction) -> Option<u16> {
         let component = interaction.data.components.first()?.components.first()?;
 
         let ActionRowComponent::InputText(InputText {

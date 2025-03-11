@@ -99,27 +99,23 @@ impl View {
             self.page + 1
         };
 
-        let description = if self.by_user.is_some() {
-            if index == 0 {
-                writeln_str!(description, "<None>");
-            }
+        if self.by_user.is_some() && index == 0 {
+            debug_assert!(!description.is_empty(), "by-user case always has content");
+            writeln_str!(description, "<None>");
+        }
 
-            debug_assert!(!description.is_empty(), "should never be empty");
-            Cow::Owned(description)
-        } else {
-            crate::fmt::written_or(description, "<None>")
-        };
+        let description = crate::fmt::written_or(description, "<None>");
 
         let embed = CreateEmbed::new()
             .title(format!("{} Top Posts", board.emoji))
             .color(data.config().embed_color)
             .description(description);
 
-        let components = ToPage::build_row(&mut self, |s| &mut s.page)
-            .auto_page_count(page_count, has_more, MAX_PAGE)
-            .end()
-            .as_slice()
-            .to_vec();
+        let components = Vec::from_iter(
+            ToPage::build_row(&mut self, |s| &mut s.page)
+                .auto_page_count(page_count, has_more, MAX_PAGE)
+                .end(),
+        );
 
         let reply = CreateReply::new().embed(embed).components(components);
 
@@ -148,7 +144,7 @@ impl ButtonArgsReply for View {
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
         ctx.acknowledge().await?;
 
-        ToPage::set_page_from(&mut self.page, ctx.interaction);
+        self.page = ToPage::get_page(ctx.interaction)?;
         let reply = self.create_reply(ctx.data).await?;
         ctx.edit(reply.into()).await?;
         Ok(())

@@ -91,11 +91,11 @@ impl View {
             .color(data.config().embed_color)
             .description(description);
 
-        let components = ToPage::build_row(&mut self, |s| &mut s.page)
-            .auto_page_count(page_count, has_more, MAX_PAGE)
-            .end()
-            .as_slice()
-            .to_vec();
+        let components = Vec::from_iter(
+            ToPage::build_row(&mut self, |s| &mut s.page)
+                .auto_page_count(page_count, has_more, MAX_PAGE)
+                .end(),
+        );
 
         let reply = CreateReply::new().embed(embed).components(components);
         Ok(reply)
@@ -114,7 +114,7 @@ impl ButtonArgsReply for View {
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
         ctx.acknowledge().await?;
 
-        ToPage::set_page_from(&mut self.page, ctx.interaction);
+        self.page = ToPage::get_page(ctx.interaction)?;
         let reply = self.create_reply(ctx.data).await?;
         ctx.edit(reply.into()).await?;
         Ok(())
