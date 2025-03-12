@@ -234,10 +234,12 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     });
 
     let into_document = emit_into_document(crate_, partial_name);
+    let serde_crate = quote::quote!(#crate_::private::serde).to_string();
 
     quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
         #[derive(::std::default::Default, #crate_::private::serde::Serialize #(,#derive)*)]
+        #[serde(crate = #serde_crate)]
         #[non_exhaustive]
         #vis struct #partial_name {
             #( #field_decls )*
@@ -302,10 +304,12 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     });
 
     let into_document = emit_into_document(crate_, filter_name);
+    let serde_crate = quote::quote!(#crate_::private::serde).to_string();
 
     quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
         #[derive(::std::default::Default, #crate_::private::serde::Serialize #(, #derive)*)]
+        #[serde(crate = #serde_crate)]
         #[non_exhaustive]
         #vis struct #filter_name {
             #( #field_decls )*
@@ -351,6 +355,8 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
+    let serde_crate = quote::quote!(#crate_::private::serde).to_string();
+
     quote::quote! {
         #[doc = concat!("A sort builder for [`", stringify!(#ty_name), "`].")]
         ///
@@ -358,7 +364,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         ///
         #[doc = concat!("[`Document`]: ", stringify!(#crate_), "::private::bson::Document")]
         #[derive(::std::default::Default, ::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, #crate_::private::serde::Serialize)]
-        #[serde(transparent)]
+        #[serde(crate = #serde_crate)]
         #vis struct #sort_name(#crate_::private::bson::Document);
 
         impl #sort_name {
