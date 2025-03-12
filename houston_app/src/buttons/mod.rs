@@ -16,9 +16,7 @@ pub use context::{ButtonContext, ModalContext};
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
 
-    pub use super::{
-        ButtonArgsReply, ButtonContext, ButtonMessage, CustomData, ModalContext, ToCustomData,
-    };
+    pub use super::{ButtonArgsReply, ButtonContext, CustomData, ModalContext, ToCustomData};
     pub use crate::prelude::*;
 }
 
@@ -375,42 +373,6 @@ pub trait ButtonArgsReply: Sized + Send {
     async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
         _ = ctx;
         anyhow::bail!("this button args type does not support modals");
-    }
-}
-
-/// Provides a way for button arguments to modify the create-reply payload.
-pub trait ButtonMessage: Sized + Send {
-    /// Creates an edit-reply payload.
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>>;
-
-    /// Creates an edit-reply payload.
-    fn edit_modal_reply(self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
-        _ = ctx;
-        anyhow::bail!("this button args type does not support modals");
-    }
-}
-
-impl<T: ButtonMessage> ButtonArgsReply for T {
-    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        self.edit_reply(ctx.clone())?
-            .execute_as_response(
-                &ctx.serenity.http,
-                ctx.interaction.id,
-                &ctx.interaction.token,
-            )
-            .await?;
-        Ok(())
-    }
-
-    async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
-        self.edit_modal_reply(ctx.clone())?
-            .execute_as_response(
-                &ctx.serenity.http,
-                ctx.interaction.id,
-                &ctx.interaction.token,
-            )
-            .await?;
-        Ok(())
     }
 }
 

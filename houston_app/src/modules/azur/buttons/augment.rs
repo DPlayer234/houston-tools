@@ -106,14 +106,15 @@ impl View {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
         let augment = azur
             .game_data()
             .augment_by_id(self.augment_id)
             .ok_or(AzurParseError::Augment)?;
 
-        Ok(self.create_with_augment(azur, augment).into())
+        let create = self.create_with_augment(azur, augment);
+        ctx.edit(create.into()).await
     }
 }

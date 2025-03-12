@@ -66,14 +66,16 @@ impl View {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        self.create(ctx.data).map(EditReply::from)
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        let create = self.create(ctx.data)?;
+        ctx.edit(create.into()).await
     }
 
-    fn edit_modal_reply(mut self, ctx: ModalContext<'_>) -> Result<EditReply<'_>> {
+    async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
         self.page = ToPage::get_page(ctx.interaction)?;
-        self.create(ctx.data).map(EditReply::from)
+        let create = self.create(ctx.data)?;
+        ctx.edit(create.into()).await
     }
 }
 

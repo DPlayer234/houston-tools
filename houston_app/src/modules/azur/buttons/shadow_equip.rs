@@ -68,22 +68,23 @@ impl View {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
         let ship = azur
             .game_data()
             .ship_by_id(self.inner.ship_id)
             .ok_or(AzurParseError::Ship)?;
-        Ok(
-            match self
-                .inner
-                .retrofit
-                .and_then(|index| ship.retrofits.get(usize::from(index)))
-            {
-                None => self.create_with_ship(azur, ship, None).into(),
-                Some(retrofit) => self.create_with_ship(azur, retrofit, Some(ship)).into(),
-            },
-        )
+
+        let create = match self
+            .inner
+            .retrofit
+            .and_then(|index| ship.retrofits.get(usize::from(index)))
+        {
+            None => self.create_with_ship(azur, ship, None),
+            Some(retrofit) => self.create_with_ship(azur, retrofit, Some(ship)),
+        };
+
+        ctx.edit(create.into()).await
     }
 }

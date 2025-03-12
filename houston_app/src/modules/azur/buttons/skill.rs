@@ -261,10 +261,10 @@ where
         .collect()
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
-        match &self.source {
+        let edit = match &self.source {
             ViewSource::Ship(source) => {
                 let base_ship = azur
                     .game_data()
@@ -274,16 +274,18 @@ impl ButtonMessage for View {
                     .retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
                     .unwrap_or(base_ship);
-                Ok(self.edit_with_ship(azur, ship, Some(base_ship)))
+                self.edit_with_ship(azur, ship, Some(base_ship))
             },
             ViewSource::Augment(augment_id) => {
                 let augment = azur
                     .game_data()
                     .augment_by_id(*augment_id)
                     .ok_or(AzurParseError::Augment)?;
-                Ok(self.edit_with_augment(augment))
+                self.edit_with_augment(augment)
             },
-        }
+        };
+
+        ctx.edit(edit).await
     }
 }
 

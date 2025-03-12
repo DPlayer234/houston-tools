@@ -126,8 +126,8 @@ impl View {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
         let chat = azur
             .game_data()
@@ -135,6 +135,6 @@ impl ButtonMessage for View {
             .ok_or(AzurParseError::JuustagramChat)?;
 
         let create = self.create_with_chat(ctx.data, azur, chat);
-        Ok(create.into())
+        ctx.edit(create.into()).await
     }
 }

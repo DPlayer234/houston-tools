@@ -43,7 +43,7 @@ impl Config {
 
     /// Whether the game data has been loaded before.
     pub fn loaded(&self) -> bool {
-        self.game_data.get().is_some()
+        matches!(self.game_data.get(), Some(Some(_)))
     }
 
     /// Gets or loads the game data.

@@ -176,24 +176,6 @@ impl View {
             }
         }
     }
-
-    fn resolve<'a>(
-        &self,
-        ctx: &ButtonContext<'a>,
-    ) -> Result<(LoadedConfig<'a>, &'a ShipData, &'a ShipSkin)> {
-        let azur = ctx.data.config().azur()?;
-        let ship = azur
-            .game_data()
-            .ship_by_id(self.ship_id)
-            .ok_or(AzurParseError::Ship)?;
-
-        let skin = ship
-            .skins
-            .get(usize::from(self.skin_index))
-            .ok_or(AzurParseError::Ship)?;
-
-        Ok((azur, ship, skin))
-    }
 }
 
 fn first_non_empty_part(words: &ShipSkinWords) -> Option<ViewPart> {
@@ -329,10 +311,22 @@ impl ViewPart {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
-        let (config, ship, skin) = self.resolve(&ctx)?;
-        Ok(self.edit_with_ship(&ctx, config, ship, skin))
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        let azur = ctx.data.config().azur()?;
+
+        let ship = azur
+            .game_data()
+            .ship_by_id(self.ship_id)
+            .ok_or(AzurParseError::Ship)?;
+
+        let skin = ship
+            .skins
+            .get(usize::from(self.skin_index))
+            .ok_or(AzurParseError::Ship)?;
+
+        let edit = self.edit_with_ship(&ctx, azur, ship, skin);
+        ctx.edit(edit).await
     }
 }
 

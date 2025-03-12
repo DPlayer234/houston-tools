@@ -161,18 +161,13 @@ async fn main() -> anyhow::Result<()> {
 
         let profile = profile()?;
         let profile_config = format!("houston_app.{profile}.toml");
+        let default_config = include_str!("../assets/default_config.toml");
 
         let config = Config::builder()
+            .add_source(File::from_str(default_config, FileFormat::Toml))
             .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
             .add_source(File::new(&profile_config, FileFormat::Toml).required(false))
             .add_source(Environment::default().separator("__"))
-            // defaults for logging
-            .set_default("log.root.level", "warn")?
-            .set_default("log.root.appenders[0]", "default")?
-            .set_default("log.appenders.default.kind", "default")?
-            .set_default("log.appenders.default.encoder.kind", "default")?
-            .set_default("log.loggers.houston_app.level", "trace")?
-            .set_default("log.loggers.houston_cmd.level", "trace")?
             .build()
             .context("cannot build config")?
             .try_deserialize()

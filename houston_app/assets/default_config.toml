@@ -1,0 +1,10 @@
+[log.root]
+level = "warn"
+appenders = ["default"]
+[log.appenders.default]
+kind = "default"
+encoder.kind = "default"
+[log.loggers.houston_app]
+level = "trace"
+[log.loggers.houston_cmd]
+level = "trace"

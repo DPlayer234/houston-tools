@@ -206,14 +206,15 @@ impl ViewPart {
     }
 }
 
-impl ButtonMessage for View {
-    fn edit_reply(self, ctx: ButtonContext<'_>) -> Result<EditReply<'_>> {
+impl ButtonArgsReply for View {
+    async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
         let ship = azur
             .game_data()
             .special_secretary_by_id(self.secretary_id)
             .ok_or(AzurParseError::SpecialSecretary)?;
 
-        Ok(self.create_with_sectary(ctx.data, ship).into())
+        let create = self.create_with_sectary(ctx.data, ship);
+        ctx.edit(create.into()).await
     }
 }
