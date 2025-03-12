@@ -43,8 +43,9 @@ use crate::update::Update;
 /// # use bson_model::{Filter, ModelDocument};
 /// # use serde::{Deserialize, Serialize};
 /// #[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize, ModelDocument)]
-/// #[model(derive(Debug, Clone, PartialEq, Eq, Hash))]
-/// # struct MyModel {}
+/// #[model(derive_partial(Debug, Clone, PartialEq, Eq, Hash))]
+/// #[model(derive_filter(Debug, Clone, PartialEq))]
+/// # struct MyModel { _p: () }
 /// # _ = stringify! {
 /// struct MyModel {
 ///     ...
@@ -52,8 +53,9 @@ use crate::update::Update;
 /// # };
 /// ```
 ///
-/// An empty `#[model(derive())]` is allowed to suppress the [`Debug`] and
-/// [`Clone`] auto-derives without adding additional ones.
+/// An empty `#[model(derive_partial())]` or `#[model(derive_filter())]` is
+/// allowed to suppress the [`Debug`] and [`Clone`] auto-derives without adding
+/// additional ones.
 ///
 /// [`serde::Deserialize`] is not supported at the current time and attempting
 /// to use a derived implementation for it on the builder types will lead to

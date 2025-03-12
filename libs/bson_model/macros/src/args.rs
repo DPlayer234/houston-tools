@@ -27,7 +27,8 @@ pub struct FieldSerdeMeta {
 pub struct ModelMeta {
     #[darling(rename = "crate")]
     pub crate_: Option<Path>,
-    pub derive: Option<PathList>,
+    pub derive_partial: Option<PathList>,
+    pub derive_filter: Option<PathList>,
 }
 
 impl FieldSerdeMeta {
@@ -74,5 +75,6 @@ pub struct ModelArgs<'a> {
     pub internals_name: syn::Ident,
     pub fields: Vec<FieldArgs<'a>>,
     pub crate_: Path,
-    pub derive: &'a [Path],
+    pub derive_partial: &'a [Path],
+    pub derive_filter: &'a [Path],
 }

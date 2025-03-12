@@ -70,8 +70,13 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         crate_: model_meta
             .crate_
             .unwrap_or_else(|| syn::parse_quote!(::bson_model)),
-        derive: model_meta
-            .derive
+        derive_partial: model_meta
+            .derive_partial
+            .as_deref()
+            .map(Vec::as_slice)
+            .unwrap_or(&default_derive),
+        derive_filter: model_meta
+            .derive_filter
             .as_deref()
             .map(Vec::as_slice)
             .unwrap_or(&default_derive),
@@ -197,7 +202,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         internals_name,
         fields,
         crate_,
-        derive,
+        derive_partial,
         ..
     } = args;
 
@@ -238,7 +243,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
 
     quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
-        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(,#derive)*)]
+        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(,#derive_partial)*)]
         #[serde(crate = #serde_crate)]
         #[non_exhaustive]
         #vis struct #partial_name {
@@ -267,7 +272,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         filter_name,
         fields,
         crate_,
-        derive,
+        derive_filter,
         ..
     } = args;
 
@@ -308,7 +313,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
 
     quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
-        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(, #derive)*)]
+        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(, #derive_filter)*)]
         #[serde(crate = #serde_crate)]
         #[non_exhaustive]
         #vis struct #filter_name {
