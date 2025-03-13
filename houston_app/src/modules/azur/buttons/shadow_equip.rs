@@ -5,6 +5,7 @@ use utils::text::write_str::*;
 use super::ship::View as ShipView;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::modules::azur::LoadedConfig;
 
 /// View a ship's shadow equip.
@@ -61,7 +62,7 @@ impl View {
 
         let components = vec![CreateActionRow::buttons(vec![{
             let back = self.inner.to_custom_id();
-            CreateButton::new(back).emoji('⏪').label("Back")
+            CreateButton::new(back).emoji(emoji::back()).label("Back")
         }])];
 
         CreateReply::new().embed(embed).components(components)

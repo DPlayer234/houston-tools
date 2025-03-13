@@ -3,6 +3,7 @@ use utils::text::truncate;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::fmt::Join;
 
 /// Views an augment.
@@ -58,7 +59,7 @@ impl View {
         let components = match &self.back {
             Some(back) => {
                 let button = CreateButton::new(back.to_custom_id())
-                    .emoji('⏪')
+                    .emoji(emoji::back())
                     .label("Back");
                 vec![CreateActionRow::buttons(vec![button])]
             },
@@ -68,12 +69,12 @@ impl View {
         CreateReply::new().embed(embed).components(components)
     }
 
-    fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<SimpleEmbedFieldCreate<'a>> {
+    fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<EmbedFieldCreate<'a>> {
         (!equip.hull_disallowed.is_empty()).then(|| {
             let fmt = Join::COMMA.display_as(&equip.hull_disallowed, |h| h.designation());
             let text = format!("> {fmt}");
 
-            ("Cannot be equipped by:", text, false)
+            embed_field_create("Cannot be equipped by:", text, false)
         })
     }
 }

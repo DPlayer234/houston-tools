@@ -6,6 +6,8 @@ use utils::text::write_str::*;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
+use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
 
@@ -141,10 +143,10 @@ impl View {
             self.button_with_level(120).label("Lv.120"),
             self.button_with_level(125).label("Lv.125"),
             self.button_with_affinity(ViewAffinity::Love)
-                .emoji('❤')
+                .emoji(unicode_emoji("❤"))
                 .label("100"),
             self.button_with_affinity(ViewAffinity::Oath)
-                .emoji('💗')
+                .emoji(unicode_emoji("💗"))
                 .label("200"),
         ];
 
@@ -152,7 +154,7 @@ impl View {
             row.insert(
                 0,
                 CreateButton::new(back.to_custom_id())
-                    .emoji('⏪')
+                    .emoji(emoji::back())
                     .label("Back"),
             );
         }
@@ -258,7 +260,7 @@ impl View {
     }
 
     /// Creates the embed field that display the stats.
-    fn get_stats_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
+    fn get_stats_field<'a>(&self, ship: &ShipData) -> [EmbedFieldCreate<'a>; 1] {
         let stats = &ship.stats;
         let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
@@ -307,7 +309,7 @@ impl View {
             )
         };
 
-        [("Stats", content, false)]
+        [embed_field_create("Stats", content, false)]
     }
 
     /// Creates the embed field that displays the weapon equipment slots.
@@ -315,7 +317,7 @@ impl View {
         &self,
         azur: LoadedConfig<'a>,
         ship: &ShipData,
-    ) -> [SimpleEmbedFieldCreate<'a>; 1] {
+    ) -> [EmbedFieldCreate<'a>; 1] {
         let slots = ship
             .equip_slots
             .iter()
@@ -370,7 +372,7 @@ impl View {
             write_str!(text, "-# **`ASW:`** {}", equip.name);
         }
 
-        [("Equipment", text, false)]
+        [embed_field_create("Equipment", text, false)]
     }
 
     /// Creates the embed field that display the skill summary.
@@ -378,7 +380,7 @@ impl View {
         &self,
         azur: LoadedConfig<'a>,
         ship: &ShipData,
-    ) -> Option<SimpleEmbedFieldCreate<'a>> {
+    ) -> Option<EmbedFieldCreate<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
@@ -399,7 +401,7 @@ impl View {
                 write_str!(text, "-# UA: **{}**", augment.name);
             }
 
-            ("Skills", text, false)
+            embed_field_create("Skills", text, false)
         })
     }
 }

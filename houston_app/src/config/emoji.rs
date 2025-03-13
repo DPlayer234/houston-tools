@@ -99,3 +99,21 @@ impl<'de> serde::Deserialize<'de> for HEmoji {
         deserializer.deserialize_str(Visitor)
     }
 }
+
+macro_rules! declare_emojis {
+    ($($emoji:ident($lit:literal);)*) => {
+        $(
+            /// Returns this unicode emoji:
+            #[doc = $lit]
+            pub fn $emoji() -> ReactionType {
+                $crate::helper::discord::unicode_emoji($lit)
+            }
+        )*
+    };
+}
+
+declare_emojis! {
+    back("⏪");
+    left("◀");
+    right("▶");
+}

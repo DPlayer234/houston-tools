@@ -1,10 +1,12 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
+use smallvec::{SmallVec, smallvec};
 use utils::text::truncate;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
@@ -41,8 +43,6 @@ impl From<ShipViewSource> for ViewSource {
         Self::Ship(value)
     }
 }
-
-type EmbedFieldCreate<'a> = (String, Cow<'a, str>, bool);
 
 impl View {
     /// Creates a new instance including a button to go back with some custom
@@ -105,7 +105,7 @@ impl View {
             .author(azur.wiki_urls().ship(base_ship));
 
         let components = CreateButton::new(self.back.to_custom_id())
-            .emoji('⏪')
+            .emoji(emoji::back())
             .label("Back");
         let mut components = vec![components];
 
@@ -171,7 +171,7 @@ impl View {
 
         let nav_row = CreateActionRow::buttons(vec![
             CreateButton::new(self.back.to_custom_id())
-                .emoji('⏪')
+                .emoji(emoji::back())
                 .label("Back"),
         ]);
 
@@ -202,7 +202,7 @@ impl View {
 
     /// Creates the embed field for a skill.
     fn create_skill_field<'a>(&self, skill: &'a Skill) -> [EmbedFieldCreate<'a>; 1] {
-        [(
+        [embed_field_create(
             format!("{} {}", skill.category.emoji(), skill.name),
             truncate(&skill.description, 1000),
             false,
@@ -210,40 +210,40 @@ impl View {
     }
 
     /// Creates the embed fields for the selected skill.
-    fn create_ex_skill_fields<'a>(&self, skill: &'a Skill) -> Vec<EmbedFieldCreate<'a>> {
-        let mut fields = vec![(
+    fn create_ex_skill_fields<'a>(&self, skill: &'a Skill) -> SmallVec<[EmbedFieldCreate<'a>; 2]> {
+        let mut fields = smallvec![embed_field_create(
             format!("{} __{}__", skill.category.emoji(), skill.name),
             truncate(&skill.description, 1000),
             false,
         )];
 
         if !skill.barrages.is_empty() {
-            fields.push((
+            let full = get_skills_extra_summary(skill);
+            fields.push(embed_field_create(
                 "__Barrage__".to_owned(),
-                {
-                    let m = get_skills_extra_summary(skill);
-                    if m.len() <= 1024 {
-                        m.into()
-                    } else {
-                        log::warn!("barrage:\n{m}");
-                        "<barrage data too long>".into()
-                    }
+                match truncate(&full, 1024) {
+                    Cow::Owned(trunc) => {
+                        log::warn!("Barrage data too long:\n{full}");
+                        trunc
+                    },
+                    Cow::Borrowed(_) => full,
                 },
                 false,
             ));
         }
 
         for buff in &skill.new_weapons {
-            let fmt = crate::fmt::azur::Details::new(&buff.weapon);
-            fields.push((
+            let mut fmt = crate::fmt::azur::Details::new(&buff.weapon);
+            if buff.duration.is_some() {
+                fmt = fmt.no_fire_rate();
+            }
+
+            fields.push(embed_field_create(
                 format!(
                     "__{}__",
                     buff.weapon.name.as_deref().unwrap_or("Special Weapon")
                 ),
-                match buff.duration {
-                    Some(_) => fmt.no_fire_rate().to_string().into(),
-                    None => fmt.to_string().into(),
-                },
+                fmt.to_string(),
                 true,
             ))
         }

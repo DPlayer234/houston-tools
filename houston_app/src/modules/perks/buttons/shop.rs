@@ -6,6 +6,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::fmt::time::HumanDuration;
 use crate::modules::perks::config::{Config, ItemPrice};
@@ -223,7 +224,7 @@ impl View {
             .color(data.config().embed_color);
 
         let back = Self::new().to_custom_id();
-        let back = CreateButton::new(back).emoji('⏪').label("Back");
+        let back = CreateButton::new(back).emoji(emoji::back()).label("Back");
 
         let buy = Self::with_action(Action::BuyEffect(effect)).to_custom_id();
         let buy = CreateButton::new(buy)
@@ -276,7 +277,7 @@ impl View {
             .color(data.config().embed_color);
 
         let back = Self::new().to_custom_id();
-        let back = CreateButton::new(back).emoji('⏪').label("Back");
+        let back = CreateButton::new(back).emoji(emoji::back()).label("Back");
 
         let buy = Self::with_action(Action::BuyItem(item, 1)).to_custom_id();
         let buy = CreateButton::new(buy)

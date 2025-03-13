@@ -5,6 +5,7 @@ use utils::text::write_str::*;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
 use crate::modules::azur::{GameData, LoadedConfig};
 
@@ -46,7 +47,7 @@ impl View {
         if let Some(back) = &self.back {
             nav_row.push(
                 CreateButton::new(back.to_custom_id())
-                    .emoji('⏪')
+                    .emoji(emoji::back())
                     .label("Back"),
             );
         }

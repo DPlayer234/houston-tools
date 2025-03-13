@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serenity::model::Color;
 use serenity::secrets::Token;
 
-mod emoji;
+pub mod emoji;
 
 pub use emoji::HEmoji;
 

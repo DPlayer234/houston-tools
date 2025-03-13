@@ -3,6 +3,7 @@ use utils::text::write_str::*;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 
 /// Views ship lines.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -52,7 +53,7 @@ impl View {
         let mut top_row = Vec::new();
         if let Some(back) = &self.back {
             let button = CreateButton::new(back.to_custom_id())
-                .emoji('⏪')
+                .emoji(emoji::back())
                 .label("Back");
             top_row.push(button);
         }

@@ -3,6 +3,7 @@ use utils::text::write_str::*;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::fmt::Join;
 use crate::helper::discord::create_string_select_menu_row;
 use crate::modules::azur::{GameData, LoadedConfig};
@@ -89,7 +90,7 @@ impl View {
         let mut components = Vec::new();
 
         let top_row = CreateButton::new(self.back.to_custom_id())
-            .emoji('⏪')
+            .emoji(emoji::back())
             .label("Back");
         let mut top_row = vec![top_row];
 

@@ -1,4 +1,5 @@
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 
 /// Opens a modal for page navigation.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -105,7 +106,7 @@ where
                 } else {
                     CreateButton::new("#no-back").disabled(true)
                 }
-                .emoji('◀'),
+                .emoji(emoji::left()),
                 CreateButton::new(ToPage::new(self.obj.to_custom_data()).to_custom_id()).label(
                     match self.max_page {
                         MaxPage::NoMore => format!("{0} / {0}", page + 1),
@@ -118,7 +119,7 @@ where
                 } else {
                     CreateButton::new("#no-forward").disabled(true)
                 }
-                .emoji('▶'),
+                .emoji(emoji::right()),
             ])
         })
     }

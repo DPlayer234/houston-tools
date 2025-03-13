@@ -4,6 +4,7 @@ use utils::text::truncate;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
+use crate::config::emoji;
 use crate::fmt::Join;
 use crate::modules::azur::LoadedConfig;
 
@@ -52,7 +53,7 @@ impl View {
         if let Some(back) = &self.back {
             components.push(
                 CreateButton::new(back.to_custom_id())
-                    .emoji('⏪')
+                    .emoji(emoji::back())
                     .label("Back"),
             );
         }
@@ -95,9 +96,9 @@ impl View {
         &self,
         label: &'a str,
         skill: Option<&Skill>,
-    ) -> Option<SimpleEmbedFieldCreate<'a>> {
+    ) -> Option<EmbedFieldCreate<'a>> {
         skill.map(|s| {
-            (
+            embed_field_create(
                 label,
                 format!("{} **{}**", s.category.emoji(), s.name),
                 false,
