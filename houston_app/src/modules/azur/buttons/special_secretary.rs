@@ -63,21 +63,11 @@ impl View {
         }
 
         components.push(CreateActionRow::buttons(vec![
-            self.button_with_part(ViewPart::Main1, secretary)
-                .label("1")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Main2, secretary)
-                .label("2")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Holidays, secretary)
-                .label("3")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Chime1, secretary)
-                .label("4")
-                .style(ButtonStyle::Secondary),
-            self.button_with_part(ViewPart::Chime2, secretary)
-                .label("5")
-                .style(ButtonStyle::Secondary),
+            self.button_with_part(ViewPart::Main1, secretary, "1", "< 1 >"),
+            self.button_with_part(ViewPart::Main2, secretary, "2", "< 2 >"),
+            self.button_with_part(ViewPart::Holidays, secretary, "3", "< 3 >"),
+            self.button_with_part(ViewPart::Chime1, secretary, "4", "< 4 >"),
+            self.button_with_part(ViewPart::Chime2, secretary, "5", "< 5 >"),
         ]));
 
         CreateReply::new().embed(embed).components(components)
@@ -88,10 +78,20 @@ impl View {
         &mut self,
         part: ViewPart,
         secretary: &SpecialSecretary,
+        label: &'a str,
+        active_label: &'a str,
     ) -> CreateButton<'a> {
-        let disabled = self.part == part || !part.has_texts(secretary);
-        self.new_button(|s| &mut s.part, part, |u| u as u16)
-            .disabled(disabled)
+        let button = self
+            .new_button(|s| &mut s.part, part, |u| u as u16)
+            .style(ButtonStyle::Secondary)
+            .label(label);
+        if !part.has_texts(secretary) {
+            button.disabled(true)
+        } else if self.part == part {
+            button.label(active_label)
+        } else {
+            button
+        }
     }
 }
 
