@@ -260,6 +260,7 @@ impl View {
     /// Creates the embed field that display the stats.
     fn get_stats_field<'a>(&self, ship: &ShipData) -> [SimpleEmbedFieldCreate<'a>; 1] {
         let stats = &ship.stats;
+        let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
 
         #[allow(clippy::cast_sign_loss)]
@@ -267,52 +268,42 @@ impl View {
         fn f(n: f64) -> u32 {
             n.floor() as u32
         }
-        macro_rules! s {
-            ($val:expr) => {{ f($val.calc(u32::from(self.level), affinity)) }};
+
+        macro_rules! calc_all {
+            ($($i:ident)*) => {
+                $(
+                    let $i = f(stats.$i.calc(level, affinity));
+                )*
+            };
         }
 
+        calc_all!(hp rld fp trp eva aa avi acc);
+        let spd = f(stats.spd);
+        let lck = f(stats.lck);
+        let cost = stats.cost;
+
+        let armor_name = stats.armor.name();
+        let armor_pad = 8usize.saturating_sub(stats.armor.name().len());
+
         let content = if ship.hull_type.team_type() != TeamType::Submarine {
+            calc_all!(asw);
             format!(
-                "**`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                 **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                 **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                 **`ASW:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                 **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
-                s!(stats.hp),
-                stats.armor.name(),
-                s!(stats.rld),
-                s!(stats.fp),
-                s!(stats.trp),
-                s!(stats.eva),
-                s!(stats.aa),
-                s!(stats.avi),
-                s!(stats.acc),
-                s!(stats.asw),
-                f(stats.spd),
-                f(stats.lck),
-                stats.cost
+                "**`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                 **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
+                 **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
+                 **`ASW:`**`{asw: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
+                 **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`",
+                "",
             )
         } else {
+            let ShipStatBlock { oxy, amo, .. } = *stats;
             format!(
-                "**`HP:`**`{: >5}` \u{2E31} **`{: <7}`**` ` \u{2E31} **`RLD:`**`{: >4}`\n\
-                 **`FP:`**`{: >5}` \u{2E31} **`TRP:`**`{: >4}` \u{2E31} **`EVA:`**`{: >4}`\n\
-                 **`AA:`**`{: >5}` \u{2E31} **`AVI:`**`{: >4}` \u{2E31} **`ACC:`**`{: >4}`\n\
-                 **`OXY:`**`{: >4}` \u{2E31} **`AMO:`**`{: >4}` \u{2E31} **`SPD:`**`{: >4}`\n\
-                 **`LCK:`**`{: >4}` \u{2E31} **`Cost:`**`{: >3}`",
-                s!(stats.hp),
-                stats.armor.name(),
-                s!(stats.rld),
-                s!(stats.fp),
-                s!(stats.trp),
-                s!(stats.eva),
-                s!(stats.aa),
-                s!(stats.avi),
-                s!(stats.acc),
-                stats.oxy,
-                stats.amo,
-                f(stats.spd),
-                f(stats.lck),
-                stats.cost
+                "**`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                 **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
+                 **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
+                 **`OXY:`**`{oxy: >4}` \u{2E31} **`AMO:`**`{amo: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
+                 **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`",
+                "",
             )
         };
 
