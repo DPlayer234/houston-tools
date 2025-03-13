@@ -447,11 +447,7 @@ async fn pin_message_to_board(
     board: &config::StarboardEntry,
     filter: bson::Document,
 ) -> Result {
-    // unless it's nsfw-to-sfw, actually forward the message
-    // otherwise, generate an embed with a link
-    let can_forward = is_forwarding_allowed(ctx, message, guild_id, board)
-        .await
-        .unwrap_or(false);
+    let pin_kind = PinKind::determine(ctx, message, guild_id, board).await;
 
     // guard sending the pin messages per-guild so they don't interleave. this
     // shouldn't lead to much contention (and even then this code isn't hot).
@@ -479,7 +475,7 @@ async fn pin_message_to_board(
     let message_link = MessageLink::from(message).guild_id(guild_id);
 
     let pin_messages;
-    if can_forward {
+    if matches!(pin_kind, PinKind::Forward) {
         let notice = board
             .channel
             .send_message(&ctx.http, notice)
@@ -490,30 +486,56 @@ async fn pin_message_to_board(
         let mut forward = MessageReference::from(message);
         forward.kind = MessageReferenceKind::Forward;
 
+        // attempt to send a forward
         let forward = CreateMessage::new().reference_message(forward);
-        let forward = board
-            .channel
-            .send_message(&ctx.http, forward)
-            .await
+        let forward = ok_forward_failed(board.channel.send_message(&ctx.http, forward).await)
             .context("could not send pin forward")?
-            .id;
+            .map(|m| m.id);
 
-        pin_messages = vec![notice, forward];
-        log::info!(
-            "Pinned message {message_link:#} to `{}`. (Forward)",
-            board.name
-        );
+        if let Some(forward) = forward {
+            // actually forwarded!
+            pin_messages = vec![notice, forward];
+            log::info!(
+                "Pinned message {message_link:#} to `{}`. (Forward)",
+                board.name
+            );
+        } else {
+            // fallback for types of messages that cannot be forwarded
+            // that is, messages with polls or non-regular types... for now
+            // rather than manually covering those cases, handle a forward failure
+            let data = ctx.data_ref::<HContextData>();
+
+            let forward = pin_kind.link_content(message_link);
+            let forward = CreateEmbed::new()
+                .description(forward)
+                .color(data.config().embed_color)
+                .timestamp(message.timestamp);
+
+            let forward = [forward];
+            let forward = EditMessage::new().embeds(&forward);
+            board
+                .channel
+                .edit_message(&ctx.http, notice, forward)
+                .await?;
+
+            pin_messages = vec![notice];
+            log::info!(
+                "Pinned message {message_link:#} to `{}`. (Fallback)",
+                board.name
+            );
+        }
     } else {
         // nsfw-to-sfw
         let data = ctx.data_ref::<HContextData>();
 
-        let forward = format!("🔞 {message_link}");
+        let forward = pin_kind.link_content(message_link);
         let forward = CreateEmbed::new()
             .description(forward)
             .color(data.config().embed_color)
             .timestamp(message.timestamp);
 
-        let notice = notice.embed(forward);
+        let forward = [forward];
+        let notice = notice.embeds(&forward);
         let notice = board
             .channel
             .send_message(&ctx.http, notice)
@@ -544,6 +566,22 @@ async fn pin_message_to_board(
         .await
         .context("failed to set message pin_messages")?;
     Ok(())
+}
+
+fn ok_forward_failed<T>(result: Result<T, serenity::Error>) -> Result<Option<T>, serenity::Error> {
+    use serenity::http::{HttpError, JsonErrorCode as J};
+
+    if let Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = &result {
+        // technically, the errors would further contain a
+        // "FORWARD_CONTAINS_UNSUPPORTED_CONTENT" but i genuinely can't imagine which
+        // other "Invalid Form Body" errors we could be getting here so this is probably
+        // just fine. probably. discord is gonna prove me wrong in due time.
+        if matches!(why.error.code, J::InvalidFormBody) {
+            return Ok(None);
+        }
+    }
+
+    result.map(Some)
 }
 
 async fn has_reaction_by_user(
@@ -585,7 +623,54 @@ async fn has_reaction_by_user(
     Ok(reacted_users.first().is_some_and(|u| u.id == user_id))
 }
 
-async fn is_forwarding_allowed(
+#[derive(Debug, Clone, Copy)]
+enum PinKind {
+    Unknown,
+    Forward,
+    Nsfw,
+    Poll,
+}
+
+impl PinKind {
+    async fn determine(
+        ctx: &Context,
+        message: &Message,
+        guild_id: GuildId,
+        board: &config::StarboardEntry,
+    ) -> Self {
+        // unless it's nsfw-to-sfw, actually forward the message
+        // otherwise, generate an embed with a link
+        let allowed = match is_safe_forward_allowed(ctx, message, guild_id, board).await {
+            Ok(allowed) => allowed,
+            Err(why) => {
+                log::error!("Failed to check NSFW status: {why:?}");
+                return Self::Unknown;
+            },
+        };
+
+        // we don't handle the full set of possibilities here
+        // but i do want a separate emoji for polls, so we check that part
+        // nsfw should override everything though
+        if !allowed {
+            Self::Nsfw
+        } else if message.poll.is_some() {
+            Self::Poll
+        } else {
+            Self::Forward
+        }
+    }
+
+    fn link_content(self, link: MessageLink) -> String {
+        match self {
+            Self::Unknown => format!("🐓 {link}"),
+            Self::Forward => format!("🐇 {link}"),
+            Self::Nsfw => format!("🔞 {link}"),
+            Self::Poll => format!("📊 {link}"),
+        }
+    }
+}
+
+async fn is_safe_forward_allowed(
     ctx: &Context,
     message: &Message,
     guild_id: GuildId,

@@ -87,7 +87,7 @@ impl Display for TimeMention {
 /// Formattable message link.
 ///
 /// The alternate format only prints the tail of the link.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct MessageLink {
     guild_id: Option<GuildId>,
     channel_id: ChannelId,

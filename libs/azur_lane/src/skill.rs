@@ -69,7 +69,7 @@ define_data_enum! {
         PriorityTarget("Priority Target", "Prio."),
         Nearest("Nearest", "Near."),
         Farthest("Farthest", "Far."),
-        Fixed("Fixed", "Fix.")
+        Fixed("Fixed", "Fixed")
     }
 }
 
