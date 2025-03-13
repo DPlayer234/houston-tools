@@ -7,7 +7,7 @@ use crate::prelude::*;
 
 /// Execution context for [`ButtonArgsReply`](super::ButtonArgsReply).
 #[derive(Debug, Clone)]
-pub struct GenericContext<'a, I> {
+pub struct AnyContext<'a, I> {
     pub(super) reply_state: &'a AtomicBool,
     /// The serenity context.
     pub serenity: &'a Context,
@@ -18,12 +18,12 @@ pub struct GenericContext<'a, I> {
 }
 
 /// Execution context for button interactions.
-pub type ButtonContext<'a> = GenericContext<'a, ComponentInteraction>;
+pub type ButtonContext<'a> = AnyContext<'a, ComponentInteraction>;
 
 /// Execution context for modal interactions.
-pub type ModalContext<'a> = GenericContext<'a, ModalInteraction>;
+pub type ModalContext<'a> = AnyContext<'a, ModalInteraction>;
 
-impl<I: InteractionImpl> GenericContext<'_, I> {
+impl<I: AnyInteraction> AnyContext<'_, I> {
     /// Acknowledges the interaction, expecting a later [`Self::edit`].
     pub async fn acknowledge(&self) -> Result {
         let has_sent = self.reply_state.load(Ordering::Relaxed);
@@ -123,11 +123,9 @@ impl ButtonContext<'_> {
     }
 }
 
-/// Helper trait so code can be shared between different [`GenericContext`]
-/// instatiations.
-///
-/// Private detail for the [`crate::buttons`] module.
-pub trait InteractionImpl {
+/// Represents any interaction struct. Used to allow code sharing between
+/// different [`GenericContext`] instatiations.
+pub trait AnyInteraction {
     fn id(&self) -> InteractionId;
     fn token(&self) -> &str;
 
@@ -152,7 +150,7 @@ pub trait InteractionImpl {
 
 macro_rules! interaction_impl {
     ($($Interaction:ty)*) => { $(
-        impl InteractionImpl for $Interaction {
+        impl AnyInteraction for $Interaction {
             fn id(&self) -> InteractionId {
                 self.id
             }

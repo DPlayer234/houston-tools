@@ -1,7 +1,7 @@
 use azur_lane::secretary::*;
 use utils::text::write_str::*;
 
-use super::AzurParseError;
+use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 
 /// Views ship lines.
@@ -208,6 +208,8 @@ impl ViewPart {
 
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        acknowledge_unloaded(&ctx).await?;
+
         let azur = ctx.data.config().azur()?;
         let ship = azur
             .game_data()

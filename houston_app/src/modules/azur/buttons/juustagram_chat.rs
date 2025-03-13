@@ -3,7 +3,7 @@ use azur_lane::juustagram::*;
 use utils::text::truncate;
 use utils::text::write_str::*;
 
-use super::AzurParseError;
+use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::fmt::discord::escape_markdown;
 use crate::modules::azur::{GameData, LoadedConfig};
@@ -128,6 +128,8 @@ impl View {
 
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        acknowledge_unloaded(&ctx).await?;
+
         let azur = ctx.data.config().azur()?;
         let chat = azur
             .game_data()

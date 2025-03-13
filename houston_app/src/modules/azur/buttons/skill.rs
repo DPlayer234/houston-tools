@@ -3,7 +3,7 @@ use azur_lane::ship::*;
 use azur_lane::skill::*;
 use utils::text::truncate;
 
-use super::AzurParseError;
+use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::modules::azur::LoadedConfig;
 
@@ -263,6 +263,8 @@ where
 
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        acknowledge_unloaded(&ctx).await?;
+
         let azur = ctx.data.config().azur()?;
         let edit = match &self.source {
             ViewSource::Ship(source) => {

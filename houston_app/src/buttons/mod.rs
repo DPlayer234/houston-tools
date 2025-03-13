@@ -11,7 +11,7 @@ mod encoding;
 #[cfg(test)]
 mod test;
 
-pub use context::{ButtonContext, ModalContext};
+pub use context::{AnyContext, AnyInteraction, ButtonContext, ModalContext};
 
 pub mod prelude {
     pub use bson_model::ModelDocument as _;

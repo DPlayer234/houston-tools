@@ -9,6 +9,7 @@
 use azur_lane::ship::HullType;
 
 use crate::buttons::prelude::*;
+use crate::buttons::{AnyContext, AnyInteraction};
 
 pub mod augment;
 pub mod equip;
@@ -141,4 +142,15 @@ mod pagination_impl {
         ));
         rows
     }
+}
+
+async fn acknowledge_unloaded<I>(ctx: &AnyContext<'_, I>) -> Result
+where
+    I: AnyInteraction,
+{
+    let azur = ctx.data.config().azur_raw()?;
+    if azur.needs_load() {
+        ctx.acknowledge().await?;
+    }
+    Ok(())
 }

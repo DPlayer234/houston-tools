@@ -23,6 +23,8 @@ pub mod azur {
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
+        defer_unloaded(ctx, ephemeral).await?;
+
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
         let ship = find::ship(azur.game_data(), name)?;
@@ -46,6 +48,8 @@ pub mod azur {
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
+        defer_unloaded(ctx, ephemeral).await?;
+
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
         let equip = find::equip(azur.game_data(), name)?;
@@ -69,6 +73,8 @@ pub mod azur {
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
+        defer_unloaded(ctx, ephemeral).await?;
+
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
         let augment = find::augment(azur.game_data(), name)?;
@@ -92,6 +98,8 @@ pub mod azur {
         /// Whether to show the response only to yourself.
         ephemeral: Option<bool>,
     ) -> Result {
+        defer_unloaded(ctx, ephemeral).await?;
+
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
         let secretary = find::special_secretary(azur.game_data(), name)?;
@@ -116,6 +124,8 @@ pub mod azur {
         ephemeral: Option<bool>,
     ) -> Result {
         use buttons::search_juustagram_chat::*;
+
+        defer_unloaded(ctx, ephemeral).await?;
 
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
@@ -189,6 +199,7 @@ pub mod azur {
         ) -> Result {
             use buttons::search_ship::*;
 
+            defer_unloaded(ctx, ephemeral).await?;
             let data = ctx.data_ref();
 
             let filter = Filter {
@@ -223,6 +234,7 @@ pub mod azur {
         ) -> Result {
             use buttons::search_equip::*;
 
+            defer_unloaded(ctx, ephemeral).await?;
             let data = ctx.data_ref();
 
             let filter = Filter {
@@ -259,6 +271,8 @@ pub mod azur {
         ) -> Result {
             use buttons::search_augment::*;
 
+            defer_unloaded(ctx, ephemeral).await?;
+
             let data = ctx.data_ref();
             let azur = data.config().azur()?;
 
@@ -292,6 +306,7 @@ pub mod azur {
         ) -> Result {
             use buttons::search_special_secretary::*;
 
+            defer_unloaded(ctx, ephemeral).await?;
             let data = ctx.data_ref();
 
             let filter = Filter {
@@ -305,4 +320,13 @@ pub mod azur {
             Ok(())
         }
     }
+}
+
+async fn defer_unloaded(ctx: Context<'_>, ephemeral: Option<bool>) -> Result {
+    let data = ctx.data_ref();
+    let azur = data.config().azur_raw()?;
+    if azur.needs_load() {
+        ctx.defer_as(ephemeral).await?;
+    }
+    Ok(())
 }

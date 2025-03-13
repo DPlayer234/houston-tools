@@ -2,6 +2,7 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
+use super::acknowledge_unloaded;
 use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
@@ -72,11 +73,13 @@ impl View {
 
 impl ButtonArgsReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
+        acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
+        acknowledge_unloaded(&ctx).await?;
         self.page = ToPage::get_page(ctx.interaction)?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await

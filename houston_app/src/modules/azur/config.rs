@@ -46,6 +46,14 @@ impl Config {
         matches!(self.game_data.get(), Some(Some(_)))
     }
 
+    /// Whether the game data still needs to be loaded.
+    ///
+    /// This returns `true` when either the game data hasn't been loaded yet or
+    /// a previous attempt failed.
+    pub(super) fn needs_load(&self) -> bool {
+        self.game_data.get().is_none()
+    }
+
     /// Gets or loads the game data.
     ///
     /// Only one thread will load the game data, other threads will wait for it
