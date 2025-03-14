@@ -1,5 +1,5 @@
 use darling::util::{Flag, PathList};
-use syn::{Ident, Path};
+use syn::{Generics, Ident, Path};
 
 #[derive(Debug, darling::FromMeta)]
 #[darling(allow_unknown_fields)]
@@ -68,6 +68,7 @@ pub struct FieldArgs<'a> {
 pub struct ModelArgs<'a> {
     pub vis: &'a syn::Visibility,
     pub ty_name: &'a syn::Ident,
+    pub generics: &'a Generics,
     pub partial_name: syn::Ident,
     pub filter_name: syn::Ident,
     pub sort_name: syn::Ident,

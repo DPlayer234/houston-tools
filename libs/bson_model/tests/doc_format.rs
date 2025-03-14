@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::marker::PhantomData;
 use std::ops::Not;
 
 use bson::doc;
@@ -32,6 +34,40 @@ struct ForFilter {
     basic: i32,
     #[serde(serialize_with = "serialize_inverse")]
     with: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
+struct Generic<T: ModelDocument> {
+    #[serde(rename = "_id")]
+    id: ObjectId,
+    data: T,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
+struct Borrowing<'a> {
+    #[serde(rename = "_id")]
+    id: ObjectId,
+    data: Cow<'a, str>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
+#[serde(bound(deserialize = "T::Owned: for<'d> Deserialize<'d>"))]
+struct BorrowingGeneric<'a, T>
+where
+    T: ToOwned,
+    T::Owned: std::fmt::Debug,
+{
+    #[serde(rename = "_id")]
+    id: ObjectId,
+    data: Cow<'a, T>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
+struct All<'a, A, B, const N: usize> {
+    cow: Cow<'a, str>,
+    gen_: A,
+    #[serde(skip)]
+    _ignore: PhantomData<&'a (A, B, [(); N])>,
 }
 
 #[test]
@@ -194,4 +230,23 @@ fn serialize_filter() {
     sub!(Lte, "$lte", 64i32, (!64i32));
     sub!(in_, "$in", [64i32, 42i32], [!64i32, !42i32]);
     sub!(not_in, "$nin", [64i32, 42i32], [!64i32, !42i32]);
+}
+
+#[test]
+fn supports_generic_types() {
+    type X<'a> = All<'a, i64, (), 0>;
+
+    let _update = X::update()
+        .set(|u| u.cow("hello".into()))
+        .set_on_insert(|u| u.gen_(0))
+        .into_document()
+        .expect("must support update");
+
+    let _filter = X::filter()
+        .cow(Cow::from("hello"))
+        .gen_(Filter::Lt(4))
+        .into_document()
+        .expect("must support filter");
+
+    let _sort = X::sort().cow(Sort::Asc).gen_(Sort::Desc).into_document();
 }

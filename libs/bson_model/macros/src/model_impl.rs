@@ -61,6 +61,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let args = ModelArgs {
         vis: &input.vis,
         ty_name: &input.ident,
+        generics: &input.generics,
         partial_name: format_ident!("{}Partial", input.ident),
         filter_name: format_ident!("{}Filter", input.ident),
         sort_name: format_ident!("{}Sort", input.ident),
@@ -100,6 +101,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
 fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         ty_name,
+        generics,
         partial_name,
         filter_name,
         sort_name,
@@ -159,27 +161,29 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
             }
         });
 
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
+
     quote::quote! {
         #[automatically_derived]
-        impl #crate_::ModelDocument for #ty_name {
-            type Partial = #partial_name;
-            type Filter = #filter_name;
-            type Sort = #sort_name;
+        impl #impl_gen #crate_::ModelDocument for #ty_name #ty_gen #where_clause {
+            type Partial = #partial_name #ty_gen;
+            type Filter = #filter_name #ty_gen;
+            type Sort = #sort_name #ty_gen;
             type Fields = #fields_name;
 
-            fn partial() -> #partial_name {
+            fn partial() -> Self::Partial {
                 #partial_name::new()
             }
 
-            fn filter() -> #filter_name {
+            fn filter() -> Self::Filter {
                 #filter_name::new()
             }
 
-            fn sort() -> #sort_name {
+            fn sort() -> Self::Sort {
                 #sort_name::new()
             }
 
-            fn fields() -> #fields_name {
+            fn fields() -> Self::Fields {
                 #fields_name (())
             }
         }
@@ -198,6 +202,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
+        generics,
         partial_name,
         internals_name,
         fields,
@@ -238,19 +243,40 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let into_document = emit_into_document(crate_, partial_name);
+    let field_defaults = fields.iter().map(|field| {
+        let FieldArgs { name, .. } = field;
+        quote::quote! {
+            #name: None,
+        }
+    });
+
+    let into_document = emit_into_document(crate_, partial_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
+
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
-        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(,#derive_partial)*)]
+        #[derive(#crate_::private::serde::Serialize #(,#derive_partial)*)]
         #[serde(crate = #serde_crate)]
         #[non_exhaustive]
-        #vis struct #partial_name {
+        #vis struct #partial_name #impl_gen #where_clause {
             #( #field_decls )*
+            #[serde(skip)]
+            __main_marker: ::std::marker::PhantomData<#ty_name #ty_gen>,
         }
 
-        impl #partial_name {
+        #[automatically_derived]
+        impl #impl_gen ::std::default::Default for #partial_name #ty_gen #where_clause {
+            fn default() -> Self {
+                Self {
+                    #( #field_defaults )*
+                    __main_marker: ::std::marker::PhantomData,
+                }
+            }
+        }
+
+        impl #impl_gen #partial_name #ty_gen #where_clause {
             /// Create a new value.
             #[must_use]
             pub fn new() -> Self {
@@ -268,6 +294,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
+        generics,
         internals_name,
         filter_name,
         fields,
@@ -308,19 +335,40 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let into_document = emit_into_document(crate_, filter_name);
+    let field_defaults = fields.iter().map(|field| {
+        let FieldArgs { name, .. } = field;
+        quote::quote! {
+            #name: None,
+        }
+    });
+
+    let into_document = emit_into_document(crate_, filter_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
+
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
-        #[derive(::std::default::Default, #crate_::private::serde::Serialize #(, #derive_filter)*)]
+        #[derive(#crate_::private::serde::Serialize #(, #derive_filter)*)]
         #[serde(crate = #serde_crate)]
         #[non_exhaustive]
-        #vis struct #filter_name {
+        #vis struct #filter_name #impl_gen #where_clause {
             #( #field_decls )*
+            #[serde(skip)]
+            __main_marker: ::std::marker::PhantomData<#ty_name #ty_gen>,
         }
 
-        impl #filter_name {
+        #[automatically_derived]
+        impl #impl_gen ::std::default::Default for #filter_name #ty_gen #where_clause {
+            fn default() -> Self {
+                Self {
+                    #( #field_defaults )*
+                    __main_marker: ::std::marker::PhantomData,
+                }
+            }
+        }
+
+        impl #impl_gen #filter_name #ty_gen #where_clause {
             /// Create a new value.
             #[must_use]
             pub fn new() -> Self {
@@ -338,6 +386,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
         ty_name,
+        generics,
         sort_name,
         fields,
         crate_,
@@ -360,7 +409,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let serde_crate = quote::quote!(#crate_::private::serde).to_string();
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[doc = concat!("A sort builder for [`", stringify!(#ty_name), "`].")]
@@ -368,11 +417,12 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         /// This represents a thin wrapper around a [`Document`] to retain the used sort priority.
         ///
         #[doc = concat!("[`Document`]: ", stringify!(#crate_), "::private::bson::Document")]
-        #[derive(::std::default::Default, ::std::fmt::Debug, ::std::clone::Clone, ::std::cmp::PartialEq, #crate_::private::serde::Serialize)]
-        #[serde(crate = #serde_crate)]
-        #vis struct #sort_name(#crate_::private::bson::Document);
+        #vis struct #sort_name #impl_gen (
+            #crate_::private::bson::Document,
+            ::std::marker::PhantomData<#ty_name #ty_gen>,
+        ) #where_clause;
 
-        impl #sort_name {
+        impl #impl_gen #sort_name #ty_gen #where_clause {
             /// Create a new value.
             #[must_use]
             pub fn new() -> Self {
@@ -380,9 +430,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
             }
 
             #( #field_methods )*
-        }
 
-        impl #sort_name {
             /// Gets the serialized BSON document.
             pub fn into_document(self) -> #crate_::private::bson::Document {
                 self.0
@@ -390,8 +438,43 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         }
 
         #[automatically_derived]
-        impl From<#sort_name> for #crate_::private::bson::Document {
-            fn from(value: #sort_name) -> Self {
+        impl #impl_gen ::std::default::Default for #sort_name #ty_gen #where_clause {
+            fn default() -> Self {
+                Self(#crate_::private::bson::Document::new(), ::std::marker::PhantomData)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_gen ::std::fmt::Debug for #sort_name #ty_gen #where_clause {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                f.debug_tuple(stringify!(#sort_name)).field(&self.0).finish()
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_gen ::std::clone::Clone for #sort_name #ty_gen #where_clause {
+            fn clone(&self) -> Self {
+                Self(::std::clone::Clone::clone(&self.0), ::std::marker::PhantomData)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_gen ::std::cmp::PartialEq for #sort_name #ty_gen #where_clause {
+            fn eq(&self, other: &Self) -> bool {
+                ::std::cmp::PartialEq::eq(&self.0, &other.0)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_gen #crate_::private::serde::Serialize for #sort_name #ty_gen #where_clause {
+            fn serialize<S: #crate_::private::serde::Serializer>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error> {
+                #crate_::private::serde::Serialize::serialize(&self.0, serializer)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_gen From<#sort_name #ty_gen> for #crate_::private::bson::Document #where_clause {
+            fn from(value: #sort_name #ty_gen) -> Self {
                 value.into_document()
             }
         }
@@ -432,9 +515,26 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
     }
 }
 
-fn emit_into_document(crate_: &syn::Path, ty_name: impl ToTokens) -> TokenStream {
+fn emit_into_document(
+    crate_: &syn::Path,
+    ty_name: impl ToTokens,
+    generics: &syn::Generics,
+) -> TokenStream {
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
+
+    let mut where_clause = where_clause
+        .cloned()
+        .unwrap_or_else(|| syn::parse_quote!(where));
+
+    for t in generics.type_params() {
+        let ident = &t.ident;
+        where_clause
+            .predicates
+            .push(syn::parse_quote!(#ident: #crate_::private::serde::Serialize));
+    }
+
     quote::quote! {
-        impl #ty_name {
+        impl #impl_gen #ty_name #ty_gen #where_clause {
             /// Tries to serialize this value into a BSON document.
             pub fn into_document(self) -> #crate_::private::bson::ser::Result<#crate_::private::bson::Document> {
                 #crate_::private::bson::to_document(&self)
@@ -442,10 +542,10 @@ fn emit_into_document(crate_: &syn::Path, ty_name: impl ToTokens) -> TokenStream
         }
 
         #[automatically_derived]
-        impl TryFrom<#ty_name> for #crate_::private::bson::Document {
+        impl #impl_gen TryFrom<#ty_name #ty_gen> for #crate_::private::bson::Document #where_clause {
             type Error = #crate_::private::bson::ser::Error;
 
-            fn try_from(value: #ty_name) -> Result<Self, Self::Error> {
+            fn try_from(value: #ty_name #ty_gen) -> Result<Self, Self::Error> {
                 value.into_document()
             }
         }
