@@ -17,6 +17,14 @@ where
     (!*value).serialize(serializer)
 }
 
+fn serialize_normal<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    T: Serialize,
+    S: Serializer,
+{
+    value.serialize(serializer)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 struct Example {
     #[serde(rename = "_id")]
@@ -63,8 +71,12 @@ where
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
-struct All<'a, A, B, const N: usize> {
+struct All<'a, A, B, const N: usize>
+where
+    A: Serialize,
+{
     cow: Cow<'a, str>,
+    #[serde(serialize_with = "serialize_normal")]
     gen_: A,
     #[serde(skip)]
     _ignore: PhantomData<&'a (A, B, [(); N])>,

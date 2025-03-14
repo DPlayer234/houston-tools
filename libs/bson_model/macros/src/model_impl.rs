@@ -112,6 +112,9 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
         ..
     } = args;
 
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
+    let turbo_fish = ty_gen.as_turbofish();
+
     let field_methods = fields.iter()
         .filter(|field| field.args.has_with())
         .map(|field| {
@@ -129,7 +132,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                 });
 
             quote::quote! {
-                pub(super) fn #update_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                fn #update_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                 where
                     S: #crate_::private::serde::ser::Serializer,
                 {
@@ -139,12 +142,13 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                     }
                 }
 
-                pub(super) fn #filter_with_name<S>(field: &::std::option::Option<#crate_::Filter<#ty>>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                fn #filter_with_name<S>(field: &::std::option::Option<#crate_::Filter<#ty>>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                 where
                     S: #crate_::private::serde::ser::Serializer,
                 {
-                    struct With;
-                    impl #crate_::private::SerdeWith<#ty> for With {
+                    struct With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+
+                    impl #impl_gen #crate_::private::SerdeWith<#ty> for With #ty_gen #where_clause {
                         fn serialize<S>(&self, value: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                         where
                             S: #crate_::private::serde::Serializer,
@@ -153,15 +157,14 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                         }
                     }
 
+                    let with = With #turbo_fish (::std::marker::PhantomData);
                     match field {
-                        ::std::option::Option::Some(value) => #crate_::private::serialize_filter_with(value, serializer, With),
+                        ::std::option::Option::Some(value) => #crate_::private::serialize_filter_with(value, serializer, with),
                         ::std::option::Option::None => serializer.serialize_none(),
                     }
                 }
             }
         });
-
-    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[automatically_derived]
@@ -190,9 +193,11 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
 
         /// Not intended for use. Implementation detail of the `bson_model` macro expansion.
         #[doc(hidden)]
-        #[allow(non_snake_case, clippy::ref_option)]
-        mod #internals_name {
-            use super::*;
+        #[allow(non_camel_case_types, dead_code)]
+        struct #internals_name #impl_gen (::std::convert::Infallible, ::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+
+        #[allow(clippy::ref_option)]
+        impl #impl_gen #internals_name #ty_gen #where_clause {
             #( #field_methods )*
         }
     }
@@ -211,10 +216,13 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         ..
     } = args;
 
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
+    let turbo_fish = ty_gen.as_turbofish().into_token_stream().to_string();
+
     let field_decls = fields.iter().map(|field| {
         let FieldArgs { name, ty, args } = field;
         let with = if args.has_with() {
-            Some(format!("{internals_name}::partial_{name}"))
+            Some(format!("{internals_name}{turbo_fish}::partial_{name}"))
         } else {
             None
         }
@@ -252,8 +260,6 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
 
     let into_document = emit_into_document(crate_, partial_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
-
-    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
@@ -303,10 +309,13 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         ..
     } = args;
 
+    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
+    let turbo_fish = ty_gen.as_turbofish().into_token_stream().to_string();
+
     let field_decls = fields.iter().map(|field| {
         let FieldArgs { name, ty, args } = field;
         let with = if args.has_with() {
-            Some(format!("{internals_name}::filter_{name}"))
+            Some(format!("{internals_name}{turbo_fish}::filter_{name}"))
         } else {
             None
         }
@@ -344,8 +353,6 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
 
     let into_document = emit_into_document(crate_, filter_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
-
-    let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     quote::quote! {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
