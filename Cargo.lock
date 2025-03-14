@@ -1113,7 +1113,6 @@ dependencies = [
  "arc-swap",
  "arrayvec",
  "azur_lane",
- "backtrace",
  "base64 0.22.1",
  "bitflags 2.9.0",
  "bson",

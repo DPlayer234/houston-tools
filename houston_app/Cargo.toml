@@ -16,7 +16,6 @@ workspace = true
 anyhow = "1.0.95"
 arc-swap = "1.7.1"
 arrayvec = "0.7.6"
-backtrace = "0.3.74"
 base64 = "0.22.1"
 bitflags = "2.8.0"
 bson = { version = "2.13.0", features = ["chrono-0_4"] }

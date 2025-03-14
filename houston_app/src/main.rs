@@ -92,15 +92,22 @@ async fn main() -> anyhow::Result<()> {
     /// at that stage error reporting is already screwed so this doesn't make it
     /// any worse.
     fn on_panic(info: &panic::PanicHookInfo<'_>) {
+        use std::backtrace::Backtrace;
         use std::io::{Write as _, stdout};
 
-        let backtrace = backtrace::Backtrace::new();
+        // always include the backtrace here, even when not enabled
+        // we do this because:
+        // - the user already opted into a custom panic handler
+        // - not having backtrace on panic is garbage for debugging
+        let backtrace = Backtrace::force_capture();
         let thread = std::thread::current();
         let name = thread.name().unwrap_or("<unnamed>");
 
         // just in case the loggers fail or are empty
+        // we could capture and use the default panic handler,
+        // but then we might lose out on the backtrace
         _ = writeln!(stdout(), "thread '{name}' {info}");
-        log::error!("thread '{name}' {info}\n{backtrace:?}");
+        log::error!("thread '{name}' {info}\n{backtrace}");
         log::logger().flush();
     }
 
