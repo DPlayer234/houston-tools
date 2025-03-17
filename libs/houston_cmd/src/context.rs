@@ -22,7 +22,7 @@ pub struct Context<'a> {
 /// Crate internal state for the context.
 ///
 /// Present to avoid bloating the inline-size of the context struct. Plus, the
-/// `reply_state` field need to be held by reference anyways, so the only extra
+/// `reply_state` field needs to be held by reference anyways, so the only extra
 /// indirection caused by this is for `options`.
 #[derive(Debug)]
 pub struct ContextInner<'a> {

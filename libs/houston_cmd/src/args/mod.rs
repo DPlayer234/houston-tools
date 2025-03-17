@@ -85,7 +85,8 @@ where
 /// Enables a type to be loaded as a
 /// [`#[context_command(user)]`](crate::context_command) parameter.
 ///
-/// By default, this is implemented for [`&User`](User).
+/// By default, this is implemented for [`&User`](User) and `(&User,
+/// Option<&PartialMember>)`.
 pub trait UserContextArg<'ctx>: Sized {
     fn extract(
         ctx: &Context<'ctx>,

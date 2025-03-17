@@ -124,7 +124,7 @@ impl ButtonContext<'_> {
 }
 
 /// Represents any interaction struct. Used to allow code sharing between
-/// different [`GenericContext`] instatiations.
+/// different [`AnyContext`] instatiations.
 pub trait AnyInteraction {
     fn id(&self) -> InteractionId;
     fn token(&self) -> &str;
