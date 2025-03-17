@@ -188,6 +188,7 @@ impl ModelField {
 
     /// Gets the name of this field.
     pub const fn name(self) -> &'static str {
+        // essentially `self.expr.get_unchecked(1..)` but const
         let [_, bytes @ ..] = self.expr.as_bytes() else {
             // SAFETY: string always begins with '$', so it can't be empty
             unsafe { hint::unreachable_unchecked() };

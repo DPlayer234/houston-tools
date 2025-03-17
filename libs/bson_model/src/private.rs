@@ -1,5 +1,8 @@
 //! Internal details for use by the proc-macro expansion.
 
+use std::convert::Infallible;
+use std::marker::PhantomData;
+
 use serde::ser::SerializeSeq as _;
 use serde::{Serialize, Serializer};
 pub use {bson, serde};
@@ -99,3 +102,6 @@ where
         },
     }
 }
+
+/// Marker type, used to define an empty type with generic arguments.
+pub struct Never<T: ?Sized>(Infallible, PhantomData<T>);

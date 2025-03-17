@@ -77,7 +77,7 @@ where
 {
     cow: Cow<'a, str>,
     #[serde(serialize_with = "serialize_normal")]
-    gen_: A,
+    r#gen: A,
     #[serde(skip)]
     _ignore: PhantomData<&'a (A, B, [(); N])>,
 }
@@ -250,15 +250,15 @@ fn supports_generic_types() {
 
     let _update = X::update()
         .set(|u| u.cow("hello".into()))
-        .set_on_insert(|u| u.gen_(0))
+        .set_on_insert(|u| u.r#gen(0))
         .into_document()
         .expect("must support update");
 
     let _filter = X::filter()
         .cow(Cow::from("hello"))
-        .gen_(Filter::Lt(4))
+        .r#gen(Filter::Lt(4))
         .into_document()
         .expect("must support filter");
 
-    let _sort = X::sort().cow(Sort::Asc).gen_(Sort::Desc).into_document();
+    let _sort = X::sort().cow(Sort::Asc).r#gen(Sort::Desc).into_document();
 }

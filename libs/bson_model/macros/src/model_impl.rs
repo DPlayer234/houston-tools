@@ -66,7 +66,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         filter_name: format_ident!("{}Filter", input.ident),
         sort_name: format_ident!("{}Sort", input.ident),
         fields_name: format_ident!("{}Fields", input.ident),
-        internals_name: format_ident!("__{}_model_document_internals", input.ident),
+        internals_name: format_ident!("__{}ModelDocumentInternals", input.ident),
         fields: parsed_fields,
         crate_: model_meta
             .crate_
@@ -193,8 +193,8 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
 
         /// Not intended for use. Implementation detail of the `bson_model` macro expansion.
         #[doc(hidden)]
-        #[allow(non_camel_case_types, dead_code)]
-        struct #internals_name #impl_gen (::std::convert::Infallible, ::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+        #[allow(dead_code)]
+        struct #internals_name #impl_gen (#crate_::private::Never<#ty_name #ty_gen>) #where_clause;
 
         #[allow(clippy::ref_option)]
         impl #impl_gen #internals_name #ty_gen #where_clause {
@@ -222,7 +222,8 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let field_decls = fields.iter().map(|field| {
         let FieldArgs { name, ty, args } = field;
         let with = if args.has_with() {
-            Some(format!("{internals_name}{turbo_fish}::partial_{name}"))
+            let ident = format_ident!("partial_{}", name);
+            Some(format!("{internals_name}{turbo_fish}::{ident}"))
         } else {
             None
         }
@@ -265,7 +266,6 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
         #[derive(#crate_::private::serde::Serialize #(,#derive_partial)*)]
         #[serde(crate = #serde_crate)]
-        #[non_exhaustive]
         #vis struct #partial_name #impl_gen #where_clause {
             #( #field_decls )*
             #[serde(skip)]
@@ -315,7 +315,8 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let field_decls = fields.iter().map(|field| {
         let FieldArgs { name, ty, args } = field;
         let with = if args.has_with() {
-            Some(format!("{internals_name}{turbo_fish}::filter_{name}"))
+            let ident = format_ident!("filter_{}", name);
+            Some(format!("{internals_name}{turbo_fish}::{ident}"))
         } else {
             None
         }
@@ -358,7 +359,6 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
         #[derive(#crate_::private::serde::Serialize #(, #derive_filter)*)]
         #[serde(crate = #serde_crate)]
-        #[non_exhaustive]
         #vis struct #filter_name #impl_gen #where_clause {
             #( #field_decls )*
             #[serde(skip)]

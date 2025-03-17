@@ -83,7 +83,8 @@ impl From<&GuildChannel> for Ccot {
 impl From<&GuildChannel> for CachedChannel {
     fn from(value: &GuildChannel) -> Self {
         if is_thread(value.kind) {
-            log::warn!("Channel {} is actually a thread.", value.id);
+            let GuildChannel { id, name, .. } = value;
+            log::warn!("Channel `{name}` ({id}) is actually a thread.");
         }
 
         Self {
@@ -98,13 +99,15 @@ impl From<&GuildChannel> for CachedChannel {
 impl From<&GuildChannel> for CachedThread {
     fn from(value: &GuildChannel) -> Self {
         if !is_thread(value.kind) {
-            log::warn!("Thread {} is actually a channel.", value.id);
+            let GuildChannel { id, name, .. } = value;
+            log::warn!("Thread `{name}` ({id}) is actually a channel.");
         }
 
         let parent_id = match value.parent_id {
             Some(parent_id) => parent_id,
             None => {
-                log::warn!("Thread {} has no parent.", value.id);
+                let GuildChannel { id, name, .. } = value;
+                log::warn!("Thread `{name}` ({id}) has no parent.");
                 ChannelId::default()
             },
         };

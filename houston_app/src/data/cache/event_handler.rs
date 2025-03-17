@@ -122,8 +122,8 @@ impl Cache {
 
     fn update_thread_update(&self, value: &ThreadUpdateEvent) {
         let Some(metadata) = &value.thread.thread_metadata else {
-            let id = value.thread.id;
-            log::warn!("Thread Update for {id} didn't have metadata.");
+            let GuildChannel { id, name, .. } = &value.thread;
+            log::warn!("Thread Update for `{name}` ({id}) didn't have metadata.");
             return;
         };
 

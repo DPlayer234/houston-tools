@@ -180,10 +180,12 @@ impl Cache {
 
     /// Fetches a channel/thread via HTTP and caches it.
     async fn fetch_channel(&self, http: &Http, channel_id: ChannelId) -> serenity::Result<Ccot> {
-        log::warn!("Cache miss for channel: {channel_id}");
-
         let channel = http.get_channel(channel_id).await?;
         let channel = channel.guild().ok_or(ModelError::InvalidChannelType)?;
+
+        let GuildChannel { id, name, .. } = &channel;
+        log::warn!("Cache miss for channel `{name}` ({id}).");
+
         let channel = Ccot::from(&channel);
         self.update_channel(channel.clone());
         Ok(channel)
