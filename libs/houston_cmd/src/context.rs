@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::atomic::AtomicUsize;
 
 use serenity::gateway::client::Context as SerenityContext;
@@ -9,7 +10,7 @@ use crate::args::ResolvedOption;
 use crate::reply::{CreateReply, UNSENT};
 
 /// The context for a command invocation.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Context<'a> {
     /// The serenity context that triggered this command.
     pub serenity: &'a SerenityContext,
@@ -17,6 +18,15 @@ pub struct Context<'a> {
     pub interaction: &'a CommandInteraction,
     /// Additional internal state.
     pub(crate) inner: &'a ContextInner<'a>,
+}
+
+impl fmt::Debug for Context<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Context")
+            .field("interaction", self.interaction)
+            .field("inner", self.inner)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Crate internal state for the context.

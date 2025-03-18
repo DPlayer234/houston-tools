@@ -15,12 +15,14 @@ pub enum Effect {
     Birthday,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Args<'a> {
     pub ctx: &'a Context,
     pub guild_id: GuildId,
     pub user_id: UserId,
 }
+
+utils::impl_debug!(struct Args<'_>: { guild_id, user_id, .. });
 
 impl<'a> Args<'a> {
     pub fn new(ctx: &'a Context, guild_id: GuildId, user_id: UserId) -> Self {

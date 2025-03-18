@@ -6,7 +6,7 @@ use serenity::prelude::*;
 use crate::prelude::*;
 
 /// Execution context for [`ButtonArgsReply`](super::ButtonArgsReply).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AnyContext<'a, I> {
     pub(super) reply_state: &'a AtomicBool,
     /// The serenity context.
@@ -16,6 +16,8 @@ pub struct AnyContext<'a, I> {
     /// The bot data.
     pub data: &'a HBotData,
 }
+
+utils::impl_debug!(for[I: AnyInteraction + std::fmt::Debug] struct AnyContext<'_, I>: { reply_state, interaction, data, .. });
 
 /// Execution context for button interactions.
 pub type ButtonContext<'a> = AnyContext<'a, ComponentInteraction>;
