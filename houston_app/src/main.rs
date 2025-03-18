@@ -164,23 +164,18 @@ async fn main() -> anyhow::Result<()> {
     }
 
     fn build_config() -> Result<config::HConfig> {
-        use config_rs::{Config, Environment, File, FileFormat};
+        use config::setup::{Builder, Env, File, TomlText};
 
         let profile = profile()?;
         let profile_config = format!("houston_app.{profile}.toml");
         let default_config = include_str!("../assets/default_config.toml");
 
-        let config = Config::builder()
-            .add_source(File::from_str(default_config, FileFormat::Toml))
-            .add_source(File::new("houston_app.toml", FileFormat::Toml).required(false))
-            .add_source(File::new(&profile_config, FileFormat::Toml).required(false))
-            .add_source(Environment::default().separator("__"))
+        Builder::new()
+            .add_layer(TomlText::new(default_config))
+            .add_layer(File::new("houston_app.toml").required(false))
+            .add_layer(File::new(&profile_config).required(false))
+            .add_layer(Env::new())
             .build()
-            .context("cannot build config")?
-            .try_deserialize()
-            .context("cannot deserialize config")?;
-
-        Ok(config)
     }
 
     fn init_logging(config: log4rs::config::RawConfig) -> anyhow::Result<()> {

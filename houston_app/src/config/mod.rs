@@ -4,6 +4,7 @@ use serenity::model::Color;
 use serenity::secrets::Token;
 
 pub mod emoji;
+pub mod setup;
 
 pub use emoji::HEmoji;
 
