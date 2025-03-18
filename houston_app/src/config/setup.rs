@@ -189,10 +189,11 @@ fn nested_value(path: &[&str], value: Value) -> Value {
     let mut table = Table::new();
     let mut cur = &mut table;
     for &segment in path {
-        let next = cur
+        cur = cur
             .entry(segment.to_owned())
-            .or_insert(Value::Table(Table::new()));
-        cur = next.as_table_mut().unwrap();
+            .or_insert(Value::Table(Table::new()))
+            .as_table_mut()
+            .expect("just inserted as a table");
     }
 
     cur.insert((*last).to_owned(), value);

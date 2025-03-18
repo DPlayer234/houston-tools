@@ -16,7 +16,8 @@ Configuration is supported either via environment variables or a file named `hou
 
 ```toml
 [discord]
-# this is the same as the DISCORD__TOKEN env variable. only one must be specified.
+# this is the same as the `DISCORD__TOKEN` environment variable.
+# if both are specified, the environment variable takes priority.
 token = "..."
 
 [bot]
@@ -25,11 +26,14 @@ token = "..."
 embed_color = 0xDDA0DD
 ```
 
-Going forward, only the TOML config will be explained.
+Going forward, only the TOML config will be explained because the configuration via environment variables is very limited.
 
 To configure logging, see the Logging section further down.
 
-Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`, so it will load `houston_app.release.toml`.
+Additionally, based on the environment variable `HOUSTON_PROFILE`, it will also try to load `houston_app.$(HOUSTON_PROFILE).toml`. Its properties will take priority over the main config file. If the environment variable isn't set, it is considered to be `release`, so it will try `houston_app.release.toml`.
+
+> [!IMPORTANT]
+> While tables are merged across the loaded configuration files, when an array is encountered, the array in the profile's config will override the same array in the base config entirely. For example, if you specify starboards in `houston_app.toml` **and** `houston_toml.release.toml`, only the starboards in `houston_toml.release.toml` will be enabled.
 
 ## Commands
 
