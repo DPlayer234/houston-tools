@@ -15,7 +15,6 @@ pub struct Wallet {
     pub guild: GuildId,
     #[serde(with = "id_as_i64")]
     pub user: UserId,
-    pub birthday: Option<DayOfYear>,
     #[serde(default)]
     pub cash: i64,
     #[serde(default)]

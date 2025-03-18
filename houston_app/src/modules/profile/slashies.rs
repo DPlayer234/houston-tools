@@ -77,6 +77,12 @@ async fn perks_unique_role(ctx: Context<'_>, member: SlashMember<'_>) -> Result<
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
+    let perks = data.config().perks()?;
+
+    if perks.role_edit.is_none() {
+        return Ok(None);
+    }
+
     let db = data.database()?;
     let guild_id = ctx.require_guild_id()?;
 
@@ -98,6 +104,12 @@ async fn perks_birthday(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
     use crate::modules::perks::model;
 
     let data = ctx.data_ref();
+    let perks = data.config().perks()?;
+
+    if perks.birthday.is_none() {
+        return Ok(None);
+    }
+
     let db = data.database()?;
 
     let filter = model::Birthday::filter()
@@ -116,13 +128,14 @@ async fn perks_collectible_info(
     use crate::modules::perks::{Item, model};
 
     let data = ctx.data_ref();
-    let db = data.database()?;
     let perks = data.config().perks()?;
-    let guild_id = ctx.require_guild_id()?;
 
     let Some(collectible) = perks.collectible.as_ref() else {
         return Ok(None);
     };
+
+    let db = data.database()?;
+    let guild_id = ctx.require_guild_id()?;
 
     let filter = model::Wallet::filter()
         .guild(guild_id)

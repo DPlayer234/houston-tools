@@ -66,14 +66,24 @@ impl super::Module for Module {
         Ok(())
     }
 
-    async fn db_init(self, _data: Arc<HBotData>, db: mongodb::Database) -> Result {
+    async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
         use model::*;
 
         use crate::helper::bson::update_indices;
+
+        let perks = data.config().perks().unwrap();
+
         update_indices(Wallet::collection(&db), Wallet::indices()).await?;
         update_indices(ActivePerk::collection(&db), ActivePerk::indices()).await?;
-        update_indices(UniqueRole::collection(&db), UniqueRole::indices()).await?;
-        update_indices(Birthday::collection(&db), Birthday::indices()).await?;
+
+        if perks.role_edit.is_some() {
+            update_indices(UniqueRole::collection(&db), UniqueRole::indices()).await?;
+        }
+
+        if perks.birthday.is_some() {
+            update_indices(Birthday::collection(&db), Birthday::indices()).await?;
+        }
+
         Ok(())
     }
 }
@@ -114,21 +124,25 @@ async fn check_perks_core(ctx: Context) -> Result {
 
     *last_check = now;
 
-    // handle updates to the effects in parallel
-    tokio::spawn({
-        let ctx = ctx.clone();
-        async move {
-            for kind in effects::Effect::all() {
-                if let Err(why) = kind.update(&ctx, now).await {
-                    log::error!("Failed update for perk effect {kind:?}: {why:?}");
-                }
-            }
-        }
-    });
+    // handle updates and expiry in parallel.
+    // don't use `try_join!` here since we want to run others to
+    // completion even if one of them ends up failing for any reason.
+    let (result, ()) = tokio::join!(check_expiry(&ctx, now), update_perks(&ctx, now));
+    result
+}
 
+async fn update_perks(ctx: &Context, now: DateTime<Utc>) {
+    for kind in effects::Effect::all() {
+        if let Err(why) = kind.update(ctx, now).await {
+            log::error!("Failed update for perk effect {kind:?}: {why:?}");
+        }
+    }
+}
+
+async fn check_expiry(ctx: &Context, now: DateTime<Utc>) -> Result {
+    let data = ctx.data_ref::<HContextData>();
     let db = data.database()?;
 
-    // search for expiring perks
     let filter = model::ActivePerk::filter()
         .until(Filter::Lt(now))
         .into_document()?;
@@ -148,7 +162,7 @@ async fn check_perks_core(ctx: Context) -> Result {
             perk.guild
         );
 
-        let args = effects::Args::new(&ctx, perk.guild, perk.user);
+        let args = effects::Args::new(ctx, perk.guild, perk.user);
         perk.effect.disable(args).await?;
 
         model::ActivePerk::collection(db)
