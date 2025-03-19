@@ -58,11 +58,10 @@ impl super::Module for Module {
     }
 
     async fn db_init(self, _data: Arc<HBotData>, db: mongodb::Database) -> Result {
-        use model::*;
-
         use crate::helper::bson::update_indices;
-        update_indices(Message::collection(&db), Message::indices()).await?;
-        update_indices(Score::collection(&db), Score::indices()).await?;
+
+        update_indices::<model::Message>(&db).await?;
+        update_indices::<model::Score>(&db).await?;
         Ok(())
     }
 }

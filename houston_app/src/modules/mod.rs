@@ -31,11 +31,11 @@ mod model_prelude {
     pub use bson_model::Sort::Asc;
     pub use chrono::{DateTime, Utc};
     pub use mongodb::options::{IndexOptions, ReturnDocument};
-    pub use mongodb::{Collection, Database, IndexModel};
+    pub use mongodb::{Collection, IndexModel};
     pub use serde::{Deserialize, Serialize};
     pub use serenity::model::id::*;
 
-    pub use crate::helper::bson::id_as_i64;
+    pub use crate::helper::bson::{ModelCollection, id_as_i64};
     pub use crate::prelude::*;
 }
 

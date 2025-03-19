@@ -67,21 +67,19 @@ impl super::Module for Module {
     }
 
     async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
-        use model::*;
-
         use crate::helper::bson::update_indices;
 
         let perks = data.config().perks().unwrap();
 
-        update_indices(Wallet::collection(&db), Wallet::indices()).await?;
-        update_indices(ActivePerk::collection(&db), ActivePerk::indices()).await?;
+        update_indices::<model::Wallet>(&db).await?;
+        update_indices::<model::ActivePerk>(&db).await?;
 
         if perks.role_edit.is_some() {
-            update_indices(UniqueRole::collection(&db), UniqueRole::indices()).await?;
+            update_indices::<model::UniqueRole>(&db).await?;
         }
 
         if perks.birthday.is_some() {
-            update_indices(Birthday::collection(&db), Birthday::indices()).await?;
+            update_indices::<model::Birthday>(&db).await?;
         }
 
         Ok(())

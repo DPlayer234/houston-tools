@@ -1,17 +1,42 @@
 use anyhow::Context as _;
 use bson::Document;
 use mongodb::options::IndexOptions;
-use mongodb::{Collection, IndexModel};
+use mongodb::{Collection, Database, IndexModel};
 
-/// Creates the specified indices.
+/// Declares a type as being a collection type in MongoDB.
+pub trait ModelCollection {
+    /// The name of the MongoDB collection.
+    const COLLECTION_NAME: &str;
+
+    /// Gets the collection for this type on the given database.
+    fn collection(db: &Database) -> Collection<Self>
+    where
+        Self: Sized + Send + Sync,
+    {
+        db.collection(Self::COLLECTION_NAME)
+    }
+
+    /// Gets the collection for this type on the given database without
+    /// ascribing the type, instead using a raw [`Document`] collection.
+    fn collection_raw(db: &Database) -> Collection<Document> {
+        db.collection(Self::COLLECTION_NAME)
+    }
+
+    /// Gets the indices to create for this collection. This must always return
+    /// the same values.
+    ///
+    /// To apply the indices, call [`update_indices`].
+    fn indices() -> Vec<IndexModel> {
+        Vec::new()
+    }
+}
+
+/// Creates the indices for model `M`.
 ///
 /// If there is a spec mismatch, drop and recreates the affected indices.
-pub async fn update_indices<T>(
-    collection: Collection<T>,
-    indices: Vec<IndexModel>,
-) -> anyhow::Result<()>
+pub async fn update_indices<M>(db: &Database) -> anyhow::Result<()>
 where
-    T: Send + Sync,
+    M: ModelCollection,
 {
     use mongodb::error::{CommandError, Error, ErrorKind};
 
@@ -52,14 +77,18 @@ where
         Ok(())
     }
 
+    let indices = M::indices();
+    if indices.is_empty() {
+        return Ok(());
+    }
+
     // attempt to create all indices in bulk first
     // this will usually succeed, so we can save some round-trips
     // if we can attempt a recreate, try the indices individually
-    match collection.create_indexes(indices.iter().cloned()).await {
+    let collection = M::collection_raw(db);
+    match collection.create_indexes(indices).await {
         Ok(_) => Ok(()),
-        Err(err) if is_recreate(&err) => {
-            update_indices_inner(collection.clone_with_type(), indices).await
-        },
+        Err(err) if is_recreate(&err) => update_indices_inner(collection, M::indices()).await,
         Err(err) => Err(err).context("could not create indices"),
     }
 }

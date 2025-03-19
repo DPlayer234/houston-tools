@@ -43,12 +43,12 @@ impl Message {
             "_id": self.id,
         }
     }
+}
 
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("starboard.messages")
-    }
+impl ModelCollection for Message {
+    const COLLECTION_NAME: &str = "starboard.messages";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("board-message"))
@@ -72,12 +72,10 @@ impl Message {
     }
 }
 
-impl Score {
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("starboard.scores")
-    }
+impl ModelCollection for Score {
+    const COLLECTION_NAME: &str = "starboard.scores";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("board-user"))

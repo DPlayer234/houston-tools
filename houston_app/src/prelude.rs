@@ -8,6 +8,7 @@ pub use serenity::model::prelude::*;
 
 pub(crate) use crate::config;
 pub use crate::data::*;
+pub use crate::helper::bson::ModelCollection as _;
 
 pub type EmbedFieldCreate<'a> = (Cow<'a, str>, Cow<'a, str>, bool);
 pub type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;

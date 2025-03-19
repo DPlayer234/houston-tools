@@ -65,12 +65,10 @@ fn name(name: &str) -> IndexOptions {
     IndexOptions::builder().name(name.to_owned()).build()
 }
 
-impl Wallet {
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("perks.wallet")
-    }
+impl ModelCollection for Wallet {
+    const COLLECTION_NAME: &str = "perks.wallet";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("guild-user"))
@@ -86,12 +84,12 @@ impl ActivePerk {
             "_id": self.id,
         }
     }
+}
 
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("perks.active_perks")
-    }
+impl ModelCollection for ActivePerk {
+    const COLLECTION_NAME: &str = "perks.active_perks";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("guild-user-effect"))
@@ -109,12 +107,10 @@ impl ActivePerk {
     }
 }
 
-impl UniqueRole {
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("perks.unique_role")
-    }
+impl ModelCollection for UniqueRole {
+    const COLLECTION_NAME: &str = "perks.unique_role";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("guild-user"))
@@ -124,12 +120,10 @@ impl UniqueRole {
     }
 }
 
-impl Birthday {
-    pub fn collection(db: &Database) -> Collection<Self> {
-        db.collection("perks.birthday")
-    }
+impl ModelCollection for Birthday {
+    const COLLECTION_NAME: &str = "perks.birthday";
 
-    pub fn indices() -> Vec<IndexModel> {
+    fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
                 .options(name("user"))
