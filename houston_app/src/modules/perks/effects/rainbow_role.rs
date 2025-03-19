@@ -138,8 +138,7 @@ async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> 
     Ok(exists)
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
+#[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 fn rgb(r: f32, g: f32, b: f32) -> Color {
     Color::from_rgb(
         (r * 255.0).clamp(0.0, 255.0) as u8,

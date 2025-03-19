@@ -58,7 +58,7 @@ impl Cache {
     /// Gets the guild channel with a given ID in a guild.
     ///
     /// The result may either be a normal channel or thread.
-    #[allow(dead_code, reason = "... probably useful")]
+    #[expect(dead_code, reason = "... probably useful")]
     pub async fn guild_channel(
         &self,
         http: &Http,

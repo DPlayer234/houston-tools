@@ -112,7 +112,7 @@ pub mod option_id_as_u64 {
         }
     }
 
-    #[allow(clippy::ref_option)]
+    #[expect(clippy::ref_option)]
     pub fn serialize<S, T>(val: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

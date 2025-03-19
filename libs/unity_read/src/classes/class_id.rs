@@ -1,7 +1,7 @@
 // I'd love to credit the person that wrote this list, but I have found it
 // mostly copy-pasted across multiple repos as is. Probably originally from:
 // <https://github.com/gameltb/io_unity/blob/main/io_unity/src/classes/mod.rs>
-#![allow(clippy::enum_variant_names)]
+#![expect(clippy::enum_variant_names)]
 
 use num_enum::FromPrimitive;
 

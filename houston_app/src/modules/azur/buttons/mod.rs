@@ -127,7 +127,7 @@ mod pagination_impl {
     {
         let mut rows = Vec::new();
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let page_count = 1 + *page(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;
         let pagination = ToPage::build_row(obj, page).exact_page_count(page_count);
 

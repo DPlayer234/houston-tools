@@ -258,7 +258,6 @@ impl Framework {
         Ok(())
     }
 
-    #[allow(clippy::type_complexity)]
     fn find_command<'ctx>(
         &self,
         interaction: &'ctx CommandInteraction,

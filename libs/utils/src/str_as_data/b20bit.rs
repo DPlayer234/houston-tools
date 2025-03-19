@@ -179,7 +179,7 @@ fn chunk_to_codes(chunk: [u8; 5]) -> [u32; 2] {
     ]
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation)]
 fn unpack_code(code: u32) -> (u16, u8) {
     debug_assert!(code <= MAX_CODE, "invalid code out of range");
     (code as u16, (code >> 16) as u8)

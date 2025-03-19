@@ -1,7 +1,7 @@
 //! Provides functions to convert primitives to AL model values.
 
 // allowed to be explicit about the intended source value
-#![allow(clippy::wildcard_in_or_patterns)]
+#![expect(clippy::wildcard_in_or_patterns)]
 
 use azur_lane::Faction;
 use azur_lane::equip::*;

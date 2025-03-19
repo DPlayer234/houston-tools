@@ -42,7 +42,7 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
     }
 
     /// Defers the interaction with a new message.
-    #[allow(dead_code, reason = "i might use this later")]
+    #[expect(dead_code, reason = "i might use this later")]
     pub async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result {
         let has_sent = self.reply_state.load(Ordering::Relaxed);
 
@@ -61,7 +61,7 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
     }
 
     /// Replies to the interaction with a new message.
-    #[allow(dead_code, reason = "i might use this later")]
+    #[expect(dead_code, reason = "i might use this later")]
     pub async fn reply(&self, create: CreateReply<'_>) -> Result {
         let has_sent = self.reply_state.load(Ordering::Relaxed);
 

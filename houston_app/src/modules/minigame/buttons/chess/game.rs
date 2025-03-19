@@ -13,7 +13,7 @@ pub struct Pos {
     pub y: u8,
 }
 
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+#[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 impl Pos {
     pub fn new_trunc(x: usize, y: usize) -> Self {
         Self {

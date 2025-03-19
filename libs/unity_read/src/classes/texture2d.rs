@@ -173,7 +173,7 @@ impl Args {
         }
 
         // truncation is fine -- source values were u32 already
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let image = RgbaImage::from_raw(self.width as u32, self.height as u32, buffer)
             .expect("buffer should be allocated with the correct size");
         Ok(image)
@@ -181,7 +181,7 @@ impl Args {
 }
 
 /// Well-known texture 2D formats.
-#[allow(non_camel_case_types, non_upper_case_globals)]
+#[expect(non_camel_case_types)]
 #[derive(Debug, Eq, PartialEq, FromPrimitive, Clone, Copy, Default, Hash)]
 #[repr(i32)]
 #[non_exhaustive]

@@ -74,7 +74,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code, reason = "reserved for later use")]
 impl SlashUser<'_> {
     pub fn display_name(&self) -> &str {
         self.member

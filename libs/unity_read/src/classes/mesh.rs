@@ -126,7 +126,7 @@ impl MeshVertexData<'_> {
             };
 
             for (index, channel) in self.mesh.vertex_data.channels.iter().enumerate() {
-                #[allow(clippy::manual_range_patterns)]
+                #[expect(clippy::manual_range_patterns)]
                 if !matches!(channel.dimension, 1 | 2 | 3) {
                     continue;
                 }
@@ -281,7 +281,7 @@ impl MeshVertexData<'_> {
                     })
                     .collect();
 
-                #[allow(clippy::cast_possible_truncation)]
+                #[expect(clippy::cast_possible_truncation)]
                 (const { N as u32 }, vec)
             }};
         }

@@ -61,7 +61,7 @@ fn create_data<const LEN: usize>() -> [u8; LEN] {
     let mut buf = [0u8; LEN];
     let (_, main, _) = unsafe { buf.align_to_mut::<u16>() };
 
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation)]
     for (index, b) in main.iter_mut().enumerate() {
         *b = u16::MAX - index as u16;
     }

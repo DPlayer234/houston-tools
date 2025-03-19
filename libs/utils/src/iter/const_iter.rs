@@ -57,7 +57,10 @@ impl<'a, T> ConstIter<&'a [T]> {
     }
 }
 
-#[allow(clippy::mem_replace_with_default)]
+#[expect(
+    clippy::mem_replace_with_default,
+    reason = "cannot use mem::take in const"
+)]
 impl<'a, T> ConstIter<&'a mut [T]> {
     pub const fn next(&mut self) -> Option<&'a mut T> {
         // need this replace here so the lifetimes work out

@@ -94,7 +94,7 @@ pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     // SAFETY: Pointer is derived from a reference and byte length is known to be in
     // range.
     unsafe {
-        #[allow(clippy::cast_sign_loss)]
+        #[expect(clippy::cast_sign_loss)]
         slice::from_raw_parts(ptr.start.cast(), byte_len as usize)
     }
 }

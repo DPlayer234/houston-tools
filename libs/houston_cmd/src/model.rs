@@ -194,7 +194,7 @@ impl Parameter {
         .required(self.required)
         .set_autocomplete(self.autocomplete.is_some());
 
-        #[allow(clippy::cast_possible_wrap)]
+        #[expect(clippy::cast_possible_wrap)]
         for (index, choice) in (self.choices)().iter().enumerate() {
             option = option.add_int_choice(choice.name.clone(), index as i64);
         }

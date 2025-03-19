@@ -40,7 +40,7 @@ trait Uleb128Encode:
 /// This type essentially specifies a conversion to/from an unsigned type that
 /// implements [`Uleb128Encode`]. For unsigned integers, that is a no-op.
 pub trait Leb128: Sized + Copy {
-    #[allow(private_bounds)]
+    #[expect(private_bounds)]
     type Unsigned: Uleb128Encode;
 
     fn into_unsigned(self) -> Self::Unsigned;
@@ -141,7 +141,7 @@ macro_rules! impl_uleb {
         impl Uleb128Encode for $Ty {
             type Buf = [u8; buf_size::<Self>()];
 
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             fn trunc_u8(self) -> u8 {
                 self as u8
             }
@@ -154,7 +154,7 @@ macro_rules! impl_uleb_signed {
         impl Leb128 for $Ty {
             type Unsigned = $Unsigned;
 
-            #[allow(clippy::cast_sign_loss)]
+            #[expect(clippy::cast_sign_loss)]
             fn into_unsigned(self) -> Self::Unsigned {
                 let mut x = (self as $Unsigned) << 1;
                 if self < 0 {
@@ -163,7 +163,7 @@ macro_rules! impl_uleb_signed {
                 x
             }
 
-            #[allow(clippy::cast_possible_wrap)]
+            #[expect(clippy::cast_possible_wrap)]
             fn from_unsigned(value: Self::Unsigned) -> Self {
                 let mut x = value >> 1;
                 if value & 1 != 0 {

@@ -32,8 +32,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
                     match k.borrow() {
                         "skill_id" =>
                         {
-                            #[allow(clippy::cast_sign_loss)]
-                            #[allow(clippy::cast_possible_truncation)]
+                            #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                             ship.skills.push(parse::skill::load_skill(lua, v as u32)?)
                         },
                         "equipment_proficiency_1" => add_equip_efficiency(ship, 0, v)?,

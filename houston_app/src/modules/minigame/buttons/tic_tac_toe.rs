@@ -114,11 +114,12 @@ impl View {
     {
         let mut components = Vec::with_capacity(3);
 
-        #[allow(clippy::cast_possible_truncation)]
         for y in 0..3 {
             let mut row = Vec::with_capacity(3);
             for x in 0..3 {
                 let state = self.board[x][y];
+
+                #[expect(clippy::cast_possible_truncation)]
                 let button = self
                     .new_button(
                         |s| &mut s.board[x][y],

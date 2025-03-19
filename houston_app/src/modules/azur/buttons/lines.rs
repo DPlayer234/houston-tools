@@ -164,7 +164,7 @@ impl View {
     ) -> CreateSelectMenuOption<'a> {
         // Just as-cast the index to u8 since we'd have problems long before an
         // overflow.
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         self.new_select_option(&skin.name, |s| &mut s.skin_index, index as u8)
     }
 

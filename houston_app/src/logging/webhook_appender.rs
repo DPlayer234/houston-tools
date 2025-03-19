@@ -188,7 +188,7 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
 
     // holds the semaphore permits to notify after the current batch.
     // notified by clearing the vec and thus dropping the permits. buffer is reused.
-    #[allow(clippy::collection_is_never_read, reason = "used to delay drop")]
+    #[expect(clippy::collection_is_never_read, reason = "used to delay drop")]
     let mut flush = Vec::new();
 
     let mut batch = BatchReceiver {
@@ -263,7 +263,9 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
 /// Equivalent to `receiver.recv()` but using a timeout.
 async fn try_recv_timeout(receiver: &mut Receiver<Msg>, timeout: Duration) -> Option<Msg> {
     let task = receiver.recv();
-    tokio::time::timeout(timeout, task).await.ok().flatten()
+    tokio::time::timeout(timeout, task)
+        .await
+        .unwrap_or_default()
 }
 
 /// Lossy-decodes `buf` and appends it to `target` as one operation.

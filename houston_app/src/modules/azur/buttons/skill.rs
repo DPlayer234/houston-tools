@@ -66,7 +66,7 @@ impl View {
         let mut components = Vec::new();
 
         for (t_index, skill) in iterator.enumerate().take(5) {
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             let t_index = Some(t_index as u8);
 
             if t_index == self.skill_index {
@@ -119,7 +119,7 @@ impl View {
                 components.push(self.button_with_augment(None).label("Default"));
             }
 
-            #[allow(clippy::cast_possible_truncation)]
+            #[expect(clippy::cast_possible_truncation)]
             let a_index = Some(a_index as u8);
             components.push(
                 self.button_with_augment(a_index)

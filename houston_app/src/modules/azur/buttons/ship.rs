@@ -265,8 +265,7 @@ impl View {
         let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
 
-        #[allow(clippy::cast_sign_loss)]
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         fn f(n: f64) -> u32 {
             n.floor() as u32
         }
