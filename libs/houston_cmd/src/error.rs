@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::context::Context;
 
 /// An error that can occur during command handling.
@@ -23,11 +25,11 @@ pub enum Error<'a> {
         ctx: Context<'a>,
     },
     /// Parsing the argument failed.
-    #[error("argument parse error: {error}")]
-    ArgumentParse {
+    #[error("argument `{input}` parse error: {error}")]
+    ArgParse {
         #[source]
         error: anyhow::Error,
-        input: Option<String>,
+        input: Cow<'a, str>,
         ctx: Context<'a>,
     },
 }
@@ -51,15 +53,15 @@ impl<'a> Error<'a> {
         Self::ArgInvalid { message, ctx }
     }
 
-    /// Constructs a new [`Error::ArgumentParse`] variant.
-    pub fn argument_parse(
+    /// Constructs a new [`Error::ArgParse`] variant.
+    pub fn arg_parse(
         ctx: Context<'a>,
-        input: Option<String>,
+        input: impl Into<Cow<'a, str>>,
         error: impl Into<anyhow::Error>,
     ) -> Self {
-        Self::ArgumentParse {
+        Self::ArgParse {
             error: error.into(),
-            input,
+            input: input.into(),
             ctx,
         }
     }

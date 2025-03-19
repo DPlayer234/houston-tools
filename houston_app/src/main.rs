@@ -74,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
                 .event_handler(event_handler)
                 .data(Arc::clone(&bot_data))
                 .await
-                .context("failed to build discord client")?;
+                .context("failed to init discord client")?;
 
             client
                 .start()

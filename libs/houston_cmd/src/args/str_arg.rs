@@ -25,7 +25,7 @@ where
         match resolved {
             ResolvedValue::String(value) => T::from_str(value)
                 .map(FromStrArg)
-                .map_err(|e| Error::argument_parse(*ctx, Some((*value).to_owned()), e)),
+                .map_err(|e| Error::arg_parse(*ctx, *value, e)),
             _ => Err(Error::structure_mismatch(*ctx, "expected string argument")),
         }
     }

@@ -273,7 +273,7 @@ impl Framework {
         let mut command = &root.data;
         while let Some(name) = resolver.sub_command() {
             let CommandOptionData::Group(group) = &command.data else {
-                return Err("found arguments when command was expected");
+                return Err("got sub-command when arguments were expected");
             };
 
             let Some(next_command) = group.sub_commands.iter().find(|c| *c.name == *name) else {
@@ -284,7 +284,7 @@ impl Framework {
         }
 
         let CommandOptionData::Command(command) = &command.data else {
-            return Err("found group where command was expected");
+            return Err("got arguments when sub-command was expected");
         };
 
         let options = resolver.options()?;
