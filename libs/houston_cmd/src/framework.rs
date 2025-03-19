@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serenity::builder::CreateInteractionResponse;
@@ -23,7 +21,7 @@ type OnErrorFn = fn(Error<'_>) -> BoxFuture<'_, ()>;
 /// [serenity's client]: serenity::gateway::client::ClientBuilder::framework
 #[derive(Debug, Default)]
 pub struct Framework {
-    commands: HashMap<Cow<'static, str>, Command>,
+    commands: command_set::CommandSet,
     pre_command: Option<PreCommandFn>,
     on_error: Option<OnErrorFn>,
     auto_register: AtomicBool,
@@ -68,10 +66,7 @@ impl Framework {
     where
         I: IntoIterator<Item = Command>,
     {
-        self.commands = commands
-            .into_iter()
-            .map(|c| (c.data.name.clone(), c))
-            .collect();
+        self.commands = commands.into_iter().collect();
         self
     }
 
@@ -124,7 +119,7 @@ impl Framework {
     }
 
     async fn register_commands_or(&self, ctx: &SerenityContext) -> Result<(), serenity::Error> {
-        let commands = crate::to_create_command(self.commands.values());
+        let commands = crate::to_create_command(self.commands.iter());
         let commands = ctx.http.create_global_commands(&commands).await?;
 
         log::info!("Created {} global commands.", commands.len());
@@ -295,5 +290,70 @@ impl Framework {
 
         let options = resolver.options()?;
         Ok((command, options))
+    }
+}
+
+/// Provides a set/map for commands that avoids having to clone command names to
+/// be used as the key of the map.
+mod command_set {
+    use std::borrow::Borrow;
+    use std::collections::HashSet;
+    use std::hash::{Hash, Hasher};
+
+    use crate::model::Command;
+
+    /// Internal wrapper around [`Command`] to implement set equality.
+    #[derive(Debug)]
+    #[repr(transparent)]
+    struct Item(Command);
+
+    impl Item {
+        fn key(&self) -> &str {
+            &self.0.data.name
+        }
+
+        fn inner(&self) -> &Command {
+            &self.0
+        }
+    }
+
+    impl PartialEq for Item {
+        fn eq(&self, other: &Self) -> bool {
+            self.key() == other.key()
+        }
+    }
+
+    impl Eq for Item {}
+
+    impl Borrow<str> for Item {
+        fn borrow(&self) -> &str {
+            self.key()
+        }
+    }
+
+    impl Hash for Item {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            self.key().hash(state);
+        }
+    }
+
+    /// Semi-storage-specialized `HashMap<str, Command>`.
+    #[derive(Debug, Default)]
+    pub struct CommandSet(HashSet<Item>);
+
+    impl CommandSet {
+        pub fn get(&self, key: &str) -> Option<&Command> {
+            self.0.get(key).map(Item::inner)
+        }
+
+        pub fn iter(&self) -> impl Iterator<Item = &Command> {
+            self.0.iter().map(Item::inner)
+        }
+    }
+
+    impl FromIterator<Command> for CommandSet {
+        fn from_iter<T: IntoIterator<Item = Command>>(iter: T) -> Self {
+            Self(iter.into_iter().map(Item).collect())
+        }
     }
 }

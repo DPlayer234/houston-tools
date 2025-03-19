@@ -33,7 +33,8 @@ pub mod birthday {
 
         if let Some(birthday) = birthday {
             let msg = format!(
-                "You already set your birthday to **{}**.",
+                "You already set your birthday to **{}**.\n\
+                 -# Birthdays can only be set once.",
                 birthday.day_of_year
             );
             return Err(HArgError::new(msg).into());

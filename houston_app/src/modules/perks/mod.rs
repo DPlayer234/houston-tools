@@ -31,7 +31,7 @@ impl super::Module for Module {
     fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         let perks = config.perks().unwrap();
         let mut c = vec![
-            slashies::perk_admin::perk_admin(),
+            slashies::perk_admin::perk_admin(perks),
             slashies::shop::shop(),
             slashies::wallet::wallet(),
         ];

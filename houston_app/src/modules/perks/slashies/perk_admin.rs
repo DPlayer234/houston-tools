@@ -1,12 +1,27 @@
 use bson::doc;
 use chrono::*;
+use houston_cmd::model::{Command, CommandOptionData};
 use utils::text::write_str::*;
 
 use crate::fmt::discord::TimeMentionable as _;
+use crate::modules::perks::Config;
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 use crate::slashies::prelude::*;
+
+pub fn perk_admin(perks: &Config) -> Command {
+    let mut root = root();
+    let CommandOptionData::Group(commands) = &mut root.data.data else {
+        unreachable!("the root is a group");
+    };
+
+    if perks.role_edit.is_some() {
+        commands.sub_commands.to_mut().push(unique_role());
+    }
+
+    root
+}
 
 /// Managed active perks.
 #[chat_command(
@@ -15,7 +30,7 @@ use crate::slashies::prelude::*;
     contexts = "Guild",
     integration_types = "Guild"
 )]
-pub mod perk_admin {
+mod root {
     /// Enables a perk for a member.
     #[sub_command]
     async fn enable(
@@ -176,53 +191,53 @@ pub mod perk_admin {
         ctx.send(CreateReply::new().embed(embed)).await?;
         Ok(())
     }
+}
 
-    /// Sets a user's unique role. Can be omitted to delete the association.
-    #[sub_command(name = "unique-role")]
-    async fn unique_role(
-        ctx: Context<'_>,
-        /// The member to give items to.
-        member: SlashMember<'_>,
-        /// The role to set as being unique to them.
-        role: Option<&Role>,
-    ) -> Result {
-        let data = ctx.data_ref();
-        let guild_id = ctx.require_guild_id()?;
-        let db = data.database()?;
-        ctx.defer_as(Ephemeral).await?;
+/// Sets a user's unique role. Can be omitted to delete the association.
+#[sub_command(name = "unique-role")]
+async fn unique_role(
+    ctx: Context<'_>,
+    /// The member to give items to.
+    member: SlashMember<'_>,
+    /// The role to set as being unique to them.
+    role: Option<&Role>,
+) -> Result {
+    let data = ctx.data_ref();
+    let guild_id = ctx.require_guild_id()?;
+    let db = data.database()?;
+    ctx.defer_as(Ephemeral).await?;
 
-        let filter = UniqueRole::filter()
-            .guild(guild_id)
-            .user(member.user.id)
+    let filter = UniqueRole::filter()
+        .guild(guild_id)
+        .user(member.user.id)
+        .into_document()?;
+
+    let description = if let Some(role) = role {
+        let update = UniqueRole::update()
+            .set_on_insert(|u| u.guild(guild_id).user(member.user.id))
+            .set(|u| u.role(role.id))
             .into_document()?;
 
-        let description = if let Some(role) = role {
-            let update = UniqueRole::update()
-                .set_on_insert(|u| u.guild(guild_id).user(member.user.id))
-                .set(|u| u.role(role.id))
-                .into_document()?;
+        UniqueRole::collection(db)
+            .update_one(filter, update)
+            .upsert(true)
+            .await?;
 
-            UniqueRole::collection(db)
-                .update_one(filter, update)
-                .upsert(true)
-                .await?;
+        format!(
+            "Set {}'s unique role to be {}.",
+            member.mention(),
+            role.mention(),
+        )
+    } else {
+        UniqueRole::collection(db).delete_one(filter).await?;
 
-            format!(
-                "Set {}'s unique role to be {}.",
-                member.mention(),
-                role.mention(),
-            )
-        } else {
-            UniqueRole::collection(db).delete_one(filter).await?;
+        format!("Unset {}'s unique role.", member.mention())
+    };
 
-            format!("Unset {}'s unique role.", member.mention())
-        };
+    let embed = CreateEmbed::new()
+        .color(data.config().embed_color)
+        .description(description);
 
-        let embed = CreateEmbed::new()
-            .color(data.config().embed_color)
-            .description(description);
-
-        ctx.send(CreateReply::new().embed(embed)).await?;
-        Ok(())
-    }
+    ctx.send(CreateReply::new().embed(embed)).await?;
+    Ok(())
 }
