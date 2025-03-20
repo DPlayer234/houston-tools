@@ -264,9 +264,38 @@ The following commands are supported in context menus:
 
 Commands are only available when the corresponding perk is enabled.
 
-## Server Profile
+### Rep
 
-This feature is enabled if either the starboard or perks are enabled.
+Aka "reputation". This is purely a counter shown on the members' server profiles. Every server member may give one point to another member once per day (or any other interval you'd like). In addition, members receiving reputation can also get cash.
+
+Reputation can only be given to users in the server, but not bots.
+
+This comes with the following configuration:
+
+```toml
+[bot.rep]
+# optional. defaults to 20 hours.
+# the cooldown between `/rep` uses per user and server.
+cooldown = "20:00:00"
+# required. the cash gain on gaining rep.
+cash = 10
+```
+
+The following commands will be enabled:
+
+| Command | Description |
+|:------- |:----------- |
+| /rep    | Gives a reputation point to another server member. |
+
+The following commands are supported in context menus:
+
+| Command | Description |
+|:------- |:----------- |
+| Rep+    | (User) Equivalent to `/rep`. |
+
+### Server Profile
+
+This feature is enabled if at least one of starboard, rep, or perks is enabled.
 
 The following commands will be enabled:
 

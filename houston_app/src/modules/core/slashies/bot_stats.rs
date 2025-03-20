@@ -87,6 +87,10 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
         writeln_str!(modules, "**profile**");
     }
 
+    if crate::modules::rep::Module.enabled(config) {
+        writeln_str!(modules, "**rep**");
+    }
+
     if crate::modules::starboard::Module.enabled(config) {
         let guilds = config.starboard.len();
         let boards = config

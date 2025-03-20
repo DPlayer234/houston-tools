@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.10.2"
+version = "2.11.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2631,7 +2631,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.4"
-source = "git+https://github.com/serenity-rs/serenity.git?branch=next#e552918da9f976af2684b544eddbb13796d34599"
+source = "git+https://github.com/serenity-rs/serenity.git?branch=next#fce19bb01998bd7c08a944080a287030433d514e"
 dependencies = [
  "aformat",
  "arrayvec",

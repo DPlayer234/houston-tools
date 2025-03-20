@@ -38,9 +38,10 @@ pub struct HBotConfig {
     pub mongodb_uri: Option<String>,
     #[serde(default)]
     pub media_react: crate::modules::media_react::Config,
+    pub perks: Option<crate::modules::perks::Config>,
+    pub rep: Option<crate::modules::rep::Config>,
     #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
-    pub perks: Option<crate::modules::perks::Config>,
 }
 
 impl HBotConfig {
@@ -54,6 +55,10 @@ impl HBotConfig {
 
     pub fn perks(&self) -> anyhow::Result<&crate::modules::perks::Config> {
         self.perks.as_ref().context("perks must be enabled")
+    }
+
+    pub fn rep(&self) -> anyhow::Result<&crate::modules::rep::Config> {
+        self.rep.as_ref().context("rep must be enabled")
     }
 }
 

@@ -11,6 +11,7 @@ pub mod media_react;
 pub mod minigame;
 pub mod perks;
 pub mod profile;
+pub mod rep;
 pub mod starboard;
 
 mod prelude {
@@ -60,6 +61,7 @@ macro_rules! for_each_module {
         $crate::modules::for_each_module!(@inner $crate::modules::perks::Module, $config, |$var| $body);
         $crate::modules::for_each_module!(@inner $crate::modules::media_react::Module, $config, |$var| $body);
         $crate::modules::for_each_module!(@inner $crate::modules::profile::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@inner $crate::modules::rep::Module, $config, |$var| $body);
         $crate::modules::for_each_module!(@inner $crate::modules::starboard::Module, $config, |$var| $body);
     }};
 }

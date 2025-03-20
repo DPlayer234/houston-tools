@@ -66,6 +66,11 @@ async fn profile_core(
         }
     }
 
+    if crate::modules::rep::Module.enabled(data.config()) {
+        let rep = rep_amount(ctx, member).await?;
+        writeln_str!(description, "-# **Reputation:** {rep}");
+    }
+
     embed = embed.description(description);
     let reply = CreateReply::new().embed(embed);
 
@@ -204,4 +209,25 @@ async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
     }
 
     Ok((!description.is_empty()).then_some(description))
+}
+
+async fn rep_amount(ctx: Context<'_>, member: SlashMember<'_>) -> Result<i64> {
+    use crate::modules::rep::model;
+
+    let data = ctx.data_ref();
+    let db = data.database()?;
+    let guild_id = ctx.require_guild_id()?;
+
+    let filter = model::Record::filter()
+        .user(member.user.id)
+        .guild(guild_id)
+        .into_document()?;
+
+    let rep = model::Record::collection(db)
+        .find_one(filter)
+        .await?
+        .map(|r| r.received)
+        .unwrap_or_default();
+
+    Ok(rep)
 }
