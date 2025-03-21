@@ -68,7 +68,9 @@ async fn profile_core(
 
     if crate::modules::rep::Module.enabled(data.config()) {
         let rep = rep_amount(ctx, member).await?;
-        writeln_str!(description, "-# **Reputation:** {rep}");
+        if rep != 0 {
+            writeln_str!(description, "-# **Reputation:** {rep}");
+        }
     }
 
     embed = embed.description(description);
@@ -152,13 +154,18 @@ async fn perks_collectible_info(
         .await?
         .unwrap_or_default();
 
+    let guild_config = collectible.guilds.get(&guild_id);
+    if wallet.crab == 0 && guild_config.is_none() {
+        return Ok(None);
+    }
+
     let mut content = format!(
         "-# **{}:** x{}",
         Item::Collectible.info(perks).name,
         wallet.crab,
     );
 
-    if let Some(guild_config) = collectible.guilds.get(&guild_id) {
+    if let Some(guild_config) = guild_config {
         for &(need, role) in &guild_config.prize_roles {
             if wallet.crab >= need.into() {
                 write_str!(content, "\n- <@&{role}>");
