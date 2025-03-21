@@ -1,14 +1,27 @@
+use std::pin::pin;
 use std::slice;
+use std::time::Duration;
 
 use bson_model::Filter;
 use chrono::Utc;
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
+use tokio::time::timeout;
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
+
+/// We try to query the DB for the cooldown first, so we only defer with
+/// non-ephemeral messages when it is likely that the user isn't on cooldown.
+///
+/// However, we don't want to fail the command entirely if the DB takes too long
+/// to respond, so we degrade the response display a bit instead.
+///
+/// ... Now, the ping to Discord is also too slow, that's now a bigger problem,
+/// but I guess we just fail the real defer then.
+const TOO_LONG: Duration = Duration::from_secs(1);
 
 /// Gives a reputation point to another server member.
 #[context_command(user, name = "Rep+", contexts = "Guild", integration_types = "Guild")]
@@ -37,8 +50,6 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         HArgError::new("Uh, that's a bot. Maybe pick someone real.")
     );
 
-    ctx.defer(false).await?;
-
     let data = ctx.data_ref();
     let db = data.database()?;
     let rep = data.config().rep()?;
@@ -54,11 +65,18 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .set_on_insert(|r| r.init(ctx.user().id, guild_id))
         .into_document()?;
 
-    let self_state = model::Record::collection(db)
-        .find_one_and_update(filter, upsert)
-        .upsert(true)
-        .return_document(ReturnDocument::After)
-        .await?
+    let self_state = async {
+        model::Record::collection(db)
+            .find_one_and_update(filter, upsert)
+            .upsert(true)
+            .return_document(ReturnDocument::After)
+            .await
+    };
+
+    // for better UX, try not to show the cooldown error to everyone in most cases.
+    // when that doesn't work out, also fine, but usually the db isn't that slow.
+    let self_state = defer_if_too_long(ctx, self_state)
+        .await??
         .context("got nothing on upsert")?;
 
     let now = Utc::now();
@@ -67,6 +85,10 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     if self_state.cooldown_ends > now {
         return bail_on_cooldown(&self_state).await;
     }
+
+    // at this point, we can _fairly_ safely assume the message will be shown to
+    // everyone. unless they somehow concurrently use `/rep`.
+    ctx.defer(false).await?;
 
     let next_cooldown_end = Utc::now()
         .checked_add_signed(rep.cooldown)
@@ -86,8 +108,9 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .await?
         .is_some();
 
-    // this will ensure that concurrent commands by the same user don't pass
-    // if the update fails, that means the filter didn't match
+    // this will ensure that concurrent commands by the same user don't pass.
+    // that _shouldn't_ be possible due to rate limits and such but... yeah.
+    // if the update fails, that means the filter didn't match.
     if !is_updated {
         return bail_on_cooldown(&self_state).await;
     }
@@ -145,6 +168,20 @@ async fn bail_on_cooldown(self_state: &model::Record) -> Result {
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
 }
 
+async fn defer_if_too_long<F>(ctx: Context<'_>, fut: F) -> Result<F::Output>
+where
+    F: Future,
+{
+    let mut fut = pin!(fut);
+    match timeout(TOO_LONG, &mut fut).await {
+        Ok(ok) => Ok(ok),
+        Err(_) => {
+            ctx.defer(false).await?;
+            Ok(fut.await)
+        },
+    }
+}
+
 const EMOJIS: &[&str] = &[
     "🐶",
     "🐱",
@@ -171,4 +208,5 @@ const EMOJIS: &[&str] = &[
     "🦇",
     "🐺",
     "🐗",
+    "🐣",
 ];
