@@ -143,23 +143,29 @@ impl ButtonArgs {
 }
 
 /// Event handler for custom button menus.
-pub mod handler {
+pub struct EventHandler;
+
+crate::modules::impl_handler!(EventHandler, |_, ctx| match _ {
+    FullEvent::InteractionCreate {
+        interaction: Interaction::Component(interaction),
+        ..
+    } => handler::dispatch_component(ctx, interaction),
+    FullEvent::InteractionCreate {
+        interaction: Interaction::Modal(interaction),
+        ..
+    } => handler::dispatch_modal(ctx, interaction),
+});
+
+/// Event handler for custom button menus.
+mod handler {
     use std::sync::atomic::AtomicBool;
 
     use super::*;
 
-    /// To be called in [`EventHandler::interaction_create`].
-    pub async fn interaction_create(ctx: Context, interaction: Interaction) {
-        match interaction {
-            Interaction::Component(interaction) => dispatch_component(ctx, interaction).await,
-            Interaction::Modal(interaction) => dispatch_modal(ctx, interaction).await,
-            _ => {}, // we only handle component and modal interactions
-        }
-    }
-
-    async fn dispatch_component(ctx: Context, interaction: ComponentInteraction) {
+    /// Dispatches component interactions.
+    pub async fn dispatch_component(ctx: &Context, interaction: &ComponentInteraction) {
         let reply_state = AtomicBool::new(false);
-        if let Err(err) = handle_component(&ctx, &interaction, &reply_state).await {
+        if let Err(err) = handle_component(ctx, interaction, &reply_state).await {
             handle_dispatch_error(
                 ctx,
                 interaction.id,
@@ -197,9 +203,10 @@ pub mod handler {
         .await
     }
 
-    async fn dispatch_modal(ctx: Context, interaction: ModalInteraction) {
+    /// Dispatches modal interactions.
+    pub async fn dispatch_modal(ctx: &Context, interaction: &ModalInteraction) {
         let reply_state = AtomicBool::new(false);
-        if let Err(err) = handle_modal(&ctx, &interaction, &reply_state).await {
+        if let Err(err) = handle_modal(ctx, interaction, &reply_state).await {
             handle_dispatch_error(
                 ctx,
                 interaction.id,
@@ -231,7 +238,7 @@ pub mod handler {
 
     #[cold]
     async fn handle_dispatch_error(
-        ctx: Context,
+        ctx: &Context,
         interaction_id: InteractionId,
         interaction_token: &str,
         reply_state: bool,

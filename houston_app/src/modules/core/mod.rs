@@ -23,4 +23,24 @@ impl super::Module for Module {
             slashies::upload::upload(),
         ]
     }
+
+    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+        Some(Box::new(self))
+    }
+}
+
+super::impl_handler!(Module, |_, ctx| match _ {
+    FullEvent::Ready { data_about_bot, .. } => ready(ctx, data_about_bot),
+});
+
+async fn ready(ctx: &Context, ready: &Ready) {
+    use std::num::NonZero;
+
+    let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
+    log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
+
+    let data = ctx.data_ref::<HContextData>();
+    if let Err(why) = data.ready(&ctx.http).await {
+        log::error!("Failure in ready: {why:?}");
+    }
 }

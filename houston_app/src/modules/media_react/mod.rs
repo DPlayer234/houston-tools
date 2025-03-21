@@ -40,17 +40,25 @@ impl super::Module for Module {
         );
         Ok(())
     }
+
+    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+        Some(Box::new(self))
+    }
 }
 
-pub async fn message(ctx: Context, new_message: Message) {
-    let message_link = MessageLink::from(&new_message);
+super::impl_handler!(Module, |_, ctx| match _ {
+    FullEvent::Message { new_message, .. } => message(ctx, new_message),
+});
+
+pub async fn message(ctx: &Context, new_message: &Message) {
+    let message_link = MessageLink::from(new_message);
 
     if let Err(why) = message_inner(ctx, new_message).await {
         log::error!("Message handling failed for {message_link:#}: {why:?}");
     }
 }
 
-async fn message_inner(ctx: Context, new_message: Message) -> Result {
+async fn message_inner(ctx: &Context, new_message: &Message) -> Result {
     // we only consider regular messages from users, not bots
     let valid = is_normal_message(new_message.kind)
         && !new_message.author.bot()
@@ -61,12 +69,12 @@ async fn message_inner(ctx: Context, new_message: Message) -> Result {
     }
 
     // grab the config for the current channel
-    let entries = find_channel_config(&ctx, new_message.guild_id, new_message.channel_id).await?;
+    let entries = find_channel_config(ctx, new_message.guild_id, new_message.channel_id).await?;
     let Some(channel_config) = entries else {
         return Ok(());
     };
 
-    let mut check = MediaChecker::new(&new_message);
+    let mut check = MediaChecker::new(new_message);
     for entry in &channel_config.emojis {
         // if there is an attachment or the content has media links, attach the emoji to
         // the message. nested message snapshots (forwards) are checked the same way

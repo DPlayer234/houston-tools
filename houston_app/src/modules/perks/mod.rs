@@ -84,22 +84,25 @@ impl super::Module for Module {
 
         Ok(())
     }
-}
 
-pub fn dispatch_check_perks(ctx: &Context) {
-    let data = ctx.data_ref::<HContextData>();
-    if Module.enabled(data.config()) {
-        tokio::task::spawn(check_perks_impl(ctx.clone()));
+    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+        Some(Box::new(self))
     }
 }
 
-async fn check_perks_impl(ctx: Context) {
-    if let Err(why) = check_perks_core(ctx).await {
+super::impl_handler!(Module, |_, ctx| match _ {
+    FullEvent::InteractionCreate { .. }
+    | FullEvent::Message { .. }
+    | FullEvent::ReactionAdd { .. } => check_perks(ctx),
+});
+
+async fn check_perks(ctx: &Context) {
+    if let Err(why) = check_perks_inner(ctx).await {
         log::error!("Perk check failed: {why:?}");
     }
 }
 
-async fn check_perks_core(ctx: Context) -> Result {
+async fn check_perks_inner(ctx: &Context) -> Result {
     let data = ctx.data_ref::<HContextData>();
     let perks = data.config().perks()?;
     let last = *perks.last_check.read().await;
@@ -125,7 +128,7 @@ async fn check_perks_core(ctx: Context) -> Result {
     // handle updates and expiry in parallel.
     // don't use `try_join!` here since we want to run others to
     // completion even if one of them ends up failing for any reason.
-    let (result, ()) = tokio::join!(check_expiry(&ctx, now), update_perks(&ctx, now));
+    let (result, ()) = tokio::join!(check_expiry(ctx, now), update_perks(ctx, now));
     result
 }
 

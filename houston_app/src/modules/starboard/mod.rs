@@ -64,7 +64,21 @@ impl super::Module for Module {
         update_indices::<model::Score>(&db).await?;
         Ok(())
     }
+
+    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+        Some(Box::new(self))
+    }
 }
+
+super::impl_handler!(Module, |_, ctx| match _ {
+    FullEvent::ReactionAdd { add_reaction, .. } => reaction_add(ctx, add_reaction),
+    FullEvent::MessageDelete {
+        channel_id,
+        deleted_message_id,
+        guild_id,
+        ..
+    } => message_delete(ctx, *channel_id, *deleted_message_id, *guild_id),
+});
 
 fn get_board(
     config: &HBotConfig,
@@ -80,7 +94,7 @@ fn get_board(
         .context("starboard not found")
 }
 
-pub async fn reaction_add(ctx: Context, reaction: Reaction) {
+pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message_link =
         MessageLink::new(reaction.guild_id, reaction.channel_id, reaction.message_id);
 
@@ -90,7 +104,7 @@ pub async fn reaction_add(ctx: Context, reaction: Reaction) {
 }
 
 pub async fn message_delete(
-    ctx: Context,
+    ctx: &Context,
     channel_id: ChannelId,
     message_id: MessageId,
     guild_id: Option<GuildId>,
@@ -106,7 +120,7 @@ pub async fn message_delete(
     }
 }
 
-async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
+async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
     // only in guilds
     // i'd also check for bots but... that's not in the reaction event
     let Some(guild_id) = reaction.guild_id else {
@@ -187,7 +201,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
         // if there are super reactions, also check there
         let has_self_reaction = |burst| {
             has_reaction_by_user(
-                &ctx,
+                ctx,
                 &message,
                 &reaction.reaction_type,
                 message.author.id,
@@ -266,7 +280,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
             // pin the message if the update just now changed the value
             if !record.pinned {
                 new_post = true;
-                pin_message_to_board(&ctx, &message, guild_id, guild_config, board, filter).await?;
+                pin_message_to_board(ctx, &message, guild_id, guild_config, board, filter).await?;
             }
         }
     };
@@ -320,7 +334,7 @@ async fn reaction_add_inner(ctx: Context, reaction: Reaction) -> Result {
 }
 
 async fn message_delete_inner(
-    ctx: Context,
+    ctx: &Context,
     guild_id: GuildId,
     channel_id: ChannelId,
     message_id: MessageId,

@@ -48,25 +48,45 @@ mod model_prelude {
 /// for_each_module!(&config, |m| do_stuff(m));
 /// ```
 macro_rules! for_each_module {
-    (@inner $module:expr, $config:expr, |$var:ident| $body:expr) => {{
+    (@inner(statement) $module:expr, $config:expr, |$var:ident| $body:expr) => {{
         let $var = $module;
         if $crate::modules::Module::enabled(&$var, $config) {
             $body
         }
     }};
+    (@inner(array) $module:expr, $config:expr, |$var:ident| $body:expr) => {{
+        let $var = $module;
+        if $crate::modules::Module::enabled(&$var, $config) {
+            ::std::option::Option::Some($body)
+        } else {
+            ::std::option::Option::None
+        }
+    }};
+    (@mode($mode:tt) $config:expr, |$var:ident| $body:expr) => {[
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::core::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::azur::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::minigame::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::perks::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::media_react::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::profile::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::rep::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::starboard::Module, $config, |$var| $body),
+    ]};
     ($config:expr, |$var:ident| $body:expr) => {{
-        $crate::modules::for_each_module!(@inner $crate::modules::core::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::azur::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::minigame::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::perks::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::media_react::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::profile::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::rep::Module, $config, |$var| $body);
-        $crate::modules::for_each_module!(@inner $crate::modules::starboard::Module, $config, |$var| $body);
+        $crate::modules::for_each_module!(@mode(statement) $config, |$var| $body);
     }};
 }
 
-pub(crate) use for_each_module;
+/// Run an expression against every enabled module and evalatues each expression
+/// as an iterator. The expression is eagerly evalualted.
+macro_rules! iter_modules {
+    ($config:expr, |$var:ident| $body:expr) => {{
+        let array = $crate::modules::for_each_module!(@mode(array) $config, |$var| $body);
+        ::std::iter::Iterator::flatten(::std::iter::IntoIterator::into_iter(array))
+    }};
+}
+
+pub(crate) use {for_each_module, iter_modules};
 
 pub trait Module: Sized {
     /// Whether the module is enabled.
@@ -104,4 +124,42 @@ pub trait Module: Sized {
         _ = db;
         Ok(())
     }
+
+    /// Gets the event handler for this module.
+    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+        None
+    }
 }
+
+/// Implements [`EventHandler`] in such a way that unmatched variants do not
+/// allocate a boxed future.
+macro_rules! impl_handler {
+    // the weird `match _ {}` part is intended so that the syntax is something
+    // that rustfmt can format. in a sense, it's just a nicety.
+    ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
+        // use expanded `async_trait` for to avoid alloc for unused branches
+        impl ::serenity::gateway::client::EventHandler for $Type {
+            fn dispatch<'s, 'c, 'e, 'a>(
+                &'s self,
+                $ctx: &'c ::serenity::gateway::client::Context,
+                event: &'e ::serenity::gateway::client::FullEvent,
+            ) -> ::serenity::futures::future::BoxFuture<'a, ()>
+            where
+                's: 'a,
+                'c: 'a,
+                'e: 'a,
+            {
+                #[allow(clippy::let_underscore_untyped)]
+                let $this = self;
+                match event {
+                    $( $pat => Box::pin($block), )*
+                    // users are allowed to exhaustively match
+                    #[allow(unreachable_patterns)]
+                    _ => $crate::helper::noop_future(),
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use impl_handler;

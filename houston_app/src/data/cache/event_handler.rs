@@ -1,17 +1,18 @@
 use std::collections::HashMap;
 
-use serenity::futures::future::{BoxFuture, always_ready};
+use serenity::futures::future::BoxFuture;
 use serenity::gateway::client::{Context, RawEventHandler};
 
 use super::model::*;
 use super::{Cache, CachedGuild};
+use crate::helper::noop_future;
 use crate::prelude::*;
 
 /// Manual `async_trait` impl so avoid allocation.
 impl RawEventHandler for Cache {
     fn raw_event<'s: 'f, 'e: 'f, 'f>(&'s self, _ctx: Context, ev: &'e Event) -> BoxFuture<'f, ()> {
         self.update_event(ev);
-        Box::pin(always_ready(|| {}))
+        noop_future()
     }
 }
 

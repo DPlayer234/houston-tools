@@ -39,9 +39,11 @@ impl serenity::framework::Framework for Framework {
             FullEvent::Ready { .. } => Box::pin(self.register_commands(ctx)),
             FullEvent::InteractionCreate {
                 interaction: Interaction::Command(interaction),
+                ..
             } => Box::pin(self.run_command(ctx, interaction)),
             FullEvent::InteractionCreate {
                 interaction: Interaction::Autocomplete(interaction),
+                ..
             } => Box::pin(self.run_autocomplete(ctx, interaction)),
             _ => Box::pin(always_ready(|| {})),
         }

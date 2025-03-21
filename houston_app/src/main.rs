@@ -11,11 +11,11 @@ mod slashies;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    use std::num::NonZero;
     use std::panic;
     use std::sync::Arc;
 
     use houston_cmd::Framework;
+    use modules::Module as _;
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
 
@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
         let bot_data = Arc::new(HBotData::new(config.bot));
         let init = bot_data.init()?;
 
-        let event_handler = HEventHandler;
+        let event_handler = HEventHandler::new(bot_data.config());
         let framework = Framework::new()
             .commands(init.commands)
             .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
@@ -112,43 +112,35 @@ async fn main() -> anyhow::Result<()> {
     }
 
     /// Type to handle various Discord events.
-    struct HEventHandler;
+    struct HEventHandler {
+        handlers: Box<[Box<dyn EventHandler>]>,
+    }
+
+    impl HEventHandler {
+        fn new(config: &config::HBotConfig) -> Self {
+            let mut handlers = <Vec<Box<dyn EventHandler>>>::new();
+
+            // fixed handlers
+            handlers.push(Box::new(buttons::EventHandler));
+
+            // add module handlers
+            handlers.extend(modules::iter_modules!(config, |m| m.event_handler()).flatten());
+
+            Self {
+                handlers: handlers.into_boxed_slice(),
+            }
+        }
+    }
 
     #[serenity::async_trait]
     impl EventHandler for HEventHandler {
-        async fn ready(&self, ctx: Context, ready: Ready) {
-            let discriminator = ready.user.discriminator.map_or(0u16, NonZero::get);
-            log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
+        async fn dispatch(&self, ctx: &Context, event: &FullEvent) {
+            use serenity::futures::future::join_all;
 
-            let data = ctx.data_ref::<HContextData>();
-            if let Err(why) = data.ready(&ctx.http).await {
-                log::error!("Failure in ready: {why:?}");
-            }
-        }
-
-        async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-            modules::perks::dispatch_check_perks(&ctx);
-            buttons::handler::interaction_create(ctx, interaction).await;
-        }
-
-        async fn message(&self, ctx: Context, new_message: Message) {
-            modules::perks::dispatch_check_perks(&ctx);
-            modules::media_react::message(ctx, new_message).await;
-        }
-
-        async fn message_delete(
-            &self,
-            ctx: Context,
-            channel_id: ChannelId,
-            message_id: MessageId,
-            guild_id: Option<GuildId>,
-        ) {
-            modules::starboard::message_delete(ctx, channel_id, message_id, guild_id).await;
-        }
-
-        async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-            modules::perks::dispatch_check_perks(&ctx);
-            modules::starboard::reaction_add(ctx, reaction).await;
+            // this isn't _super_ optimal since it will allocate a boxed slice of futures,
+            // but it's probably a minor thing in the grand scheme. it should also be able
+            // to figure out the correct size immediately, so no _redundant_ allocs.
+            join_all(self.handlers.iter().map(|h| h.dispatch(ctx, event))).await;
         }
     }
 
