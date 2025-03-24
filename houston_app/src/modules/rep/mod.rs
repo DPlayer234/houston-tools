@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::prelude::*;
 
 mod config;
@@ -25,6 +27,13 @@ impl super::Module for Module {
             "setting `rep.cash_gain` requires enabling `perks`",
         );
 
+        Ok(())
+    }
+
+    async fn db_init(self, _data: Arc<HBotData>, db: mongodb::Database) -> Result {
+        use crate::helper::bson::update_indices;
+
+        update_indices::<model::Record>(&db).await?;
         Ok(())
     }
 }
