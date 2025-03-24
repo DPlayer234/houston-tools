@@ -19,9 +19,9 @@ use crate::slashies::prelude::*;
 /// However, we don't want to fail the command entirely if the DB takes too long
 /// to respond, so we degrade the response display a bit instead.
 ///
-/// ... Now, the ping to Discord is also too slow, that's now a bigger problem,
-/// but I guess we just fail the real defer then.
-const TOO_LONG: Duration = Duration::from_secs(1);
+/// ... Now, if the ping to Discord is also too slow, that's now a bigger
+/// problem, but I guess we just fail the real defer then.
+const TOO_LONG: Duration = Duration::from_millis(1500);
 
 /// Gives a reputation point to another server member.
 #[context_command(user, name = "Rep+", contexts = "Guild", integration_types = "Guild")]
@@ -55,64 +55,98 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     let rep = data.config().rep()?;
     let guild_id = ctx.require_guild_id()?;
 
-    let base_filter = model::Record::filter().user(ctx.user().id).guild(guild_id);
+    let db_op = async {
+        let base_filter = model::Record::filter().user(ctx.user().id).guild(guild_id);
 
-    // fetch/upsert the user's base state
-    // we need this to ensure the document exists
-    let filter = bson::to_document(&base_filter)?;
+        // fetch/upsert the user's base state
+        // we need this to ensure the document exists
+        let filter = bson::to_document(&base_filter)?;
 
-    let upsert = model::Record::update()
-        .set_on_insert(|r| r.init(ctx.user().id, guild_id))
-        .into_document()?;
+        let upsert = model::Record::update()
+            .set_on_insert(|r| r.init(ctx.user().id, guild_id))
+            .into_document()?;
 
-    let self_state = async {
-        model::Record::collection(db)
+        let self_state = model::Record::collection(db)
             .find_one_and_update(filter, upsert)
             .upsert(true)
             .return_document(ReturnDocument::After)
-            .await
+            .await?
+            .context("got nothing on upsert")?;
+
+        let now = Utc::now();
+
+        // preliminary cooldown check
+        if self_state.cooldown_ends > now {
+            return bail_on_cooldown(&self_state).await;
+        }
+
+        let next_cooldown_end = Utc::now()
+            .checked_add_signed(rep.cooldown)
+            .context("cooldown broke the end of time")?;
+
+        // try to update the cooldown in the document
+        let filter = base_filter
+            .cooldown_ends(Filter::Lte(now))
+            .into_document()?;
+
+        let update = model::Record::update()
+            .set(|r| r.cooldown_ends(next_cooldown_end))
+            .into_document()?;
+
+        let is_updated = model::Record::collection(db)
+            .find_one_and_update(filter, update)
+            .await?
+            .is_some();
+
+        // this will ensure that concurrent commands by the same user don't pass.
+        // that _shouldn't_ be possible due to rate limits and such but... yeah.
+        // if the update fails, that means the filter didn't match.
+        if !is_updated {
+            return bail_on_cooldown(&self_state).await;
+        }
+
+        Ok(())
     };
 
     // for better UX, try not to show the cooldown error to everyone in most cases.
     // when that doesn't work out, also fine, but usually the db isn't that slow.
-    let self_state = defer_if_too_long(ctx, self_state)
-        .await??
-        .context("got nothing on upsert")?;
+    // ... except we also don't want to defer in the successful case because edits
+    // can't trigger notifications. so don't defer at all if possible.
+    let res = match defer_if_too_long(ctx, db_op).await {
+        Ok(inner) => {
+            // evaluate `db_op` result.
+            inner?;
 
-    let now = Utc::now();
+            // send the message as soon as we're sure it's correct
+            let emoji = EMOJIS.choose(&mut rand::rng()).expect("EMOJIS not empty");
+            let content = format!(
+                "{emoji} | {} has given {} a reputation point!",
+                ctx.user().mention(),
+                member.mention(),
+            );
 
-    // preliminary cooldown check
-    if self_state.cooldown_ends > now {
-        return bail_on_cooldown(&self_state).await;
-    }
+            let allowed_mentions =
+                CreateAllowedMentions::new().users(slice::from_ref(&member.user.id));
 
-    // at this point, we can _fairly_ safely assume the message will be shown to
-    // everyone. unless they somehow concurrently use `/rep`.
-    ctx.defer(false).await?;
+            let reply = CreateReply::new()
+                .content(content)
+                .allowed_mentions(allowed_mentions);
 
-    let next_cooldown_end = Utc::now()
-        .checked_add_signed(rep.cooldown)
-        .context("cooldown broke the end of time")?;
+            // low chance this fails. propagate the error to the `if let` below.
+            ctx.send(reply).await
+        },
+        Err(why) => Err(why),
+    };
 
-    // try to update the cooldown in the document
-    let filter = base_filter
-        .cooldown_ends(Filter::Lte(now))
-        .into_document()?;
-
-    let update = model::Record::update()
-        .set(|r| r.cooldown_ends(next_cooldown_end))
-        .into_document()?;
-
-    let is_updated = model::Record::collection(db)
-        .find_one_and_update(filter, update)
-        .await?
-        .is_some();
-
-    // this will ensure that concurrent commands by the same user don't pass.
-    // that _shouldn't_ be possible due to rate limits and such but... yeah.
-    // if the update fails, that means the filter didn't match.
-    if !is_updated {
-        return bail_on_cooldown(&self_state).await;
+    // DON'T propagate this out. this error may indicate that deferring failed, plus
+    // db operations have already happened, so we want to finish those even if this
+    // fails. and to send to discord isn't unreasonable because we introduce delay.
+    if let Err(why) = res {
+        log::error!(
+            "Failed to send `/rep` confirm: in {guild_id}, by {}, to {}. {why:?}",
+            ctx.user().name,
+            member.user.name,
+        );
     }
 
     // actually rep the target user
@@ -146,20 +180,6 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         log::trace!("{} gained {} cash.", member.user.name, amount);
     }
 
-    let emoji = EMOJIS.choose(&mut rand::rng()).expect("EMOJIS not empty");
-    let content = format!(
-        "{emoji} | {} has given {} a reputation point!",
-        ctx.user().mention(),
-        member.mention(),
-    );
-
-    let allowed_mentions = CreateAllowedMentions::new().users(slice::from_ref(&member.user.id));
-
-    let reply = CreateReply::new()
-        .content(content)
-        .allowed_mentions(allowed_mentions);
-
-    ctx.send(reply).await?;
     Ok(())
 }
 
@@ -168,7 +188,10 @@ async fn bail_on_cooldown(self_state: &model::Record) -> Result {
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
 }
 
-async fn defer_if_too_long<F>(ctx: Context<'_>, fut: F) -> Result<F::Output>
+/// Defers via the `ctx` if `fut` takes [`TOO_LONG`] to finish.
+///
+/// The outer result represents the defer result or [`Ok`] if it didn't defer.
+async fn defer_if_too_long<F>(ctx: Context<'_>, fut: F) -> serenity::Result<F::Output>
 where
     F: Future,
 {
