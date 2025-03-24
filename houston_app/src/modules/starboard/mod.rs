@@ -244,9 +244,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
 
         let update = model::Message::update()
             .set_on_insert(|m| {
-                m.board(board.id)
-                    .channel(message.channel_id)
-                    .message(message.id)
+                m.channel(message.channel_id)
                     .user(message.author.id)
                     .pinned(false)
             })
@@ -303,7 +301,6 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
             .into_document()?;
 
         let update = model::Score::update()
-            .set_on_insert(|s| s.board(board.id).user(message.author.id))
             .inc(|s| s.score(score_increase).post_count(i64::from(new_post)))
             .into_document()?;
 

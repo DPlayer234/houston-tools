@@ -214,7 +214,6 @@ async fn unique_role(
 
     let description = if let Some(role) = role {
         let update = UniqueRole::update()
-            .set_on_insert(|u| u.guild(guild_id).user(member.user.id))
             .set(|u| u.role(role.id))
             .into_document()?;
 

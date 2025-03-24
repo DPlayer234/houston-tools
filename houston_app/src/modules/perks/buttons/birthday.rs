@@ -30,11 +30,7 @@ impl ButtonArgsReply for Set {
         let filter = Birthday::filter().user(user_id).into_document()?;
 
         let update = Birthday::update()
-            .set_on_insert(|b| {
-                b.user(user_id)
-                    .region(self.region)
-                    .day_of_year(self.day_of_year)
-            })
+            .set_on_insert(|b| b.region(self.region).day_of_year(self.day_of_year))
             .into_document()?;
 
         let birthday = Birthday::collection(db)

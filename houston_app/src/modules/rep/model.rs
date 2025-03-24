@@ -21,14 +21,6 @@ fn name_unique(name: &str) -> IndexOptions {
         .build()
 }
 
-impl RecordPartial {
-    pub fn init(self, user: UserId, guild: GuildId) -> Self {
-        self.user(user)
-            .guild(guild)
-            .cooldown_ends(DateTime::UNIX_EPOCH)
-    }
-}
-
 impl ModelCollection for Record {
     const COLLECTION_NAME: &str = "rep.record";
 

@@ -220,7 +220,7 @@ impl WalletExt for Collection<Wallet> {
             .user(user_id)
             .into_document()?;
 
-        let mut update = Wallet::update().set_on_insert(|w| w.guild(guild_id).user(user_id));
+        let mut update = Wallet::update();
         let inc = update.inc.get_or_insert_default();
 
         for &(item, amount) in items {
@@ -319,7 +319,6 @@ impl ActivePerkExt for Collection<ActivePerk> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         let update = ActivePerk::update()
-            .set_on_insert(|a| a.guild(guild_id).user(user_id).effect(effect))
             .set(|a| a.until(until))
             .into_document()?;
 

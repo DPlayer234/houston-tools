@@ -3,7 +3,7 @@ use std::slice;
 use std::time::Duration;
 
 use bson_model::Filter;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use tokio::time::timeout;
@@ -55,15 +55,16 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     let rep = data.config().rep()?;
     let guild_id = ctx.require_guild_id()?;
 
-    let db_op = async {
-        let base_filter = model::Record::filter().user(ctx.user().id).guild(guild_id);
-
-        // fetch/upsert the user's base state
-        // we need this to ensure the document exists
-        let filter = bson::to_document(&base_filter)?;
+    let cooldown_check = async {
+        // fetch/upsert the user's base state.
+        // we need this to ensure the document exists for the update.
+        let filter = model::Record::filter()
+            .user(ctx.user().id)
+            .guild(guild_id)
+            .into_document()?;
 
         let upsert = model::Record::update()
-            .set_on_insert(|r| r.init(ctx.user().id, guild_id))
+            .set_on_insert(|r| r.cooldown_ends(DateTime::UNIX_EPOCH))
             .into_document()?;
 
         let self_state = model::Record::collection(db)
@@ -85,7 +86,9 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
             .context("cooldown broke the end of time")?;
 
         // try to update the cooldown in the document
-        let filter = base_filter
+        let filter = model::Record::filter()
+            .user(ctx.user().id)
+            .guild(guild_id)
             .cooldown_ends(Filter::Lte(now))
             .into_document()?;
 
@@ -112,7 +115,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     // when that doesn't work out, also fine, but usually the db isn't that slow.
     // ... except we also don't want to defer in the successful case because edits
     // can't trigger notifications. so don't defer at all if possible.
-    let res = match defer_if_too_long(ctx, db_op).await {
+    let res = match defer_if_too_long(ctx, cooldown_check).await {
         Ok(inner) => {
             // evaluate `db_op` result.
             inner?;
@@ -156,7 +159,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .into_document()?;
 
     let update = model::Record::update()
-        .set_on_insert(|r| r.init(member.user.id, guild_id))
+        .set_on_insert(|r| r.cooldown_ends(DateTime::UNIX_EPOCH))
         .inc(|r| r.received(1))
         .into_document()?;
 
