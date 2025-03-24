@@ -117,30 +117,31 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     // when that doesn't work out, also fine, but usually the db isn't that slow.
     // ... except we also don't want to defer in the successful case because edits
     // can't trigger notifications. so don't defer at all if possible.
-    let res = match if_too_long(cooldown_check, defer).await {
-        Ok(inner) => {
-            // evaluate `db_op` result.
-            inner?;
+    let (cooldown_check, defer) = if_too_long(cooldown_check, defer).await;
 
-            // send the message as soon as we're sure it's correct
-            let emoji = EMOJIS.choose(&mut rand::rng()).expect("EMOJIS not empty");
-            let content = format!(
-                "{emoji} | {} has given {} a reputation point!",
-                ctx.user().mention(),
-                member.mention(),
-            );
+    // evaluate cooldown result
+    cooldown_check?;
 
-            let allowed_mentions =
-                CreateAllowedMentions::new().users(slice::from_ref(&member.user.id));
+    // if the defer part ran and failed, don't try to send a message
+    // propagate the error from both branches to the logging below
+    let res = if let Some(Err(why)) = defer {
+        Err(why)
+    } else {
+        // send the message as soon as we're sure it's correct
+        let emoji = EMOJIS.choose(&mut rand::rng()).expect("EMOJIS not empty");
+        let content = format!(
+            "{emoji} | {} has given {} a reputation point!",
+            ctx.user().mention(),
+            member.mention(),
+        );
 
-            let reply = CreateReply::new()
-                .content(content)
-                .allowed_mentions(allowed_mentions);
+        let allowed_mentions = CreateAllowedMentions::new().users(slice::from_ref(&member.user.id));
 
-            // low chance this fails. propagate the error to the `if let` below.
-            ctx.send(reply).await
-        },
-        Err(why) => Err(why),
+        let reply = CreateReply::new()
+            .content(content)
+            .allowed_mentions(allowed_mentions);
+
+        ctx.send(reply).await
     };
 
     // DON'T propagate this out. this error may indicate that deferring failed, plus
@@ -207,18 +208,15 @@ async fn throw_cooldown_error(ctx: Context<'_>) -> Result {
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
 }
 
-async fn if_too_long<F, I, E>(fut: F, intercept: I) -> Result<F::Output, E>
+async fn if_too_long<F, I>(fut: F, intercept: I) -> (F::Output, Option<I::Output>)
 where
     F: Future,
-    I: Future<Output = Result<(), E>>,
+    I: Future,
 {
     let mut fut = pin!(fut);
     match timeout(TOO_LONG, &mut fut).await {
-        Ok(ok) => Ok(ok),
-        Err(_) => {
-            intercept.await?;
-            Ok(fut.await)
-        },
+        Ok(f) => (f, None),
+        Err(_) => tokio::join!(fut, async { Some(intercept.await) }),
     }
 }
 
