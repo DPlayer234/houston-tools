@@ -1,15 +1,16 @@
 use std::pin::pin;
 use std::slice;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bson_model::Filter;
 use chrono::{DateTime, Utc};
-use mongodb::options::ReturnDocument;
 use rand::prelude::*;
 use tokio::time::timeout;
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
+use crate::helper::bson::is_upsert_duplicate_key;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
 
@@ -39,6 +40,15 @@ pub async fn rep(
     rep_core(ctx, member).await
 }
 
+// this code has a couple of frankly weird conditions:
+// - we don't want to defer too early in the failure case so the cooldown error
+//   isn't shown to everyone.
+// - we don't want to defer _at all_ in the success case so the rep message is
+//   the initial message, which is needed to actually trigger a notification.
+// - we can't wait too long to defer and/or send because that would time out the
+//   command interaction.
+// - there are at least 3 required database operations.
+// so consider that when touching this.
 async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     anyhow::ensure!(
         member.user.id != ctx.user().id,
@@ -55,37 +65,20 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     let rep = data.config().rep()?;
     let guild_id = ctx.require_guild_id()?;
 
+    // defer appropriately when the initial check takes too long
+    let ephemeral = AtomicBool::new(false);
+    let defer = async { ctx.defer(ephemeral.load(Ordering::Relaxed)).await };
+
     let cooldown_check = async {
-        // fetch/upsert the user's base state.
-        // we need this to ensure the document exists for the update.
-        let filter = model::Record::filter()
-            .user(ctx.user().id)
-            .guild(guild_id)
-            .into_document()?;
-
-        let upsert = model::Record::update()
-            .set_on_insert(|r| r.cooldown_ends(DateTime::UNIX_EPOCH))
-            .into_document()?;
-
-        let self_state = model::Record::collection(db)
-            .find_one_and_update(filter, upsert)
-            .upsert(true)
-            .return_document(ReturnDocument::After)
-            .await?
-            .context("got nothing on upsert")?;
-
         let now = Utc::now();
-
-        // preliminary cooldown check
-        if self_state.cooldown_ends > now {
-            return bail_on_cooldown(&self_state).await;
-        }
-
         let next_cooldown_end = Utc::now()
             .checked_add_signed(rep.cooldown)
             .context("cooldown broke the end of time")?;
 
-        // try to update the cooldown in the document
+        // try to update the cooldown in the document.
+        // this is performed as an upsert with a unique index over [user, guild].
+        // if this fails due to a `DuplicateKey`, this means that the document exists
+        // and its cooldown hasn't expired yet.
         let filter = model::Record::filter()
             .user(ctx.user().id)
             .guild(guild_id)
@@ -96,16 +89,25 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
             .set(|r| r.cooldown_ends(next_cooldown_end))
             .into_document()?;
 
-        let is_updated = model::Record::collection(db)
-            .find_one_and_update(filter, update)
-            .await?
-            .is_some();
+        let update_res = model::Record::collection(db)
+            .update_one(filter, update)
+            .upsert(true)
+            .await;
 
-        // this will ensure that concurrent commands by the same user don't pass.
-        // that _shouldn't_ be possible due to rate limits and such but... yeah.
-        // if the update fails, that means the filter didn't match.
-        if !is_updated {
-            return bail_on_cooldown(&self_state).await;
+        let on_cooldown = match update_res {
+            Ok(_) => false,
+            Err(why) if is_upsert_duplicate_key(&why) => true,
+            Err(why) => anyhow::bail!(why),
+        };
+
+        if on_cooldown {
+            // set it to defer ephemerally if on cooldown
+            ephemeral.store(true, Ordering::Relaxed);
+
+            // the only downside to the upsert-or-fail approach:
+            // needs 1 more query for the failure case.
+            // i'd say it's worth 1 less query for the success case.
+            return throw_cooldown_error(ctx).await;
         }
 
         Ok(())
@@ -115,7 +117,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     // when that doesn't work out, also fine, but usually the db isn't that slow.
     // ... except we also don't want to defer in the successful case because edits
     // can't trigger notifications. so don't defer at all if possible.
-    let res = match defer_if_too_long(ctx, cooldown_check).await {
+    let res = match if_too_long(cooldown_check, defer).await {
         Ok(inner) => {
             // evaluate `db_op` result.
             inner?;
@@ -186,23 +188,35 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     Ok(())
 }
 
-async fn bail_on_cooldown(self_state: &model::Record) -> Result {
+async fn throw_cooldown_error(ctx: Context<'_>) -> Result {
+    let data = ctx.data_ref();
+    let db = data.database()?;
+    let guild_id = ctx.require_guild_id()?;
+
+    let filter = model::Record::filter()
+        .user(ctx.user().id)
+        .guild(guild_id)
+        .into_document()?;
+
+    let self_state = model::Record::collection(db)
+        .find_one(filter)
+        .await?
+        .context("got nothing after upsert")?;
+
     let time = self_state.cooldown_ends.short_date_time();
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
 }
 
-/// Defers via the `ctx` if `fut` takes [`TOO_LONG`] to finish.
-///
-/// The outer result represents the defer result or [`Ok`] if it didn't defer.
-async fn defer_if_too_long<F>(ctx: Context<'_>, fut: F) -> serenity::Result<F::Output>
+async fn if_too_long<F, I, E>(fut: F, intercept: I) -> Result<F::Output, E>
 where
     F: Future,
+    I: Future<Output = Result<(), E>>,
 {
     let mut fut = pin!(fut);
     match timeout(TOO_LONG, &mut fut).await {
         Ok(ok) => Ok(ok),
         Err(_) => {
-            ctx.defer(false).await?;
+            intercept.await?;
             Ok(fut.await)
         },
     }

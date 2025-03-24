@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use bson::Document;
+use mongodb::error::{CommandError, Error, ErrorKind, WriteError, WriteFailure};
 use mongodb::options::IndexOptions;
 use mongodb::{Collection, Database, IndexModel};
 
@@ -31,6 +32,16 @@ pub trait ModelCollection {
     }
 }
 
+/// Determines whether the error code is `11000 (DuplicateKey)`.
+pub fn is_upsert_duplicate_key(err: &Error) -> bool {
+    // can show up for both command and write errors, for some reason
+    matches!(
+        *err.kind,
+        ErrorKind::Command(CommandError { code: 11000, .. })
+            | ErrorKind::Write(WriteFailure::WriteError(WriteError { code: 11000, .. }))
+    )
+}
+
 /// Creates the indices for model `M`.
 ///
 /// If there is a spec mismatch, drop and recreates the affected indices.
@@ -38,8 +49,6 @@ pub async fn update_indices<M>(db: &Database) -> anyhow::Result<()>
 where
     M: ModelCollection,
 {
-    use mongodb::error::{CommandError, Error, ErrorKind};
-
     // match for command error kind 86 `IndexKeySpecsConflict`
     // in this case, we can probably just drop the index and recreate it
     fn is_recreate(err: &Error) -> bool {
