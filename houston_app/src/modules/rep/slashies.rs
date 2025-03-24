@@ -133,11 +133,11 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
 
     log::trace!("{} repped {}.", ctx.user().name, member.user.name);
 
-    if rep.cash != 0 && crate::modules::perks::Module.enabled(data.config()) {
+    if rep.cash_gain != 0 && crate::modules::perks::Module.enabled(data.config()) {
         use crate::modules::perks::Item;
         use crate::modules::perks::model::{Wallet, WalletExt as _};
 
-        let amount: i64 = rep.cash.into();
+        let amount: i64 = rep.cash_gain.into();
 
         Wallet::collection(db)
             .add_items(guild_id, member.user.id, &[(Item::Cash, amount)])

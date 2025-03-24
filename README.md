@@ -277,8 +277,8 @@ This comes with the following configuration:
 # optional. defaults to 20 hours.
 # the cooldown between `/rep` uses per user and server.
 cooldown = "20:00:00"
-# required. the cash gain on gaining rep.
-cash = 10
+# optional. the cash gain on gaining rep.
+cash_gain = 10
 ```
 
 The following commands will be enabled:

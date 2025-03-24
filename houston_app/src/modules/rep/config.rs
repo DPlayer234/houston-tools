@@ -10,5 +10,6 @@ fn default_cooldown() -> TimeDelta {
 pub struct Config {
     #[serde(with = "serde_time_delta", default = "default_cooldown")]
     pub cooldown: TimeDelta,
-    pub cash: u32,
+    #[serde(default, alias = "cash")]
+    pub cash_gain: u32,
 }

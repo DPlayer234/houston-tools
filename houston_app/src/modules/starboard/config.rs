@@ -59,9 +59,9 @@ pub struct StarboardEntry {
     pub reacts: u32,
     #[serde(default = "Vec::new")]
     pub notices: Vec<String>,
-    #[serde(default)]
+    #[serde(default, alias = "cash")]
     pub cash_gain: i32,
-    #[serde(default)]
+    #[serde(default, alias = "cash_pin")]
     pub cash_pin_gain: i32,
 }
 

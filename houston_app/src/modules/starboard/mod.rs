@@ -46,6 +46,16 @@ impl super::Module for Module {
             "starboard requires a mongodb_uri",
         );
 
+        anyhow::ensure!(
+            config
+                .starboard
+                .values()
+                .flat_map(|e| e.boards.values())
+                .all(|e| !e.any_cash_gain())
+                || crate::modules::perks::Module.enabled(config),
+            "setting `starboard.*.boards.*.cash_gain` requires enabling `perks`",
+        );
+
         let guilds = config.starboard.len();
         let boards = config
             .starboard

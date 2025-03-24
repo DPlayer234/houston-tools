@@ -16,4 +16,15 @@ impl super::Module for Module {
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {
         [slashies::rep(), slashies::rep_context()]
     }
+
+    fn validate(&self, config: &HBotConfig) -> Result {
+        let rep = config.rep().unwrap();
+
+        anyhow::ensure!(
+            rep.cash_gain == 0 || crate::modules::perks::Module.enabled(config),
+            "setting `rep.cash_gain` requires enabling `perks`",
+        );
+
+        Ok(())
+    }
 }

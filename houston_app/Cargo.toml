@@ -1,6 +1,6 @@
 [package]
 name = "houston_app"
-version = "2.11.1"
+version = "2.11.2"
 edition.workspace = true
 rust-version.workspace = true
 
