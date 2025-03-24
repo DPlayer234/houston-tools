@@ -14,8 +14,11 @@ pub struct Record {
     pub cooldown_ends: DateTime<Utc>,
 }
 
-fn name(name: &str) -> IndexOptions {
-    IndexOptions::builder().name(name.to_owned()).build()
+fn name_unique(name: &str) -> IndexOptions {
+    IndexOptions::builder()
+        .name(name.to_owned())
+        .unique(true)
+        .build()
 }
 
 impl RecordPartial {
@@ -32,7 +35,7 @@ impl ModelCollection for Record {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("user-guild"))
+                .options(name_unique("user-guild"))
                 .keys(Self::sort().user(Asc).guild(Asc))
                 .build(),
         ]

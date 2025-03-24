@@ -65,13 +65,20 @@ fn name(name: &str) -> IndexOptions {
     IndexOptions::builder().name(name.to_owned()).build()
 }
 
+fn name_unique(name: &str) -> IndexOptions {
+    IndexOptions::builder()
+        .name(name.to_owned())
+        .unique(true)
+        .build()
+}
+
 impl ModelCollection for Wallet {
     const COLLECTION_NAME: &str = "perks.wallet";
 
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("guild-user"))
+                .options(name_unique("guild-user"))
                 .keys(Self::sort().guild(Asc).user(Asc))
                 .build(),
         ]
@@ -92,7 +99,7 @@ impl ModelCollection for ActivePerk {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("guild-user-effect"))
+                .options(name_unique("guild-user-effect"))
                 .keys(Self::sort().guild(Asc).user(Asc).effect(Asc))
                 .build(),
             IndexModel::builder()
@@ -113,7 +120,7 @@ impl ModelCollection for UniqueRole {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("guild-user"))
+                .options(name_unique("guild-user"))
                 .keys(Self::sort().guild(Asc).user(Asc))
                 .build(),
         ]
@@ -126,7 +133,7 @@ impl ModelCollection for Birthday {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("user"))
+                .options(name_unique("user"))
                 .keys(Self::sort().user(Asc))
                 .build(),
             IndexModel::builder()

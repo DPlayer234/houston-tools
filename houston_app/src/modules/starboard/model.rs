@@ -37,6 +37,13 @@ fn name(name: &str) -> IndexOptions {
     IndexOptions::builder().name(name.to_owned()).build()
 }
 
+fn name_unique(name: &str) -> IndexOptions {
+    IndexOptions::builder()
+        .name(name.to_owned())
+        .unique(true)
+        .build()
+}
+
 impl Message {
     pub fn self_filter(&self) -> Document {
         doc! {
@@ -51,7 +58,7 @@ impl ModelCollection for Message {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("board-message"))
+                .options(name_unique("board-message"))
                 .keys(Self::sort().board(Asc).message(Asc))
                 .build(),
             IndexModel::builder()
@@ -78,7 +85,7 @@ impl ModelCollection for Score {
     fn indices() -> Vec<IndexModel> {
         vec![
             IndexModel::builder()
-                .options(name("board-user"))
+                .options(name_unique("board-user"))
                 .keys(Self::sort().board(Asc).user(Asc))
                 .build(),
             IndexModel::builder()
