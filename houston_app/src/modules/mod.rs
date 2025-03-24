@@ -137,7 +137,7 @@ macro_rules! impl_handler {
     // the weird `match _ {}` part is intended so that the syntax is something
     // that rustfmt can format. in a sense, it's just a nicety.
     ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
-        // use expanded `async_trait` for to avoid alloc for unused branches
+        // use expanded `async_trait` to avoid alloc for unused branches
         impl ::serenity::gateway::client::EventHandler for $Type {
             fn dispatch<'s, 'c, 'e, 'a>(
                 &'s self,

@@ -145,7 +145,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
 
     // DON'T propagate this out. this error may indicate that deferring failed, plus
     // db operations have already happened, so we want to finish those even if this
-    // fails. and to send to discord isn't unreasonable because we introduce delay.
+    // fails. and failing to send to discord isn't unreasonable due to the delay.
     if let Err(why) = res {
         log::error!(
             "Failed to send `/rep` confirm: in {guild_id}, by {}, to {}. {why:?}",
