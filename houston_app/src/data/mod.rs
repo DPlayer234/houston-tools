@@ -110,11 +110,12 @@ impl HBotData {
     }
 
     async fn load_app_emojis(&self, http: &Http) -> Result {
-        if self.app_emojis.get().is_none() {
-            _ = self
+        if self.app_emojis.get().is_none()
+            && self
                 .app_emojis
-                .set(app_emojis::HAppEmojiStore::load_and_update(self.config(), http).await?);
-
+                .set(app_emojis::HAppEmojiStore::load_and_update(self.config(), http).await?)
+                .is_ok()
+        {
             log::info!("Loaded App Emojis.");
         }
 

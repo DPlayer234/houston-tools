@@ -30,6 +30,13 @@ pub trait ModelCollection {
     fn indices() -> Vec<IndexModel> {
         Vec::new()
     }
+
+    /// Creates the indices for this model.
+    ///
+    /// If there is a spec mismatch, drop and recreates the affected indices.
+    fn update_indices(db: &Database) -> impl Future<Output = anyhow::Result<()>> {
+        update_indices(Self::collection_raw(db), Self::indices)
+    }
 }
 
 /// Determines whether the error code is `11000 (DuplicateKey)`.
@@ -42,24 +49,21 @@ pub fn is_upsert_duplicate_key(err: &Error) -> bool {
     )
 }
 
-/// Creates the indices for model `M`.
-///
-/// If there is a spec mismatch, drop and recreates the affected indices.
-pub async fn update_indices<M>(db: &Database) -> anyhow::Result<()>
-where
-    M: ModelCollection,
-{
+async fn update_indices(
+    collection: Collection<Document>,
+    indices_fn: fn() -> Vec<IndexModel>,
+) -> anyhow::Result<()> {
     // match for command error kind 86 `IndexKeySpecsConflict`
     // in this case, we can probably just drop the index and recreate it
     fn is_recreate(err: &Error) -> bool {
         matches!(*err.kind, ErrorKind::Command(CommandError { code: 86, .. }))
     }
 
-    async fn update_indices_inner(
+    async fn recreate(
         collection: Collection<Document>,
-        indices: Vec<IndexModel>,
+        indices_fn: fn() -> Vec<IndexModel>,
     ) -> anyhow::Result<()> {
-        for index in indices {
+        for index in indices_fn() {
             match collection.create_index(index.clone()).await {
                 Ok(_) => {},
                 Err(err) if is_recreate(&err) => {
@@ -86,7 +90,7 @@ where
         Ok(())
     }
 
-    let indices = M::indices();
+    let indices = indices_fn();
     if indices.is_empty() {
         return Ok(());
     }
@@ -94,10 +98,9 @@ where
     // attempt to create all indices in bulk first
     // this will usually succeed, so we can save some round-trips
     // if we can attempt a recreate, try the indices individually
-    let collection = M::collection_raw(db);
     match collection.create_indexes(indices).await {
         Ok(_) => Ok(()),
-        Err(err) if is_recreate(&err) => update_indices_inner(collection, M::indices()).await,
+        Err(err) if is_recreate(&err) => recreate(collection, indices_fn).await,
         Err(err) => Err(err).context("could not create indices"),
     }
 }
