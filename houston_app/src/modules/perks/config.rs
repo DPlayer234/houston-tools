@@ -41,14 +41,14 @@ pub struct EffectPrice {
     pub duration: TimeDelta,
 }
 
-fn one() -> u32 {
+fn default_item_amount() -> u32 {
     1
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct ItemPrice {
     pub cost: u32,
-    #[serde(default = "one")]
+    #[serde(default = "default_item_amount")]
     pub amount: u32,
 }
 

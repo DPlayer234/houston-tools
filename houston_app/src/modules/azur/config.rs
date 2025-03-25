@@ -9,14 +9,14 @@ use utils::join;
 
 use super::GameData;
 
-fn default_true() -> bool {
+fn default_early_load() -> bool {
     true
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     data_path: Arc<Path>,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_early_load")]
     pub early_load: bool,
 
     #[serde(default)]
