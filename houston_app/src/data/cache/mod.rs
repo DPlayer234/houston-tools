@@ -117,8 +117,11 @@ impl Cache {
     pub fn stats(&self) -> Option<String> {
         use utils::text::write_str::*;
 
-        let mut out = String::new();
+        if matches!(self.guilds.len(), 0 | 11..) {
+            return None;
+        }
 
+        let mut out = String::new();
         for entry in &self.guilds {
             let guild = entry.value();
             let id = entry.key().get() % 1_000_000;
@@ -130,7 +133,7 @@ impl Cache {
             );
         }
 
-        (!out.is_empty()).then_some(out)
+        Some(out)
     }
 
     fn guild_channel_(&self, guild_id: GuildId, channel_id: ChannelId) -> Option<Ccot> {

@@ -162,15 +162,15 @@ fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -
     for o in options {
         f.write_str(o.name)?;
         f.write_str(": ")?;
-        fmt_resolved_option(o, f)?;
+        fmt_resolved_option(&o.value, f)?;
         f.write_str(" ")?;
     }
 
     Ok(())
 }
 
-fn fmt_resolved_option(option: &ResolvedOption<'_>, f: &mut Formatter<'_>) -> Result {
-    match option.value {
+fn fmt_resolved_option(value: &ResolvedValue<'_>, f: &mut Formatter<'_>) -> Result {
+    match value {
         ResolvedValue::Boolean(v) => v.fmt(f),
         ResolvedValue::Integer(v) => v.fmt(f),
         ResolvedValue::Number(v) => v.fmt(f),
