@@ -3,6 +3,7 @@ use utils::text::write_str::*;
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
+use crate::helper::discord::guild_avatar_url;
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.
@@ -32,10 +33,16 @@ pub async fn who(
 }
 
 async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>) -> Result {
-    let mut embed = who_user_embed(user.user).color(ctx.data_ref().config().embed_color);
+    let mut embed = who_user_embed(user.user)
+        .color(ctx.data_ref().config().embed_color)
+        .thumbnail(user.face());
 
-    if let Some(member) = &user.member {
-        embed = embed.field("Server Member Info", who_member_info(member), false);
+    if let Some(member) = user.member {
+        embed = embed.field(
+            "Server Member Info",
+            who_member_info(user.user, member, ctx.guild_id().unwrap_or_default()),
+            false,
+        );
     }
 
     ctx.send(create_reply(ephemeral).embed(embed)).await?;
@@ -47,7 +54,6 @@ async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>
 fn who_user_embed(user: &User) -> CreateEmbed<'_> {
     CreateEmbed::new()
         .author(CreateEmbedAuthor::new(get_unique_username(user)))
-        .thumbnail(user.face())
         .description(who_user_info(user))
 }
 
@@ -91,7 +97,7 @@ fn who_user_info(user: &User) -> String {
 
 /* Additional server member info */
 
-fn who_member_info(member: &PartialMember) -> String {
+fn who_member_info(user: &User, member: &PartialMember, guild_id: GuildId) -> String {
     // role ids are also present, but not useful since there is no guild info.
 
     let mut f = String::new();
@@ -102,6 +108,11 @@ fn who_member_info(member: &PartialMember) -> String {
 
     if let Some(joined_at) = member.joined_at {
         writeln_str!(f, "**Joined At:** {}", joined_at.short_date_time());
+    }
+
+    if let Some(hash) = &member.avatar {
+        let avatar_url = guild_avatar_url(user.id, guild_id, hash);
+        writeln_str!(f, "**Guild Avatar:** [Click]({avatar_url})");
     }
 
     if let Some(premium_since) = member.premium_since {
@@ -157,61 +168,64 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         ($flag:ident) => {
             (Permissions::$flag, titlecase!(stringify!($flag)))
         };
+        ($flag:ident, $name:literal) => {
+            (Permissions::$flag, $name)
+        };
     }
 
     // use const size to catch when new flags are added
     const FLAG_COUNT: usize = Permissions::FLAGS.len();
     const FLAGS: [(Permissions, &str); FLAG_COUNT] = [
-        flag!(CREATE_INSTANT_INVITE),
+        flag!(ADMINISTRATOR),
+        flag!(VIEW_CHANNEL),
+        flag!(MANAGE_CHANNELS),
+        flag!(MANAGE_ROLES),
+        flag!(CREATE_GUILD_EXPRESSIONS, "Create Expressions"),
+        flag!(MANAGE_GUILD_EXPRESSIONS, "Manage Expressions"),
+        flag!(VIEW_AUDIT_LOG),
+        flag!(VIEW_GUILD_INSIGHTS, "View Server Insights"),
+        flag!(MANAGE_WEBHOOKS),
+        flag!(MANAGE_GUILD, "Manage Server"),
+        flag!(CREATE_INSTANT_INVITE, "Create Invite"),
+        flag!(CHANGE_NICKNAME),
+        flag!(MANAGE_NICKNAMES),
         flag!(KICK_MEMBERS),
         flag!(BAN_MEMBERS),
-        flag!(ADMINISTRATOR),
-        flag!(MANAGE_CHANNELS),
-        flag!(MANAGE_GUILD),
-        flag!(ADD_REACTIONS),
-        flag!(VIEW_AUDIT_LOG),
-        flag!(PRIORITY_SPEAKER),
-        flag!(STREAM),
-        flag!(VIEW_CHANNEL),
+        flag!(MODERATE_MEMBERS, "Timeout Members"),
         flag!(SEND_MESSAGES),
-        flag!(SEND_TTS_MESSAGES),
-        flag!(MANAGE_MESSAGES),
+        flag!(SEND_MESSAGES_IN_THREADS, "Send Messages in Threads"),
+        flag!(CREATE_PUBLIC_THREADS),
+        flag!(CREATE_PRIVATE_THREADS),
         flag!(EMBED_LINKS),
         flag!(ATTACH_FILES),
-        flag!(READ_MESSAGE_HISTORY),
-        flag!(MENTION_EVERYONE),
+        flag!(ADD_REACTIONS),
         flag!(USE_EXTERNAL_EMOJIS),
-        flag!(VIEW_GUILD_INSIGHTS),
+        flag!(USE_EXTERNAL_STICKERS),
+        flag!(MENTION_EVERYONE, "Mention @\u{200D}everyone"),
+        flag!(MANAGE_MESSAGES),
+        flag!(MANAGE_THREADS),
+        flag!(READ_MESSAGE_HISTORY),
+        flag!(SEND_TTS_MESSAGES),
+        flag!(SEND_VOICE_MESSAGES),
+        flag!(SEND_POLLS, "Create Polls"),
         flag!(CONNECT),
         flag!(SPEAK),
+        flag!(STREAM, "Video"),
+        flag!(USE_SOUNDBOARD),
+        flag!(USE_EXTERNAL_SOUNDS),
+        flag!(USE_VAD, "Use Voice Activity"),
+        flag!(PRIORITY_SPEAKER),
         flag!(MUTE_MEMBERS),
         flag!(DEAFEN_MEMBERS),
         flag!(MOVE_MEMBERS),
-        flag!(USE_VAD),
-        flag!(CHANGE_NICKNAME),
-        flag!(MANAGE_NICKNAMES),
-        flag!(MANAGE_ROLES),
-        flag!(MANAGE_WEBHOOKS),
-        flag!(MANAGE_GUILD_EXPRESSIONS),
-        flag!(USE_APPLICATION_COMMANDS),
-        flag!(REQUEST_TO_SPEAK),
-        flag!(MANAGE_EVENTS),
-        flag!(MANAGE_THREADS),
-        flag!(CREATE_PUBLIC_THREADS),
-        flag!(CREATE_PRIVATE_THREADS),
-        flag!(USE_EXTERNAL_STICKERS),
-        flag!(SEND_MESSAGES_IN_THREADS),
-        flag!(USE_EMBEDDED_ACTIVITIES),
-        flag!(MODERATE_MEMBERS),
-        flag!(VIEW_CREATOR_MONETIZATION_ANALYTICS),
-        flag!(USE_SOUNDBOARD),
-        flag!(CREATE_GUILD_EXPRESSIONS),
-        flag!(CREATE_EVENTS),
-        flag!(USE_EXTERNAL_SOUNDS),
-        flag!(SEND_VOICE_MESSAGES),
+        flag!(REQUEST_TO_SPEAK, "Request to Speak"),
         flag!(SET_VOICE_CHANNEL_STATUS),
-        flag!(SEND_POLLS),
+        flag!(USE_APPLICATION_COMMANDS),
+        flag!(USE_EMBEDDED_ACTIVITIES, "Use Activities"),
         flag!(USE_EXTERNAL_APPS),
+        flag!(CREATE_EVENTS),
+        flag!(MANAGE_EVENTS),
+        flag!(VIEW_CREATOR_MONETIZATION_ANALYTICS),
     ];
 
     write_str!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits());

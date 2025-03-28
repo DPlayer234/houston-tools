@@ -30,6 +30,13 @@ pub fn unicode_emoji(text: &'static str) -> ReactionType {
     ReactionType::Unicode(text)
 }
 
+pub fn guild_avatar_url(user_id: UserId, guild_id: GuildId, hash: &ImageHash) -> String {
+    let ext = if hash.is_animated() { "gif" } else { "webp" };
+    format!(
+        "https://cdn.discordapp.com/guilds/{guild_id}/users/{user_id}/avatars/{hash}.{ext}?size=1024"
+    )
+}
+
 pub trait WithPartial {
     type Partial;
 }

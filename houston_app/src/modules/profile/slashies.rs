@@ -167,7 +167,7 @@ async fn perks_collectible_info(
 
     if let Some(guild_config) = guild_config {
         for &(need, role) in &guild_config.prize_roles {
-            if wallet.crab >= need.into() {
+            if wallet.crab >= i64::from(need) {
                 write_str!(content, "\n- <@&{role}>");
             } else {
                 write_str!(content, "\n- -# 🔒 ({need})")

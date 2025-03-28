@@ -12,14 +12,14 @@ pub async fn wallet(
     ephemeral: Option<bool>,
 ) -> Result {
     let data = ctx.data_ref();
-    let guild_id = ctx.require_guild_id()?;
+    let member = ctx.member().context("must be used in guild (no member)")?;
     let perks = data.config().perks()?;
     let db = data.database()?;
 
     ctx.defer_as(ephemeral).await?;
 
     let filter = Wallet::filter()
-        .guild(guild_id)
+        .guild(member.guild_id)
         .user(ctx.user().id)
         .into_document()?;
 
@@ -40,9 +40,8 @@ pub async fn wallet(
 
     let description = crate::fmt::written_or(description, "<None>");
 
-    let (display_name, face) = get_display_info(ctx);
-    let author = format!("{display_name}: Wallet");
-    let author = CreateEmbedAuthor::new(author).icon_url(face);
+    let author = format!("{}: Wallet", member.display_name());
+    let author = CreateEmbedAuthor::new(author).icon_url(member.face());
 
     let embed = CreateEmbed::new()
         .author(author)
@@ -51,11 +50,4 @@ pub async fn wallet(
 
     ctx.send(CreateReply::new().embed(embed)).await?;
     Ok(())
-}
-
-fn get_display_info(ctx: Context<'_>) -> (&str, String) {
-    match ctx.member() {
-        Some(member) => (member.display_name(), member.face()),
-        _ => (ctx.user().display_name(), ctx.user().face()),
-    }
 }

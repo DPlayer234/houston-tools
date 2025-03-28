@@ -230,7 +230,7 @@ impl View {
         let buy = CreateButton::new(buy)
             .label("Buy")
             .style(ButtonStyle::Success)
-            .disabled(wallet.cash < st.cost.into() || active.is_some());
+            .disabled(wallet.cash < i64::from(st.cost) || active.is_some());
 
         let components = vec![CreateActionRow::buttons(vec![back, buy])];
         let reply = CreateReply::new().embed(embed).components(components);
@@ -283,7 +283,7 @@ impl View {
         let buy = CreateButton::new(buy)
             .label("Buy")
             .style(ButtonStyle::Success)
-            .disabled(wallet.cash < st.cost.into());
+            .disabled(wallet.cash < i64::from(st.cost));
 
         let mut buttons = vec![back, buy];
 

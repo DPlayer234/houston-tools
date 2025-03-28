@@ -1,18 +1,23 @@
 use houston_cmd::{Context, Error, SlashArg, UserContextArg};
 
-use crate::helper::discord::Partial;
+use crate::helper::discord::{Partial, guild_avatar_url};
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SlashUser<'a> {
     pub user: &'a User,
     pub member: Option<&'a PartialMember>,
+    guild_id: Option<GuildId>,
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
     fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
-            ResolvedValue::User(user, member) => Ok(Self { user, member }),
+            ResolvedValue::User(user, member) => Ok(Self {
+                user,
+                member,
+                guild_id: ctx.guild_id(),
+            }),
             _ => Err(Error::structure_mismatch(*ctx, "expected User")),
         }
     }
@@ -24,11 +29,15 @@ impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
 
 impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
     fn extract(
-        _ctx: &Context<'ctx>,
+        ctx: &Context<'ctx>,
         user: &'ctx User,
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
-        Ok(Self { user, member })
+        Ok(Self {
+            user,
+            member,
+            guild_id: ctx.guild_id(),
+        })
     }
 }
 
@@ -36,6 +45,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
 pub struct SlashMember<'a> {
     pub user: &'a User,
     pub member: Partial<&'a Member>,
+    guild_id: GuildId,
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
@@ -45,6 +55,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
                 return Ok(Self {
                     user,
                     member: Partial::Partial(member),
+                    guild_id: ctx.guild_id().unwrap_or_default(),
                 });
             },
             // delegate to this method to get the correct error
@@ -70,12 +81,13 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         Ok(Self {
             user,
             member: Partial::Partial(member),
+            guild_id: ctx.guild_id().unwrap_or_default(),
         })
     }
 }
 
-#[expect(dead_code, reason = "reserved for later use")]
 impl SlashUser<'_> {
+    #[expect(dead_code, reason = "reserved for later use")]
     pub fn display_name(&self) -> &str {
         self.member
             .and_then(|m| m.nick.as_deref())
@@ -83,7 +95,11 @@ impl SlashUser<'_> {
     }
 
     pub fn face(&self) -> String {
-        self.user.face()
+        if let Some(hash) = self.member.and_then(|m| m.avatar.as_ref()) {
+            guild_avatar_url(self.user.id, self.guild_id.unwrap_or_default(), hash)
+        } else {
+            self.user.face()
+        }
     }
 }
 
@@ -93,6 +109,7 @@ impl<'a> SlashMember<'a> {
         Ok(Self {
             user: ctx.user(),
             member: Partial::Full(member),
+            guild_id: member.guild_id,
         })
     }
 
@@ -108,10 +125,15 @@ impl<'a> SlashMember<'a> {
     }
 
     pub fn face(&self) -> String {
-        match self.member {
-            Partial::Full(m) => m.face(),
-            // PartialMember has no guild avatar
-            Partial::Partial(_) => self.user.face(),
+        let hash = match self.member {
+            Partial::Full(m) => &m.avatar,
+            Partial::Partial(m) => &m.avatar,
+        };
+
+        if let Some(hash) = hash {
+            guild_avatar_url(self.user.id, self.guild_id, hash)
+        } else {
+            self.user.face()
         }
     }
 }

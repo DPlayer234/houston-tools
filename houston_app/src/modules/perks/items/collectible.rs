@@ -23,7 +23,7 @@ impl Shape for Collectible {
             let roles = guild_config
                 .prize_roles
                 .iter()
-                .filter(|e| (start..=owned).contains(&e.0.into()));
+                .filter(|e| (start..=owned).contains(&i64::from(e.0)));
 
             for &(need, role) in roles {
                 args.ctx
