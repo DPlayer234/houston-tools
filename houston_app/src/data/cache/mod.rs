@@ -7,6 +7,7 @@ use dashmap::DashMap;
 use extract_map::ExtractMap;
 use serenity::http::Http;
 
+use crate::fmt::discord::id_suffix;
 use crate::prelude::*;
 
 mod event_handler;
@@ -124,10 +125,10 @@ impl Cache {
         let mut out = String::new();
         for entry in &self.guilds {
             let guild = entry.value();
-            let id = entry.key().get() % 1_000_000;
+            let id = id_suffix(*entry.key());
             writeln_str!(
                 out,
-                "**?{id:06}:** channels: {}, threads: {}",
+                "**{id}:** channels: {}, threads: {}",
                 guild.channels.len(),
                 guild.threads.len()
             );

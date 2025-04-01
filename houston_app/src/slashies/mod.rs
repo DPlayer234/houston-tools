@@ -2,7 +2,7 @@ use args::SlashMember;
 use houston_cmd::Context;
 
 use crate::data::IntoEphemeral;
-use crate::fmt::discord::DisplayCommand;
+use crate::fmt::discord::{DisplayCommand, interaction_location};
 use crate::prelude::*;
 
 pub mod args;
@@ -19,7 +19,8 @@ pub mod prelude {
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: Context<'_>) {
     log::info!(
-        "{}: {}",
+        "{}, {}: {}",
+        interaction_location(ctx.guild_id(), ctx.interaction.channel.as_ref()),
         ctx.user().name,
         DisplayCommand::new(&ctx.interaction.data, ctx.options()),
     );

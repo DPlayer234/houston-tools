@@ -161,6 +161,7 @@ mod handler {
     use std::sync::atomic::AtomicBool;
 
     use super::*;
+    use crate::fmt::discord::interaction_location;
 
     /// Dispatches component interactions.
     pub async fn dispatch_component(ctx: &Context, interaction: &ComponentInteraction) {
@@ -192,7 +193,12 @@ mod handler {
         };
 
         let args = ButtonArgs::from_custom_id(custom_id)?;
-        log::info!("{}: {:?}", interaction.user.name, args);
+        log::info!(
+            "[Button] {}, {}: {:?}",
+            interaction_location(interaction.guild_id, interaction.channel.as_ref()),
+            interaction.user.name,
+            args
+        );
 
         args.reply(ButtonContext {
             reply_state,
@@ -225,7 +231,12 @@ mod handler {
         reply_state: &AtomicBool,
     ) -> Result {
         let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
-        log::info!("{}: {:?}", interaction.user.name, args);
+        log::info!(
+            "[Modal] {}, {}: {:?}",
+            interaction_location(interaction.guild_id, interaction.channel.as_ref()),
+            interaction.user.name,
+            args
+        );
 
         args.modal_reply(ModalContext {
             reply_state,
