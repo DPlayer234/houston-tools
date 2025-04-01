@@ -1136,7 +1136,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "anyhow",
  "houston_cmd_macros",

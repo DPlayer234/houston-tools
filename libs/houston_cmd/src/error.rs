@@ -44,6 +44,7 @@ impl<'a> Error<'a> {
     }
 
     /// Constructs a new [`Error::StructureMismatch`] variant.
+    #[cold]
     pub fn structure_mismatch(ctx: Context<'a>, message: &'static str) -> Self {
         Self::StructureMismatch { message, ctx }
     }

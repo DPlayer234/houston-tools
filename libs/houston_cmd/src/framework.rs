@@ -173,52 +173,23 @@ impl Framework {
             pre_command(ctx).await;
         }
 
-        let data = &ctx.interaction.data;
-        match data.kind {
-            CommandType::ChatInput => {
-                let Invoke::ChatInput(invoke) = command.invoke else {
-                    return Err(Error::structure_mismatch(
-                        ctx,
-                        "expected chat input command",
-                    ));
+        match (ctx.interaction.data.kind, command.invoke) {
+            (CommandType::ChatInput, Invoke::ChatInput(invoke)) => invoke(ctx).await,
+            (CommandType::User, Invoke::User(invoke)) => {
+                let Some(ResolvedTarget::User(user, member)) = ctx.interaction.data.target() else {
+                    return Err(Error::structure_mismatch(ctx, "missing user target"));
                 };
 
-                invoke(ctx).await
-            },
-            CommandType::User => {
-                let (Invoke::User(invoke), Some(target_id)) = (command.invoke, data.target_id)
-                else {
-                    return Err(Error::structure_mismatch(
-                        ctx,
-                        "expected user context command",
-                    ));
-                };
-
-                let target_id = target_id.to_user_id();
-                let Some(user) = data.resolved.users.get(&target_id) else {
-                    return Err(Error::structure_mismatch(ctx, "expected user target"));
-                };
-
-                let member = data.resolved.members.get(&target_id);
                 invoke(ctx, user, member).await
             },
-            CommandType::Message => {
-                let (Invoke::Message(invoke), Some(target_id)) = (command.invoke, data.target_id)
-                else {
-                    return Err(Error::structure_mismatch(
-                        ctx,
-                        "expected message context command",
-                    ));
-                };
-
-                let target_id = target_id.to_message_id();
-                let Some(message) = data.resolved.messages.get(&target_id) else {
-                    return Err(Error::structure_mismatch(ctx, "expected message target"));
+            (CommandType::Message, Invoke::Message(invoke)) => {
+                let Some(ResolvedTarget::Message(message)) = ctx.interaction.data.target() else {
+                    return Err(Error::structure_mismatch(ctx, "missing message target"));
                 };
 
                 invoke(ctx, message).await
             },
-            _ => Err(Error::structure_mismatch(ctx, "invalid command type")),
+            _ => Err(invoke_structure_mismatch(ctx, command.invoke)),
         }
     }
 
@@ -292,6 +263,16 @@ impl Framework {
         let options = resolver.options()?;
         Ok((command, options))
     }
+}
+
+#[cold]
+fn invoke_structure_mismatch(ctx: Context<'_>, invoke: Invoke) -> Error<'_> {
+    let msg = match invoke {
+        Invoke::ChatInput(_) => "expected chat input command",
+        Invoke::User(_) => "expected user context command",
+        Invoke::Message(_) => "expected message context command",
+    };
+    Error::structure_mismatch(ctx, msg)
 }
 
 /// Provides a set/map for commands that avoids having to clone command names to

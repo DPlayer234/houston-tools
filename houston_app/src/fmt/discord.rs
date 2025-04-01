@@ -140,30 +140,58 @@ impl Display for MessageLink {
     }
 }
 
-/// Implements [`Display`] to format resolved command arguments.
+/// Implements [`Display`] to format the full command.
 #[must_use]
-pub enum DisplayResolvedArgs<'a> {
-    /// Uses resolved options from a slash command.
-    Options(&'a [ResolvedOption<'a>]),
-    /// Uses the resolved target from a context menu command.
-    Target(ResolvedTarget<'a>),
+pub struct DisplayCommand<'a> {
+    data: &'a CommandData,
+    options: &'a [ResolvedOption<'a>],
 }
 
-impl Display for DisplayResolvedArgs<'_> {
+impl<'a> DisplayCommand<'a> {
+    pub fn new(data: &'a CommandData, options: &'a [ResolvedOption<'a>]) -> Self {
+        Self { data, options }
+    }
+}
+
+impl Display for DisplayCommand<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Options(o) => fmt_resolved_options(o, f),
-            Self::Target(t) => fmt_resolved_target(t, f),
+        if self.data.kind == CommandType::ChatInput {
+            f.write_str("/")?;
+            f.write_str(&self.data.name)?;
+            let mut options = &self.data.options;
+            while let Some(CommandDataOption {
+                name,
+                value:
+                    CommandDataOptionValue::SubCommand(next_options)
+                    | CommandDataOptionValue::SubCommandGroup(next_options),
+                ..
+            }) = options.first()
+            {
+                f.write_str(" ")?;
+                f.write_str(name)?;
+                options = next_options;
+            }
+
+            fmt_resolved_options(self.options, f)
+        } else {
+            f.write_str(&self.data.name)?;
+
+            if let Some(target) = self.data.target() {
+                f.write_str(": ")?;
+                fmt_resolved_target(&target, f)
+            } else {
+                Ok(())
+            }
         }
     }
 }
 
 fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -> Result {
     for o in options {
+        f.write_str(" ")?;
         f.write_str(o.name)?;
         f.write_str(": ")?;
         fmt_resolved_option(&o.value, f)?;
-        f.write_str(" ")?;
     }
 
     Ok(())
@@ -191,42 +219,5 @@ fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> Re
         ResolvedTarget::User(v, _) => f.write_str(&v.name),
         ResolvedTarget::Message(v) => v.id.fmt(f),
         _ => f.write_str("<unknown>"),
-    }
-}
-
-/// Implements [`Display`] to format the full command name.
-#[must_use]
-pub struct DisplayCommandName<'a> {
-    name: &'a str,
-    options: &'a [CommandDataOption],
-}
-
-impl<'a> From<&'a CommandData> for DisplayCommandName<'a> {
-    fn from(value: &'a CommandData) -> Self {
-        Self {
-            name: &value.name,
-            options: &value.options,
-        }
-    }
-}
-
-impl Display for DisplayCommandName<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str(self.name)?;
-        let mut options = self.options;
-        while let Some(CommandDataOption {
-            name,
-            value:
-                CommandDataOptionValue::SubCommand(next_options)
-                | CommandDataOptionValue::SubCommandGroup(next_options),
-            ..
-        }) = options.first()
-        {
-            f.write_str(" ")?;
-            f.write_str(name)?;
-            options = next_options;
-        }
-
-        Ok(())
     }
 }

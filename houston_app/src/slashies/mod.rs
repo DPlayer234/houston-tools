@@ -2,7 +2,7 @@ use args::SlashMember;
 use houston_cmd::Context;
 
 use crate::data::IntoEphemeral;
-use crate::fmt::discord::{DisplayCommandName, DisplayResolvedArgs};
+use crate::fmt::discord::DisplayCommand;
 use crate::prelude::*;
 
 pub mod args;
@@ -18,14 +18,11 @@ pub mod prelude {
 
 /// Pre-command execution hook.
 pub async fn pre_command(ctx: Context<'_>) {
-    let name = DisplayCommandName::from(&ctx.interaction.data);
-
-    let options = ctx.interaction.data.target().map_or_else(
-        || DisplayResolvedArgs::Options(ctx.options()),
-        DisplayResolvedArgs::Target,
+    log::info!(
+        "{}: {}",
+        ctx.user().name,
+        DisplayCommand::new(&ctx.interaction.data, ctx.options()),
     );
-
-    log::info!("{}: /{name} {options}", ctx.user().name)
 }
 
 /// Command execution error handler.
