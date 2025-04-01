@@ -141,12 +141,14 @@ impl View {
     pub fn create_next_reply(mut self, data: &HBotData) -> CreateReply<'_> {
         let description = match self.players.turn {
             Player::P1 => format!(
-                "> **❌ <@{}>**\n-# ⭕ <@{}>",
-                self.players.p1, self.players.p2
+                "> **❌ {}**\n-# ⭕ {}",
+                self.players.p1.mention(),
+                self.players.p2.mention(),
             ),
             Player::P2 => format!(
-                "-# ❌ <@{}>\n> **⭕ <@{}>**",
-                self.players.p1, self.players.p2
+                "-# ❌ {}\n> **⭕ {}**",
+                self.players.p1.mention(),
+                self.players.p2.mention(),
             ),
         };
 
@@ -170,11 +172,12 @@ impl View {
         let winner_id = self.players.user_id(winner);
 
         let description = format!(
-            "## <@{winner_id}> wins!\n\
-             -# ❌ <@{p1}>\n\
-             -# ⭕ <@{p2}>",
-            p1 = self.players.p1,
-            p2 = self.players.p2,
+            "## {} wins!\n\
+             -# ❌ {}\n\
+             -# ⭕ {}",
+            winner_id.mention(),
+            self.players.p1.mention(),
+            self.players.p2.mention(),
         );
 
         let embed = CreateEmbed::new()
@@ -195,10 +198,10 @@ impl View {
     fn create_draw_reply(mut self, data: &HBotData) -> CreateReply<'_> {
         let embed = format!(
             "## Draw!\n\
-             -# ❌ <@{p1}>\n\
-             -# ⭕ <@{p2}>",
-            p1 = self.players.p1,
-            p2 = self.players.p2,
+             -# ❌ {}\n\
+             -# ⭕ {}",
+            self.players.p1.mention(),
+            self.players.p2.mention(),
         );
 
         let description = CreateEmbed::new()
@@ -206,7 +209,7 @@ impl View {
             .color(data.config().embed_color);
 
         let components = self.board_buttons(data, Player::P1, |b, _, _, _| {
-            b.disabled(true).style(ButtonStyle::Danger)
+            b.disabled(true).style(ButtonStyle::Secondary)
         });
 
         CreateReply::new().embed(description).components(components)

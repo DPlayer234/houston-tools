@@ -114,11 +114,11 @@ fn get_config(ctx: &Context) -> Result<&RainbowConfig, NoRainbowRole> {
         .ok_or(NoRainbowRole)
 }
 
-fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry> {
+fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry, NoRainbowRole> {
     get_config(args.ctx)?
         .guilds
         .get(&args.guild_id)
-        .context("rainbow role not configured for guild")
+        .ok_or(NoRainbowRole)
 }
 
 async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> {

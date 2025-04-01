@@ -1,9 +1,6 @@
 use std::fmt;
 
-use serenity::model::id::UserId;
-
-use crate::buttons::ButtonContext;
-use crate::data::HArgError;
+use crate::buttons::prelude::*;
 use crate::helper::discord::id_as_u64;
 
 pub mod chess;
@@ -64,7 +61,10 @@ impl PlayerState {
         if interacting == current_turn {
             Ok(())
         } else if interacting == self.p1 || interacting == self.p2 {
-            Err(HArgError::new(format!("It's <@{current_turn}>'s turn.")))
+            Err(HArgError::new(format!(
+                "It's {}'s turn.",
+                current_turn.mention()
+            )))
         } else {
             Err(HArgError::new_const("You're not part of this game."))
         }

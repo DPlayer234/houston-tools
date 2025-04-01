@@ -166,12 +166,14 @@ impl View {
     pub fn create_next_reply(mut self, data: &HBotData) -> CreateReply<'_> {
         let description = match self.players.turn {
             Player::P1 => format!(
-                "> **⬜ <@{}>**\n-# ⬛ <@{}>",
-                self.players.p1, self.players.p2
+                "> **⬜ {}**\n-# ⬛ {}",
+                self.players.p1.mention(),
+                self.players.p2.mention(),
             ),
             Player::P2 => format!(
-                "-# ⬜ <@{}>\n> **⬛ <@{}>**",
-                self.players.p1, self.players.p2
+                "-# ⬜ {}\n> **⬛ {}**",
+                self.players.p1.mention(),
+                self.players.p2.mention(),
             ),
         };
 
@@ -188,11 +190,12 @@ impl View {
         let winner_id = self.players.turn_user_id();
 
         let description = format!(
-            "## <@{winner_id}> wins!\n\
-             -# ⬜ <@{p1}>\n\
-             -# ⬛ <@{p2}>",
-            p1 = self.players.p1,
-            p2 = self.players.p2,
+            "## {} wins!\n\
+             -# ⬜ {}\n\
+             -# ⬛ {}",
+            winner_id.mention(),
+            self.players.p1.mention(),
+            self.players.p2.mention(),
         );
 
         let embed = CreateEmbed::new()

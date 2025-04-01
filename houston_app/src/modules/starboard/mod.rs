@@ -485,7 +485,7 @@ async fn pin_message_to_board(
         .unwrap_or("{user}, your post made it! Wow!");
 
     let notice = replace_holes(notice, |out, n| match n {
-        "user" => write_str!(out, "<@{}>", message.author.id),
+        "user" => write_str!(out, "{}", message.author.mention()),
         _ => out.push(char::REPLACEMENT_CHARACTER),
     });
 

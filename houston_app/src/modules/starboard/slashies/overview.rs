@@ -122,9 +122,9 @@ pub async fn overview(
         match top_posts.iter().find(|t| t.board == board.id) {
             Some(top_post) => writeln_str!(
                 value,
-                "{} by <@{}>: {} {}",
+                "{} by {}: {} {}",
                 MessageLink::new(guild, top_post.channel, top_post.message),
-                top_post.user,
+                top_post.user.mention(),
                 top_post.max_reacts,
                 board.emoji,
             ),
@@ -135,8 +135,8 @@ pub async fn overview(
         match top_users.iter().find(|t| t.board == board.id) {
             Some(top_user) => write_str!(
                 value,
-                "<@{}>: {} {} from {} post(s)",
-                top_user.user,
+                "{}: {} {} from {} post(s)",
+                top_user.user.mention(),
                 top_user.score,
                 board.emoji,
                 top_user.post_count,

@@ -39,8 +39,8 @@ impl Shape for Collectible {
 
                 if let Some(notice) = &guild_config.notice {
                     let message = replace_holes(&notice.text, |out, n| match n {
-                        "user" => write_str!(out, "<@{}>", args.user_id),
-                        "role" => write_str!(out, "<@&{}>", role),
+                        "user" => write_str!(out, "{}", args.user_id.mention()),
+                        "role" => write_str!(out, "{}", role.mention()),
                         _ => out.push(char::REPLACEMENT_CHARACTER),
                     });
 

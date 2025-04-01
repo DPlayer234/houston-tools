@@ -57,9 +57,9 @@ impl View {
             index += 1;
             writeln_str!(
                 description,
-                "{}. <@{}>: {} {} from {} post(s)",
+                "{}. {}: {} {} from {} post(s)",
                 offset + index,
-                item.user,
+                item.user.mention(),
                 item.score,
                 board.emoji.as_emoji(),
                 item.post_count,

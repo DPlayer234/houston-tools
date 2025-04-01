@@ -54,7 +54,7 @@ async fn profile_core(
 
     if crate::modules::perks::Module.enabled(data.config()) {
         if let Some(unique_role) = perks_unique_role(ctx, member).await? {
-            writeln_str!(description, "-# <@&{unique_role}>");
+            writeln_str!(description, "-# {}", unique_role.mention());
         }
 
         if let Some(birthday) = perks_birthday(ctx, member).await? {
@@ -168,7 +168,7 @@ async fn perks_collectible_info(
     if let Some(guild_config) = guild_config {
         for &(need, role) in &guild_config.prize_roles {
             if wallet.crab >= i64::from(need) {
-                write_str!(content, "\n- <@&{role}>");
+                write_str!(content, "\n- {}", role.mention());
             } else {
                 write_str!(content, "\n- -# 🔒 ({need})")
             }

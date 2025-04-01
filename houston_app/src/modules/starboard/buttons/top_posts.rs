@@ -55,7 +55,7 @@ impl View {
         let mut index = 0u64;
 
         if let Some(by_user) = self.by_user {
-            writeln_str!(description, "-# By: <@{by_user}>");
+            writeln_str!(description, "-# By: {}", by_user.mention());
         }
 
         while let Some(item) = cursor.try_next().await? {
@@ -75,8 +75,8 @@ impl View {
             } else {
                 writeln_str!(
                     description,
-                    "{rank}. {link} by <@{}>: {max_reacts} {emoji}",
-                    item.user,
+                    "{rank}. {link} by {}: {max_reacts} {emoji}",
+                    item.user.mention(),
                 );
             }
         }

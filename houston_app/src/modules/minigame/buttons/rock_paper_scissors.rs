@@ -87,11 +87,11 @@ impl View {
         }
 
         let description = format!(
-            "<@{}> {}VS {}<@{}>",
-            self.states[0].user,
+            "{} {}VS {}{}",
+            self.states[0].user.mention(),
             hidden_label(self.states[0].choice),
             hidden_label(self.states[1].choice),
-            self.states[1].user
+            self.states[1].user.mention(),
         );
 
         let embed = CreateEmbed::new()
@@ -110,7 +110,7 @@ impl View {
     fn create_ready_reply<'new>(self, data: &HBotData, ready: Ready) -> CreateReply<'new> {
         let mut description = String::with_capacity(64);
         match ready {
-            Ready::Winner(user) => writeln_str!(description, "## <@{user}> wins!"),
+            Ready::Winner(user) => writeln_str!(description, "## {} wins!", user.mention()),
             Ready::Draw => writeln_str!(description, "## Draw!"),
         }
 
@@ -122,12 +122,12 @@ impl View {
 
         writeln_str!(
             description,
-            "<@{}> {} **{}** {} <@{}>",
-            self.states[0].user,
+            "{} {} **{}** {} {}",
+            self.states[0].user.mention(),
             self.states[0].choice.unwrap_or(Choice::Rock).emoji(),
             match_icon,
             self.states[1].choice.unwrap_or(Choice::Rock).emoji(),
-            self.states[1].user,
+            self.states[1].user.mention(),
         );
 
         let embed = CreateEmbed::new()

@@ -45,7 +45,7 @@ impl Shape for Birthday {
 
         if let Some(notice) = &config.notice {
             let message = replace_holes(&notice.text, |out, n| match n {
-                "user" => write_str!(out, "<@{}>", args.user_id),
+                "user" => write_str!(out, "{}", args.user_id.mention()),
                 _ => out.push(char::REPLACEMENT_CHARACTER),
             });
 
