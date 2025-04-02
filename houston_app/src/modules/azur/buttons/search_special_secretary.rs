@@ -7,21 +7,22 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     page: u16,
-    filter: Filter,
+    #[serde(borrow)]
+    filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Filter {
-    pub name: Option<String>,
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Filter<'v> {
+    pub name: Option<&'v str>,
 }
 
 const PAGE_SIZE: usize = 15;
 
-impl View {
-    pub fn new(filter: Filter) -> Self {
+impl<'v> View<'v> {
+    pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
     }
 
@@ -37,7 +38,7 @@ impl View {
             writeln_str!(desc, "- **{}**", secretary.name);
 
             let view_chat =
-                super::special_secretary::View::new(secretary.id).back(self.to_custom_data());
+                super::special_secretary::View::new(secretary.id).back(self.as_custom_data());
             options.push(CreateSelectMenuOption::new(
                 truncate(secretary.name.as_str(), 100),
                 view_chat.to_custom_id(),
@@ -67,7 +68,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
@@ -82,12 +83,12 @@ impl ButtonArgsReply for View {
     }
 }
 
-impl Filter {
+impl Filter<'_> {
     fn iterate<'a>(
         &self,
         azur: &'a GameData,
     ) -> Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a> {
-        match &self.name {
+        match self.name {
             Some(name) => self.apply_filter(azur, azur.special_secretaries_by_prefix(name)),
             None => self.apply_filter(azur, azur.special_secretaries().iter()),
         }

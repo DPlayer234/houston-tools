@@ -9,13 +9,14 @@ use crate::helper::discord::create_string_select_menu_row;
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub ship_id: u32,
     pub skin_index: u8,
     pub part: ViewPart,
     pub extra: bool,
-    pub back: CustomData,
+    #[serde(borrow)]
+    pub back: CustomData<'v>,
 }
 
 /// Which part of the lines to display.
@@ -28,10 +29,10 @@ pub enum ViewPart {
     Combat,
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance including a button to go back with some custom
     /// ID.
-    pub fn with_back(ship_id: u32, back: CustomData) -> Self {
+    pub fn with_back(ship_id: u32, back: CustomData<'v>) -> Self {
         Self {
             ship_id,
             skin_index: 0,
@@ -312,7 +313,7 @@ impl ViewPart {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

@@ -4,7 +4,7 @@ use crate::buttons::prelude::*;
 use crate::modules::perks::DayOfYear;
 use crate::modules::perks::model::*;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Set {
     day_of_year: DayOfYear,
     region: u16,

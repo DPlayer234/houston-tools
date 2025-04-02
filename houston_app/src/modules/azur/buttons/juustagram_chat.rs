@@ -9,14 +9,15 @@ use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
 use crate::modules::azur::{GameData, LoadedConfig};
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     chat_id: u32,
     flags: ArrayVec<u8, 20>,
-    back: Option<CustomData>,
+    #[serde(borrow)]
+    back: Option<CustomData<'v>>,
 }
 
-impl View {
+impl<'v> View<'v> {
     pub fn new(chat_id: u32) -> Self {
         let mut flags = ArrayVec::new();
         flags.push(0u8);
@@ -28,7 +29,7 @@ impl View {
         }
     }
 
-    pub fn back(mut self, back: CustomData) -> Self {
+    pub fn back(mut self, back: CustomData<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -127,7 +128,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

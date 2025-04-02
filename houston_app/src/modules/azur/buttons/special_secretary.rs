@@ -6,15 +6,16 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 
 /// Views ship lines.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub secretary_id: u32,
     pub part: ViewPart,
-    back: Option<CustomData>,
+    #[serde(borrow)]
+    back: Option<CustomData<'v>>,
 }
 
 /// Which part of the lines to display.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ViewPart {
     Main1,
     Main2,
@@ -23,7 +24,7 @@ pub enum ViewPart {
     Chime2,
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance.
     pub fn new(secretary_id: u32) -> Self {
         Self {
@@ -33,7 +34,7 @@ impl View {
         }
     }
 
-    pub fn back(mut self, back: CustomData) -> Self {
+    pub fn back(mut self, back: CustomData<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -207,7 +208,7 @@ impl ViewPart {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

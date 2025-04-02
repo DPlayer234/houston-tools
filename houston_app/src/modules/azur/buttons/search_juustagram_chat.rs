@@ -7,13 +7,13 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     page: u16,
     filter: Filter,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Filter {
     pub ship: Option<u32>,
 }
@@ -45,7 +45,7 @@ impl View {
             }
 
             let view_chat =
-                super::juustagram_chat::View::new(chat.chat_id).back(self.to_custom_data());
+                super::juustagram_chat::View::new(chat.chat_id).back(self.as_custom_data());
             options.push(
                 CreateSelectMenuOption::new(truncate(chat_name, 100), view_chat.to_custom_id())
                     .description(truncate(&chat.unlock_desc, 100)),

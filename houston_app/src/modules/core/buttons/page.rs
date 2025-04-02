@@ -2,12 +2,12 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 
 /// Opens a modal for page navigation.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct ToPage(CustomData);
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ToPage<'v>(#[serde(borrow)] CustomData<'v>);
 
-impl ToPage {
+impl<'v> ToPage<'v> {
     /// Opens a modal for page navigation.
-    pub fn new(data: CustomData) -> Self {
+    pub fn new(data: CustomData<'v>) -> Self {
         Self(data)
     }
 
@@ -107,7 +107,7 @@ where
                     CreateButton::new("#no-back").disabled(true)
                 }
                 .emoji(emoji::left()),
-                CreateButton::new(ToPage::new(self.obj.to_custom_data()).to_custom_id()).label(
+                CreateButton::new(ToPage::new(self.obj.as_custom_data()).to_custom_id()).label(
                     match self.max_page {
                         MaxPage::NoMore => format!("{0} / {0}", page + 1),
                         MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
@@ -125,7 +125,7 @@ where
     }
 }
 
-impl ButtonArgsReply for ToPage {
+impl ButtonArgsReply for ToPage<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let input_text = CreateInputText::new(InputTextStyle::Short, "Page", "page")
             .min_length(1)

@@ -9,13 +9,14 @@ use crate::config::emoji;
 use crate::modules::azur::LoadedConfig;
 
 /// View a ship's shadow equip.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
-    pub inner: ShipView,
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
+    #[serde(borrow)]
+    pub inner: ShipView<'v>,
 }
 
-impl View {
-    pub fn new(inner: ShipView) -> Self {
+impl<'v> View<'v> {
+    pub fn new(inner: ShipView<'v>) -> Self {
         Self { inner }
     }
 
@@ -69,7 +70,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

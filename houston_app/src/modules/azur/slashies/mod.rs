@@ -203,7 +203,7 @@ pub mod azur {
             let data = ctx.data_ref();
 
             let filter = Filter {
-                name: name.map(str::to_owned),
+                name,
                 faction: faction.map(EFaction::convert),
                 hull_type: hull_type.map(EHullType::convert),
                 rarity: rarity.map(EShipRarity::convert),
@@ -238,7 +238,7 @@ pub mod azur {
             let data = ctx.data_ref();
 
             let filter = Filter {
-                name: name.map(str::to_owned),
+                name,
                 faction: faction.map(EFaction::convert),
                 kind: kind.map(EEquipKind::convert),
                 rarity: rarity.map(EEquipRarity::convert),
@@ -282,7 +282,7 @@ pub mod azur {
             };
 
             let filter = Filter {
-                name: name.map(str::to_owned),
+                name,
                 hull_type: hull_type.map(EHullType::convert),
                 rarity: rarity.map(EAugmentRarity::convert),
                 unique_ship_id,
@@ -309,9 +309,7 @@ pub mod azur {
             defer_unloaded(ctx, ephemeral).await?;
             let data = ctx.data_ref();
 
-            let filter = Filter {
-                name: name.map(str::to_owned),
-            };
+            let filter = Filter { name };
 
             let view = View::new(filter);
             ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))

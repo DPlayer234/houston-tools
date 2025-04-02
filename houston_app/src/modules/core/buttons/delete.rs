@@ -1,6 +1,6 @@
 use crate::buttons::prelude::*;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Delete;
 
 impl ButtonArgsReply for Delete {

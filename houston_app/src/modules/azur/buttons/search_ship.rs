@@ -7,15 +7,16 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     page: u16,
-    filter: Filter,
+    #[serde(borrow)]
+    filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Filter {
-    pub name: Option<String>,
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Filter<'v> {
+    pub name: Option<&'v str>,
     pub faction: Option<Faction>,
     pub hull_type: Option<HullType>,
     pub rarity: Option<ShipRarity>,
@@ -24,8 +25,8 @@ pub struct Filter {
 
 const PAGE_SIZE: usize = 15;
 
-impl View {
-    pub fn new(filter: Filter) -> Self {
+impl<'v> View<'v> {
+    pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
     }
 
@@ -50,7 +51,7 @@ impl View {
                 ship.hull_type.designation(),
             );
 
-            let view_ship = super::ship::View::new(ship.group_id).back(self.to_custom_data());
+            let view_ship = super::ship::View::new(ship.group_id).back(self.as_custom_data());
             options.push(
                 CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id())
                     .emoji(emoji.clone()),
@@ -81,7 +82,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
@@ -96,10 +97,10 @@ impl ButtonArgsReply for View {
     }
 }
 
-impl Filter {
+impl Filter<'_> {
     fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
-        match &self.name {
-            Some(name) => self.apply_filter(azur, azur.ships_by_prefix(name.as_str())),
+        match self.name {
+            Some(name) => self.apply_filter(azur, azur.ships_by_prefix(name)),
             None => self.apply_filter(azur, azur.ships().iter()),
         }
     }
@@ -115,7 +116,7 @@ impl Filter {
         macro_rules! def_and_filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
                 fn $fn_name<'a>(
-                    f: &Filter,
+                    f: &Filter<'_>,
                     azur: &'a GameData,
                     iter: impl Iterator<Item = &'a ShipData> + 'a,
                 ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
@@ -132,7 +133,7 @@ impl Filter {
         def_and_filter!(next_rarity: rarity => next_has_augment);
 
         fn next_has_augment<'a>(
-            f: &Filter,
+            f: &Filter<'_>,
             azur: &'a GameData,
             iter: impl Iterator<Item = &'a ShipData> + 'a,
         ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {

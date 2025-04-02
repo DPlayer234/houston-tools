@@ -22,7 +22,7 @@ impl Player {
     }
 }
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct PlayerState {
     #[serde(with = "id_as_u64")]
     p1: UserId,

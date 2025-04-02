@@ -2,7 +2,7 @@ use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
 use crate::helper::discord::unicode_emoji;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     players: PlayerState,
     board: [[Option<Player>; 3]; 3],

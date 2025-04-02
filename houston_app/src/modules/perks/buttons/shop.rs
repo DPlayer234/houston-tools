@@ -15,12 +15,12 @@ use crate::modules::perks::items::Item;
 use crate::modules::perks::model::*;
 
 // View the store.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     action: Action,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 enum Action {
     Main,
     ViewEffect(Effect),

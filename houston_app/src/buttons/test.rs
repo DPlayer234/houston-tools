@@ -5,24 +5,19 @@ macro_rules! round_trip_test {
         #[test]
         fn $test_name() {
             let args = $make;
-            let custom_data = args.to_custom_data();
-            let wrapped_args = ButtonArgs::$variant(args);
 
-            let re_args = custom_data
-                .to_button_args()
-                .expect("just constructed from valid data");
-
-            assert_eq!(re_args, wrapped_args);
-            assert_eq!(custom_data, re_args.to_custom_data());
+            // ensure wrapped serializes data the same way
+            let custom_data = args.as_custom_data();
+            let wrapped_args = ButtonArgs::$variant(args.clone());
 
             let custom_id = custom_data.to_custom_id();
-            let re_args = ButtonArgs::from_custom_id(&custom_id).expect("must be valid data");
-
-            assert_eq!(re_args, wrapped_args);
-            assert_eq!(custom_data, re_args.to_custom_data());
-
             let wrapped_custom_id = wrapped_args.to_custom_id();
             assert_eq!(custom_id, wrapped_custom_id);
+
+            let decoder = encoding::Decoder::new(&custom_id).expect("must be decodable");
+            let re_args = decoder.read().expect("must be readable");
+            let re_custom_id = re_args.to_custom_id();
+            assert_eq!(re_custom_id, custom_id);
         }
     };
 }
@@ -37,5 +32,5 @@ round_trip_test!(round_trip_args_equip, AzurEquip => azur::buttons::equip::View:
 #[test]
 fn eq_direct_to_custom_id() {
     let view = azur::buttons::ship::View::new(9999);
-    assert_eq!(view.to_custom_id(), view.to_custom_data().to_custom_id());
+    assert_eq!(view.to_custom_id(), view.as_custom_data().to_custom_id());
 }

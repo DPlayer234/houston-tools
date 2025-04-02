@@ -3,13 +3,13 @@ use utils::text::write_str::*;
 use crate::buttons::prelude::*;
 use crate::helper::discord::{id_as_u64, unicode_emoji};
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     states: [State; 2],
     action: Option<Choice>,
 }
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct State {
     #[serde(with = "id_as_u64")]
     user: UserId,

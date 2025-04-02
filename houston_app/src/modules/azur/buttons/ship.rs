@@ -12,13 +12,14 @@ use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
 
 /// View general ship details.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub ship_id: u32,
     pub level: u8,
     pub affinity: ViewAffinity,
     pub retrofit: Option<u8>,
-    pub back: Option<CustomData>,
+    #[serde(borrow)]
+    pub back: Option<CustomData<'v>>,
 }
 
 /// The affinity used to calculate stat values.
@@ -29,7 +30,7 @@ pub enum ViewAffinity {
     Oath,
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance.
     pub fn new(ship_id: u32) -> Self {
         Self {
@@ -42,7 +43,7 @@ impl View {
     }
 
     /// Sets the back button target.
-    pub fn back(mut self, back: CustomData) -> Self {
+    pub fn back(mut self, back: CustomData<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -163,15 +164,13 @@ impl View {
     }
 
     fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
-        let self_custom_data = self.to_custom_data();
-
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
             use super::skill::{ShipViewSource, View};
 
             let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
-            let view_skill = View::with_back(source, self_custom_data.clone());
+            let view_skill = View::with_back(source, self.as_custom_data());
             let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
@@ -189,7 +188,7 @@ impl View {
         }
 
         {
-            let view_lines = super::lines::View::with_back(self.ship_id, self_custom_data);
+            let view_lines = super::lines::View::with_back(self.ship_id, self.as_custom_data());
             let button = CreateButton::new(view_lines.to_custom_id())
                 .label("Lines")
                 .style(ButtonStyle::Secondary);
@@ -405,7 +404,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

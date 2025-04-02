@@ -7,15 +7,16 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     page: u16,
-    filter: Filter,
+    #[serde(borrow)]
+    filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Filter {
-    pub name: Option<String>,
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Filter<'v> {
+    pub name: Option<&'v str>,
     pub faction: Option<Faction>,
     pub kind: Option<EquipKind>,
     pub rarity: Option<EquipRarity>,
@@ -23,8 +24,8 @@ pub struct Filter {
 
 const PAGE_SIZE: usize = 15;
 
-impl View {
-    pub fn new(filter: Filter) -> Self {
+impl<'v> View<'v> {
+    pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
     }
 
@@ -47,7 +48,7 @@ impl View {
                 equip.kind.name(),
             );
 
-            let view_equip = super::equip::View::new(equip.equip_id).back(self.to_custom_data());
+            let view_equip = super::equip::View::new(equip.equip_id).back(self.as_custom_data());
             options.push(CreateSelectMenuOption::new(
                 &equip.name,
                 view_equip.to_custom_id(),
@@ -78,7 +79,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
@@ -93,10 +94,10 @@ impl ButtonArgsReply for View {
     }
 }
 
-impl Filter {
+impl Filter<'_> {
     fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
-        match &self.name {
-            Some(name) => self.apply_filter(azur.equips_by_prefix(name.as_str())),
+        match self.name {
+            Some(name) => self.apply_filter(azur.equips_by_prefix(name)),
             None => self.apply_filter(azur.equips().iter()),
         }
     }
@@ -108,7 +109,7 @@ impl Filter {
         macro_rules! def_and_filter {
             ($fn_name:ident: $field:ident => $next:ident) => {
                 fn $fn_name<'a>(
-                    f: &Filter,
+                    f: &Filter<'_>,
                     iter: impl Iterator<Item = &'a Equip> + 'a,
                 ) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
                     match f.$field {
@@ -124,7 +125,7 @@ impl Filter {
         def_and_filter!(next_rarity: rarity => finish);
 
         fn finish<'a>(
-            _f: &Filter,
+            _f: &Filter<'_>,
             iter: impl Iterator<Item = &'a Equip> + 'a,
         ) -> Box<dyn Iterator<Item = &'a Equip> + 'a> {
             Box::new(iter)

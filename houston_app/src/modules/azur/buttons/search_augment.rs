@@ -7,15 +7,16 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     page: u16,
-    filter: Filter,
+    #[serde(borrow)]
+    filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Filter {
-    pub name: Option<String>,
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Filter<'v> {
+    pub name: Option<&'v str>,
     pub hull_type: Option<HullType>,
     pub rarity: Option<AugmentRarity>,
     pub unique_ship_id: Option<u32>,
@@ -23,8 +24,8 @@ pub struct Filter {
 
 const PAGE_SIZE: usize = 15;
 
-impl View {
-    pub fn new(filter: Filter) -> Self {
+impl<'v> View<'v> {
+    pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
     }
 
@@ -40,7 +41,7 @@ impl View {
         for augment in iter.by_ref().take(PAGE_SIZE) {
             writeln_str!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
 
-            let view = super::augment::View::new(augment.augment_id).back(self.to_custom_data());
+            let view = super::augment::View::new(augment.augment_id).back(self.as_custom_data());
             options.push(CreateSelectMenuOption::new(
                 &augment.name,
                 view.to_custom_id(),
@@ -71,7 +72,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
@@ -88,10 +89,10 @@ impl ButtonArgsReply for View {
 
 type FIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
 
-impl Filter {
+impl Filter<'_> {
     fn iterate<'a>(&self, azur: &'a GameData) -> FIter<'a> {
-        match &self.name {
-            Some(name) => self.apply_filter(azur, azur.augments_by_prefix(name.as_str())),
+        match self.name {
+            Some(name) => self.apply_filter(azur, azur.augments_by_prefix(name)),
             None => self.apply_filter(azur, azur.augments().iter()),
         }
     }
@@ -101,7 +102,7 @@ impl Filter {
         I: Iterator<Item = &'a Augment> + 'a,
     {
         fn next_hull_type<'a>(
-            f: &Filter,
+            f: &Filter<'_>,
             azur: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {
@@ -121,7 +122,7 @@ impl Filter {
         }
 
         fn next_rarity<'a>(
-            f: &Filter,
+            f: &Filter<'_>,
             azur: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {
@@ -134,7 +135,7 @@ impl Filter {
         }
 
         fn next_unique_ship_id<'a>(
-            f: &Filter,
+            f: &Filter<'_>,
             _data: &'a GameData,
             iter: impl Iterator<Item = &'a Augment> + 'a,
         ) -> FIter<'a> {

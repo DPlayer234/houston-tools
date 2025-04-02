@@ -7,11 +7,13 @@ use crate::modules::{azur, core as core_mod, minigame, perks, starboard};
 use crate::prelude::*;
 
 mod context;
+mod custom_data;
 mod encoding;
 #[cfg(test)]
 mod test;
 
 pub use context::{AnyContext, AnyInteraction, ButtonContext, ModalContext};
+pub use custom_data::CustomData;
 
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
@@ -22,40 +24,46 @@ pub mod prelude {
 
 /// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
 macro_rules! define_button_args {
-    ($($(#[$attr:meta])* $name:ident($Ty:ty)),* $(,)?) => {
+    ($life:lifetime {
+        $( $(#[$attr:meta])* $name:ident($(#[$attr_inner:meta])* $Ty:ty) ),* $(,)?
+    }) => {
         /// The supported button interaction arguments.
         ///
         /// This is owned data that can be deserialized into.
-        #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
-        enum ButtonArgs {
+        #[derive(Debug, Clone, serde::Deserialize)]
+        enum ButtonArgs<$life> {
             $(
                 $(#[$attr])*
-                $name($Ty),
+                $name($(#[$attr_inner])* $Ty),
             )*
         }
 
         /// The supported button interaction arguments.
         ///
         /// This is borrowed data that can be serialized.
-        #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-        enum ButtonArgsRef<'a> {
+        #[derive(Debug, Clone, Copy, serde::Serialize)]
+        enum ButtonArgsRef<$life> {
             $(
                 $(#[$attr])*
-                $name(&'a $Ty),
+                $name($(#[$attr_inner])* &$life $Ty),
             )*
         }
 
         $(
-            impl<'a> From<&'a $Ty> for ButtonArgsRef<'a> {
-                fn from(value: &'a $Ty) -> Self {
-                    Self::$name(value)
+            impl<$life> ToCustomData for $Ty {
+                fn to_custom_id(&self) -> String {
+                    encoding::to_custom_id(ButtonArgsRef::$name(self))
+                }
+
+                fn as_custom_data(&self) -> CustomData<'_> {
+                    CustomData::from_button_args(ButtonArgsRef::$name(self))
                 }
             }
         )*
 
-        impl<'a> From<&'a ButtonArgs> for ButtonArgsRef<'a> {
+        impl<'v> From<&'v ButtonArgs<'v>> for ButtonArgsRef<'v> {
             /// Borrows the inner data.
-            fn from(value: &'a ButtonArgs) -> Self {
+            fn from(value: &'v ButtonArgs<'v>) -> Self {
                 match value {
                     $(
                         ButtonArgs::$name(v) => Self::$name(v),
@@ -64,7 +72,26 @@ macro_rules! define_button_args {
             }
         }
 
-        impl ButtonArgs {
+        impl ToCustomData for ButtonArgs<'_> {
+            fn to_custom_id(&self) -> String {
+                encoding::to_custom_id(self.borrow_ref())
+            }
+
+            fn as_custom_data(&self) -> CustomData<'_> {
+                CustomData::from_button_args(self.borrow_ref())
+            }
+        }
+
+        impl ButtonArgs<'_> {
+            /// Borrows the inner data.
+            fn borrow_ref(&self) -> ButtonArgsRef<'_> {
+                match self {
+                    $(
+                        Self::$name(v) => ButtonArgsRef::$name(v),
+                    )*
+                }
+            }
+
             async fn reply(self, ctx: ButtonContext<'_>) -> Result {
                 match self {
                     $(
@@ -86,27 +113,27 @@ macro_rules! define_button_args {
 
 // to avoid unexpected effects for old buttons, don't insert new variants
 // anywhere other than the bottom and don't reorder them!
-define_button_args! {
+define_button_args!('v {
     /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
     Noop(core_mod::buttons::Noop),
     /// Open the ship detail view.
-    AzurShip(azur::buttons::ship::View),
+    AzurShip(#[serde(borrow)] azur::buttons::ship::View<'v>),
     /// Open the augment detail view.
-    AzurAugment(azur::buttons::augment::View),
+    AzurAugment(#[serde(borrow)] azur::buttons::augment::View<'v>),
     /// Open the skill detail view.
-    AzurSkill(azur::buttons::skill::View),
+    AzurSkill(#[serde(borrow)] azur::buttons::skill::View<'v>),
     /// Open the ship lines detail view.
-    AzurLines(azur::buttons::lines::View),
+    AzurLines(#[serde(borrow)] azur::buttons::lines::View<'v>),
     /// Open the ship filter list view.
-    AzurSearchShip(azur::buttons::search_ship::View),
+    AzurSearchShip(#[serde(borrow)] azur::buttons::search_ship::View<'v>),
     /// Open the ship shadow equip details.
-    AzurShadowEquip(azur::buttons::shadow_equip::View),
+    AzurShadowEquip(#[serde(borrow)] azur::buttons::shadow_equip::View<'v>),
     /// Open the equipment details.
-    AzurEquip(azur::buttons::equip::View),
+    AzurEquip(#[serde(borrow)] azur::buttons::equip::View<'v>),
     /// Open the equipment search.
-    AzurSearchEquip(azur::buttons::search_equip::View),
+    AzurSearchEquip(#[serde(borrow)] azur::buttons::search_equip::View<'v>),
     /// Open the augment search.
-    AzurSearchAugment(azur::buttons::search_augment::View),
+    AzurSearchAugment(#[serde(borrow)] azur::buttons::search_augment::View<'v>),
     /// Open the perk store.
     PerksStore(perks::buttons::shop::View),
     /// Open the starboard top view.
@@ -114,13 +141,13 @@ define_button_args! {
     /// Open the starboard top posts view.
     StarboardTopPosts(starboard::buttons::top_posts::View),
     /// Open the "go to page" modal.
-    ToPage(core_mod::buttons::ToPage),
+    ToPage(#[serde(borrow)] core_mod::buttons::ToPage<'v>),
     /// Delete the source message.
     Delete(core_mod::buttons::Delete),
     /// Sets the birthday for the perks module.
     PerksBirthdaySet(perks::buttons::birthday::Set),
     /// Open a Juustagram chat.
-    AzurJuustagramChat(azur::buttons::juustagram_chat::View),
+    AzurJuustagramChat(#[serde(borrow)] azur::buttons::juustagram_chat::View<'v>),
     /// Open the Juustagram chat search.
     AzurSearchJuustagramChat(azur::buttons::search_juustagram_chat::View),
     /// Play the next tic-tac-toe turn.
@@ -130,17 +157,10 @@ define_button_args! {
     /// Play the next "chess" turn.
     MinigameChess(minigame::buttons::chess::View),
     /// Open the special secretary view.
-    AzurSpecialSecretary(azur::buttons::special_secretary::View),
+    AzurSpecialSecretary(#[serde(borrow)] azur::buttons::special_secretary::View<'v>),
     /// Open the special secretary search.
-    AzurSearchSpecialSecretary(azur::buttons::search_special_secretary::View),
-}
-
-impl ButtonArgs {
-    /// Constructs button arguments from a component custom ID.
-    pub fn from_custom_id(id: &str) -> Result<Self> {
-        encoding::from_custom_id(id)
-    }
-}
+    AzurSearchSpecialSecretary(#[serde(borrow)] azur::buttons::search_special_secretary::View<'v>),
+});
 
 /// Event handler for custom button menus.
 pub struct EventHandler;
@@ -192,7 +212,9 @@ mod handler {
             _ => anyhow::bail!("Invalid interaction."),
         };
 
-        let args = ButtonArgs::from_custom_id(custom_id)?;
+        let mut buf = encoding::StackBuf::new();
+        let args = encoding::decode_custom_id(&mut buf, custom_id)?;
+
         log::info!(
             "[Button] {}, {}: {:?}",
             interaction_location(interaction.guild_id, interaction.channel.as_ref()),
@@ -230,7 +252,9 @@ mod handler {
         interaction: &ModalInteraction,
         reply_state: &AtomicBool,
     ) -> Result {
-        let args = ButtonArgs::from_custom_id(&interaction.data.custom_id)?;
+        let mut buf = encoding::StackBuf::new();
+        let args = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
+
         log::info!(
             "[Modal] {}, {}: {:?}",
             interaction_location(interaction.guild_id, interaction.channel.as_ref()),
@@ -305,7 +329,7 @@ pub trait ToCustomData {
 
     /// Converts this instance to custom data.
     #[must_use]
-    fn to_custom_data(&self) -> CustomData;
+    fn as_custom_data(&self) -> CustomData<'_>;
 
     /// Creates a new button that would switch to a state where one field is
     /// changed.
@@ -369,19 +393,6 @@ pub trait ToCustomData {
     }
 }
 
-impl<T> ToCustomData for T
-where
-    for<'a> &'a T: Into<ButtonArgsRef<'a>>,
-{
-    fn to_custom_id(&self) -> String {
-        encoding::to_custom_id(self.into())
-    }
-
-    fn to_custom_data(&self) -> CustomData {
-        CustomData::from_button_args(self.into())
-    }
-}
-
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonArgsReply: Sized + Send {
     /// Replies to the component interaction.
@@ -391,37 +402,6 @@ pub trait ButtonArgsReply: Sized + Send {
     async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
         _ = ctx;
         anyhow::bail!("this button args type does not support modals");
-    }
-}
-
-/// Represents custom data for another menu.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct CustomData(encoding::Buf);
-
-impl CustomData {
-    /// Converts this instance to a component custom ID.
-    #[must_use]
-    pub fn to_custom_id(&self) -> String {
-        encoding::encode_custom_id(&self.0)
-    }
-
-    /// Creates an instance from [`ButtonArgs`].
-    #[must_use]
-    fn from_button_args(args: ButtonArgsRef<'_>) -> Self {
-        let mut buf = encoding::Buf::new();
-        encoding::write_button_args(&mut buf, args);
-        Self(buf)
-    }
-}
-
-#[cfg(test)]
-impl CustomData {
-    /// Gets an empty value.
-    pub const EMPTY: Self = Self(encoding::Buf::new_const());
-
-    /// Converts this instance to [`ButtonArgs`].
-    fn to_button_args(&self) -> Result<ButtonArgs> {
-        encoding::read_button_args(&self.0)
     }
 }
 
@@ -435,11 +415,11 @@ fn _assert_traits() {
         unreachable!()
     }
 
-    ok(dummy::<ButtonArgs>());
-    ok(dummy::<ButtonArgs>().reply(dummy()));
-    ok(dummy::<ButtonArgs>().modal_reply(dummy()));
+    ok(dummy::<ButtonArgs<'_>>());
+    ok(dummy::<ButtonArgs<'_>>().reply(dummy()));
+    ok(dummy::<ButtonArgs<'_>>().modal_reply(dummy()));
     ok(dummy::<ButtonArgsRef<'_>>());
-    ok(dummy::<CustomData>());
+    ok(dummy::<CustomData<'_>>());
 
     ok(dummy::<ButtonContext<'_>>());
     ok(dummy::<ButtonContext<'_>>().acknowledge());

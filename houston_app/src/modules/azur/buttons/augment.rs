@@ -9,13 +9,14 @@ use crate::fmt::Join;
 use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub augment_id: u32,
-    pub back: Option<CustomData>,
+    #[serde(borrow)]
+    pub back: Option<CustomData<'v>>,
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance.
     pub fn new(augment_id: u32) -> Self {
         Self {
@@ -25,7 +26,7 @@ impl View {
     }
 
     /// Sets the back button target.
-    pub fn back(mut self, back: CustomData) -> Self {
+    pub fn back(mut self, back: CustomData<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -60,7 +61,7 @@ impl View {
 
         if augment.effect.is_some() || augment.skill_upgrade.is_some() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
-            let view_skill = super::skill::View::with_back(source, self.to_custom_data());
+            let view_skill = super::skill::View::with_back(source, self.as_custom_data());
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
@@ -75,7 +76,7 @@ impl View {
             },
             AugmentUsability::UniqueShipId(ship_id) => {
                 if let Some(ship) = azur.game_data().ship_by_id(*ship_id) {
-                    let view = super::ship::View::new(ship.group_id).back(self.to_custom_data());
+                    let view = super::ship::View::new(ship.group_id).back(self.as_custom_data());
                     let label = format!("For: {}", ship.name);
                     CreateButton::new(view.to_custom_id()).label(truncate(label, 80))
                 } else {
@@ -107,7 +108,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

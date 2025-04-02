@@ -7,13 +7,14 @@ use crate::config::emoji;
 use crate::fmt::Join;
 
 /// Views an augment.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub equip_id: u32,
-    pub back: Option<CustomData>,
+    #[serde(borrow)]
+    pub back: Option<CustomData<'v>>,
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance.
     pub fn new(equip_id: u32) -> Self {
         Self {
@@ -23,7 +24,7 @@ impl View {
     }
 
     /// Sets the back button target.
-    pub fn back(mut self, back: CustomData) -> Self {
+    pub fn back(mut self, back: CustomData<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -79,7 +80,7 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

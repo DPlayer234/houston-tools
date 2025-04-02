@@ -4,7 +4,7 @@ use crate::buttons::prelude::*;
 /// IDs.
 ///
 /// Its [`ButtonArgsReply`] implementation will always return an error.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Noop {
     key: u16,
     value: u16,

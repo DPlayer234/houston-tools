@@ -10,23 +10,24 @@ use crate::config::emoji;
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct View {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct View<'v> {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
-    pub back: CustomData,
+    #[serde(borrow)]
+    pub back: CustomData<'v>,
     // this should honestly be in `ShipViewSource` but that's a pain
     augment_index: Option<u8>,
 }
 
 /// Where to load the skills from.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ViewSource {
     Ship(ShipViewSource),
     Augment(u32),
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ShipViewSource {
     pub ship_id: u32,
     pub retrofit: Option<u8>,
@@ -44,10 +45,10 @@ impl From<ShipViewSource> for ViewSource {
     }
 }
 
-impl View {
+impl<'v> View<'v> {
     /// Creates a new instance including a button to go back with some custom
     /// ID.
-    pub fn with_back(source: ViewSource, back: CustomData) -> Self {
+    pub fn with_back(source: ViewSource, back: CustomData<'v>) -> Self {
         Self {
             source,
             skill_index: None,
@@ -261,7 +262,7 @@ where
         .collect()
 }
 
-impl ButtonArgsReply for View {
+impl ButtonArgsReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 
