@@ -19,7 +19,6 @@ pub fn create_string_select_menu_row<'a>(
 /// unicode code symbol without allocating any memory.
 ///
 /// No validation. I wish this could be const.
-#[inline]
 pub fn unicode_emoji(text: &'static str) -> ReactionType {
     // it is worth noting that `ReactionType::from` unconditionally allocates only
     // to throw the allocation away. it seems the compiler isn't quite smart enough

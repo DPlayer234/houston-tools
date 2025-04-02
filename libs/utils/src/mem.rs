@@ -22,7 +22,6 @@ use std::slice;
 /// let y: &[u8; 4] = utils::mem::as_sized(x);
 /// assert_eq!(x, y);
 /// ```
-#[inline]
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
     try_as_sized(slice).expect("requested size must match exactly")
@@ -49,7 +48,6 @@ pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
 /// assert_eq!(small, None);
 /// assert_eq!(large, None);
 /// ```
-#[inline]
 pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
     if slice.len() == N {
         // SAFETY: The length has already been validated.
@@ -83,7 +81,6 @@ pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
 ///     assert_eq!(bytes, &[0, 1, 0, 2, 0, 3]);
 /// }
 /// ```
-#[inline]
 #[must_use = "transmuting has no effect if you don't use the return value"]
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     let ptr = slice.as_ptr_range();

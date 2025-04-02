@@ -109,7 +109,6 @@ pub trait SlashUserExt<'a>: Sized {
 impl<'a> SlashUserExt<'a> for Option<SlashMember<'a>> {
     type Inner = SlashMember<'a>;
 
-    #[inline]
     fn or_invoking(self, ctx: Context<'a>) -> Result<Self::Inner> {
         match self {
             Some(member) => Ok(member),

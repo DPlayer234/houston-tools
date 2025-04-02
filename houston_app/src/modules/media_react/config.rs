@@ -36,7 +36,6 @@ pub enum Condition {
 }
 
 impl Condition {
-    #[inline]
     pub fn select(self, f: impl FnOnce() -> bool) -> bool {
         match self {
             Self::Never => false,

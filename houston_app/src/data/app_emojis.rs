@@ -21,11 +21,11 @@ macro_rules! generate {
         impl<'a> HAppEmojis<'a> {
             $(
                 #[must_use]
-                #[inline(always)]
+                #[inline]
                 pub fn $key(self) -> &'a ReactionType {
                     match self.0 {
                         Some(e) => &e.$key,
-                        None => &FALLBACK_EMOJI
+                        None => fallback_emoji()
                     }
                 }
             )*
@@ -54,7 +54,7 @@ macro_rules! generate {
                     $(
                         $key: match exist.$key {
                             Some(e) => staticify_emoji_name(e, $name),
-                            $( None if !$condition(config) => FALLBACK_EMOJI.clone(), )?
+                            $( None if !$condition(config) => fallback_emoji().clone(), )?
                             None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
                         },
                     )*
@@ -66,7 +66,7 @@ macro_rules! generate {
 
 impl<'a> HAppEmojis<'a> {
     pub fn fallback(self) -> &'a ReactionType {
-        &FALLBACK_EMOJI
+        fallback_emoji()
     }
 }
 
@@ -124,12 +124,17 @@ generate!({
     hull_ixm  = "Hull_IXm",  "azur/Hull_IXm.png"  if azur;
 });
 
-static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| unicode_emoji("❔"));
-
 async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
     Ok(ctx.get_application_emojis().await?)
 }
 
+#[cold]
+fn fallback_emoji() -> &'static ReactionType {
+    static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| unicode_emoji("❔"));
+    &FALLBACK_EMOJI
+}
+
+#[cold]
 #[inline(never)]
 async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Result<ReactionType> {
     #[derive(serde::Serialize)]
