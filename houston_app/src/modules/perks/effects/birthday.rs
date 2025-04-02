@@ -100,8 +100,7 @@ impl Shape for Birthday {
         };
 
         'regions: for (region_id, region) in birthday.regions.iter().enumerate() {
-            #[expect(clippy::cast_possible_truncation)]
-            let region_id = region_id as u16;
+            let region_id = u16::try_from(region_id)?;
 
             // calculate the correct date with the current time and offset
             let today = now

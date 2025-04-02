@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bson_model::{Filter, ModelDocument as _};
+use chrono::TimeDelta;
 use chrono::prelude::*;
 
 use super::prelude::*;
@@ -61,8 +62,31 @@ impl super::Module for Module {
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
-        anyhow::ensure!(config.mongodb_uri.is_some(), "perks requires a mongodb_uri");
+        let perks = config.perks().unwrap();
+
+        anyhow::ensure!(
+            config.mongodb_uri.is_some(),
+            "`perks` requires setting `mongodb_uri`"
+        );
+
+        if let Some(birthday) = &perks.birthday {
+            anyhow::ensure!(
+                u16::try_from(birthday.regions.len()).is_ok(),
+                "can only specify up to {} birthday regions",
+                u16::MAX
+            );
+        }
+
         log::info!("Perks are enabled.");
+
+        if perks.rainbow.is_some() && perks.check_interval < TimeDelta::minutes(2) {
+            log::warn!(
+                "`perks.check_interval` is less than 2 minutes and rainbow role is enabled. \
+                 You will likely hit Discord rate limits with this configuration. \
+                 Increase `perks.check_interval` to at least 2 minutes."
+            );
+        }
+
         Ok(())
     }
 

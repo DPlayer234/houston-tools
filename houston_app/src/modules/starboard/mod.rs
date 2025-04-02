@@ -43,7 +43,7 @@ impl super::Module for Module {
 
         anyhow::ensure!(
             config.mongodb_uri.is_some(),
-            "starboard requires a mongodb_uri",
+            "`starboard` requires setting `mongodb_uri`",
         );
 
         anyhow::ensure!(
