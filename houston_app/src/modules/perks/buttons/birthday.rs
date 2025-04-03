@@ -19,7 +19,8 @@ impl Set {
     }
 }
 
-impl ButtonArgsReply for Set {
+button_value!(Set, 15);
+impl ButtonReply for Set {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let user_id = ctx.interaction.user.id;
 

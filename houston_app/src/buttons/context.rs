@@ -5,7 +5,7 @@ use serenity::prelude::*;
 
 use crate::prelude::*;
 
-/// Execution context for [`ButtonArgsReply`](super::ButtonArgsReply).
+/// Execution context for [`ButtonReply`](super::ButtonReply).
 #[derive(Clone)]
 pub struct AnyContext<'a, I> {
     pub(super) reply_state: &'a AtomicBool,
@@ -130,6 +130,9 @@ impl ButtonContext<'_> {
 pub trait AnyInteraction {
     fn id(&self) -> InteractionId;
     fn token(&self) -> &str;
+    fn guild_id(&self) -> Option<GuildId>;
+    fn channel(&self) -> Option<&PartialChannel>;
+    fn user(&self) -> &User;
 
     async fn create_response(
         &self,
@@ -159,6 +162,18 @@ macro_rules! interaction_impl {
 
             fn token(&self) -> &str {
                 &self.token
+            }
+
+            fn guild_id(&self) -> Option<GuildId> {
+                self.guild_id
+            }
+
+            fn channel(&self) -> Option<&PartialChannel> {
+                self.channel.as_ref()
+            }
+
+            fn user(&self) -> &User {
+                &self.user
             }
 
             async fn create_response(

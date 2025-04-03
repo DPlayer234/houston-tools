@@ -21,6 +21,24 @@ impl super::Module for Module {
         [slashies::azur()]
     }
 
+    fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
+        [
+            buttons::augment::View::action(),
+            buttons::equip::View::action(),
+            buttons::juustagram_chat::View::action(),
+            buttons::lines::View::action(),
+            buttons::search_augment::View::action(),
+            buttons::search_equip::View::action(),
+            buttons::search_juustagram_chat::View::action(),
+            buttons::search_ship::View::action(),
+            buttons::search_special_secretary::View::action(),
+            buttons::shadow_equip::View::action(),
+            buttons::ship::View::action(),
+            buttons::skill::View::action(),
+            buttons::special_secretary::View::action(),
+        ]
+    }
+
     async fn startup(self, data: Arc<HBotData>) -> Result {
         let azur = data.config().azur_raw().unwrap();
         if azur.early_load {

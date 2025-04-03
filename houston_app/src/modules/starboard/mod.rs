@@ -35,6 +35,13 @@ impl super::Module for Module {
         [slashies::starboard()]
     }
 
+    fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
+        [
+            buttons::top::View::action(),
+            buttons::top_posts::View::action(),
+        ]
+    }
+
     fn validate(&self, config: &HBotConfig) -> Result {
         anyhow::ensure!(
             is_unique_set(config.starboard.values().flat_map(|b| b.boards.keys())),

@@ -102,7 +102,8 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+button_value!(View, 11);
+impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         ctx.acknowledge().await?;
 

@@ -4,32 +4,52 @@ use std::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer, Error};
 use serde::ser::{Serialize, Serializer};
 
-use super::{ButtonArgsRef, encoding};
+use super::{ButtonValue, encoding};
 use crate::prelude::*;
 
 /// Represents a reference to another menu.
 ///
 /// This either references the actual view or its serialized form.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Nav<'v>(NavInner<'v>);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 enum NavInner<'v> {
     Slice(&'v [u8]),
-    Args(ButtonArgsRef<'v>),
+    Args(&'v dyn SerializeCustomIdToStackBuf),
 }
 
 macro_rules! to_slice {
     ($c:expr => $buf:ident) => {
         match $c.0 {
             NavInner::Slice(slice) => slice,
-            NavInner::Args(args) => {
+            NavInner::Args(data) => {
                 $buf = encoding::StackBuf::new();
-                encoding::write_button_args(&mut $buf, args);
+                data.write_inner_data(&mut $buf);
                 &$buf
             },
         }
     };
+}
+
+impl<'v> Nav<'v> {
+    /// Converts this instance to a component custom ID.
+    #[must_use]
+    pub fn to_custom_id(&self) -> String {
+        let mut buf;
+        let slice = to_slice!(*self => buf);
+        encoding::encode_custom_id(slice)
+    }
+
+    #[must_use]
+    pub(super) const fn from_slice(slice: &'v [u8]) -> Self {
+        Self(NavInner::Slice(slice))
+    }
+
+    #[must_use]
+    pub fn from_action_value<T: ButtonValue + Serialize>(args: &'v T) -> Self {
+        Self(NavInner::Args(args))
+    }
 }
 
 impl Serialize for Nav<'_> {
@@ -69,23 +89,28 @@ impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
     }
 }
 
-impl<'v> Nav<'v> {
-    /// Converts this instance to a component custom ID.
-    #[must_use]
-    pub fn to_custom_id(&self) -> String {
-        let mut buf;
-        let slice = to_slice!(*self => buf);
-        encoding::encode_custom_id(slice)
+impl fmt::Debug for Nav<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            NavInner::Slice(slice) => f.debug_tuple("Slice").field(&slice).finish(),
+            NavInner::Args(args) => f.debug_tuple("Args").field(&args.action_key()).finish(),
+        }
+    }
+}
+
+/// Provides a dyn-compatible wrapper trait for serializing arbitrary structs
+/// into the encoding format.
+trait SerializeCustomIdToStackBuf: Send + Sync {
+    fn action_key(&self) -> usize;
+    fn write_inner_data(&self, buf: &mut encoding::StackBuf);
+}
+
+impl<T: ButtonValue + Serialize> SerializeCustomIdToStackBuf for T {
+    fn action_key(&self) -> usize {
+        T::ACTION_KEY
     }
 
-    #[must_use]
-    pub(super) const fn from_slice(slice: &'v [u8]) -> Self {
-        Self(NavInner::Slice(slice))
-    }
-
-    /// Creates an instance from [`ButtonArgs`].
-    #[must_use]
-    pub(super) fn from_button_args(args: ButtonArgsRef<'v>) -> Self {
-        Self(NavInner::Args(args))
+    fn write_inner_data(&self, buf: &mut encoding::StackBuf) {
+        encoding::write_inner_data(buf, self);
     }
 }

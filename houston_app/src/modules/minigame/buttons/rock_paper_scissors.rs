@@ -143,7 +143,8 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+button_value!(View, 19);
+impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
         let action = self.action;
         let state = self

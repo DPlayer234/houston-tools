@@ -38,7 +38,7 @@ impl<'v> ToPage<'v> {
 
     pub fn build_row<T, F>(obj: &mut T, page_field: F) -> PageRowBuilder<'_, T, F>
     where
-        T: ToCustomId,
+        T: ButtonValue,
         F: Fn(&mut T) -> &mut u16,
     {
         PageRowBuilder {
@@ -65,7 +65,7 @@ enum MaxPage {
 
 impl<T, F> PageRowBuilder<'_, T, F>
 where
-    T: ToCustomId,
+    T: ButtonValue,
     F: Fn(&mut T) -> &mut u16,
 {
     pub fn exact_page_count(mut self, pages: u16) -> Self {
@@ -107,13 +107,13 @@ where
                     CreateButton::new("#no-back").disabled(true)
                 }
                 .emoji(emoji::left()),
-                CreateButton::new(ToPage::new(self.obj.to_nav()).to_custom_id()).label(
-                    match self.max_page {
-                        MaxPage::NoMore => format!("{0} / {0}", page + 1),
-                        MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
-                        MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
-                    },
-                ),
+                CreateButton::new(ToPage::new(self.obj.to_nav()).to_custom_id()).label(match self
+                    .max_page
+                {
+                    MaxPage::NoMore => format!("{0} / {0}", page + 1),
+                    MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
+                    MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
+                }),
                 if has_more {
                     self.obj.new_button(&self.page_field, page + 1, |_| 2)
                 } else {
@@ -125,7 +125,8 @@ where
     }
 }
 
-impl ButtonArgsReply for ToPage<'_> {
+button_value!(ToPage<'_>, 13);
+impl ButtonReply for ToPage<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let input_text = CreateInputText::new(InputTextStyle::Short, "Page", "page")
             .min_length(1)

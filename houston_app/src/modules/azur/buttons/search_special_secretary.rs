@@ -37,8 +37,7 @@ impl<'v> View<'v> {
         for secretary in iter.by_ref().take(PAGE_SIZE) {
             writeln_str!(desc, "- **{}**", secretary.name);
 
-            let view_chat =
-                super::special_secretary::View::new(secretary.id).back(self.to_nav());
+            let view_chat = super::special_secretary::View::new(secretary.id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(
                 truncate(secretary.name.as_str(), 100),
                 view_chat.to_custom_id(),
@@ -68,7 +67,8 @@ impl<'v> View<'v> {
     }
 }
 
-impl ButtonArgsReply for View<'_> {
+button_value!(View<'_>, 22);
+impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;

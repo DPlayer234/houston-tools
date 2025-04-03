@@ -400,7 +400,8 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+button_value!(View, 10);
+impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let guild_id = ctx.interaction.guild_id.context("requires guild")?;
         let user_id = ctx.interaction.user.id;

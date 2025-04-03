@@ -44,8 +44,7 @@ impl View {
                 chat_name = chat.name.as_str().into();
             }
 
-            let view_chat =
-                super::juustagram_chat::View::new(chat.chat_id).back(self.to_nav());
+            let view_chat = super::juustagram_chat::View::new(chat.chat_id).back(self.to_nav());
             options.push(
                 CreateSelectMenuOption::new(truncate(chat_name, 100), view_chat.to_custom_id())
                     .description(truncate(&chat.unlock_desc, 100)),
@@ -75,7 +74,8 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+button_value!(View, 17);
+impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;

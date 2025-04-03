@@ -121,7 +121,7 @@ mod pagination_impl {
         page: F,
     ) -> Vec<CreateActionRow<'a>>
     where
-        T: ToCustomId,
+        T: ButtonValue,
         I: Iterator,
         F: Fn(&mut T) -> &mut u16,
     {

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use houston_cmd::model::Command;
 use serenity::prelude::*;
 
+use crate::buttons::ButtonAction;
 use crate::prelude::*;
 
 pub mod azur;
@@ -19,6 +20,7 @@ mod prelude {
     pub use serenity::prelude::*;
 
     pub use super::Module as _;
+    pub use crate::buttons::{ButtonAction, ButtonValue as _};
     pub use crate::config::HBotConfig;
     pub use crate::prelude::*;
 }
@@ -100,6 +102,11 @@ pub trait Module: Sized {
 
     /// Commands for this module.
     fn commands(&self, config: &config::HBotConfig) -> impl IntoIterator<Item = Command> {
+        _ = config;
+        []
+    }
+
+    fn buttons(&self, config: &config::HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
         _ = config;
         []
     }

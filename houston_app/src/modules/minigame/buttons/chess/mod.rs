@@ -208,7 +208,8 @@ impl View {
     }
 }
 
-impl ButtonArgsReply for View {
+button_value!(View, 20);
+impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
         self.players.check_turn(&ctx)?;
 

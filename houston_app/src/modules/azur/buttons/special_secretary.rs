@@ -208,7 +208,8 @@ impl ViewPart {
     }
 }
 
-impl ButtonArgsReply for View<'_> {
+button_value!(View<'_>, 21);
+impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
 

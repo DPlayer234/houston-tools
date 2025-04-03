@@ -88,6 +88,7 @@ impl HBotData {
             m.validate(config)?;
             startup.intents |= m.intents(config);
             startup.commands.extend(m.commands(config));
+            startup.buttons.extend(m.buttons(config));
         });
         Ok(startup)
     }
@@ -154,6 +155,8 @@ pub struct HInit {
     pub intents: GatewayIntents,
     /// Commands to register.
     pub commands: Vec<houston_cmd::model::Command>,
+    /// Buttons to register.
+    pub buttons: Vec<crate::buttons::ButtonAction>,
 }
 
 impl Default for HInit {
@@ -162,6 +165,7 @@ impl Default for HInit {
             // default isn't empty but non_privileged
             intents: GatewayIntents::empty(),
             commands: Vec::new(),
+            buttons: Vec::new(),
         }
     }
 }

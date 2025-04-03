@@ -24,6 +24,14 @@ impl super::Module for Module {
         ]
     }
 
+    fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
+        [
+            buttons::Delete::action(),
+            buttons::Noop::action(),
+            buttons::ToPage::action(),
+        ]
+    }
+
     fn event_handler(self) -> Option<Box<dyn EventHandler>> {
         Some(Box::new(self))
     }

@@ -72,7 +72,8 @@ impl<'v> View<'v> {
     }
 }
 
-impl ButtonArgsReply for View<'_> {
+button_value!(View<'_>, 9);
+impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;

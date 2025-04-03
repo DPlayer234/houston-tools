@@ -1,13 +1,18 @@
 use std::mem::swap;
-use std::ptr;
+use std::sync::atomic::AtomicBool;
+use std::{fmt, ptr};
 
+use extract_map::{ExtractKey, ExtractMap};
+use houston_cmd::BoxFuture;
+use serde::Deserialize as _;
 use serenity::prelude::*;
 
-use crate::modules::{azur, core as core_mod, minigame, perks, starboard};
+use crate::fmt::discord::interaction_location;
+use crate::modules::core::buttons::Noop;
 use crate::prelude::*;
 
 mod context;
-mod encoding;
+pub mod encoding;
 mod nav;
 #[cfg(test)]
 mod test;
@@ -18,188 +23,68 @@ pub use nav::Nav;
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
 
-    pub use super::{ButtonArgsReply, ButtonContext, ModalContext, ToCustomId, Nav};
+    pub(crate) use super::button_value;
+    pub use super::{ButtonContext, ButtonReply, ButtonValue, ModalContext, Nav};
     pub use crate::prelude::*;
 }
 
-/// Helper macro that repeats needed code for every [`ButtonArgs`] variant.
-macro_rules! define_button_args {
-    ($life:lifetime {
-        $( $(#[$attr:meta])* $name:ident($(#[$attr_inner:meta])* $Ty:ty) ),* $(,)?
-    }) => {
-        /// The supported button interaction arguments.
-        ///
-        /// This is owned data that can be deserialized into.
-        #[derive(Debug, Clone, serde::Deserialize)]
-        enum ButtonArgs<$life> {
-            $(
-                $(#[$attr])*
-                $name($(#[$attr_inner])* $Ty),
-            )*
-        }
-
-        /// The supported button interaction arguments.
-        ///
-        /// This is borrowed data that can be serialized.
-        #[derive(Debug, Clone, Copy, serde::Serialize)]
-        enum ButtonArgsRef<$life> {
-            $(
-                $(#[$attr])*
-                $name($(#[$attr_inner])* &$life $Ty),
-            )*
-        }
-
-        $(
-            impl<$life> ToCustomId for $Ty {
-                fn to_custom_id(&self) -> String {
-                    encoding::to_custom_id(ButtonArgsRef::$name(self))
-                }
-
-                fn to_nav(&self) -> Nav<'_> {
-                    Nav::from_button_args(ButtonArgsRef::$name(self))
-                }
-            }
-        )*
-
-        impl<'v> From<&'v ButtonArgs<'v>> for ButtonArgsRef<'v> {
-            /// Borrows the inner data.
-            fn from(value: &'v ButtonArgs<'v>) -> Self {
-                match value {
-                    $(
-                        ButtonArgs::$name(v) => Self::$name(v),
-                    )*
-                }
-            }
-        }
-
-        impl ToCustomId for ButtonArgs<'_> {
-            fn to_custom_id(&self) -> String {
-                encoding::to_custom_id(self.borrow_ref())
-            }
-
-            fn to_nav(&self) -> Nav<'_> {
-                Nav::from_button_args(self.borrow_ref())
-            }
-        }
-
-        impl ButtonArgs<'_> {
-            /// Borrows the inner data.
-            fn borrow_ref(&self) -> ButtonArgsRef<'_> {
-                match self {
-                    $(
-                        Self::$name(v) => ButtonArgsRef::$name(v),
-                    )*
-                }
-            }
-
-            async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-                match self {
-                    $(
-                        Self::$name(args) => args.reply(ctx).await,
-                    )*
-                }
-            }
-
-            async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
-                match self {
-                    $(
-                        Self::$name(args) => args.modal_reply(ctx).await,
-                    )*
-                }
-            }
-        }
-    };
+/// Event handler for custom button menus.
+pub struct EventHandler {
+    actions: ExtractMap<usize, ButtonAction>,
 }
 
-// to avoid unexpected effects for old buttons, don't insert new variants
-// anywhere other than the bottom and don't reorder them!
-define_button_args!('v {
-    /// Unused button. A sentinel value is used to avoid duplicating custom IDs.
-    Noop(core_mod::buttons::Noop),
-    /// Open the ship detail view.
-    AzurShip(#[serde(borrow)] azur::buttons::ship::View<'v>),
-    /// Open the augment detail view.
-    AzurAugment(#[serde(borrow)] azur::buttons::augment::View<'v>),
-    /// Open the skill detail view.
-    AzurSkill(#[serde(borrow)] azur::buttons::skill::View<'v>),
-    /// Open the ship lines detail view.
-    AzurLines(#[serde(borrow)] azur::buttons::lines::View<'v>),
-    /// Open the ship filter list view.
-    AzurSearchShip(#[serde(borrow)] azur::buttons::search_ship::View<'v>),
-    /// Open the ship shadow equip details.
-    AzurShadowEquip(#[serde(borrow)] azur::buttons::shadow_equip::View<'v>),
-    /// Open the equipment details.
-    AzurEquip(#[serde(borrow)] azur::buttons::equip::View<'v>),
-    /// Open the equipment search.
-    AzurSearchEquip(#[serde(borrow)] azur::buttons::search_equip::View<'v>),
-    /// Open the augment search.
-    AzurSearchAugment(#[serde(borrow)] azur::buttons::search_augment::View<'v>),
-    /// Open the perk store.
-    PerksStore(perks::buttons::shop::View),
-    /// Open the starboard top view.
-    StarboardTop(starboard::buttons::top::View),
-    /// Open the starboard top posts view.
-    StarboardTopPosts(starboard::buttons::top_posts::View),
-    /// Open the "go to page" modal.
-    ToPage(#[serde(borrow)] core_mod::buttons::ToPage<'v>),
-    /// Delete the source message.
-    Delete(core_mod::buttons::Delete),
-    /// Sets the birthday for the perks module.
-    PerksBirthdaySet(perks::buttons::birthday::Set),
-    /// Open a Juustagram chat.
-    AzurJuustagramChat(#[serde(borrow)] azur::buttons::juustagram_chat::View<'v>),
-    /// Open the Juustagram chat search.
-    AzurSearchJuustagramChat(azur::buttons::search_juustagram_chat::View),
-    /// Play the next tic-tac-toe turn.
-    MinigameTicTacToe(minigame::buttons::tic_tac_toe::View),
-    /// Choose your action for rock-paper-scissors.
-    MinigameRockPaperScissors(minigame::buttons::rock_paper_scissors::View),
-    /// Play the next "chess" turn.
-    MinigameChess(minigame::buttons::chess::View),
-    /// Open the special secretary view.
-    AzurSpecialSecretary(#[serde(borrow)] azur::buttons::special_secretary::View<'v>),
-    /// Open the special secretary search.
-    AzurSearchSpecialSecretary(#[serde(borrow)] azur::buttons::search_special_secretary::View<'v>),
-});
-
-/// Event handler for custom button menus.
-pub struct EventHandler;
-
-crate::modules::impl_handler!(EventHandler, |_, ctx| match _ {
+crate::modules::impl_handler!(EventHandler, |t, ctx| match _ {
     FullEvent::InteractionCreate {
         interaction: Interaction::Component(interaction),
         ..
-    } => handler::dispatch_component(ctx, interaction),
+    } => t.dispatch_component(ctx, interaction),
     FullEvent::InteractionCreate {
         interaction: Interaction::Modal(interaction),
         ..
-    } => handler::dispatch_modal(ctx, interaction),
+    } => t.dispatch_modal(ctx, interaction),
 });
 
-/// Event handler for custom button menus.
-mod handler {
-    use std::sync::atomic::AtomicBool;
+pub fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
+    log::info!(
+        "[{kind}] {}, {}: {args:?}",
+        interaction_location(interaction.guild_id(), interaction.channel()),
+        interaction.user().name,
+    );
+}
 
-    use super::*;
-    use crate::fmt::discord::interaction_location;
+impl EventHandler {
+    /// Create a new handler with the given button actions.
+    pub fn new(actions: impl IntoIterator<Item = ButtonAction>) -> Result<Self> {
+        let mut map = ExtractMap::new();
+        for action in actions {
+            let key = action.key;
+            anyhow::ensure!(
+                map.insert(action).is_none(),
+                "duplicate button action for key `{key}`"
+            );
+        }
+
+        Ok(Self { actions: map })
+    }
 
     /// Dispatches component interactions.
-    pub async fn dispatch_component(ctx: &Context, interaction: &ComponentInteraction) {
+    async fn dispatch_component(&self, ctx: &Context, interaction: &ComponentInteraction) {
         let reply_state = AtomicBool::new(false);
-        if let Err(err) = handle_component(ctx, interaction, &reply_state).await {
-            handle_dispatch_error(
+        if let Err(err) = self.handle_component(ctx, interaction, &reply_state).await {
+            Box::pin(self.handle_dispatch_error(
                 ctx,
                 interaction.id,
                 &interaction.token,
                 reply_state.into_inner(),
                 err,
-            )
+            ))
             .await
         }
     }
 
     /// Handles the component interaction dispatch.
     async fn handle_component(
+        &self,
         ctx: &Context,
         interaction: &ComponentInteraction,
         reply_state: &AtomicBool,
@@ -209,70 +94,64 @@ mod handler {
         let custom_id: &str = match &interaction.data.kind {
             Kind::StringSelect { values } if values.len() == 1 => &values[0],
             Kind::Button => &interaction.data.custom_id,
-            _ => anyhow::bail!("Invalid interaction."),
+            _ => anyhow::bail!("invalid button interaction"),
         };
 
         let mut buf = encoding::StackBuf::new();
-        let args = encoding::decode_custom_id(&mut buf, custom_id)?;
+        let mut decoder = encoding::decode_custom_id(&mut buf, custom_id)?;
+        let key = usize::deserialize(&mut decoder)?;
+        let action = self.actions.get(&key).context("unknown button action")?;
 
-        log::info!(
-            "[Button] {}, {}: {:?}",
-            interaction_location(interaction.guild_id, interaction.channel.as_ref()),
-            interaction.user.name,
-            args
-        );
-
-        args.reply(ButtonContext {
+        let ctx = ButtonContext {
             reply_state,
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
-        })
-        .await
+        };
+
+        (action.invoke_button)(ctx, decoder).await
     }
 
     /// Dispatches modal interactions.
-    pub async fn dispatch_modal(ctx: &Context, interaction: &ModalInteraction) {
+    async fn dispatch_modal(&self, ctx: &Context, interaction: &ModalInteraction) {
         let reply_state = AtomicBool::new(false);
-        if let Err(err) = handle_modal(ctx, interaction, &reply_state).await {
-            handle_dispatch_error(
+        if let Err(err) = self.handle_modal(ctx, interaction, &reply_state).await {
+            Box::pin(self.handle_dispatch_error(
                 ctx,
                 interaction.id,
                 &interaction.token,
                 reply_state.into_inner(),
                 err,
-            )
+            ))
             .await
         }
     }
 
     /// Handles the modal interaction dispatch.
     async fn handle_modal(
+        &self,
         ctx: &Context,
         interaction: &ModalInteraction,
         reply_state: &AtomicBool,
     ) -> Result {
         let mut buf = encoding::StackBuf::new();
-        let args = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
+        let mut decoder = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
+        let key = usize::deserialize(&mut decoder)?;
+        let action = self.actions.get(&key).context("unknown button action")?;
 
-        log::info!(
-            "[Modal] {}, {}: {:?}",
-            interaction_location(interaction.guild_id, interaction.channel.as_ref()),
-            interaction.user.name,
-            args
-        );
-
-        args.modal_reply(ModalContext {
+        let ctx = ModalContext {
             reply_state,
             serenity: ctx,
             interaction,
             data: ctx.data_ref::<HContextData>(),
-        })
-        .await
+        };
+
+        (action.invoke_modal)(ctx, decoder).await
     }
 
     #[cold]
     async fn handle_dispatch_error(
+        &self,
         ctx: &Context,
         interaction_id: InteractionId,
         interaction_token: &str,
@@ -319,10 +198,18 @@ mod handler {
     }
 }
 
-/// Provides a way to convert an object into a component custom ID.
+/// Provides the shared surface for values that can be used as button actions
+/// and custom IDs.
 ///
-/// This is implemented for every type held by [`ButtonArgs`].
-pub trait ToCustomId {
+/// Use [`button_value`] to implement this trait.
+pub trait ButtonValue: Send + Sync {
+    /// Unique key for this action type.
+    const ACTION_KEY: usize;
+
+    /// Gets an action that can be registered to the [`EventHandler`].
+    #[must_use]
+    fn action() -> ButtonAction;
+
     /// Converts this instance to a component custom ID.
     #[must_use]
     fn to_custom_id(&self) -> String;
@@ -349,7 +236,7 @@ pub trait ToCustomId {
             // It isn't used in any way other than as a discriminator.
             let sentinel_key = ptr::from_ref(field_ref) as u16;
 
-            let sentinel = core_mod::buttons::Noop::new(sentinel_key, sentinel(value));
+            let sentinel = Noop::new(sentinel_key, sentinel(value));
             let custom_id = sentinel.to_custom_id();
             CreateButton::new(custom_id).disabled(true)
         } else {
@@ -394,7 +281,7 @@ pub trait ToCustomId {
 }
 
 /// Provides a way for button arguments to reply to the interaction.
-pub trait ButtonArgsReply: Sized + Send {
+pub trait ButtonReply: Sized + Send {
     /// Replies to the component interaction.
     async fn reply(self, ctx: ButtonContext<'_>) -> Result;
 
@@ -404,6 +291,77 @@ pub trait ButtonArgsReply: Sized + Send {
         anyhow::bail!("this button args type does not support modals");
     }
 }
+
+/// Button action to be registered to the [`EventHandler`].
+///
+/// This is similar to what commands do, just for buttons and modals.
+#[derive(Debug, Clone, Copy)]
+pub struct ButtonAction {
+    /// The corresponding [`ButtonValue::ACTION_KEY`].
+    pub key: usize,
+    /// The function to invoke for buttons.
+    pub invoke_button:
+        for<'ctx> fn(ButtonContext<'ctx>, encoding::Decoder<'ctx>) -> BoxFuture<'ctx, Result>,
+    /// The function to invoke for modals.
+    pub invoke_modal:
+        for<'ctx> fn(ModalContext<'ctx>, encoding::Decoder<'ctx>) -> BoxFuture<'ctx, Result>,
+}
+
+impl ExtractKey<usize> for ButtonAction {
+    fn extract_key(&self) -> &usize {
+        &self.key
+    }
+}
+
+/// Implements the [`ButtonValue`] trait.
+/// Accepts the type and its action key as a [`usize`].
+///
+/// The type in question needs to implement the following:
+/// - [`ButtonReply`]
+/// - [`fmt::Debug`]
+/// - [`serde::Deserialize`]
+/// - [`serde::Serialize`]
+///
+/// If the type has lifetimes, specify them as `'_`.
+macro_rules! button_value {
+    ($Ty:ty, $key:literal) => {
+        impl $crate::buttons::ButtonValue for $Ty {
+            const ACTION_KEY: usize = $key;
+
+            fn action() -> $crate::buttons::ButtonAction {
+                $crate::buttons::ButtonAction {
+                    key: $key,
+                    invoke_button: |ctx, mut buf| {
+                        let this = buf.read_to_end::<$Ty>();
+                        Box::pin(async move {
+                            let this = this?;
+                            $crate::buttons::log_interaction("Button", ctx.interaction, &this);
+                            this.reply(ctx).await
+                        })
+                    },
+                    invoke_modal: |ctx, mut buf| {
+                        let this = buf.read_to_end::<$Ty>();
+                        Box::pin(async move {
+                            let this = this?;
+                            $crate::buttons::log_interaction("Modal", ctx.interaction, &this);
+                            this.modal_reply(ctx).await
+                        })
+                    },
+                }
+            }
+
+            fn to_custom_id(&self) -> String {
+                $crate::buttons::encoding::to_custom_id(self)
+            }
+
+            fn to_nav(&self) -> Nav<'_> {
+                $crate::buttons::Nav::from_action_value(self)
+            }
+        }
+    };
+}
+
+pub(crate) use button_value;
 
 /// Compile-time helper to assert that types are [`Send`] as expected.
 ///
@@ -415,10 +373,6 @@ fn _assert_traits() {
         unreachable!()
     }
 
-    ok(dummy::<ButtonArgs<'_>>());
-    ok(dummy::<ButtonArgs<'_>>().reply(dummy()));
-    ok(dummy::<ButtonArgs<'_>>().modal_reply(dummy()));
-    ok(dummy::<ButtonArgsRef<'_>>());
     ok(dummy::<Nav<'_>>());
 
     ok(dummy::<ButtonContext<'_>>());
