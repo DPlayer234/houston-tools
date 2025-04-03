@@ -1,7 +1,7 @@
 use super::*;
 
 macro_rules! to_custom_id_consistency {
-    ($test_name:ident, $variant:ident => $make:expr) => {
+    ($test_name:ident, $make:expr) => {
         #[test]
         fn $test_name() {
             let args = $make;
@@ -16,12 +16,40 @@ macro_rules! to_custom_id_consistency {
 const TEST_NAV: Nav<'static> =
     Nav::from_slice(include_bytes!("test.rs").first_chunk::<100>().unwrap());
 
-to_custom_id_consistency!(round_trip_args_none, Noop => crate::modules::core::buttons::Noop::new(12345, 6789));
-to_custom_id_consistency!(round_trip_args_ship, AzurShip => crate::modules::azur::buttons::ship::View::new(9999));
-to_custom_id_consistency!(round_trip_args_augment, AzurAugment => crate::modules::azur::buttons::augment::View::new(9999));
-to_custom_id_consistency!(round_trip_args_skill, AzurSkill => { use crate::modules::azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), TEST_NAV) });
-to_custom_id_consistency!(round_trip_args_lines, AzurLines => crate::modules::azur::buttons::lines::View::with_back(9999, TEST_NAV));
-to_custom_id_consistency!(round_trip_args_equip, AzurEquip => crate::modules::azur::buttons::equip::View::new(9999));
+to_custom_id_consistency!(
+    check_noop,
+    crate::modules::core::buttons::Noop::new(12345, 6789)
+);
+to_custom_id_consistency!(
+    check_to_page,
+    crate::modules::core::buttons::ToPage::new(TEST_NAV)
+);
+
+to_custom_id_consistency!(
+    check_azur_ship,
+    crate::modules::azur::buttons::ship::View::new(9999)
+);
+to_custom_id_consistency!(
+    check_azur_augment,
+    crate::modules::azur::buttons::augment::View::new(9999)
+);
+to_custom_id_consistency!(check_azur_skill, {
+    use crate::modules::azur::buttons::skill::*;
+    View::with_back(ViewSource::Augment(1), TEST_NAV)
+});
+to_custom_id_consistency!(
+    check_azur_lines,
+    crate::modules::azur::buttons::lines::View::with_back(9999, TEST_NAV)
+);
+to_custom_id_consistency!(
+    check_azur_equip,
+    crate::modules::azur::buttons::equip::View::new(9999)
+);
+
+to_custom_id_consistency!(
+    check_perks_shop,
+    crate::modules::perks::buttons::shop::View::new()
+);
 
 #[test]
 fn eq_direct_to_custom_id() {
