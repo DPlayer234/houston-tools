@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_steph::de::{Deserializer, SliceRead};
 use utils::str_as_data::b20bit;
 
@@ -11,8 +11,22 @@ const STACK: usize = b20bit::max_byte_len(100);
 /// Buffer used for on-stack coding.
 pub type StackBuf = ArrayVec<u8, STACK>;
 
-/// Provides a button buffer decoder.
-pub type Decoder<'de> = Deserializer<SliceRead<'de>>;
+/// Allows decoding a button action value.
+pub struct Decoder<'de>(Deserializer<SliceRead<'de>>);
+
+impl<'de> Decoder<'de> {
+    /// Read the button action key.
+    pub(super) fn read_key(&mut self) -> Result<usize> {
+        Ok(usize::deserialize(&mut self.0)?)
+    }
+
+    /// Deserializes the button value.
+    pub fn into_button_value<T: Deserialize<'de>>(mut self) -> Result<T> {
+        let value = T::deserialize(&mut self.0)?;
+        self.0.end()?;
+        Ok(value)
+    }
+}
 
 /// Encodes a button value as a custom ID.
 pub fn to_custom_id<T: ButtonValue + Serialize>(action: &T) -> String {
@@ -29,7 +43,7 @@ pub fn encode_custom_id(slice: &[u8]) -> String {
 /// Decodes a custom ID into a button buffer.
 pub fn decode_custom_id<'de>(buf: &'de mut StackBuf, id: &str) -> Result<Decoder<'de>> {
     b20bit::decode(&mut *buf, id)?;
-    Ok(serde_steph::Deserializer::from_slice(buf))
+    Ok(Decoder(Deserializer::from_slice(buf)))
 }
 
 /// Writes the inner data for a button value.

@@ -4,7 +4,7 @@ use std::{fmt, ptr};
 
 use extract_map::{ExtractKey, ExtractMap};
 use houston_cmd::BoxFuture;
-use serde::Deserialize as _;
+use serde::Deserialize;
 use serenity::prelude::*;
 
 use crate::fmt::discord::interaction_location;
@@ -43,14 +43,6 @@ crate::modules::impl_handler!(EventHandler, |t, ctx| match _ {
         ..
     } => t.dispatch_modal(ctx, interaction),
 });
-
-pub fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
-    log::info!(
-        "[{kind}] {}, {}: {args:?}",
-        interaction_location(interaction.guild_id(), interaction.channel()),
-        interaction.user().name,
-    );
-}
 
 impl EventHandler {
     /// Create a new handler with the given button actions.
@@ -99,7 +91,7 @@ impl EventHandler {
 
         let mut buf = encoding::StackBuf::new();
         let mut decoder = encoding::decode_custom_id(&mut buf, custom_id)?;
-        let key = usize::deserialize(&mut decoder)?;
+        let key = decoder.read_key()?;
         let action = self.actions.get(&key).context("unknown button action")?;
 
         let ctx = ButtonContext {
@@ -136,7 +128,7 @@ impl EventHandler {
     ) -> Result {
         let mut buf = encoding::StackBuf::new();
         let mut decoder = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
-        let key = usize::deserialize(&mut decoder)?;
+        let key = decoder.read_key()?;
         let action = self.actions.get(&key).context("unknown button action")?;
 
         let ctx = ModalContext {
@@ -299,9 +291,11 @@ pub trait ButtonReply: Sized + Send {
 pub struct ButtonAction {
     /// The corresponding [`ButtonValue::ACTION_KEY`].
     pub key: usize,
+
     /// The function to invoke for buttons.
     pub invoke_button:
         for<'ctx> fn(ButtonContext<'ctx>, encoding::Decoder<'ctx>) -> BoxFuture<'ctx, Result>,
+
     /// The function to invoke for modals.
     pub invoke_modal:
         for<'ctx> fn(ModalContext<'ctx>, encoding::Decoder<'ctx>) -> BoxFuture<'ctx, Result>,
@@ -310,6 +304,44 @@ pub struct ButtonAction {
 impl ExtractKey<usize> for ButtonAction {
     fn extract_key(&self) -> &usize {
         &self.key
+    }
+}
+
+/// Provides shared code for invoking button value actions.
+///
+/// Used by the [`button_value`] macro.
+#[doc(hidden)]
+pub fn invoke_button_value<'ctx, T, I, F>(
+    ctx: AnyContext<'ctx, I>,
+    buf: encoding::Decoder<'ctx>,
+    f: impl Fn(T, AnyContext<'ctx, I>) -> F,
+    label: &str,
+) -> BoxFuture<'ctx, Result>
+where
+    T: fmt::Debug + Deserialize<'ctx>,
+    I: AnyInteraction,
+    F: Future<Output = Result> + Send + 'ctx,
+{
+    // less generic interaction logging
+    pub fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
+        log::info!(
+            "[{kind}] {}, {}: {args:?}",
+            interaction_location(interaction.guild_id(), interaction.channel()),
+            interaction.user().name,
+        );
+    }
+
+    // shared boxed future type for the outer error case
+    fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
+        Box::pin(async move { Err(why) })
+    }
+
+    match buf.into_button_value::<T>() {
+        Ok(this) => {
+            log_interaction(label, ctx.interaction, &this);
+            Box::pin(f(this, ctx))
+        },
+        Err(why) => err_fut(why),
     }
 }
 
@@ -329,23 +361,18 @@ macro_rules! button_value {
             const ACTION_KEY: usize = $key;
 
             fn action() -> $crate::buttons::ButtonAction {
+                // somewhat strange emit with a fairly insane reason:
+                // i am not sure how to correctly constrain `$Ty` to `Deserialize<'_>` in
+                // a helper function generic so this actually still works.
                 $crate::buttons::ButtonAction {
-                    key: $key,
-                    invoke_button: |ctx, mut buf| {
-                        let this = buf.read_to_end::<$Ty>();
-                        Box::pin(async move {
-                            let this = this?;
-                            $crate::buttons::log_interaction("Button", ctx.interaction, &this);
-                            this.reply(ctx).await
-                        })
+                    key: <Self as $crate::buttons::ButtonValue>::ACTION_KEY,
+                    invoke_button: |ctx, buf| {
+                        let reply = <$Ty as $crate::buttons::ButtonReply>::reply;
+                        $crate::buttons::invoke_button_value(ctx, buf, reply, "Button")
                     },
-                    invoke_modal: |ctx, mut buf| {
-                        let this = buf.read_to_end::<$Ty>();
-                        Box::pin(async move {
-                            let this = this?;
-                            $crate::buttons::log_interaction("Modal", ctx.interaction, &this);
-                            this.modal_reply(ctx).await
-                        })
+                    invoke_modal: |ctx, buf| {
+                        let modal_reply = <$Ty as $crate::buttons::ButtonReply>::modal_reply;
+                        $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Model")
                     },
                 }
             }
@@ -355,7 +382,7 @@ macro_rules! button_value {
             }
 
             fn to_nav(&self) -> Nav<'_> {
-                $crate::buttons::Nav::from_action_value(self)
+                $crate::buttons::Nav::from_button_value(self)
             }
         }
     };

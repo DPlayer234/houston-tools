@@ -16,14 +16,14 @@ pub struct Nav<'v>(NavInner<'v>);
 #[derive(Clone, Copy)]
 enum NavInner<'v> {
     Slice(&'v [u8]),
-    Args(&'v dyn SerializeCustomIdToStackBuf),
+    Value(&'v dyn SerializeCustomIdToStackBuf),
 }
 
 macro_rules! to_slice {
     ($c:expr => $buf:ident) => {
         match $c.0 {
             NavInner::Slice(slice) => slice,
-            NavInner::Args(data) => {
+            NavInner::Value(data) => {
                 $buf = encoding::StackBuf::new();
                 data.write_inner_data(&mut $buf);
                 &$buf
@@ -47,8 +47,8 @@ impl<'v> Nav<'v> {
     }
 
     #[must_use]
-    pub fn from_action_value<T: ButtonValue + Serialize>(args: &'v T) -> Self {
-        Self(NavInner::Args(args))
+    pub fn from_button_value<T: ButtonValue + Serialize>(args: &'v T) -> Self {
+        Self(NavInner::Value(args))
     }
 }
 
@@ -93,7 +93,7 @@ impl fmt::Debug for Nav<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
             NavInner::Slice(slice) => f.debug_tuple("Slice").field(&slice).finish(),
-            NavInner::Args(args) => f.debug_tuple("Args").field(&args.action_key()).finish(),
+            NavInner::Value(args) => f.debug_tuple("Value").field(&args.action_key()).finish(),
         }
     }
 }

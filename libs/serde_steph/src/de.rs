@@ -80,7 +80,7 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     }
 
     /// Deserializes a single object, followed by a call to [`Self::end`].
-    pub fn read_to_end<T: de::Deserialize<'de>>(&mut self) -> Result<T> {
+    pub(crate) fn read_to_end<T: de::Deserialize<'de>>(&mut self) -> Result<T> {
         let value = T::deserialize(&mut *self)?;
         self.end()?;
         Ok(value)
