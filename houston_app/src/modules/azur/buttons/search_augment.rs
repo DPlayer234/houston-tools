@@ -41,7 +41,7 @@ impl<'v> View<'v> {
         for augment in iter.by_ref().take(PAGE_SIZE) {
             writeln_str!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
 
-            let view = super::augment::View::new(augment.augment_id).back(self.as_custom_data());
+            let view = super::augment::View::new(augment.augment_id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(
                 &augment.name,
                 view.to_custom_id(),

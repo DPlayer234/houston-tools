@@ -11,7 +11,7 @@ pub struct View<'v> {
     pub secretary_id: u32,
     pub part: ViewPart,
     #[serde(borrow)]
-    back: Option<CustomData<'v>>,
+    back: Option<Nav<'v>>,
 }
 
 /// Which part of the lines to display.
@@ -34,7 +34,7 @@ impl<'v> View<'v> {
         }
     }
 
-    pub fn back(mut self, back: CustomData<'v>) -> Self {
+    pub fn back(mut self, back: Nav<'v>) -> Self {
         self.back = Some(back);
         self
     }

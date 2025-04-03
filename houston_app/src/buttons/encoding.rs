@@ -18,7 +18,7 @@ pub fn to_custom_id(args: ButtonArgsRef<'_>) -> String {
     encode_custom_id(&buf)
 }
 
-/// Encodes a [`super::CustomData`] buffer as a custom ID.
+/// Encodes a [`super::Nav`] buffer as a custom ID.
 pub fn encode_custom_id(slice: &[u8]) -> String {
     b20bit::to_string(slice)
 }

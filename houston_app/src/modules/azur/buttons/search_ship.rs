@@ -51,7 +51,7 @@ impl<'v> View<'v> {
                 ship.hull_type.designation(),
             );
 
-            let view_ship = super::ship::View::new(ship.group_id).back(self.as_custom_data());
+            let view_ship = super::ship::View::new(ship.group_id).back(self.to_nav());
             options.push(
                 CreateSelectMenuOption::new(&ship.name, view_ship.to_custom_id())
                     .emoji(emoji.clone()),

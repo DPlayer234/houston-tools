@@ -14,7 +14,7 @@ pub struct View<'v> {
     chat_id: u32,
     flags: ArrayVec<u8, 20>,
     #[serde(borrow)]
-    back: Option<CustomData<'v>>,
+    back: Option<Nav<'v>>,
 }
 
 impl<'v> View<'v> {
@@ -29,7 +29,7 @@ impl<'v> View<'v> {
         }
     }
 
-    pub fn back(mut self, back: CustomData<'v>) -> Self {
+    pub fn back(mut self, back: Nav<'v>) -> Self {
         self.back = Some(back);
         self
     }

@@ -7,18 +7,18 @@ use crate::modules::{azur, core as core_mod, minigame, perks, starboard};
 use crate::prelude::*;
 
 mod context;
-mod custom_data;
 mod encoding;
+mod nav;
 #[cfg(test)]
 mod test;
 
 pub use context::{AnyContext, AnyInteraction, ButtonContext, ModalContext};
-pub use custom_data::CustomData;
+pub use nav::Nav;
 
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
 
-    pub use super::{ButtonArgsReply, ButtonContext, CustomData, ModalContext, ToCustomData};
+    pub use super::{ButtonArgsReply, ButtonContext, ModalContext, ToCustomId, Nav};
     pub use crate::prelude::*;
 }
 
@@ -50,13 +50,13 @@ macro_rules! define_button_args {
         }
 
         $(
-            impl<$life> ToCustomData for $Ty {
+            impl<$life> ToCustomId for $Ty {
                 fn to_custom_id(&self) -> String {
                     encoding::to_custom_id(ButtonArgsRef::$name(self))
                 }
 
-                fn as_custom_data(&self) -> CustomData<'_> {
-                    CustomData::from_button_args(ButtonArgsRef::$name(self))
+                fn to_nav(&self) -> Nav<'_> {
+                    Nav::from_button_args(ButtonArgsRef::$name(self))
                 }
             }
         )*
@@ -72,13 +72,13 @@ macro_rules! define_button_args {
             }
         }
 
-        impl ToCustomData for ButtonArgs<'_> {
+        impl ToCustomId for ButtonArgs<'_> {
             fn to_custom_id(&self) -> String {
                 encoding::to_custom_id(self.borrow_ref())
             }
 
-            fn as_custom_data(&self) -> CustomData<'_> {
-                CustomData::from_button_args(self.borrow_ref())
+            fn to_nav(&self) -> Nav<'_> {
+                Nav::from_button_args(self.borrow_ref())
             }
         }
 
@@ -321,15 +321,15 @@ mod handler {
 
 /// Provides a way to convert an object into a component custom ID.
 ///
-/// This is auto-implemented for every type held by [`ButtonArgs`].
-pub trait ToCustomData {
+/// This is implemented for every type held by [`ButtonArgs`].
+pub trait ToCustomId {
     /// Converts this instance to a component custom ID.
     #[must_use]
     fn to_custom_id(&self) -> String;
 
-    /// Converts this instance to custom data.
+    /// Converts this instance to a [`Nav`].
     #[must_use]
-    fn as_custom_data(&self) -> CustomData<'_>;
+    fn to_nav(&self) -> Nav<'_>;
 
     /// Creates a new button that would switch to a state where one field is
     /// changed.
@@ -419,7 +419,7 @@ fn _assert_traits() {
     ok(dummy::<ButtonArgs<'_>>().reply(dummy()));
     ok(dummy::<ButtonArgs<'_>>().modal_reply(dummy()));
     ok(dummy::<ButtonArgsRef<'_>>());
-    ok(dummy::<CustomData<'_>>());
+    ok(dummy::<Nav<'_>>());
 
     ok(dummy::<ButtonContext<'_>>());
     ok(dummy::<ButtonContext<'_>>().acknowledge());

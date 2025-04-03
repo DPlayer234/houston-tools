@@ -15,7 +15,7 @@ pub struct View<'v> {
     pub source: ViewSource,
     pub skill_index: Option<u8>,
     #[serde(borrow)]
-    pub back: CustomData<'v>,
+    pub back: Nav<'v>,
     // this should honestly be in `ShipViewSource` but that's a pain
     augment_index: Option<u8>,
 }
@@ -48,7 +48,7 @@ impl From<ShipViewSource> for ViewSource {
 impl<'v> View<'v> {
     /// Creates a new instance including a button to go back with some custom
     /// ID.
-    pub fn with_back(source: ViewSource, back: CustomData<'v>) -> Self {
+    pub fn with_back(source: ViewSource, back: Nav<'v>) -> Self {
         Self {
             source,
             skill_index: None,

@@ -11,7 +11,7 @@ use crate::fmt::Join;
 pub struct View<'v> {
     pub equip_id: u32,
     #[serde(borrow)]
-    pub back: Option<CustomData<'v>>,
+    pub back: Option<Nav<'v>>,
 }
 
 impl<'v> View<'v> {
@@ -24,7 +24,7 @@ impl<'v> View<'v> {
     }
 
     /// Sets the back button target.
-    pub fn back(mut self, back: CustomData<'v>) -> Self {
+    pub fn back(mut self, back: Nav<'v>) -> Self {
         self.back = Some(back);
         self
     }

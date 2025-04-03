@@ -7,7 +7,7 @@ macro_rules! round_trip_test {
             let args = $make;
 
             // ensure wrapped serializes data the same way
-            let custom_data = args.as_custom_data();
+            let custom_data = args.to_nav();
             let wrapped_args = ButtonArgs::$variant(args.clone());
 
             let custom_id = custom_data.to_custom_id();
@@ -24,15 +24,18 @@ macro_rules! round_trip_test {
     };
 }
 
+const TEST_NAV: Nav<'static> =
+    Nav::from_slice(include_bytes!("test.rs").first_chunk::<100>().unwrap());
+
 round_trip_test!(round_trip_args_none, Noop => core_mod::buttons::Noop::new(12345, 6789));
 round_trip_test!(round_trip_args_ship, AzurShip => azur::buttons::ship::View::new(9999));
 round_trip_test!(round_trip_args_augment, AzurAugment => azur::buttons::augment::View::new(9999));
-round_trip_test!(round_trip_args_skill, AzurSkill => { use azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), CustomData::EMPTY) });
-round_trip_test!(round_trip_args_lines, AzurLines => azur::buttons::lines::View::with_back(9999, CustomData::EMPTY));
+round_trip_test!(round_trip_args_skill, AzurSkill => { use azur::buttons::skill::*; View::with_back(ViewSource::Augment(1), TEST_NAV) });
+round_trip_test!(round_trip_args_lines, AzurLines => azur::buttons::lines::View::with_back(9999, TEST_NAV));
 round_trip_test!(round_trip_args_equip, AzurEquip => azur::buttons::equip::View::new(9999));
 
 #[test]
 fn eq_direct_to_custom_id() {
     let view = azur::buttons::ship::View::new(9999);
-    assert_eq!(view.to_custom_id(), view.as_custom_data().to_custom_id());
+    assert_eq!(view.to_custom_id(), view.to_nav().to_custom_id());
 }

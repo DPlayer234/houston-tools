@@ -3,11 +3,11 @@ use crate::config::emoji;
 
 /// Opens a modal for page navigation.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ToPage<'v>(#[serde(borrow)] CustomData<'v>);
+pub struct ToPage<'v>(#[serde(borrow)] Nav<'v>);
 
 impl<'v> ToPage<'v> {
     /// Opens a modal for page navigation.
-    pub fn new(data: CustomData<'v>) -> Self {
+    pub fn new(data: Nav<'v>) -> Self {
         Self(data)
     }
 
@@ -38,7 +38,7 @@ impl<'v> ToPage<'v> {
 
     pub fn build_row<T, F>(obj: &mut T, page_field: F) -> PageRowBuilder<'_, T, F>
     where
-        T: ToCustomData,
+        T: ToCustomId,
         F: Fn(&mut T) -> &mut u16,
     {
         PageRowBuilder {
@@ -65,7 +65,7 @@ enum MaxPage {
 
 impl<T, F> PageRowBuilder<'_, T, F>
 where
-    T: ToCustomData,
+    T: ToCustomId,
     F: Fn(&mut T) -> &mut u16,
 {
     pub fn exact_page_count(mut self, pages: u16) -> Self {
@@ -107,7 +107,7 @@ where
                     CreateButton::new("#no-back").disabled(true)
                 }
                 .emoji(emoji::left()),
-                CreateButton::new(ToPage::new(self.obj.as_custom_data()).to_custom_id()).label(
+                CreateButton::new(ToPage::new(self.obj.to_nav()).to_custom_id()).label(
                     match self.max_page {
                         MaxPage::NoMore => format!("{0} / {0}", page + 1),
                         MaxPage::Exact(max) => format!("{} / {}", page + 1, max),

@@ -19,7 +19,7 @@ pub struct View<'v> {
     pub affinity: ViewAffinity,
     pub retrofit: Option<u8>,
     #[serde(borrow)]
-    pub back: Option<CustomData<'v>>,
+    pub back: Option<Nav<'v>>,
 }
 
 /// The affinity used to calculate stat values.
@@ -43,7 +43,7 @@ impl<'v> View<'v> {
     }
 
     /// Sets the back button target.
-    pub fn back(mut self, back: CustomData<'v>) -> Self {
+    pub fn back(mut self, back: Nav<'v>) -> Self {
         self.back = Some(back);
         self
     }
@@ -170,7 +170,7 @@ impl<'v> View<'v> {
             use super::skill::{ShipViewSource, View};
 
             let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
-            let view_skill = View::with_back(source, self.as_custom_data());
+            let view_skill = View::with_back(source, self.to_nav());
             let button = CreateButton::new(view_skill.to_custom_id())
                 .label("Skills")
                 .style(ButtonStyle::Secondary);
@@ -188,7 +188,7 @@ impl<'v> View<'v> {
         }
 
         {
-            let view_lines = super::lines::View::with_back(self.ship_id, self.as_custom_data());
+            let view_lines = super::lines::View::with_back(self.ship_id, self.to_nav());
             let button = CreateButton::new(view_lines.to_custom_id())
                 .label("Lines")
                 .style(ButtonStyle::Secondary);

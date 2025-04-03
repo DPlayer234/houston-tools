@@ -45,7 +45,7 @@ impl View {
             }
 
             let view_chat =
-                super::juustagram_chat::View::new(chat.chat_id).back(self.as_custom_data());
+                super::juustagram_chat::View::new(chat.chat_id).back(self.to_nav());
             options.push(
                 CreateSelectMenuOption::new(truncate(chat_name, 100), view_chat.to_custom_id())
                     .description(truncate(&chat.unlock_desc, 100)),

@@ -7,23 +7,23 @@ use serde::ser::{Serialize, Serializer};
 use super::{ButtonArgsRef, encoding};
 use crate::prelude::*;
 
-/// Represents custom data for another menu.
+/// Represents a reference to another menu.
+///
+/// This either references the actual view or its serialized form.
 #[derive(Debug, Clone)]
-pub struct CustomData<'v>(CustomDataInner<'v>);
+pub struct Nav<'v>(NavInner<'v>);
 
-#[derive(Debug, Clone)]
-enum CustomDataInner<'v> {
-    #[doc(hidden)]
+#[derive(Debug, Clone, Copy)]
+enum NavInner<'v> {
     Slice(&'v [u8]),
-    #[doc(hidden)]
     Args(ButtonArgsRef<'v>),
 }
 
 macro_rules! to_slice {
     ($c:expr => $buf:ident) => {
         match $c.0 {
-            CustomDataInner::Slice(slice) => slice,
-            CustomDataInner::Args(args) => {
+            NavInner::Slice(slice) => slice,
+            NavInner::Args(args) => {
                 $buf = encoding::StackBuf::new();
                 encoding::write_button_args(&mut $buf, args);
                 &$buf
@@ -32,8 +32,8 @@ macro_rules! to_slice {
     };
 }
 
-impl Serialize for CustomData<'_> {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+impl Serialize for Nav<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -43,15 +43,15 @@ impl Serialize for CustomData<'_> {
     }
 }
 
-impl<'v, 'de: 'v> Deserialize<'de> for CustomData<'v> {
+impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct Visitor<'de>(PhantomData<CustomData<'de>>);
+        struct Visitor<'de>(PhantomData<Nav<'de>>);
 
         impl<'de> serde::de::Visitor<'de> for Visitor<'de> {
-            type Value = CustomData<'de>;
+            type Value = Nav<'de>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("custom data bytes")
@@ -61,7 +61,7 @@ impl<'v, 'de: 'v> Deserialize<'de> for CustomData<'v> {
             where
                 E: Error,
             {
-                Ok(CustomData::from_slice(v))
+                Ok(Nav::from_slice(v))
             }
         }
 
@@ -69,11 +69,7 @@ impl<'v, 'de: 'v> Deserialize<'de> for CustomData<'v> {
     }
 }
 
-impl<'v> CustomData<'v> {
-    /// Gets an empty value.
-    #[cfg(test)]
-    pub const EMPTY: Self = Self::from_slice(&[]);
-
+impl<'v> Nav<'v> {
     /// Converts this instance to a component custom ID.
     #[must_use]
     pub fn to_custom_id(&self) -> String {
@@ -83,13 +79,13 @@ impl<'v> CustomData<'v> {
     }
 
     #[must_use]
-    const fn from_slice(slice: &'v [u8]) -> Self {
-        Self(CustomDataInner::Slice(slice))
+    pub(super) const fn from_slice(slice: &'v [u8]) -> Self {
+        Self(NavInner::Slice(slice))
     }
 
     /// Creates an instance from [`ButtonArgs`].
     #[must_use]
     pub(super) fn from_button_args(args: ButtonArgsRef<'v>) -> Self {
-        Self(CustomDataInner::Args(args))
+        Self(NavInner::Args(args))
     }
 }

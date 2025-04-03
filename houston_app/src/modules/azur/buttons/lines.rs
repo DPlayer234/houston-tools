@@ -16,7 +16,7 @@ pub struct View<'v> {
     pub part: ViewPart,
     pub extra: bool,
     #[serde(borrow)]
-    pub back: CustomData<'v>,
+    pub back: Nav<'v>,
 }
 
 /// Which part of the lines to display.
@@ -32,7 +32,7 @@ pub enum ViewPart {
 impl<'v> View<'v> {
     /// Creates a new instance including a button to go back with some custom
     /// ID.
-    pub fn with_back(ship_id: u32, back: CustomData<'v>) -> Self {
+    pub fn with_back(ship_id: u32, back: Nav<'v>) -> Self {
         Self {
             ship_id,
             skin_index: 0,

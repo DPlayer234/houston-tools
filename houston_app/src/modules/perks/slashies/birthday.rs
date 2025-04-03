@@ -1,7 +1,7 @@
 use chrono::*;
 use mongodb::options::ReturnDocument;
 
-use crate::buttons::ToCustomData as _;
+use crate::buttons::ToCustomId as _;
 use crate::modules::perks::DayOfYear;
 use crate::modules::perks::config::BirthdayRegionConfig;
 use crate::modules::perks::model::*;

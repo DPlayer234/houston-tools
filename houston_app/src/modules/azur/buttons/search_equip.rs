@@ -48,7 +48,7 @@ impl<'v> View<'v> {
                 equip.kind.name(),
             );
 
-            let view_equip = super::equip::View::new(equip.equip_id).back(self.as_custom_data());
+            let view_equip = super::equip::View::new(equip.equip_id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(
                 &equip.name,
                 view_equip.to_custom_id(),
