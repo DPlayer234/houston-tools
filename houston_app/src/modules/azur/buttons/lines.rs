@@ -73,16 +73,14 @@ impl<'v> View<'v> {
         skin: &'a ShipSkin,
     ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
         let words = match &skin.words_extra {
-            Some(words) if self.extra => {
-                self.try_redirect_to_non_empty_part(words);
-                words
-            },
+            Some(words) if self.extra => words,
             _ => {
                 self.extra = false;
                 &skin.words
             },
         };
 
+        self.try_redirect_to_non_empty_part(words);
         let embed = CreateEmbed::new()
             .color(ship.rarity.color_rgb())
             .author(azur.wiki_urls().ship(ship))
