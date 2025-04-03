@@ -14,8 +14,10 @@ macro_rules! round_trip_test {
             let wrapped_custom_id = wrapped_args.to_custom_id();
             assert_eq!(custom_id, wrapped_custom_id);
 
-            let decoder = encoding::Decoder::new(&custom_id).expect("must be decodable");
-            let re_args = decoder.read().expect("must be readable");
+            let mut buf = encoding::StackBuf::new();
+            let re_args =
+                encoding::decode_custom_id(&mut buf, &custom_id).expect("must be readable");
+
             let re_custom_id = re_args.to_custom_id();
             assert_eq!(re_custom_id, custom_id);
         }
