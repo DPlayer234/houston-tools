@@ -332,6 +332,7 @@ where
     }
 
     // shared boxed future type for the outer error case
+    #[cold]
     fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
         Box::pin(async move { Err(why) })
     }
@@ -372,7 +373,7 @@ macro_rules! button_value {
                     },
                     invoke_modal: |ctx, buf| {
                         let modal_reply = <$Ty as $crate::buttons::ButtonReply>::modal_reply;
-                        $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Model")
+                        $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Modal")
                     },
                 }
             }
@@ -407,6 +408,7 @@ fn _assert_traits() {
     ok(dummy::<ButtonContext<'_>>().defer_as(true));
     ok(dummy::<ButtonContext<'_>>().reply(dummy()));
     ok(dummy::<ButtonContext<'_>>().edit(dummy()));
+    ok(dummy::<ButtonContext<'_>>().modal(dummy()));
 
     ok(dummy::<ModalContext<'_>>());
     ok(dummy::<ModalContext<'_>>().acknowledge());

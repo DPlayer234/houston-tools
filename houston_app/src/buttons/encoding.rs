@@ -48,12 +48,20 @@ pub fn decode_custom_id<'de>(buf: &'de mut StackBuf, id: &str) -> Result<Decoder
 
 /// Writes the inner data for a button value.
 pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) {
-    fn inner<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) -> Result {
-        serde_steph::to_writer(&mut *buf, &T::ACTION_KEY)?;
-        Ok(serde_steph::to_writer(buf, action)?)
+    use serde_steph::{Error, Result, to_writer};
+
+    #[inline]
+    fn inner<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) -> Result<()> {
+        to_writer(&mut *buf, &T::ACTION_KEY)?;
+        to_writer(buf, action)
+    }
+
+    #[cold]
+    fn log_error(why: Error, key: usize) {
+        log::error!("Error serializing `{key}`: {why}");
     }
 
     if let Err(why) = inner(buf, action) {
-        log::error!("Error serializing `{}`: [{why:?}]", T::ACTION_KEY);
+        log_error(why, T::ACTION_KEY);
     }
 }
