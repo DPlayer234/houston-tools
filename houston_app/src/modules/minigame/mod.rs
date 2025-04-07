@@ -16,9 +16,9 @@ impl super::Module for Module {
 
     fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
         [
-            buttons::chess::View::action(),
-            buttons::rock_paper_scissors::View::action(),
-            buttons::tic_tac_toe::View::action(),
+            buttons::chess::View::ACTION,
+            buttons::rock_paper_scissors::View::ACTION,
+            buttons::tic_tac_toe::View::ACTION,
         ]
     }
 }

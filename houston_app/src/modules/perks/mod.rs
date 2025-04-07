@@ -63,10 +63,10 @@ impl super::Module for Module {
 
     fn buttons(&self, config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
         let perks = config.perks().unwrap();
-        let mut b = vec![buttons::shop::View::action()];
+        let mut b = vec![buttons::shop::View::ACTION];
 
         if perks.birthday.is_some() {
-            b.push(buttons::birthday::Set::action());
+            b.push(buttons::birthday::Set::ACTION);
         }
 
         b

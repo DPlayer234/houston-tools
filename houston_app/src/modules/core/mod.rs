@@ -26,9 +26,9 @@ impl super::Module for Module {
 
     fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
         [
-            buttons::Delete::action(),
-            buttons::Noop::action(),
-            buttons::ToPage::action(),
+            buttons::Delete::ACTION,
+            buttons::Noop::ACTION,
+            buttons::ToPage::ACTION,
         ]
     }
 

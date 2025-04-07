@@ -23,19 +23,19 @@ impl super::Module for Module {
 
     fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
         [
-            buttons::augment::View::action(),
-            buttons::equip::View::action(),
-            buttons::juustagram_chat::View::action(),
-            buttons::lines::View::action(),
-            buttons::search_augment::View::action(),
-            buttons::search_equip::View::action(),
-            buttons::search_juustagram_chat::View::action(),
-            buttons::search_ship::View::action(),
-            buttons::search_special_secretary::View::action(),
-            buttons::shadow_equip::View::action(),
-            buttons::ship::View::action(),
-            buttons::skill::View::action(),
-            buttons::special_secretary::View::action(),
+            buttons::augment::View::ACTION,
+            buttons::equip::View::ACTION,
+            buttons::juustagram_chat::View::ACTION,
+            buttons::lines::View::ACTION,
+            buttons::search_augment::View::ACTION,
+            buttons::search_equip::View::ACTION,
+            buttons::search_juustagram_chat::View::ACTION,
+            buttons::search_ship::View::ACTION,
+            buttons::search_special_secretary::View::ACTION,
+            buttons::shadow_equip::View::ACTION,
+            buttons::ship::View::ACTION,
+            buttons::skill::View::ACTION,
+            buttons::special_secretary::View::ACTION,
         ]
     }
 

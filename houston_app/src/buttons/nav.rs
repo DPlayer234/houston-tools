@@ -107,7 +107,7 @@ trait SerializeCustomIdToStackBuf: Send + Sync {
 
 impl<T: ButtonValue + Serialize> SerializeCustomIdToStackBuf for T {
     fn action_key(&self) -> usize {
-        T::ACTION_KEY
+        const { T::ACTION.key }
     }
 
     fn write_inner_data(&self, buf: &mut encoding::StackBuf) {

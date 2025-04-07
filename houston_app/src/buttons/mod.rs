@@ -195,12 +195,12 @@ impl EventHandler {
 ///
 /// Use [`button_value`] to implement this trait.
 pub trait ButtonValue: Send + Sync {
-    /// Unique key for this action type.
-    const ACTION_KEY: usize;
-
     /// Gets an action that can be registered to the [`EventHandler`].
-    #[must_use]
-    fn action() -> ButtonAction;
+    //
+    // note: for places that need the key, make sure to use
+    // `const { T::ACTION.key }` for shorter code gen. beyond
+    // me why that changes anything at all.
+    const ACTION: ButtonAction;
 
     /// Converts this instance to a component custom ID.
     #[must_use]
@@ -289,7 +289,9 @@ pub trait ButtonReply: Sized + Send {
 /// This is similar to what commands do, just for buttons and modals.
 #[derive(Debug, Clone, Copy)]
 pub struct ButtonAction {
-    /// The corresponding [`ButtonValue::ACTION_KEY`].
+    /// The corresponding key used to identify this action.
+    ///
+    /// The same key is used for serialization by the action type.
     pub key: usize,
 
     /// The function to invoke for buttons.
@@ -359,24 +361,20 @@ where
 macro_rules! button_value {
     ($Ty:ty, $key:literal) => {
         impl $crate::buttons::ButtonValue for $Ty {
-            const ACTION_KEY: usize = $key;
-
-            fn action() -> $crate::buttons::ButtonAction {
-                // somewhat strange emit with a fairly insane reason:
-                // i am not sure how to correctly constrain `$Ty` to `Deserialize<'_>` in
-                // a helper function generic so this actually still works.
-                $crate::buttons::ButtonAction {
-                    key: <Self as $crate::buttons::ButtonValue>::ACTION_KEY,
-                    invoke_button: |ctx, buf| {
-                        let reply = <$Ty as $crate::buttons::ButtonReply>::reply;
-                        $crate::buttons::invoke_button_value(ctx, buf, reply, "Button")
-                    },
-                    invoke_modal: |ctx, buf| {
-                        let modal_reply = <$Ty as $crate::buttons::ButtonReply>::modal_reply;
-                        $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Modal")
-                    },
-                }
-            }
+            // somewhat strange emit with a fairly insane reason:
+            // i am not sure how to correctly constrain `$Ty` to `Deserialize<'_>` in
+            // a helper function generic so this actually still works.
+            const ACTION: $crate::buttons::ButtonAction = $crate::buttons::ButtonAction {
+                key: $key,
+                invoke_button: |ctx, buf| {
+                    let reply = <$Ty as $crate::buttons::ButtonReply>::reply;
+                    $crate::buttons::invoke_button_value(ctx, buf, reply, "Button")
+                },
+                invoke_modal: |ctx, buf| {
+                    let modal_reply = <$Ty as $crate::buttons::ButtonReply>::modal_reply;
+                    $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Modal")
+                },
+            };
 
             fn to_custom_id(&self) -> String {
                 $crate::buttons::encoding::to_custom_id(self)

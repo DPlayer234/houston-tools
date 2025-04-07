@@ -52,7 +52,7 @@ pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: 
 
     #[inline]
     fn inner<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) -> Result<()> {
-        to_writer(&mut *buf, &T::ACTION_KEY)?;
+        to_writer(&mut *buf, &const { T::ACTION.key })?;
         to_writer(buf, action)
     }
 
@@ -62,6 +62,6 @@ pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: 
     }
 
     if let Err(why) = inner(buf, action) {
-        log_error(why, T::ACTION_KEY);
+        log_error(why, const { T::ACTION.key });
     }
 }

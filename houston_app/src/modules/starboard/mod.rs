@@ -36,10 +36,7 @@ impl super::Module for Module {
     }
 
     fn buttons(&self, _config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
-        [
-            buttons::top::View::action(),
-            buttons::top_posts::View::action(),
-        ]
+        [buttons::top::View::ACTION, buttons::top_posts::View::ACTION]
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
