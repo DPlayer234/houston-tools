@@ -26,16 +26,18 @@ pub type ButtonContext<'a> = AnyContext<'a, ComponentInteraction>;
 pub type ModalContext<'a> = AnyContext<'a, ModalInteraction>;
 
 impl<I: AnyInteraction> AnyContext<'_, I> {
+    #[inline]
+    fn try_first(&self) -> bool {
+        !self.reply_state.swap(true, Ordering::AcqRel)
+    }
+
     /// Acknowledges the interaction, expecting a later [`Self::edit`].
     pub async fn acknowledge(&self) -> Result {
-        let has_sent = self.reply_state.load(Ordering::Relaxed);
-
-        if !has_sent {
+        if self.try_first() {
             let reply = CreateInteractionResponse::Acknowledge;
             self.interaction
                 .create_response(&self.serenity.http, reply)
                 .await?;
-            self.reply_state.store(true, Ordering::Relaxed);
         }
 
         Ok(())
@@ -44,9 +46,7 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
     /// Defers the interaction with a new message.
     #[expect(dead_code, reason = "i might use this later")]
     pub async fn defer_as(&self, ephemeral: impl IntoEphemeral) -> Result {
-        let has_sent = self.reply_state.load(Ordering::Relaxed);
-
-        if !has_sent {
+        if self.try_first() {
             let reply = CreateInteractionResponse::Defer(
                 CreateInteractionResponseMessage::new().ephemeral(ephemeral.into_ephemeral()),
             );
@@ -54,7 +54,6 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
             self.interaction
                 .create_response(&self.serenity.http, reply)
                 .await?;
-            self.reply_state.store(true, Ordering::Relaxed);
         }
 
         Ok(())
@@ -63,20 +62,17 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
     /// Replies to the interaction with a new message.
     #[expect(dead_code, reason = "i might use this later")]
     pub async fn reply(&self, create: CreateReply<'_>) -> Result {
-        let has_sent = self.reply_state.load(Ordering::Relaxed);
-
-        if has_sent {
-            let reply = create.into_interaction_followup();
-            self.interaction
-                .create_followup(&self.serenity.http, reply)
-                .await?;
-        } else {
+        if self.try_first() {
             let reply = create.into_interaction_response();
             let reply = CreateInteractionResponse::Message(reply);
             self.interaction
                 .create_response(&self.serenity.http, reply)
                 .await?;
-            self.reply_state.store(true, Ordering::Relaxed);
+        } else {
+            let reply = create.into_interaction_followup();
+            self.interaction
+                .create_followup(&self.serenity.http, reply)
+                .await?;
         }
 
         Ok(())
@@ -84,21 +80,18 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
 
     /// Edits a previous reply to the interaction or the original message.
     pub async fn edit(&self, edit: EditReply<'_>) -> Result {
-        let has_sent = self.reply_state.load(Ordering::Relaxed);
-
-        if has_sent {
-            let reply = edit.into_interaction_edit();
-            self.interaction
-                .edit_response(&self.serenity.http, reply)
-                .await?;
-        } else {
+        if self.try_first() {
             edit.execute_as_response(
                 &self.serenity.http,
                 self.interaction.id(),
                 self.interaction.token(),
             )
             .await?;
-            self.reply_state.store(true, Ordering::Relaxed);
+        } else {
+            let reply = edit.into_interaction_edit();
+            self.interaction
+                .edit_response(&self.serenity.http, reply)
+                .await?;
         }
 
         Ok(())
@@ -113,14 +106,13 @@ impl ButtonContext<'_> {
     pub async fn modal(&self, modal: CreateModal<'_>) -> Result {
         // this is only available for button interactions
         // because you cannot respond to a modal with another one
-        let has_sent = self.reply_state.load(Ordering::Relaxed);
-        anyhow::ensure!(!has_sent, "cannot send modals after initial response");
+        let first = self.try_first();
+        anyhow::ensure!(first, "cannot send modals after initial response");
 
         let reply = CreateInteractionResponse::Modal(modal);
         self.interaction
             .create_response(&self.serenity.http, reply)
             .await?;
-        self.reply_state.store(true, Ordering::Relaxed);
         Ok(())
     }
 }

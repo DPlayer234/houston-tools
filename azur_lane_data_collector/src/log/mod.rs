@@ -29,7 +29,7 @@ static USE_ANSI: AtomicBool = AtomicBool::new(false);
 /// Sets whether colors are printed.
 pub fn use_color(force: Option<bool>) {
     let value = force.unwrap_or_else(|| utils::term::supports_ansi_escapes(&io::stderr()));
-    USE_ANSI.store(value, Ordering::Relaxed);
+    USE_ANSI.store(value, Ordering::Release);
 }
 
 fn lock_output() -> impl io::Write {
@@ -37,7 +37,7 @@ fn lock_output() -> impl io::Write {
 }
 
 fn only_ansi<F: FnOnce() -> Result<(), E>, E>(f: F) -> Result<(), E> {
-    if USE_ANSI.load(Ordering::Relaxed) {
+    if USE_ANSI.load(Ordering::Acquire) {
         f()
     } else {
         Ok(())
@@ -179,7 +179,7 @@ impl ActionInner {
 
     fn print_info(&self, args: fmt::Arguments<'_>) -> io::Result<()> {
         let mut out = lock_output();
-        if USE_ANSI.load(Ordering::Relaxed) {
+        if USE_ANSI.load(Ordering::Acquire) {
             write!(out, "{UNDO_LINE}")?;
             writeln_args(&mut out, args)?;
             writeln!(out, "{self}")

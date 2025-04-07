@@ -67,7 +67,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
 
     // defer appropriately when the initial check takes too long
     let ephemeral = AtomicBool::new(false);
-    let defer = async { ctx.defer(ephemeral.load(Ordering::Relaxed)).await };
+    let defer = async { ctx.defer(ephemeral.load(Ordering::Acquire)).await };
 
     let cooldown_check = async {
         let now = Utc::now();
@@ -102,7 +102,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
 
         if on_cooldown {
             // set it to defer ephemerally if on cooldown
-            ephemeral.store(true, Ordering::Relaxed);
+            ephemeral.store(true, Ordering::Release);
 
             // the only downside to the upsert-or-fail approach:
             // needs 1 more query for the failure case.
