@@ -7,6 +7,8 @@ pub use vec_chunks::VecChunks;
 pub trait IteratorExt: Iterator {
     /// Adapts this iterator to yield items in chunks as [`Vec<T>`].
     ///
+    /// # Panics
+    ///
     /// Panics if `chunk_size` is 0.
     fn vec_chunks(self, chunk_size: usize) -> VecChunks<Self>
     where

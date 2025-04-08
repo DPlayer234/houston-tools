@@ -24,7 +24,7 @@ use std::slice;
 /// ```
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
-    try_as_sized(slice).expect("requested size must match exactly")
+    try_as_sized(slice).expect("requested size should match slice length exactly")
 }
 
 /// Tries to convert a slice to an array reference of size `N`.
@@ -48,6 +48,7 @@ pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
 /// assert_eq!(small, None);
 /// assert_eq!(large, None);
 /// ```
+#[must_use = "if you don't need the return value, just assert the length"]
 pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
     if slice.len() == N {
         // SAFETY: The length has already been validated.
@@ -108,14 +109,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "requested size must match exactly")]
+    #[should_panic(expected = "requested size should match slice length exactly")]
     fn as_sized_too_small() {
         let x: &[u8] = &[1, 2, 3];
         let _y: &[u8; 4] = as_sized(x);
     }
 
     #[test]
-    #[should_panic(expected = "requested size must match exactly")]
+    #[should_panic(expected = "requested size should match slice length exactly")]
     fn as_sized_too_large() {
         let x: &[u8] = &[1, 2, 3, 4, 5];
         let _y: &[u8; 4] = as_sized(x);

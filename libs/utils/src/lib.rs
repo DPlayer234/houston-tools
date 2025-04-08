@@ -15,6 +15,7 @@ pub mod text;
 
 mod private;
 
+#[expect(deprecated, reason = "to be removed in a future version")]
 pub use private::hash::{hash, hash_default};
 
 /// Joins multiple path segments into a [`PathBuf`].

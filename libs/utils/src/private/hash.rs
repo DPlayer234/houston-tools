@@ -1,3 +1,8 @@
+#![deprecated(
+    since = "7.2.0",
+    note = "use `BuildHasher::hash_one` with your preferred implementation"
+)]
+
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 /// Convenience method to calculate the hash of a value with the

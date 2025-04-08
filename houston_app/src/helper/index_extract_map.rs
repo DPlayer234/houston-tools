@@ -181,7 +181,12 @@ fn size_hint_cautious<T>(hint: Option<usize>) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Equivalent as _, ExtractKey, IndexExtractMap, Key, Value};
+    use std::hash::{BuildHasher as _, RandomState};
+
+    use extract_map::ExtractKey;
+    use indexmap::Equivalent as _;
+
+    use super::{IndexExtractMap, Key, Value};
 
     #[derive(Debug, Clone, PartialEq)]
     struct Item {
@@ -206,16 +211,18 @@ mod tests {
 
         let value = Value::new(item);
         let key = Key::from_ref(value.get_ref().extract_key());
-        let hash = utils::hash_default(&value);
+
+        let hasher = RandomState::new();
+        let hash = hasher.hash_one(&value);
 
         assert!(key.equivalent(&value), "{key:?}.equivalent(&{value:?})");
-        assert_eq!(utils::hash_default(key), hash);
+        assert_eq!(hasher.hash_one(key), hash);
 
         assert!(
             Key::from_ref(key_value).equivalent(&value),
             "Key::from_ref({key_value:?}).equivalent(&{value:?})"
         );
-        assert_eq!(utils::hash_default(Key::from_ref(key_value)), hash);
+        assert_eq!(hasher.hash_one(Key::from_ref(key_value)), hash);
     }
 
     #[test]

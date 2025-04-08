@@ -210,28 +210,37 @@ fn codes_to_chunk(codes: [u32; 2]) -> [u8; 5] {
     ]
 }
 
+/// Tthe size of the gap in the middle of valid unicode code points.
+/// b20bit codes larger than `0xD7FF` have `OFFSET` added to them in the
+/// encoded format. When decoding, char codes in the upper range are subtracted
+/// by `OFFSET`.
 const OFFSET: u32 = 0xE000 - 0xD800;
+
+/// The maximum valid unencoded b20bit code. [`pack_code`] and co. will never
+/// return a larger value and, when a larger value is decoded from a char, the
+/// input is rejected.
 const MAX_CODE: u32 = 0xFFFFF;
 
 fn char_to_code(c: char) -> Result<u32, Error> {
-    let code = match c {
-        '\0'..='\u{D7FF}' => u32::from(c),
-        '\u{E000}'..='\u{10FFFF}' => u32::from(c) - OFFSET,
-    };
+    // the exclusive end of valid char codes.
+    // char codes greater than or equal to this will be never be emitted by the
+    // encoding, must therefore be invalid, and will be rejected.
+    const EX_END: char = char::from_u32(MAX_CODE + OFFSET + 1).unwrap();
 
-    if code > MAX_CODE {
-        Err(Error::ContentFormat)
-    } else {
-        Ok(code)
+    match c {
+        '\0'..='\u{D7FF}' => Ok(u32::from(c)),
+        '\u{E000}'..EX_END => Ok(u32::from(c) - OFFSET),
+        EX_END..='\u{10FFFF}' => Err(Error::ContentFormat),
     }
 }
 
 fn code_to_char(code: u32) -> char {
     match code {
-        // SAFETY: Reverse of `char_to_code`.
+        // SAFETY: reverse of `char_to_code`.
+        // every potential char we can construct here will be in range
         0..=0xD7FF => unsafe { char::from_u32_unchecked(code) },
         0xD800..=MAX_CODE => unsafe { char::from_u32_unchecked(code + OFFSET) },
-        // packed codes are at most 0x0F_FFFF
+        // packed codes never exceed `MAX_CODE`
         _ => unreachable!("invalid packed code"),
     }
 }
