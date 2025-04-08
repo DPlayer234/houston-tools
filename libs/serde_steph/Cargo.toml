@@ -5,12 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serde = "1.0.217"
-thiserror = "2.0.11"
+serde = "1.0.219"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
-indexmap = { version = "2.7.1", features = ["serde"] }
+indexmap = { version = "2.9.0", features = ["serde"] }
 
 [lints]
 workspace = true

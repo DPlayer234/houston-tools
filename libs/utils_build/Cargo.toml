@@ -8,4 +8,4 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-winresource = "0.1.19"
+winresource = "0.1.20"

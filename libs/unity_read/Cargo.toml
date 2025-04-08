@@ -10,15 +10,15 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.97"
 binrw = "0.14.1"
-bytemuck = "1.21.0"
-half = "2.4.1"
-image = { version = "0.25.5", default-features = false }
+bytemuck = "1.22.0"
+half = "2.6.0"
+image = { version = "0.25.6", default-features = false }
 modular-bitfield = "0.11.2"
 num_enum = "0.7.3"
 lz4 = "1.28.1"
 lzma-rs = "0.3.0"
-once_cell = { version = "1.20.3", default-features = false }
-texture2ddecoder = "0.1.1"
-thiserror = "2.0.11"
+once_cell = { version = "1.21.3", default-features = false }
+texture2ddecoder = "0.1.2"
+thiserror = "2.0.12"
