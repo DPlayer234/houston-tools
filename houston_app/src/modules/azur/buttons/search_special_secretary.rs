@@ -14,7 +14,7 @@ pub struct View<'v> {
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
 }
@@ -83,25 +83,13 @@ impl ButtonReply for View<'_> {
     }
 }
 
-impl Filter<'_> {
-    fn iterate<'a>(
-        &self,
-        azur: &'a GameData,
-    ) -> Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a> {
-        match self.name {
-            Some(name) => self.apply_filter(azur, azur.special_secretaries_by_prefix(name)),
-            None => self.apply_filter(azur, azur.special_secretaries().iter()),
-        }
-    }
+type BoxIter<'a> = Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a>;
 
-    fn apply_filter<'a, I>(
-        &self,
-        _azur: &'a GameData,
-        iter: I,
-    ) -> Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a>
-    where
-        I: Iterator<Item = &'a SpecialSecretary> + 'a,
-    {
-        Box::new(iter)
+impl Filter<'_> {
+    fn iterate<'a>(&self, azur: &'a GameData) -> BoxIter<'a> {
+        match self.name {
+            Some(name) => Box::new(azur.special_secretaries_by_prefix(name)),
+            None => Box::new(azur.special_secretaries().iter()),
+        }
     }
 }

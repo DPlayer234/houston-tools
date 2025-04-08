@@ -13,7 +13,7 @@ pub struct View {
     filter: Filter,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Filter {
     pub ship: Option<u32>,
 }
@@ -90,22 +90,13 @@ impl ButtonReply for View {
     }
 }
 
-impl Filter {
-    fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a Chat> + 'a> {
-        match &self.ship {
-            Some(id) => self.apply_filter(azur, azur.juustagram_chats_by_ship_id(*id)),
-            None => self.apply_filter(azur, azur.juustagram_chats().iter()),
-        }
-    }
+type BoxIter<'a> = Box<dyn Iterator<Item = &'a Chat> + 'a>;
 
-    fn apply_filter<'a, I>(
-        &self,
-        _data: &'a GameData,
-        iter: I,
-    ) -> Box<dyn Iterator<Item = &'a Chat> + 'a>
-    where
-        I: Iterator<Item = &'a Chat> + 'a,
-    {
-        Box::new(iter)
+impl Filter {
+    fn iterate<'a>(&self, azur: &'a GameData) -> BoxIter<'a> {
+        match &self.ship {
+            Some(id) => Box::new(azur.juustagram_chats_by_ship_id(*id)),
+            None => Box::new(azur.juustagram_chats().iter()),
+        }
     }
 }

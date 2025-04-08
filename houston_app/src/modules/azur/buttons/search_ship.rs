@@ -14,7 +14,7 @@ pub struct View<'v> {
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub faction: Option<Faction>,
@@ -98,54 +98,54 @@ impl ButtonReply for View<'_> {
     }
 }
 
-impl Filter<'_> {
-    fn iterate<'a>(&self, azur: &'a GameData) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
-        match self.name {
-            Some(name) => self.apply_filter(azur, azur.ships_by_prefix(name)),
-            None => self.apply_filter(azur, azur.ships().iter()),
+type BoxIter<'a> = Box<dyn Iterator<Item = &'a ShipData> + 'a>;
+
+impl<'v> Filter<'v> {
+    fn iterate<'a>(self, azur: &'a GameData) -> FilteredIter<'a, 'v> {
+        let inner: BoxIter<'a> = match self.name {
+            Some(name) => Box::new(azur.ships_by_prefix(name)),
+            None => Box::new(azur.ships().iter()),
+        };
+
+        FilteredIter {
+            inner,
+            azur,
+            filter: self,
         }
     }
+}
 
-    fn apply_filter<'a, I>(
-        &self,
-        azur: &'a GameData,
-        iter: I,
-    ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a>
-    where
-        I: Iterator<Item = &'a ShipData> + 'a,
-    {
-        macro_rules! def_and_filter {
-            ($fn_name:ident: $field:ident => $next:ident) => {
-                fn $fn_name<'a>(
-                    f: &Filter<'_>,
-                    azur: &'a GameData,
-                    iter: impl Iterator<Item = &'a ShipData> + 'a,
-                ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
-                    match f.$field {
-                        Some(filter) => $next(f, azur, iter.filter(move |s| s.$field == filter)),
-                        None => $next(f, azur, iter),
-                    }
-                }
-            };
+struct FilteredIter<'a, 'v> {
+    inner: BoxIter<'a>,
+    azur: &'a GameData,
+    filter: Filter<'v>,
+}
+
+impl<'a> Iterator for FilteredIter<'a, '_> {
+    type Item = &'a ShipData;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Filter {
+            faction,
+            rarity,
+            hull_type,
+            has_augment,
+            ..
+        } = self.filter;
+
+        fn match_has_augment(azur: &GameData, item: &ShipData, has_augment: bool) -> bool {
+            azur.augments_by_ship_id(item.group_id).next().is_some() == has_augment
         }
 
-        def_and_filter!(next_faction: faction => next_hull_type);
-        def_and_filter!(next_hull_type: hull_type => next_rarity);
-        def_and_filter!(next_rarity: rarity => next_has_augment);
-
-        fn next_has_augment<'a>(
-            f: &Filter<'_>,
-            azur: &'a GameData,
-            iter: impl Iterator<Item = &'a ShipData> + 'a,
-        ) -> Box<dyn Iterator<Item = &'a ShipData> + 'a> {
-            match f.has_augment {
-                Some(filter) => Box::new(iter.filter(move |s| {
-                    azur.augments_by_ship_id(s.group_id).next().is_some() == filter
-                })),
-                None => Box::new(iter),
+        loop {
+            let item = self.inner.next()?;
+            if faction.is_none_or(|f| item.faction == f)
+                && hull_type.is_none_or(|h| item.hull_type == h)
+                && rarity.is_none_or(|r| item.rarity == r)
+                && has_augment.is_none_or(|h| match_has_augment(self.azur, item, h))
+            {
+                return Some(item);
             }
         }
-
-        next_faction(self, azur, iter)
     }
 }

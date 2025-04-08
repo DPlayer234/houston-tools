@@ -14,7 +14,7 @@ pub struct View<'v> {
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub hull_type: Option<HullType>,
@@ -88,66 +88,57 @@ impl ButtonReply for View<'_> {
     }
 }
 
-type FIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
+type BoxIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
 
-impl Filter<'_> {
-    fn iterate<'a>(&self, azur: &'a GameData) -> FIter<'a> {
-        match self.name {
-            Some(name) => self.apply_filter(azur, azur.augments_by_prefix(name)),
-            None => self.apply_filter(azur, azur.augments().iter()),
+impl<'v> Filter<'v> {
+    fn iterate<'a>(self, azur: &'a GameData) -> FilteredIter<'a, 'v> {
+        let inner: BoxIter<'a> = match self.name {
+            Some(name) => Box::new(azur.augments_by_prefix(name)),
+            None => Box::new(azur.augments().iter()),
+        };
+
+        FilteredIter {
+            inner,
+            azur,
+            filter: self,
         }
     }
+}
 
-    fn apply_filter<'a, I>(&self, azur: &'a GameData, iter: I) -> FIter<'a>
-    where
-        I: Iterator<Item = &'a Augment> + 'a,
-    {
-        fn next_hull_type<'a>(
-            f: &Filter<'_>,
-            azur: &'a GameData,
-            iter: impl Iterator<Item = &'a Augment> + 'a,
-        ) -> FIter<'a> {
-            match f.hull_type {
-                Some(filter) => next_rarity(
-                    f,
-                    azur,
-                    iter.filter(move |s| match &s.usability {
-                        AugmentUsability::HullTypes(h) => h.contains(&filter),
-                        AugmentUsability::UniqueShipId(id) => {
-                            azur.ship_by_id(*id).is_some_and(|s| s.hull_type == filter)
-                        },
-                    }),
-                ),
-                None => next_rarity(f, azur, iter),
+struct FilteredIter<'a, 'v> {
+    inner: BoxIter<'a>,
+    azur: &'a GameData,
+    filter: Filter<'v>,
+}
+
+impl<'a> Iterator for FilteredIter<'a, '_> {
+    type Item = &'a Augment;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Filter {
+            rarity,
+            unique_ship_id,
+            hull_type,
+            ..
+        } = self.filter;
+
+        fn match_hull_type(azur: &GameData, item: &Augment, hull_type: HullType) -> bool {
+            match &item.usability {
+                AugmentUsability::HullTypes(h) => h.contains(&hull_type),
+                AugmentUsability::UniqueShipId(id) => azur
+                    .ship_by_id(*id)
+                    .is_some_and(|s| s.hull_type == hull_type),
             }
         }
 
-        fn next_rarity<'a>(
-            f: &Filter<'_>,
-            azur: &'a GameData,
-            iter: impl Iterator<Item = &'a Augment> + 'a,
-        ) -> FIter<'a> {
-            match f.rarity {
-                Some(filter) => {
-                    next_unique_ship_id(f, azur, iter.filter(move |s| s.rarity == filter))
-                },
-                None => next_unique_ship_id(f, azur, iter),
+        loop {
+            let item = self.inner.next()?;
+            if rarity.is_none_or(|r| item.rarity == r)
+                && unique_ship_id.is_none_or(|i| item.usability.unique_ship_id() == Some(i))
+                && hull_type.is_none_or(|h| match_hull_type(self.azur, item, h))
+            {
+                return Some(item);
             }
         }
-
-        fn next_unique_ship_id<'a>(
-            f: &Filter<'_>,
-            _data: &'a GameData,
-            iter: impl Iterator<Item = &'a Augment> + 'a,
-        ) -> FIter<'a> {
-            match f.unique_ship_id {
-                Some(filter) => {
-                    Box::new(iter.filter(move |s| s.usability.unique_ship_id() == Some(filter)))
-                },
-                None => Box::new(iter),
-            }
-        }
-
-        next_hull_type(self, azur, iter)
     }
 }
