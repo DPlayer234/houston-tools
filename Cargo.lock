@@ -3310,7 +3310,7 @@ checksum = "e70f2a8b45122e719eb623c01822704c4e0907e7e426a05927e1a1cfff5b75d0"
 
 [[package]]
 name = "unity_read"
-version = "4.2.0"
+version = "4.2.1"
 dependencies = [
  "anyhow",
  "binrw",

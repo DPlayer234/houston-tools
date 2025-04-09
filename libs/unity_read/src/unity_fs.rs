@@ -396,10 +396,14 @@ impl<'a> BufGuard<'a> {
 
     /// Gets the buffer.
     fn buf(&mut self) -> &mut dyn SeekRead {
-        // `as_mut` is required to get the reborrow to work correctly
-        self.buf
-            .as_mut()
-            .expect("buf cannot be accessed after drop")
+        // avoid returning `&mut &mut dyn SeekRead` and generating another vtable
+        // that would be valid (since `R: SeekRead` implies `&mut R: SeekRead`), but it
+        // just adds unnecessary indirection and extra code.
+        match &mut self.buf {
+            // `buf` is `&mut &mut dyn SeekRead` here, reborrow the inner value
+            Some(buf) => &mut **buf,
+            None => panic!("buf cannot be accessed after drop"),
+        }
     }
 }
 
