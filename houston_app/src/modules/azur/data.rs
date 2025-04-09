@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem::take;
 use std::path::{Component, Path};
 use std::sync::Arc;
-use std::{fs, io};
+use std::{fs, io, slice};
 
 use azur_lane::equip::*;
 use azur_lane::juustagram::*;
@@ -12,7 +12,7 @@ use bytes::Bytes;
 use dashmap::DashMap;
 use serenity::small_fixed_array::TruncatingInto as _;
 use smallvec::{SmallVec, smallvec};
-use utils::fuzzy::Search;
+use utils::fuzzy::{Match, MatchIter, Search};
 
 type IndexVec = SmallVec<[usize; 2]>;
 
@@ -226,10 +226,8 @@ impl GameData {
     }
 
     /// Gets all ships by a name prefix.
-    pub fn ships_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &ShipData> + use<'_> {
-        self.ship_simsearch
-            .search(prefix)
-            .filter_map(|i| self.ships.get(i.index))
+    pub fn ships_by_prefix(&self, prefix: &str) -> ByPrefixIter<'_, ShipData> {
+        ByPrefixIter::new(&self.ship_simsearch, &self.ships, prefix)
     }
 
     /// Gets an equip by its ID.
@@ -240,10 +238,8 @@ impl GameData {
     }
 
     /// Gets all equips by a name prefix.
-    pub fn equips_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Equip> + use<'_> {
-        self.equip_simsearch
-            .search(prefix)
-            .filter_map(|i| self.equips.get(i.index))
+    pub fn equips_by_prefix(&self, prefix: &str) -> ByPrefixIter<'_, Equip> {
+        ByPrefixIter::new(&self.equip_simsearch, &self.equips, prefix)
     }
 
     /// Gets an augment by its ID.
@@ -254,19 +250,16 @@ impl GameData {
     }
 
     /// Gets all augments by a name prefix.
-    pub fn augments_by_prefix(&self, prefix: &str) -> impl Iterator<Item = &Augment> + use<'_> {
-        self.augment_simsearch
-            .search(prefix)
-            .filter_map(|i| self.augments.get(i.index))
+    pub fn augments_by_prefix(&self, prefix: &str) -> ByPrefixIter<'_, Augment> {
+        ByPrefixIter::new(&self.augment_simsearch, &self.augments, prefix)
     }
 
     /// Gets unique augments by their associated ship ID.
-    pub fn augments_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Augment> {
-        self.ship_id_to_augment_indices
-            .get(&ship_id)
-            .into_iter()
-            .flatten()
-            .filter_map(|i| self.augments.get(*i))
+    pub fn augments_by_ship_id(&self, ship_id: u32) -> ByLookupIter<'_, Augment> {
+        ByLookupIter::new(
+            self.ship_id_to_augment_indices.get(&ship_id),
+            &self.augments,
+        )
     }
 
     /// Gets a Juustagram chat by its ID.
@@ -276,12 +269,11 @@ impl GameData {
     }
 
     /// Gets all Juustagram chats by their associated ship ID.
-    pub fn juustagram_chats_by_ship_id(&self, ship_id: u32) -> impl Iterator<Item = &Chat> {
-        self.ship_id_to_juustagram_chat_indices
-            .get(&ship_id)
-            .into_iter()
-            .flatten()
-            .filter_map(|i| self.juustagram_chats.get(*i))
+    pub fn juustagram_chats_by_ship_id(&self, ship_id: u32) -> ByLookupIter<'_, Chat> {
+        ByLookupIter::new(
+            self.ship_id_to_juustagram_chat_indices.get(&ship_id),
+            &self.juustagram_chats,
+        )
     }
 
     /// Gets a special secretary by its ID.
@@ -294,10 +286,12 @@ impl GameData {
     pub fn special_secretaries_by_prefix(
         &self,
         prefix: &str,
-    ) -> impl Iterator<Item = &SpecialSecretary> + use<'_> {
-        self.special_secretary_simsearch
-            .search(prefix)
-            .filter_map(|i| self.special_secretaries.get(i.index))
+    ) -> ByPrefixIter<'_, SpecialSecretary> {
+        ByPrefixIter::new(
+            &self.special_secretary_simsearch,
+            &self.special_secretaries,
+            prefix,
+        )
     }
 
     /// Gets a chibi's image data.
@@ -352,5 +346,87 @@ impl GameData {
                 None
             },
         }
+    }
+}
+
+pub struct ByPrefixIter<'a, T> {
+    matches: MatchIter<'a, ()>,
+    items: &'a [T],
+}
+
+impl<'a, T> ByPrefixIter<'a, T> {
+    fn new(search: &'a Search<()>, items: &'a [T], prefix: &str) -> Self {
+        Self {
+            matches: search.search(prefix),
+            items,
+        }
+    }
+
+    fn mapper(&self) -> impl Fn(Match<'a, ()>) -> &'a T {
+        // the used indices should always be in range
+        |i| &self.items[i.index]
+    }
+}
+
+impl<'a, T> Iterator for ByPrefixIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.matches.next().map(self.mapper())
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.matches.nth(n).map(self.mapper())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.matches.size_hint()
+    }
+}
+
+impl<T> ExactSizeIterator for ByPrefixIter<'_, T> {
+    fn len(&self) -> usize {
+        self.matches.len()
+    }
+}
+
+pub struct ByLookupIter<'a, T> {
+    indices: slice::Iter<'a, usize>,
+    items: &'a [T],
+}
+
+impl<'a, T> ByLookupIter<'a, T> {
+    pub fn new(lookup: Option<&'a IndexVec>, items: &'a [T]) -> Self {
+        let indices = lookup
+            .map_or_else(<&[usize]>::default, IndexVec::as_slice)
+            .iter();
+        Self { indices, items }
+    }
+
+    fn mapper(&self) -> impl Fn(&usize) -> &'a T {
+        // the used indices should always be in range
+        |i| &self.items[*i]
+    }
+}
+
+impl<'a, T> Iterator for ByLookupIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.indices.next().map(self.mapper())
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.indices.nth(n).map(self.mapper())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.indices.size_hint()
+    }
+}
+
+impl<T> ExactSizeIterator for ByLookupIter<'_, T> {
+    fn len(&self) -> usize {
+        self.indices.len()
     }
 }

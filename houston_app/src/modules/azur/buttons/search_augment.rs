@@ -3,6 +3,7 @@ use azur_lane::ship::*;
 use utils::text::write_str::*;
 
 use super::acknowledge_unloaded;
+use super::search::{Filtered, Filtering, PAGE_SIZE};
 use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
@@ -22,8 +23,6 @@ pub struct Filter<'v> {
     pub unique_ship_id: Option<u32>,
 }
 
-const PAGE_SIZE: usize = 15;
-
 impl<'v> View<'v> {
     pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
@@ -33,7 +32,7 @@ impl<'v> View<'v> {
         mut self,
         data: &'a HBotData,
         azur: LoadedConfig<'a>,
-        mut iter: impl Iterator<Item = &'a Augment>,
+        mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
@@ -63,11 +62,7 @@ impl<'v> View<'v> {
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
         let azur = data.config().azur()?;
-        let filtered = self
-            .filter
-            .iterate(azur.game_data())
-            .skip(PAGE_SIZE * usize::from(self.page));
-
+        let filtered = self.filter.iterate(azur.game_data()).at_page(self.page);
         self.create_with_iter(data, azur, filtered)
     }
 }
@@ -88,39 +83,27 @@ impl ButtonReply for View<'_> {
     }
 }
 
-type BoxIter<'a> = Box<dyn Iterator<Item = &'a Augment> + 'a>;
+type Query<'a, 'v> = Filtered<'a, Augment, (Filter<'v>, &'a GameData)>;
 
 impl<'v> Filter<'v> {
-    fn iterate<'a>(self, azur: &'a GameData) -> FilteredIter<'a, 'v> {
-        let inner: BoxIter<'a> = match self.name {
-            Some(name) => Box::new(azur.augments_by_prefix(name)),
-            None => Box::new(azur.augments().iter()),
-        };
-
-        FilteredIter {
-            inner,
-            azur,
-            filter: self,
+    fn iterate(self, azur: &GameData) -> Query<'_, 'v> {
+        let filter = (self, azur);
+        match self.name {
+            Some(name) => Filtered::by_prefix(azur.augments_by_prefix(name), filter),
+            None => Filtered::slice(azur.augments(), filter),
         }
     }
 }
 
-struct FilteredIter<'a, 'v> {
-    inner: BoxIter<'a>,
-    azur: &'a GameData,
-    filter: Filter<'v>,
-}
-
-impl<'a> Iterator for FilteredIter<'a, '_> {
-    type Item = &'a Augment;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl Filtering<Augment> for (Filter<'_>, &GameData) {
+    fn is_match(&self, item: &Augment) -> bool {
+        let (filter, azur) = *self;
         let Filter {
             rarity,
             unique_ship_id,
             hull_type,
             ..
-        } = self.filter;
+        } = filter;
 
         fn match_hull_type(azur: &GameData, item: &Augment, hull_type: HullType) -> bool {
             match &item.usability {
@@ -131,14 +114,8 @@ impl<'a> Iterator for FilteredIter<'a, '_> {
             }
         }
 
-        loop {
-            let item = self.inner.next()?;
-            if rarity.is_none_or(|r| item.rarity == r)
-                && unique_ship_id.is_none_or(|i| item.usability.unique_ship_id() == Some(i))
-                && hull_type.is_none_or(|h| match_hull_type(self.azur, item, h))
-            {
-                return Some(item);
-            }
-        }
+        rarity.is_none_or(|r| item.rarity == r)
+            && unique_ship_id.is_none_or(|i| item.usability.unique_ship_id() == Some(i))
+            && hull_type.is_none_or(|h| match_hull_type(azur, item, h))
     }
 }

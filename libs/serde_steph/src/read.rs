@@ -168,7 +168,7 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
         let capacity = len.min(0x1000);
         let mut buf = Vec::with_capacity(capacity);
         let limit = u64::try_from(len).map_err(|_| eof())?;
-        (&mut self.inner).take(limit).read_to_end(&mut buf)?;
+        self.inner.by_ref().take(limit).read_to_end(&mut buf)?;
 
         if buf.len() == len {
             Ok(buf)

@@ -76,6 +76,17 @@ pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
     }
 }
 
+async fn acknowledge_unloaded<I>(ctx: &AnyContext<'_, I>) -> Result
+where
+    I: AnyInteraction,
+{
+    let azur = ctx.data.config().azur_raw()?;
+    if azur.needs_load() {
+        ctx.acknowledge().await?;
+    }
+    Ok(())
+}
+
 macro_rules! pagination {
     ($obj:expr, $options:expr, $iter:expr, $label:expr) => {{
         if $options.is_empty() {
@@ -95,11 +106,10 @@ macro_rules! pagination {
 pub(crate) use pagination;
 
 mod pagination_impl {
+    use super::search::PAGE_SIZE;
     use crate::buttons::prelude::*;
     use crate::helper::discord::create_string_select_menu_row;
     use crate::modules::core::buttons::ToPage;
-
-    const PAGE_SIZE: usize = 15;
 
     pub fn no_results<'new>(page: u16) -> Result<CreateReply<'new>> {
         if page == 0 {
@@ -144,13 +154,93 @@ mod pagination_impl {
     }
 }
 
-async fn acknowledge_unloaded<I>(ctx: &AnyContext<'_, I>) -> Result
-where
-    I: AnyInteraction,
-{
-    let azur = ctx.data.config().azur_raw()?;
-    if azur.needs_load() {
-        ctx.acknowledge().await?;
+mod search {
+    use std::slice::Iter;
+
+    use crate::modules::azur::data::{ByLookupIter, ByPrefixIter};
+
+    pub const PAGE_SIZE: usize = 15;
+
+    pub struct Filtered<'a, T, F> {
+        inner: Inner<'a, T>,
+        filter: F,
     }
-    Ok(())
+
+    pub trait Filtering<T> {
+        fn is_match(&self, item: &T) -> bool;
+    }
+
+    impl<'a, T, F> Filtered<'a, T, F>
+    where
+        F: Filtering<T>,
+    {
+        pub fn slice(inner: &'a [T], filter: F) -> Self {
+            Self {
+                inner: Inner::Slice(inner.iter()),
+                filter,
+            }
+        }
+
+        pub fn by_prefix(inner: ByPrefixIter<'a, T>, filter: F) -> Self {
+            Self {
+                inner: Inner::ByPrefix(inner),
+                filter,
+            }
+        }
+
+        pub fn by_lookup(inner: ByLookupIter<'a, T>, filter: F) -> Self {
+            Self {
+                inner: Inner::ByLookup(inner),
+                filter,
+            }
+        }
+
+        pub fn at_page(mut self, page: u16) -> Self {
+            let mut skip = PAGE_SIZE * usize::from(page);
+            while skip > 0 && self.next().is_some() {
+                skip -= 1;
+            }
+
+            self
+        }
+    }
+
+    enum Inner<'a, T> {
+        Slice(Iter<'a, T>),
+        ByPrefix(ByPrefixIter<'a, T>),
+        ByLookup(ByLookupIter<'a, T>),
+    }
+
+    impl<'a, T> Inner<'a, T> {
+        fn next(&mut self) -> Option<&'a T> {
+            match self {
+                Self::Slice(i) => i.next(),
+                Self::ByPrefix(i) => i.next(),
+                Self::ByLookup(i) => i.next(),
+            }
+        }
+    }
+
+    impl<'a, T: 'a, F> Iterator for Filtered<'a, T, F>
+    where
+        F: Filtering<T>,
+    {
+        type Item = &'a T;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            loop {
+                let item = self.inner.next()?;
+                if self.filter.is_match(item) {
+                    return Some(item);
+                }
+            }
+        }
+    }
+
+    pub struct All;
+    impl<T> Filtering<T> for All {
+        fn is_match(&self, _item: &T) -> bool {
+            true
+        }
+    }
 }

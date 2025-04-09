@@ -3,6 +3,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use super::acknowledge_unloaded;
+use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
@@ -18,8 +19,6 @@ pub struct Filter {
     pub ship: Option<u32>,
 }
 
-const PAGE_SIZE: usize = 15;
-
 impl View {
     pub fn new(filter: Filter) -> Self {
         Self { page: 0, filter }
@@ -29,7 +28,7 @@ impl View {
         mut self,
         data: &'a HBotData,
         azur: LoadedConfig<'a>,
-        mut iter: impl Iterator<Item = &'a Chat>,
+        mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
@@ -65,11 +64,7 @@ impl View {
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
         let azur = data.config().azur()?;
-        let filtered = self
-            .filter
-            .iterate(azur.game_data())
-            .skip(PAGE_SIZE * usize::from(self.page));
-
+        let filtered = self.filter.iterate(azur.game_data()).at_page(self.page);
         self.create_with_iter(data, azur, filtered)
     }
 }
@@ -90,13 +85,13 @@ impl ButtonReply for View {
     }
 }
 
-type BoxIter<'a> = Box<dyn Iterator<Item = &'a Chat> + 'a>;
+type Query<'a> = Filtered<'a, Chat, All>;
 
 impl Filter {
-    fn iterate<'a>(&self, azur: &'a GameData) -> BoxIter<'a> {
-        match &self.ship {
-            Some(id) => Box::new(azur.juustagram_chats_by_ship_id(*id)),
-            None => Box::new(azur.juustagram_chats().iter()),
+    fn iterate(self, azur: &GameData) -> Query<'_> {
+        match self.ship {
+            Some(id) => Filtered::by_lookup(azur.juustagram_chats_by_ship_id(id), All),
+            None => Filtered::slice(azur.juustagram_chats(), All),
         }
     }
 }

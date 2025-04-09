@@ -3,6 +3,7 @@ use utils::text::truncate;
 use utils::text::write_str::*;
 
 use super::acknowledge_unloaded;
+use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
 use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
@@ -19,8 +20,6 @@ pub struct Filter<'v> {
     pub name: Option<&'v str>,
 }
 
-const PAGE_SIZE: usize = 15;
-
 impl<'v> View<'v> {
     pub fn new(filter: Filter<'v>) -> Self {
         Self { page: 0, filter }
@@ -29,7 +28,7 @@ impl<'v> View<'v> {
     fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
-        mut iter: impl Iterator<Item = &'a SpecialSecretary>,
+        mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
         let mut desc = String::new();
         let mut options = Vec::new();
@@ -58,11 +57,7 @@ impl<'v> View<'v> {
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
         let azur = data.config().azur()?;
-        let filtered = self
-            .filter
-            .iterate(azur.game_data())
-            .skip(PAGE_SIZE * usize::from(self.page));
-
+        let filtered = self.filter.iterate(azur.game_data()).at_page(self.page);
         self.create_with_iter(data, filtered)
     }
 }
@@ -83,13 +78,13 @@ impl ButtonReply for View<'_> {
     }
 }
 
-type BoxIter<'a> = Box<dyn Iterator<Item = &'a SpecialSecretary> + 'a>;
+type Query<'a> = Filtered<'a, SpecialSecretary, All>;
 
 impl Filter<'_> {
-    fn iterate<'a>(&self, azur: &'a GameData) -> BoxIter<'a> {
+    fn iterate(self, azur: &GameData) -> Query<'_> {
         match self.name {
-            Some(name) => Box::new(azur.special_secretaries_by_prefix(name)),
-            None => Box::new(azur.special_secretaries().iter()),
+            Some(name) => Filtered::by_prefix(azur.special_secretaries_by_prefix(name), All),
+            None => Filtered::slice(azur.special_secretaries(), All),
         }
     }
 }
