@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
-use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
 use dashmap::DashMap;

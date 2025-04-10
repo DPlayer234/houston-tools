@@ -1,6 +1,7 @@
 use super::prelude::*;
 use crate::config::HBotConfig;
 use crate::fmt::discord::MessageLink;
+use crate::helper::discord::is_normal_message;
 use crate::helper::is_unique_set;
 
 pub mod config;
@@ -119,10 +120,6 @@ async fn find_channel_config(
         .filter(|c| c.with_threads);
 
     Ok(entries)
-}
-
-fn is_normal_message(kind: MessageType) -> bool {
-    matches!(kind, MessageType::Regular | MessageType::InlineReply)
 }
 
 /// Provides a way to check whether a message or its snapshots have media, given

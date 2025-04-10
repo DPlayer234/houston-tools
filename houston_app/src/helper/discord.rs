@@ -36,6 +36,10 @@ pub fn guild_avatar_url(user_id: UserId, guild_id: GuildId, hash: &ImageHash) ->
     )
 }
 
+pub fn is_normal_message(kind: MessageType) -> bool {
+    matches!(kind, MessageType::Regular | MessageType::InlineReply)
+}
+
 pub trait WithPartial {
     type Partial;
 }

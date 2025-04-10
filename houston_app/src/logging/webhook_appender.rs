@@ -10,7 +10,6 @@
 //! just a subset, i.e. filtered to just warnings and errors.
 
 use std::io::{self, Write as _};
-use std::sync::Arc;
 use std::time::Duration;
 
 use arrayvec::ArrayVec;

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bson_model::{Filter, ModelDocument as _};
 use chrono::TimeDelta;
 use chrono::prelude::*;

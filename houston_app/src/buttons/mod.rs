@@ -325,7 +325,7 @@ where
     F: Future<Output = Result> + Send + 'ctx,
 {
     // less generic interaction logging
-    pub fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
+    fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
         log::info!(
             "[{kind}] {}, {}: {args:?}",
             interaction_location(interaction.guild_id(), interaction.channel()),

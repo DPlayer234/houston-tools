@@ -12,7 +12,6 @@ mod slashies;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use std::panic;
-    use std::sync::Arc;
 
     use houston_cmd::Framework;
     use modules::Module as _;

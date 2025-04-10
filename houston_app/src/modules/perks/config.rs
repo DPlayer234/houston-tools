@@ -30,7 +30,7 @@ pub struct Config {
     pub collectible: Option<CollectibleConfig>,
     pub birthday: Option<BirthdayConfig>,
 
-    #[serde(skip, default)]
+    #[serde(skip)]
     pub last_check: RwLock<DateTime<Utc>>,
 }
 
@@ -154,7 +154,7 @@ pub struct BirthdayRegionConfig {
     #[serde(with = "serde_time_delta", default)]
     pub time_offset: TimeDelta,
 
-    #[serde(skip, default)]
+    #[serde(skip)]
     pub last_check: RwLock<NaiveDate>,
 }
 
