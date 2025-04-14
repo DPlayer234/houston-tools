@@ -116,7 +116,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
 pub async fn message_delete(
     ctx: &Context,
-    channel_id: ChannelId,
+    channel_id: GenericChannelId,
     message_id: MessageId,
     guild_id: Option<GuildId>,
 ) {
@@ -344,7 +344,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
 async fn message_delete_inner(
     ctx: &Context,
     guild_id: GuildId,
-    channel_id: ChannelId,
+    channel_id: GenericChannelId,
     message_id: MessageId,
 ) -> Result {
     let data = ctx.data_ref::<HContextData>();

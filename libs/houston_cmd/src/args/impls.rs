@@ -56,7 +56,7 @@ impl_slash!('ctx &'ctx str => |_, String(x)| x);
 impl_slash!('ctx &'ctx User => |_, User(user, _)| user);
 impl_slash!('ctx &'ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?);
 impl_slash!('ctx &'ctx Role => |_, Role(role)| role);
-impl_slash!('ctx &'ctx PartialChannel => |_, Channel(channel)| channel);
+impl_slash!('ctx &'ctx GenericInteractionChannel => |_, Channel(channel)| channel);
 impl_slash!('ctx &'ctx Attachment => |_, Attachment(attachment)| attachment);
 
 impl_slash!('ctx (&'ctx User, Option<&'ctx PartialMember>) => |_, User(user, member)| (user, member));

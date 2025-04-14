@@ -32,19 +32,12 @@ pub struct Cache {
 #[derive(Default)]
 struct CachedGuild {
     channels: ExtractMap<ChannelId, CachedChannel>,
-    threads: ExtractMap<ChannelId, CachedThread>,
+    threads: ExtractMap<ThreadId, CachedThread>,
     /// Tracks threads in a channel. The key is the parent channel ID.
-    threads_in: HashMap<ChannelId, HashSet<ChannelId>>,
+    threads_in: HashMap<ChannelId, HashSet<ThreadId>>,
 }
 
 utils::impl_debug!(struct Cache: { .. });
-
-fn is_thread(kind: ChannelType) -> bool {
-    matches!(
-        kind,
-        ChannelType::NewsThread | ChannelType::PublicThread | ChannelType::PrivateThread
-    )
-}
 
 /// API for accessing the cache.
 impl Cache {
@@ -63,7 +56,7 @@ impl Cache {
         &self,
         http: &Http,
         guild_id: GuildId,
-        channel_id: ChannelId,
+        channel_id: GenericChannelId,
     ) -> serenity::Result<Ccot> {
         if let Some(channel) = self.guild_channel_(guild_id, channel_id) {
             return Ok(channel);
@@ -80,13 +73,13 @@ impl Cache {
         &self,
         http: &Http,
         guild_id: GuildId,
-        channel_id: ChannelId,
+        thread_id: ThreadId,
     ) -> serenity::Result<Option<CachedThread>> {
-        if let Some(thread) = self.thread_channel_(guild_id, channel_id) {
+        if let Some(thread) = self.thread_channel_(guild_id, thread_id) {
             return Ok(thread);
         }
 
-        let channel = self.fetch_channel(http, channel_id).await?;
+        let channel = self.fetch_channel(http, thread_id.widen()).await?;
         Ok(channel.thread())
     }
 
@@ -98,7 +91,7 @@ impl Cache {
         &self,
         http: &Http,
         guild_id: GuildId,
-        mut channel_id: ChannelId,
+        mut channel_id: GenericChannelId,
     ) -> serenity::Result<CachedChannel> {
         if let Some(channel) = self.super_channel_(guild_id, &mut channel_id) {
             return Ok(channel);
@@ -107,7 +100,7 @@ impl Cache {
         match self.fetch_channel(http, channel_id).await? {
             Ccot::Channel(channel) => Ok(channel),
             Ccot::Thread(thread) => {
-                let channel = self.fetch_channel(http, thread.parent_id).await?;
+                let channel = self.fetch_channel(http, thread.parent_id.widen()).await?;
                 Ok(channel.channel().ok_or(ModelError::InvalidChannelType)?)
             },
         }
@@ -136,14 +129,16 @@ impl Cache {
         Some(out)
     }
 
-    fn guild_channel_(&self, guild_id: GuildId, channel_id: ChannelId) -> Option<Ccot> {
+    fn guild_channel_(&self, guild_id: GuildId, channel_id: GenericChannelId) -> Option<Ccot> {
         let g = self.guilds.get(&guild_id)?;
 
-        if let Some(channel) = g.channels.get(&channel_id) {
+        if let Some(channel) = g.channels.get(&channel_id.expect_channel()) {
             return Some(Ccot::Channel(channel.clone()));
         }
 
-        g.threads.get(&channel_id).map(|t| Ccot::Thread(t.clone()))
+        g.threads
+            .get(&channel_id.expect_thread())
+            .map(|t| Ccot::Thread(t.clone()))
     }
 
     /// Returns:
@@ -153,15 +148,18 @@ impl Cache {
     fn thread_channel_(
         &self,
         guild_id: GuildId,
-        channel_id: ChannelId,
+        thread_id: ThreadId,
     ) -> Option<Option<CachedThread>> {
         let guild = self.guilds.get(&guild_id)?;
 
-        if guild.channels.get(&channel_id).is_some() {
+        // to not cause a cache miss if this is called with a normal channel id when
+        // looking up from `GenericChannelId`, check the normal channels first
+        let as_channel_id = thread_id.widen().expect_channel();
+        if guild.channels.get(&as_channel_id).is_some() {
             return Some(None);
         }
 
-        if let Some(thread) = guild.threads.get(&channel_id) {
+        if let Some(thread) = guild.threads.get(&thread_id) {
             return Some(Some(thread.clone()));
         }
 
@@ -171,35 +169,43 @@ impl Cache {
     fn super_channel_(
         &self,
         guild_id: GuildId,
-        channel_id: &mut ChannelId,
+        channel_id: &mut GenericChannelId,
     ) -> Option<CachedChannel> {
         let guild = self.guilds.get(&guild_id)?;
-        if let Some(thread) = guild.threads.get(channel_id) {
-            *channel_id = thread.parent_id;
+        if let Some(thread) = guild.threads.get(&channel_id.expect_thread()) {
+            *channel_id = thread.parent_id.widen();
         }
 
-        guild.channels.get(channel_id).cloned()
+        guild.channels.get(&channel_id.expect_channel()).cloned()
     }
 
     /// Fetches a channel/thread via HTTP and caches it.
-    async fn fetch_channel(&self, http: &Http, channel_id: ChannelId) -> serenity::Result<Ccot> {
+    async fn fetch_channel(
+        &self,
+        http: &Http,
+        channel_id: GenericChannelId,
+    ) -> serenity::Result<Ccot> {
         let channel = http.get_channel(channel_id).await?;
-        let channel = channel.guild().ok_or(ModelError::InvalidChannelType)?;
 
-        let GuildChannel { id, name, .. } = &channel;
-        log::warn!("Cache miss for channel `{name}` ({id}).");
+        fn warn_miss(label: &str, name: &str, id: u64) {
+            log::warn!("Cache miss for {label} `{name}` ({id}).");
+        }
 
-        let channel = Ccot::from(&channel);
-        self.update_channel(channel.clone());
-        Ok(channel)
-    }
+        macro_rules! handle {
+            ($channel:expr, $Ty:ty, $cache:ident, $ccot:ident) => {{
+                warn_miss(stringify!($ccot), &$channel.base.name, $channel.id.get());
 
-    /// Adds or updates a channel or thread in the cache.
-    fn update_channel(&self, channel: Ccot) {
-        let mut guild = self.guilds.entry(channel.guild_id()).or_default();
+                let c = <$Ty>::from(&$channel);
+                self.insert_guild(c.guild_id).$cache.insert(c.clone());
+
+                Ok(Ccot::$ccot(c))
+            }};
+        }
+
         match channel {
-            Ccot::Channel(c) => _ = guild.channels.insert(c),
-            Ccot::Thread(t) => _ = guild.threads.insert(t),
+            Channel::Guild(channel) => handle!(channel, CachedChannel, channels, Channel),
+            Channel::GuildThread(thread) => handle!(thread, CachedThread, threads, Thread),
+            _ => Err(ModelError::InvalidChannelType.into()),
         }
     }
 
@@ -232,7 +238,7 @@ impl CachedGuild {
     }
 
     /// Removes a thread from the guild cache.
-    fn remove_thread(&mut self, parent_id: ChannelId, thread_id: ChannelId) {
+    fn remove_thread(&mut self, parent_id: ChannelId, thread_id: ThreadId) {
         self.threads.remove(&thread_id);
 
         // remove the thread from the parent channel set

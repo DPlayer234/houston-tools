@@ -33,7 +33,7 @@ pub fn id_suffix(id: impl Into<u64>) -> impl Display {
 #[must_use]
 pub fn interaction_location(
     guild_id: Option<GuildId>,
-    channel: Option<&PartialChannel>,
+    channel: Option<&GenericInteractionChannel>,
 ) -> impl Display + '_ {
     enum Location<'a> {
         Dm,
@@ -52,7 +52,7 @@ pub fn interaction_location(
     }
 
     let guild_id = guild_id.map(|g| IdSuffix::new(g.into()));
-    let channel_name = channel.and_then(|c| c.name.as_deref());
+    let channel_name = channel.and_then(|c| c.base().name.as_deref());
     match (guild_id, channel_name) {
         (Some(guild_id), Some(channel_name)) => Location::Channel(guild_id, channel_name),
         (Some(guild_id), None) => Location::Guild(guild_id),
@@ -125,7 +125,7 @@ impl Display for TimeMention {
 #[derive(Debug, Clone, Copy)]
 pub struct MessageLink {
     guild_id: Option<GuildId>,
-    channel_id: ChannelId,
+    channel_id: GenericChannelId,
     message_id: MessageId,
 }
 
@@ -133,7 +133,7 @@ impl MessageLink {
     /// Creates a new link from the components.
     pub fn new(
         guild_id: impl Into<Option<GuildId>>,
-        channel_id: ChannelId,
+        channel_id: GenericChannelId,
         message_id: MessageId,
     ) -> Self {
         Self {
@@ -239,9 +239,9 @@ fn fmt_resolved_option(value: &ResolvedValue<'_>, f: &mut Formatter<'_>) -> Resu
         ResolvedValue::Number(v) => v.fmt(f),
         ResolvedValue::String(v) => write!(f, "\"{v}\""),
         ResolvedValue::Attachment(v) => f.write_str(&v.filename),
-        ResolvedValue::Channel(v) => match &v.name {
+        ResolvedValue::Channel(v) => match &v.base().name {
             Some(name) => f.write_str(name),
-            None => v.id.fmt(f),
+            None => v.id().fmt(f),
         },
         ResolvedValue::Role(v) => f.write_str(&v.name),
         ResolvedValue::User(v, _) => f.write_str(&v.name),

@@ -123,7 +123,7 @@ pub trait AnyInteraction {
     fn id(&self) -> InteractionId;
     fn token(&self) -> &str;
     fn guild_id(&self) -> Option<GuildId>;
-    fn channel(&self) -> Option<&PartialChannel>;
+    fn channel(&self) -> Option<&GenericInteractionChannel>;
     fn user(&self) -> &User;
 
     async fn create_response(
@@ -160,7 +160,7 @@ macro_rules! interaction_impl {
                 self.guild_id
             }
 
-            fn channel(&self) -> Option<&PartialChannel> {
+            fn channel(&self) -> Option<&GenericInteractionChannel> {
                 self.channel.as_ref()
             }
 

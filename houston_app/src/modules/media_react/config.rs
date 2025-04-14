@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::config::HEmoji;
 use crate::prelude::*;
 
-pub type Config = HashMap<ChannelId, MediaReactChannel>;
+pub type Config = HashMap<GenericChannelId, MediaReactChannel>;
 
 fn default_with_threads() -> bool {
     true

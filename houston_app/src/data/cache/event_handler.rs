@@ -19,7 +19,7 @@ impl RawEventHandler for Cache {
 /// Internal methods to update the cache based on received events.
 impl Cache {
     /// Removes a thread from the cache, if it is a private thread.
-    fn remove_thread_if_private(&self, guild_id: GuildId, thread_id: ChannelId) {
+    fn remove_thread_if_private(&self, guild_id: GuildId, thread_id: ThreadId) {
         if let Some(mut guild) = self.guilds.get_mut(&guild_id) {
             if let Some(thread) = guild.threads.get(&thread_id) {
                 if thread.kind == ChannelType::PrivateThread {
@@ -58,12 +58,12 @@ impl Cache {
     }
 
     fn update_channel_create(&self, value: &ChannelCreateEvent) {
-        let mut guild = self.insert_guild(value.channel.guild_id);
+        let mut guild = self.insert_guild(value.channel.base.guild_id);
         guild.channels.insert((&value.channel).into());
     }
 
     fn update_channel_delete(&self, value: &ChannelDeleteEvent) {
-        if let Some(mut guild) = self.guilds.get_mut(&value.channel.guild_id) {
+        if let Some(mut guild) = self.guilds.get_mut(&value.channel.base.guild_id) {
             guild.channels.remove(&value.channel.id);
 
             // make sure to remove associated threads
@@ -73,7 +73,7 @@ impl Cache {
     }
 
     fn update_channel_update(&self, value: &ChannelUpdateEvent) {
-        let mut guild = self.insert_guild(value.channel.guild_id);
+        let mut guild = self.insert_guild(value.channel.base.guild_id);
         guild.channels.insert((&value.channel).into());
     }
 
@@ -111,7 +111,7 @@ impl Cache {
 
     fn update_thread_create(&self, value: &ThreadCreateEvent) {
         // reasonably assume that only active threads can be created
-        let mut guild = self.insert_guild(value.thread.guild_id);
+        let mut guild = self.insert_guild(value.thread.base.guild_id);
         guild.add_thread((&value.thread).into());
     }
 
@@ -122,17 +122,11 @@ impl Cache {
     }
 
     fn update_thread_update(&self, value: &ThreadUpdateEvent) {
-        let Some(metadata) = &value.thread.thread_metadata else {
-            let GuildChannel { id, name, .. } = &value.thread;
-            log::warn!("Thread Update for `{name}` ({id}) didn't have metadata.");
-            return;
-        };
-
         let thread = CachedThread::from(&value.thread);
         let mut guild = self.insert_guild(thread.guild_id);
 
         // we only track active threads so remove archived ones
-        if metadata.archived() {
+        if value.thread.thread_metadata.archived() {
             guild.remove_thread(thread.parent_id, thread.id);
         } else {
             guild.add_thread(thread);
@@ -140,7 +134,7 @@ impl Cache {
     }
 
     fn update_thread_list_sync(&self, value: &ThreadListSyncEvent) {
-        let mut guild = self.guilds.entry(value.guild_id).or_default();
+        let mut guild = self.insert_guild(value.guild_id);
 
         if let Some(parents) = &value.channel_ids {
             for &channel_id in parents {

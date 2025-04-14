@@ -1,6 +1,5 @@
 use extract_map::ExtractKey;
 
-use super::is_thread;
 use crate::prelude::*;
 
 /// Minimal cached information about a guild channel.
@@ -16,7 +15,7 @@ pub struct CachedChannel {
 /// Minimal cached information about a thread.
 #[derive(Debug, Clone)]
 pub struct CachedThread {
-    pub id: ChannelId,
+    pub id: ThreadId,
     pub kind: ChannelType,
     pub guild_id: GuildId,
     pub parent_id: ChannelId,
@@ -30,13 +29,6 @@ pub enum Ccot {
 }
 
 impl Ccot {
-    pub fn guild_id(&self) -> GuildId {
-        match self {
-            Self::Channel(c) => c.guild_id,
-            Self::Thread(t) => t.guild_id,
-        }
-    }
-
     pub fn channel(self) -> Option<CachedChannel> {
         match self {
             Self::Channel(c) => Some(c),
@@ -58,65 +50,30 @@ impl ExtractKey<ChannelId> for CachedChannel {
     }
 }
 
-impl ExtractKey<ChannelId> for CachedThread {
-    fn extract_key(&self) -> &ChannelId {
+impl ExtractKey<ThreadId> for CachedThread {
+    fn extract_key(&self) -> &ThreadId {
         &self.id
-    }
-}
-
-impl From<GuildChannel> for Ccot {
-    fn from(value: GuildChannel) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&GuildChannel> for Ccot {
-    fn from(value: &GuildChannel) -> Self {
-        if is_thread(value.kind) {
-            Self::Thread(value.into())
-        } else {
-            Self::Channel(value.into())
-        }
     }
 }
 
 impl From<&GuildChannel> for CachedChannel {
     fn from(value: &GuildChannel) -> Self {
-        if is_thread(value.kind) {
-            let GuildChannel { id, name, .. } = value;
-            log::warn!("Channel `{name}` ({id}) is actually a thread.");
-        }
-
         Self {
             id: value.id,
-            kind: value.kind,
-            guild_id: value.guild_id,
+            kind: value.base.kind,
+            guild_id: value.base.guild_id,
             nsfw: value.nsfw,
         }
     }
 }
 
-impl From<&GuildChannel> for CachedThread {
-    fn from(value: &GuildChannel) -> Self {
-        if !is_thread(value.kind) {
-            let GuildChannel { id, name, .. } = value;
-            log::warn!("Thread `{name}` ({id}) is actually a channel.");
-        }
-
-        let parent_id = match value.parent_id {
-            Some(parent_id) => parent_id,
-            None => {
-                let GuildChannel { id, name, .. } = value;
-                log::warn!("Thread `{name}` ({id}) has no parent.");
-                ChannelId::default()
-            },
-        };
-
+impl From<&GuildThread> for CachedThread {
+    fn from(value: &GuildThread) -> Self {
         Self {
             id: value.id,
-            kind: value.kind,
-            guild_id: value.guild_id,
-            parent_id,
+            kind: value.base.kind,
+            guild_id: value.base.guild_id,
+            parent_id: value.parent_id,
         }
     }
 }

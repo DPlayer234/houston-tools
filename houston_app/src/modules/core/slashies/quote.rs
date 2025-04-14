@@ -27,12 +27,12 @@ pub async fn quote(ctx: Context<'_>, message: &Message) -> Result {
 
 struct QuoteTarget<'a> {
     message: &'a Message,
-    channel_id: ChannelId,
+    channel_id: GenericChannelId,
     guild_id: Option<GuildId>,
 }
 
 impl<'a> QuoteTarget<'a> {
-    fn new(message: &'a Message, channel_id: ChannelId, guild_id: Option<GuildId>) -> Self {
+    fn new(message: &'a Message, channel_id: GenericChannelId, guild_id: Option<GuildId>) -> Self {
         Self {
             message,
             channel_id,

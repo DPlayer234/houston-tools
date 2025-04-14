@@ -54,7 +54,7 @@ pub struct StarboardGuild {
 pub struct StarboardEntry {
     pub id: BoardId,
     pub name: String,
-    pub channel: ChannelId,
+    pub channel: GenericChannelId,
     pub emoji: HEmoji,
     pub reacts: u32,
     #[serde(default = "Vec::new")]

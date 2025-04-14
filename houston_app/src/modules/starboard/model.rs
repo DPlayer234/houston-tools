@@ -7,7 +7,7 @@ pub struct Message {
     pub id: ObjectId,
     pub board: BoardId,
     #[serde(with = "id_as_i64")]
-    pub channel: ChannelId,
+    pub channel: GenericChannelId,
     #[serde(with = "id_as_i64")]
     pub message: MessageId,
     #[serde(with = "id_as_i64")]

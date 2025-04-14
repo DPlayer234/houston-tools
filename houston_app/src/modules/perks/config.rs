@@ -131,7 +131,7 @@ pub struct CollectibleGuildEntry {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleNotice {
-    pub channel: ChannelId,
+    pub channel: GenericChannelId,
     pub text: String,
 }
 
@@ -168,7 +168,7 @@ pub struct BirthdayGuildConfig {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayNotice {
-    pub channel: ChannelId,
+    pub channel: GenericChannelId,
     pub text: String,
 }
 

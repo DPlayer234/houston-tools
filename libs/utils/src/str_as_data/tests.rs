@@ -87,7 +87,6 @@ fn round_trip_b20bit_all_chars() {
     let reencoded = b20bit::to_string(&decoded);
 
     assert_eq!(encoded, reencoded);
-    std::thread::sleep(std::time::Duration::from_secs(10));
 }
 
 #[test]

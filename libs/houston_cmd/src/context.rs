@@ -84,7 +84,7 @@ impl<'a> Context<'a> {
     }
 
     /// Gets the ID of the channel the command was invoked in.
-    pub fn channel_id(self) -> ChannelId {
+    pub fn channel_id(self) -> GenericChannelId {
         self.interaction.channel_id
     }
 

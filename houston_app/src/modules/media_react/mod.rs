@@ -93,7 +93,7 @@ async fn message_inner(ctx: &Context, new_message: &Message) -> Result {
 async fn find_channel_config(
     ctx: &Context,
     guild_id: Option<GuildId>,
-    channel_id: ChannelId,
+    channel_id: GenericChannelId,
 ) -> Result<Option<&MediaReactChannel>> {
     let data = ctx.data_ref::<HContextData>();
 
@@ -110,13 +110,13 @@ async fn find_channel_config(
     // second, try if this is a thread
     let thread = data
         .cache
-        .thread_channel(&ctx.http, guild_id, channel_id)
+        .thread_channel(&ctx.http, guild_id, channel_id.expect_thread())
         .await?;
 
     // if it is a thread, grab the parent channel's configuration
     // filter it on whether threads are included
     let entries = thread
-        .and_then(|t| data.config().media_react.get(&t.parent_id))
+        .and_then(|t| data.config().media_react.get(&t.parent_id.widen()))
         .filter(|c| c.with_threads);
 
     Ok(entries)

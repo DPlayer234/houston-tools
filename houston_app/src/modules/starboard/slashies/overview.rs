@@ -25,7 +25,7 @@ struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,
     #[serde(with = "id_as_i64")]
-    channel: ChannelId,
+    channel: GenericChannelId,
     #[serde(with = "id_as_i64")]
     message: MessageId,
     #[serde(with = "id_as_i64")]
