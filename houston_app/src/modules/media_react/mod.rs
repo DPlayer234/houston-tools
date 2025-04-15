@@ -109,7 +109,7 @@ async fn find_channel_config(
 
     // second, try if this is a thread
     let thread = data
-        .cache
+        .cache()
         .thread_channel(&ctx.http, guild_id, channel_id.expect_thread())
         .await?;
 

@@ -32,7 +32,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
          **Ping:** {elapsed} ms"
     );
 
-    let current_user = data.cache.current_user()?;
+    let current_user = data.cache().current_user()?;
     let author = get_unique_username(&current_user);
     let author_icon = current_user.face();
 
@@ -109,7 +109,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
         .description(description)
         .field("Modules", modules, false);
 
-    if let Some(stats) = data.cache.stats() {
+    if let Some(stats) = data.cache().stats() {
         embed = embed.field("Cache", stats, false);
     }
 

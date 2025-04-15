@@ -12,17 +12,13 @@ use crate::prelude::*;
 mod event_handler;
 mod model;
 
+pub use event_handler::CacheUpdateHandler;
 pub use model::{CachedChannel, CachedThread, Ccot};
 
 /// Provides a simple application-specific cache for Discord state.
 ///
 /// Currently, this only serves to cache channels and threads for guilds, as
 /// well as the current user.
-///
-/// Requires the [`GatewayIntents::GUILDS`] intent.
-//
-// CMBK: edge-case "loses access to channels with threads"
-// the threads in question will stay in the cache, not sure how to solve that well
 #[derive(Default)]
 pub struct Cache {
     current_user: ArcSwapOption<CurrentUser>,

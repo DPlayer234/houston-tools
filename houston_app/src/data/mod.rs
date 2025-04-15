@@ -46,7 +46,7 @@ pub struct HBotData {
     /// The loaded application emojis.
     app_emojis: OnceLock<app_emojis::HAppEmojiStore>,
     /// The Discord cache.
-    pub cache: Arc<Cache>,
+    cache: Cache,
     /// Database connection.
     database: OnceLock<mongodb::Database>,
 }
@@ -58,7 +58,7 @@ impl HBotData {
         Self {
             config,
             app_emojis: OnceLock::new(),
-            cache: Arc::default(),
+            cache: Cache::default(),
             database: OnceLock::new(),
         }
     }
@@ -67,6 +67,12 @@ impl HBotData {
     #[must_use]
     pub fn config(&self) -> &HBotConfig {
         &self.config
+    }
+
+    /// Gets the Discord cache.
+    #[must_use]
+    pub fn cache(&self) -> &Cache {
+        &self.cache
     }
 
     /// Gets the loaded app emojis.

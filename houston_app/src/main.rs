@@ -14,12 +14,12 @@ async fn main() -> anyhow::Result<()> {
     use std::panic;
 
     use houston_cmd::Framework;
-    use modules::Module as _;
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
 
     use crate::build::{GIT_HASH, VERSION};
-    use crate::data::cache::Cache;
+    use crate::data::cache::CacheUpdateHandler;
+    use crate::modules::Module as _;
     use crate::prelude::*;
 
     // run the program and clean up
@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
                     // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
                     config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
                 ))
-                .raw_event_handler::<Cache>(Arc::clone(&bot_data.cache))
+                .raw_event_handler(CacheUpdateHandler)
                 .framework(framework)
                 .event_handler(event_handler)
                 .data(Arc::clone(&bot_data))

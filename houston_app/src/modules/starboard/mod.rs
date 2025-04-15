@@ -698,9 +698,9 @@ async fn is_safe_forward_allowed(
     board: &config::StarboardEntry,
 ) -> serenity::Result<bool> {
     let data = ctx.data_ref::<HContextData>();
-    let cache = data.cache.as_ref();
 
-    let target = cache
+    let target = data
+        .cache()
         .super_channel(&ctx.http, guild_id, board.channel)
         .await?;
 
@@ -709,7 +709,8 @@ async fn is_safe_forward_allowed(
         return Ok(true);
     }
 
-    let source = cache
+    let source = data
+        .cache()
         .super_channel(&ctx.http, guild_id, message.channel_id)
         .await?;
 

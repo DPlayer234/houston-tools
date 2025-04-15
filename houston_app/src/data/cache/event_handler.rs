@@ -8,11 +8,39 @@ use super::{Cache, CachedGuild};
 use crate::helper::noop_future;
 use crate::prelude::*;
 
-/// Manual `async_trait` impl so avoid allocation.
-impl RawEventHandler for Cache {
-    fn raw_event<'s: 'f, 'e: 'f, 'f>(&'s self, _ctx: Context, ev: &'e Event) -> BoxFuture<'f, ()> {
-        self.update_event(ev);
+/// [`RawEventHandler`] that updates the cache stored in the [`HContextData`].
+///
+/// Requires the [`GatewayIntents::GUILDS`] intent.
+//
+// CMBK: edge-case "loses access to channels with threads"
+// the threads in question will stay in the cache, not sure how to solve that
+pub struct CacheUpdateHandler;
+
+// Manual `async_trait` impl to avoid allocation.
+impl RawEventHandler for CacheUpdateHandler {
+    fn raw_event<'s: 'f, 'e: 'f, 'f>(&'s self, ctx: Context, ev: &'e Event) -> BoxFuture<'f, ()> {
+        update_event(&ctx, ev);
         noop_future()
+    }
+}
+
+/// Updates the cache held by the context with an event.
+fn update_event(ctx: &Context, event: &Event) {
+    let cache = || ctx.data_ref::<HContextData>().cache();
+    match event {
+        Event::Ready(event) => cache().update_ready(event),
+        Event::ChannelCreate(event) => cache().update_channel_create(event),
+        Event::ChannelDelete(event) => cache().update_channel_delete(event),
+        Event::ChannelUpdate(event) => cache().update_channel_update(event),
+        Event::GuildCreate(event) => cache().update_guild_create(event),
+        Event::GuildDelete(event) => cache().update_guild_delete(event),
+        Event::UserUpdate(event) => cache().update_user_update(event),
+        Event::ThreadCreate(event) => cache().update_thread_create(event),
+        Event::ThreadUpdate(event) => cache().update_thread_update(event),
+        Event::ThreadDelete(event) => cache().update_thread_delete(event),
+        Event::ThreadListSync(event) => cache().update_thread_list_sync(event),
+        Event::ThreadMembersUpdate(event) => cache().update_thread_members_update(event),
+        _ => {},
     }
 }
 
@@ -26,25 +54,6 @@ impl Cache {
                     guild.threads.remove(&thread_id);
                 }
             }
-        }
-    }
-
-    /// Updates the cache with an event.
-    fn update_event(&self, event: &Event) {
-        match event {
-            Event::Ready(event) => self.update_ready(event),
-            Event::ChannelCreate(event) => self.update_channel_create(event),
-            Event::ChannelDelete(event) => self.update_channel_delete(event),
-            Event::ChannelUpdate(event) => self.update_channel_update(event),
-            Event::GuildCreate(event) => self.update_guild_create(event),
-            Event::GuildDelete(event) => self.update_guild_delete(event),
-            Event::UserUpdate(event) => self.update_user_update(event),
-            Event::ThreadCreate(event) => self.update_thread_create(event),
-            Event::ThreadUpdate(event) => self.update_thread_update(event),
-            Event::ThreadDelete(event) => self.update_thread_delete(event),
-            Event::ThreadListSync(event) => self.update_thread_list_sync(event),
-            Event::ThreadMembersUpdate(event) => self.update_thread_members_update(event),
-            _ => {},
         }
     }
 }
