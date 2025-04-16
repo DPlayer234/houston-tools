@@ -5,7 +5,7 @@ use crate::buttons::ButtonValue as _;
 use crate::modules::core::buttons::Delete;
 use crate::slashies::prelude::*;
 
-/// "Snipes" and reposts the last deleted message.
+/// "Snipes" and reveals the most recent, deleted message in this channel.
 #[chat_command(contexts = "Guild", integration_types = "Guild")]
 pub async fn snipe(ctx: Context<'_>) -> Result {
     let data = ctx.data_ref();

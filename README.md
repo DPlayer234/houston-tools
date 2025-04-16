@@ -347,7 +347,7 @@ Emojis are added in declaration order.
 
 ## Snipe
 
-Enables message-sniping, allowing users to reveal the most recent deleted message in a channel.
+Enables message-sniping, allowing users to reveal the most recent, deleted message in a channel.
 
 Unlike most other features, this needs to be opted-in _for each server_ instead of once globally. This is to avoid overextending what messages should be potentially kept.
 
