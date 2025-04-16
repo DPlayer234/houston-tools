@@ -69,12 +69,13 @@ async fn message_inner(
     guild_id: GuildId,
     is_edit: bool,
 ) -> Result {
-    // we only consider regular messages from users, not bots
+    // we only consider regular messages from users, not bots.
+    // also ignore messages that have neither content nor attachments or ones that
+    // have a lot of content. attachments aren't currently retained, but they are
+    // noted. this essentially excludes sticker-only messages and polls.
     let valid = is_user_message(new_message)
-        // exclude messages with large content
-        && new_message.content.len() <= 2000
-        // or ones with polls (why isn't this a different message type?)
-        && new_message.poll.is_none();
+        && (!new_message.content.is_empty() || !new_message.attachments.is_empty())
+        && new_message.content.len() <= 2000;
 
     if !valid {
         return Ok(());
