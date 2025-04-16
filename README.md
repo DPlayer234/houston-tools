@@ -319,7 +319,7 @@ Media-react has the bot automatically react to messages in certain channels. The
 [bot.media_react.1305620816272166962]
 # the emojis to add
 emojis = ["⭐"]
-# optional. default to true.
+# optional. defaults to true.
 # if true, this configuration will also apply to threads in this channel.
 with_threads = true
 
@@ -344,6 +344,29 @@ condition.forward = "content"
 There may be up to 20 emojis per channel. The "emoji" value is declared in the same way as starboard emojis, that is each value must be unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631".
 
 Emojis are added in declaration order.
+
+## Snipe
+
+Enables message-sniping, allowing users to reveal the most recent deleted message in a channel.
+
+Unlike most other features, this needs to be opted-in _for each server_ instead of once globally. This is to avoid overextending what messages should be potentially kept.
+
+```toml
+# this table header is sufficient to enable the feature.
+# the numeric key is the guild id.
+[bot.snipe.1293210831923974204]
+# optional. defaults to 5 minutes.
+# the maximum age of sniped messages. this is based on the send time.
+max_age = "00:05:00"
+# optional. defaults to 64.
+# the maximum amount of messages in the cache _for the entire server_.
+# setting this to a high value is not recommended.
+# pick something appropriate based on the activity of the server.
+max_cache_size = 64
+
+# enabled for another guild with the default settings
+[bot.snipe.233587951353856000]
+```
 
 ## Azur Lane
 

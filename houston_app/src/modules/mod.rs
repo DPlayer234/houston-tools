@@ -13,6 +13,7 @@ pub mod minigame;
 pub mod perks;
 pub mod profile;
 pub mod rep;
+pub mod snipe;
 pub mod starboard;
 
 mod prelude {
@@ -72,6 +73,7 @@ macro_rules! for_each_module {
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::media_react::Module, $config, |$var| $body),
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::profile::Module, $config, |$var| $body),
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::rep::Module, $config, |$var| $body),
+        $crate::modules::for_each_module!(@inner($mode) $crate::modules::snipe::Module, $config, |$var| $body),
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::starboard::Module, $config, |$var| $body),
     ]};
     ($config:expr, |$var:ident| $body:expr) => {{

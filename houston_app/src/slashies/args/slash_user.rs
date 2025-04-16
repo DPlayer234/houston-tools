@@ -86,9 +86,16 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
     }
 }
 
-impl SlashUser<'_> {
-    #[expect(dead_code, reason = "reserved for later use")]
-    pub fn display_name(&self) -> &str {
+impl<'a> SlashUser<'a> {
+    pub fn from_message(message: &'a Message) -> Self {
+        Self {
+            user: &message.author,
+            member: message.member.as_deref(),
+            guild_id: message.guild_id,
+        }
+    }
+
+    pub fn display_name(&self) -> &'a str {
         self.member
             .and_then(|m| m.nick.as_deref())
             .unwrap_or_else(|| self.user.display_name())
@@ -113,14 +120,14 @@ impl<'a> SlashMember<'a> {
         })
     }
 
-    pub fn nick(&self) -> Option<&str> {
+    pub fn nick(&self) -> Option<&'a str> {
         match self.member {
             Partial::Full(m) => m.nick.as_deref(),
             Partial::Partial(m) => m.nick.as_deref(),
         }
     }
 
-    pub fn display_name(&self) -> &str {
+    pub fn display_name(&self) -> &'a str {
         self.nick().unwrap_or_else(|| self.user.display_name())
     }
 

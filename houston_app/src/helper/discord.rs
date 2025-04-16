@@ -40,6 +40,10 @@ pub fn is_normal_message(kind: MessageType) -> bool {
     matches!(kind, MessageType::Regular | MessageType::InlineReply)
 }
 
+pub fn is_user_message(message: &Message) -> bool {
+    is_normal_message(message.kind) && !message.author.bot() && !message.author.system()
+}
+
 pub trait WithPartial {
     type Partial;
 }

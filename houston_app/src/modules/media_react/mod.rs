@@ -1,7 +1,7 @@
 use super::prelude::*;
 use crate::config::HBotConfig;
 use crate::fmt::discord::MessageLink;
-use crate::helper::discord::is_normal_message;
+use crate::helper::discord::is_user_message;
 use crate::helper::is_unique_set;
 
 pub mod config;
@@ -61,11 +61,7 @@ pub async fn message(ctx: &Context, new_message: &Message) {
 
 async fn message_inner(ctx: &Context, new_message: &Message) -> Result {
     // we only consider regular messages from users, not bots
-    let valid = is_normal_message(new_message.kind)
-        && !new_message.author.bot()
-        && !new_message.author.system();
-
-    if !valid {
+    if !is_user_message(new_message) {
         return Ok(());
     }
 
