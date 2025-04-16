@@ -2,11 +2,11 @@ use super::prelude::*;
 use crate::fmt::discord::MessageLink;
 use crate::helper::discord::is_user_message;
 
-mod config;
+pub mod config;
 mod slashies;
+pub mod state;
 
 pub use config::Config;
-use config::SnipedMessage;
 
 pub struct Module;
 
@@ -98,7 +98,7 @@ async fn message_inner(
             state.messages.pop_front();
         }
 
-        let sniped = SnipedMessage::new(new_message);
+        let sniped = state::SnipedMessage::new(new_message);
         state.messages.push_back(sniped);
     }
 
