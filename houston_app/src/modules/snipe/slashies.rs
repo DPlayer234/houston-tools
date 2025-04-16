@@ -1,4 +1,5 @@
 use chrono::Utc;
+use utils::text::write_str::*;
 
 use crate::buttons::ButtonValue as _;
 use crate::modules::core::buttons::Delete;
@@ -27,12 +28,11 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         // can't hold this lock across awaits, and it should be released asap anyways
         let mut state = snipe.state.write().expect("should not be poisoned");
         state.take_last(move |m| {
-            m.deleted() && m.channel_id == channel_id && *m.timestamp >= min_timestamp
+            m.deleted && m.channel_id == channel_id && *m.timestamp >= min_timestamp
         })
     };
 
     if let Some(message) = message {
-        let has_attachments = message.attachments();
         let author =
             CreateEmbedAuthor::new(message.author.display_name).icon_url(message.author.avatar_url);
 
@@ -42,8 +42,13 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
             .timestamp(message.timestamp)
             .color(data.config().embed_color);
 
-        if has_attachments {
-            embed = embed.footer(CreateEmbedFooter::new("<had attachments>"));
+        if !message.attachments.is_empty() {
+            let mut value = String::new();
+            for attachment in &message.attachments {
+                writeln_str!(value, "- [{}]({})", attachment.filename, attachment.url);
+            }
+
+            embed = embed.field("Attachments", value, false);
         }
 
         let button = CreateButton::new(Delete.to_custom_id())

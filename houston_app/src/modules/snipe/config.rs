@@ -3,7 +3,7 @@ use std::num::NonZero;
 use std::sync::RwLock;
 
 use chrono::TimeDelta;
-use serenity::small_fixed_array::FixedString;
+use serenity::small_fixed_array::{FixedArray, FixedString};
 
 use crate::helper::time::serde_time_delta;
 use crate::prelude::*;
@@ -38,28 +38,39 @@ pub struct GuildState {
     pub messages: VecDeque<SnipedMessage>,
 }
 
-bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy, Default)]
-    struct SnipedMessageFlags: u8 {
-        const DELETED = 0x1;
-        const ATTACHMENTS = 0x2;
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct SnipedMessage {
     pub id: MessageId,
     pub channel_id: GenericChannelId,
     pub author: SnipedAuthor,
     pub content: FixedString<u16>,
+    pub attachments: FixedArray<SnipedAttachment>,
     pub timestamp: Timestamp,
-    flags: SnipedMessageFlags,
+    pub deleted: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct SnipedAuthor {
     pub display_name: FixedString<u8>,
     pub avatar_url: FixedString<u8>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SnipedAttachment {
+    pub filename: FixedString<u8>,
+    pub url: FixedString,
+}
+
+fn capture_attachments(attachments: &[Attachment]) -> FixedArray<SnipedAttachment> {
+    let attachments = attachments
+        .iter()
+        .map(|a| SnipedAttachment {
+            filename: FixedString::from_str_trunc(a.filename.as_str()),
+            url: a.url.clone(),
+        })
+        .collect();
+
+    FixedArray::from_vec_trunc(attachments)
 }
 
 impl SnipedMessage {
@@ -70,37 +81,20 @@ impl SnipedMessage {
             avatar_url: FixedString::from_string_trunc(author.face()),
         };
 
-        let mut flags = SnipedMessageFlags::empty();
-        if !msg.attachments.is_empty() {
-            flags.insert(SnipedMessageFlags::ATTACHMENTS);
-        }
-
         Self {
             id: msg.id,
             channel_id: msg.channel_id,
             author,
             content: msg.content.clone(),
+            attachments: capture_attachments(&msg.attachments),
             timestamp: msg.timestamp,
-            flags,
+            deleted: false,
         }
     }
 
     pub fn update(&mut self, msg: &Message) {
         self.content.clone_from(&msg.content);
-        self.flags
-            .set(SnipedMessageFlags::ATTACHMENTS, !msg.attachments.is_empty());
-    }
-
-    pub fn attachments(&self) -> bool {
-        self.flags.contains(SnipedMessageFlags::ATTACHMENTS)
-    }
-
-    pub fn deleted(&self) -> bool {
-        self.flags.contains(SnipedMessageFlags::DELETED)
-    }
-
-    pub(super) fn mark_deleted(&mut self) {
-        self.flags.insert(SnipedMessageFlags::DELETED);
+        self.attachments = capture_attachments(&msg.attachments);
     }
 }
 
