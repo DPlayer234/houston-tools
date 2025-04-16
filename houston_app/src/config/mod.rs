@@ -40,6 +40,7 @@ pub struct HBotConfig {
     pub media_react: crate::modules::media_react::Config,
     pub perks: Option<crate::modules::perks::Config>,
     pub rep: Option<crate::modules::rep::Config>,
+    #[serde(default)]
     pub snipe: crate::modules::snipe::Config,
     #[serde(default)]
     pub starboard: crate::modules::starboard::Config,
