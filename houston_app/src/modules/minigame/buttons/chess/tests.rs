@@ -148,19 +148,19 @@ fn white_pawn_moves() {
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(2, 3), Player::P1),
+            .target_mask(&board, Pos::new(2, 3), Player::P1),
         from_c4,
     );
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(2, 2), Player::P1),
+            .target_mask(&board, Pos::new(2, 2), Player::P1),
         from_c3,
     );
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(3, 3), Player::P1),
+            .target_mask(&board, Pos::new(3, 3), Player::P1),
         from_d4,
     );
 }
@@ -196,19 +196,19 @@ fn black_pawn_moves() {
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(2, 1), Player::P2),
+            .target_mask(&board, Pos::new(2, 1), Player::P2),
         from_c2,
     );
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(2, 2), Player::P2),
+            .target_mask(&board, Pos::new(2, 2), Player::P2),
         from_c3,
     );
     assert_eq!(
         Piece::Pawn
             .get_move()
-            .target_mask(&board, Pos::new_trunc(3, 1), Player::P2),
+            .target_mask(&board, Pos::new(3, 1), Player::P2),
         from_d2,
     );
 }
@@ -250,14 +250,14 @@ fn queen_moves() {
     assert_eq!(
         Piece::Queen
             .get_move()
-            .target_mask(&board1, Pos::new_trunc(3, 2), Player::P1),
+            .target_mask(&board1, Pos::new(3, 2), Player::P1),
         mask1
     );
 
     assert_eq!(
         Piece::Queen
             .get_move()
-            .target_mask(&board2, Pos::new_trunc(1, 2), Player::P1),
+            .target_mask(&board2, Pos::new(1, 2), Player::P1),
         mask2
     );
 }
@@ -299,14 +299,14 @@ fn king_moves() {
     assert_eq!(
         Piece::King
             .get_move()
-            .target_mask(&board1, Pos::new_trunc(3, 2), Player::P1),
+            .target_mask(&board1, Pos::new(3, 2), Player::P1),
         mask1
     );
 
     assert_eq!(
         Piece::King
             .get_move()
-            .target_mask(&board2, Pos::new_trunc(1, 2), Player::P1),
+            .target_mask(&board2, Pos::new(1, 2), Player::P1),
         mask2
     );
 }
@@ -348,14 +348,14 @@ fn knight_moves() {
     assert_eq!(
         Piece::Knight
             .get_move()
-            .target_mask(&board1, Pos::new_trunc(3, 2), Player::P1),
+            .target_mask(&board1, Pos::new(3, 2), Player::P1),
         mask1
     );
 
     assert_eq!(
         Piece::Knight
             .get_move()
-            .target_mask(&board2, Pos::new_trunc(1, 2), Player::P1),
+            .target_mask(&board2, Pos::new(1, 2), Player::P1),
         mask2
     );
 }

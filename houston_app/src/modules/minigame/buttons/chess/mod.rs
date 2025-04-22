@@ -24,7 +24,7 @@ mod game;
 #[cfg(test)]
 mod tests;
 
-use game::{Board, N, Piece, Pos, new_board};
+use game::{Board, N, N_U8, Piece, Pos, new_board};
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
@@ -63,7 +63,7 @@ impl View {
     }
 
     fn board_buttons<'a>(&mut self, data: &'a HBotData) -> Vec<CreateActionRow<'a>> {
-        let mut components = Vec::with_capacity(5);
+        let mut components = Vec::with_capacity(N);
 
         let moves = match self.action {
             Action::Selected(pos) => self.board.get(pos).copied().flatten().map(|t| {
@@ -75,10 +75,10 @@ impl View {
             _ => None,
         };
 
-        for y in 0..N {
-            let mut row = Vec::with_capacity(5);
-            for x in 0..N {
-                let pos = Pos::new_trunc(x, y);
+        for y in 0..N_U8 {
+            let mut row = Vec::with_capacity(N);
+            for x in 0..N_U8 {
+                let pos = Pos::new(x, y);
                 let tile = self.board.get(pos).expect("must be in range");
 
                 let icon = match tile {
@@ -119,12 +119,12 @@ impl View {
     }
 
     fn no_act_board_buttons<'a>(&self, data: &'a HBotData) -> Vec<CreateActionRow<'a>> {
-        let mut components = Vec::with_capacity(5);
+        let mut components = Vec::with_capacity(N);
 
-        for y in 0..N {
-            let mut row = Vec::with_capacity(5);
-            for x in 0..N {
-                let pos = Pos::new_trunc(x, y);
+        for y in 0..N_U8 {
+            let mut row = Vec::with_capacity(N);
+            for x in 0..N_U8 {
+                let pos = Pos::new(x, y);
                 let tile = self.board.get(pos).expect("must be in range");
 
                 let icon = match tile {

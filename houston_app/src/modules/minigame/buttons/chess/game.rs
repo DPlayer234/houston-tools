@@ -3,49 +3,48 @@
 use super::Player;
 use crate::buttons::prelude::*;
 
-pub const N: usize = 5;
+/// The board size, as a [`u8`].
+pub const N_U8: u8 = 5;
 
+/// The board size, as a [`usize`].
+pub const N: usize = N_U8 as usize;
+
+/// The board grid.
 pub type Board = Grid<Option<Tile>>;
 
+/// A board position. May be out of range.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Pos {
     pub x: u8,
     pub y: u8,
 }
 
-#[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+#[expect(clippy::cast_sign_loss)]
 impl Pos {
-    pub fn new_trunc(x: usize, y: usize) -> Self {
-        Self {
-            x: x as u8,
-            y: y as u8,
-        }
+    pub const fn new(x: u8, y: u8) -> Self {
+        Self { x, y }
     }
 
-    fn add_x(self, x: i8) -> Self {
-        Self {
-            x: self.x.wrapping_add(x as u8),
-            y: self.y,
-        }
+    const fn add_x(mut self, x: i8) -> Self {
+        self.x = self.x.wrapping_add(x as u8);
+        self
     }
 
-    fn add_y(self, y: i8) -> Self {
-        Self {
-            x: self.x,
-            y: self.y.wrapping_add(y as u8),
-        }
+    const fn add_y(mut self, y: i8) -> Self {
+        self.y = self.y.wrapping_add(y as u8);
+        self
     }
 
-    fn add_offset(self, offset: Offset) -> Self {
-        Self {
-            x: self.x.wrapping_add(offset.x as u8),
-            y: self.y.wrapping_add(offset.y as u8),
-        }
+    const fn add_offset(self, offset: Offset) -> Self {
+        Self::new(
+            self.x.wrapping_add(offset.x as u8),
+            self.y.wrapping_add(offset.y as u8),
+        )
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Offset {
+struct Offset {
     x: i8,
     y: i8,
 }
@@ -77,10 +76,10 @@ impl<T> Grid<T> {
     }
 
     fn iter_grid(&self) -> impl Iterator<Item = (Pos, &T)> + use<'_, T> {
-        self.array.iter().enumerate().flat_map(|(x, row)| {
-            row.iter()
-                .enumerate()
-                .map(move |(y, tile)| (Pos::new_trunc(x, y), tile))
+        (0u8..).zip(&self.array).flat_map(|(x, row)| {
+            (0u8..)
+                .zip(row)
+                .map(move |(y, tile)| (Pos::new(x, y), tile))
         })
     }
 }
@@ -416,13 +415,11 @@ impl Board {
     }
 
     fn iter_pieces(&self, player: Player) -> impl Iterator<Item = (Pos, Piece)> + use<'_> {
-        self.array.iter().enumerate().flat_map(move |(x, row)| {
-            row.iter()
-                .enumerate()
-                .filter_map(move |(y, tile)| match tile {
-                    Some(t) if t.player == player => Some((Pos::new_trunc(x, y), t.piece)),
-                    _ => None,
-                })
+        (0u8..).zip(&self.array).flat_map(move |(x, row)| {
+            (0u8..).zip(row).filter_map(move |(y, tile)| match tile {
+                Some(t) if t.player == player => Some((Pos::new(x, y), t.piece)),
+                _ => None,
+            })
         })
     }
 
