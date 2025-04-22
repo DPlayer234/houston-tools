@@ -7,6 +7,7 @@ use utils::text::write_str::*;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
+use crate::fmt::Join;
 use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
@@ -318,20 +319,15 @@ impl<'v> View<'v> {
                 text.push('\n');
             }
 
+            let slots = Join::simple("/")
+                .display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
+
             write_str!(
                 text,
-                "**`{: >3.0}%`**`x{}` ",
+                "**`{: >3.0}%`**`x{}` {slots}",
                 mount.efficiency * 100f64,
                 mount.mounts
             );
-
-            for (index, &kind) in allowed.iter().enumerate() {
-                if index != 0 {
-                    text.push('/');
-                }
-
-                write_str!(text, "{}", equip_slot_display(azur.wiki_urls(), kind));
-            }
 
             if mount.preload != 0 {
                 write_str!(text, " `PRE x{}`", mount.preload);

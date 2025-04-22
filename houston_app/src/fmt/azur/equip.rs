@@ -43,25 +43,21 @@ fn write_stats<I, F>(iter: &[I], map: F, f: &mut Formatter<'_>) -> Result
 where
     F: Fn(&I) -> (StatKind, f64),
 {
-    for (index, chunk) in iter.chunks(3).enumerate() {
-        if index != 0 {
-            f.write_str("\n")?;
-        }
+    fn write_stat((kind, amount): (StatKind, f64), f: &mut Formatter<'_>) -> Result {
+        let name = kind.name();
+        let len = 7 - name.len();
+        write!(f, "**`{name}:`**`{amount: >len$}`")
+    }
 
-        for (index, stat) in chunk.iter().enumerate() {
-            let (kind, amount) = map(stat);
-            if index != 0 {
-                f.write_str(" \u{2E31} ")?;
-            }
-
-            let name = kind.name();
-            write!(
-                f,
-                "**`{}:`**`{: >len$}`",
-                name,
-                amount,
-                len = 7 - name.len()
-            )?;
+    // CMBK: gear never adds more than 3 stats
+    // in fact, the game data doesn't allow more than that
+    // if this assumption ever changes, re-add chunking lines
+    let mut iter = iter.iter();
+    if let Some(item) = iter.next() {
+        write_stat(map(item), f)?;
+        for item in iter {
+            f.write_str(" \u{2E31} ")?;
+            write_stat(map(item), f)?;
         }
     }
 
