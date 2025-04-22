@@ -53,6 +53,7 @@ define_data_enum! {
         IrisLibre("Iris Libre", Some("FFNF")),
         VichyaDominion("Vichya Dominion", Some("MNF")),
         IrisOrthodoxy("Iris Orthodoxy", Some("NF")),
+        KingdomOfTulipa("Kingdom of Tulipa", Some("HNLMS")),
         Tempesta("Tempesta", Some("MOT")),
         Meta("META", Some("META")),
         Siren("Siren", None),

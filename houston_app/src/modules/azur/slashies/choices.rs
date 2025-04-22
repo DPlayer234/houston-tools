@@ -36,6 +36,7 @@ make_choice!(EFaction for Faction {
     #[name = "Iris Libre"] IrisLibre,
     #[name = "Vichya Dominion"] VichyaDominion,
     #[name = "Iris Orthodoxy"] IrisOrthodoxy,
+    #[name = "Kingdom of Tulipa"] KingdomOfTulipa,
     Tempesta,
     #[name = "META"] Meta,
     #[name = "Collab: Neptunia"] CollabNeptunia,
