@@ -101,30 +101,30 @@ macro_rules! impl_view_part_fn {
     ($self:expr, $words:expr, $add:ident) => {
         match $self {
             ViewPart::Main1 => {
-                $add!("Login", login);
+                $add!("Login", &$words.login);
 
                 for line in &$words.main_screen {
                     $add!(main line);
                 }
 
-                $add!("Touch", touch);
+                $add!("Touch", &$words.touch);
             }
             ViewPart::Main2 => {
-                $add!("Mission Reminder", mission_reminder);
-                $add!("Mission Complete", mission_complete);
-                $add!("Mail Reminder", mail_reminder);
-                $add!("Return to Port", return_to_port);
-                $add!("Commission Complete", commission_complete);
+                $add!("Mission Reminder", &$words.mission_reminder);
+                $add!("Mission Complete", &$words.mission_complete);
+                $add!("Mail Reminder", &$words.mail_reminder);
+                $add!("Return to Port", &$words.return_to_port);
+                $add!("Commission Complete", &$words.commission_complete);
             }
             ViewPart::Holidays => {
-                $add!("Christmas", christmas);
-                $add!("New Year's Eve", new_years_eve);
-                $add!("New Year's Day", new_years_day);
-                $add!("Valentine's Day", valentines);
-                $add!("Mid-Autumn Festival", mid_autumn_festival);
-                $add!("Halloween", halloween);
-                $add!("Event Reminder", event_reminder);
-                $add!("Change Module", change_module);
+                $add!("Christmas", &$words.christmas);
+                $add!("New Year's Eve", &$words.new_years_eve);
+                $add!("New Year's Day", &$words.new_years_day);
+                $add!("Valentine's Day", &$words.valentines);
+                $add!("Mid-Autumn Festival", &$words.mid_autumn_festival);
+                $add!("Halloween", &$words.halloween);
+                $add!("Event Reminder", &$words.event_reminder);
+                $add!("Change Module", &$words.change_module);
             }
             ViewPart::Chime1 => {
                 if let Some(chime) = &$words.chime {
@@ -151,31 +151,30 @@ impl ViewPart {
 
         let mut result = String::new();
 
+        // avoid duplicating the entire basic text code a million times
+        fn basic(result: &mut String, label: &str, text: &str) {
+            let text = escape_markdown(text);
+            writeln_str!(result, "- **{label}:** {text}");
+        }
+
+        fn chime(result: &mut String, hour: usize, text: &str) {
+            let text = escape_markdown(text);
+            writeln_str!(result, "- **{hour:02}:00 Notification:** {text}");
+        }
+
         macro_rules! add {
-            ($label:literal, $key:ident) => {
-                if let Some(text) = &words.$key {
-                    write_str!(
-                        result,
-                        concat!("- **", $label, ":** {}\n"),
-                        escape_markdown(text),
-                    );
+            ($label:literal, $text:expr) => {
+                if let Some(text) = $text {
+                    basic(&mut result, $label, text);
                 }
             };
             (main $line:expr) => {
-                write_str!(
-                    result,
-                    "- **Main Screen {}:** {}\n",
-                    $line.index() + 1,
-                    escape_markdown($line.text()),
-                );
+                let index = $line.index() + 1;
+                let text = escape_markdown($line.text());
+                writeln_str!(result, "- **Main Screen {index}:** {text}");
             };
             (chime $index:expr, $opt:expr) => {
-                write_str!(
-                    result,
-                    "- **{:02}:00 Notification:** {}\n",
-                    $index,
-                    escape_markdown($opt),
-                );
+                chime(&mut result, $index, $opt);
             };
         }
 
@@ -191,8 +190,8 @@ impl ViewPart {
     /// Determines whether this part shows any lines.
     fn has_texts(self, words: &SpecialSecretary) -> bool {
         macro_rules! check {
-            ($_:literal, $key:ident) => {
-                if words.$key.is_some() {
+            ($_:literal, $text:expr) => {
+                if $text.is_some() {
                     return true;
                 }
             };

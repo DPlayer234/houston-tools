@@ -1,6 +1,7 @@
 //! Provides helper methods to work with displayed text.
 
 mod escape;
+mod from_fn_impl;
 mod inline_str;
 pub mod private;
 mod titlecase_impl;
@@ -8,6 +9,7 @@ mod truncate_impl;
 pub mod write_str;
 
 pub use escape::{EscapeByChar, escape_by_char};
+pub use from_fn_impl::{FromFn, from_fn};
 pub use inline_str::InlineStr;
 pub use titlecase_impl::to_titlecase;
 pub use truncate_impl::truncate;

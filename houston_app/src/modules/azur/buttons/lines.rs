@@ -1,3 +1,5 @@
+use std::fmt;
+
 use azur_lane::ship::*;
 use utils::text::write_str::*;
 
@@ -200,44 +202,44 @@ macro_rules! impl_view_part_fn {
     ($self:expr, $words:expr, $add:ident) => {
         match $self {
             ViewPart::Info => {
-                $add!("Description", description);
-                $add!("Profile", introduction);
-                $add!("Acquisition", acquisition);
+                $add!("Description", &$words.description);
+                $add!("Profile", &$words.introduction);
+                $add!("Acquisition", &$words.acquisition);
             }
             ViewPart::Main1 => {
-                $add!("Login", login);
+                $add!("Login", &$words.login);
 
                 for line in &$words.main_screen {
                     $add!(main line);
                 }
 
-                $add!("Touch", touch);
-                $add!("Special Touch", special_touch);
-                $add!("Rub", rub);
+                $add!("Touch", &$words.touch);
+                $add!("Special Touch", &$words.special_touch);
+                $add!("Rub", &$words.rub);
             }
             ViewPart::Main2 => {
-                $add!("Mission Reminder", mission_reminder);
-                $add!("Mission Complete", mission_complete);
-                $add!("Mail Reminder", mail_reminder);
-                $add!("Return to Port", return_to_port);
-                $add!("Commission Complete", commission_complete);
+                $add!("Mission Reminder", &$words.mission_reminder);
+                $add!("Mission Complete", &$words.mission_complete);
+                $add!("Mail Reminder", &$words.mail_reminder);
+                $add!("Return to Port", &$words.return_to_port);
+                $add!("Commission Complete", &$words.commission_complete);
             }
             ViewPart::Affinity => {
-                $add!("Details", details);
-                $add!("Disappointed", disappointed);
-                $add!("Stranger", stranger);
-                $add!("Friendly", friendly);
-                $add!("Crush", crush);
-                $add!("Love", love);
-                $add!("Oath", oath);
+                $add!("Details", &$words.details);
+                $add!("Disappointed", &$words.disappointed);
+                $add!("Stranger", &$words.stranger);
+                $add!("Friendly", &$words.friendly);
+                $add!("Crush", &$words.crush);
+                $add!("Love", &$words.love);
+                $add!("Oath", &$words.oath);
             }
             ViewPart::Combat => {
-                $add!("Enhance", enhance);
-                $add!("Flagship Fight", flagship_fight);
-                $add!("Victory", victory);
-                $add!("Defeat", defeat);
-                $add!("Skill", skill);
-                $add!("Low Health", low_health);
+                $add!("Enhance", &$words.enhance);
+                $add!("Flagship Fight", &$words.flagship_fight);
+                $add!("Victory", &$words.victory);
+                $add!("Defeat", &$words.defeat);
+                $add!("Skill", &$words.skill);
+                $add!("Low Health", &$words.low_health);
 
                 for opt in &$words.couple_encourage {
                     $add!(couple opt);
@@ -254,31 +256,27 @@ impl ViewPart {
 
         let mut result = String::new();
 
+        // avoid duplicating the entire basic text code a million times
+        fn basic(result: &mut String, label: &str, text: &str) {
+            let text = escape_markdown(text);
+            writeln_str!(result, "- **{label}:** {text}");
+        }
+
         macro_rules! add {
-            ($label:literal, $key:ident) => {
-                if let Some(text) = &words.$key {
-                    write_str!(
-                        result,
-                        concat!("- **", $label, ":** {}\n"),
-                        escape_markdown(text),
-                    );
+            ($label:literal, $text:expr) => {
+                if let Some(text) = $text {
+                    basic(&mut result, $label, text);
                 }
             };
             (main $line:expr) => {
-                write_str!(
-                    result,
-                    "- **Main Screen {}:** {}\n",
-                    $line.index() + 1,
-                    escape_markdown($line.text()),
-                );
+                let index = $line.index() + 1;
+                let text = escape_markdown($line.text());
+                writeln_str!(result, "- **Main Screen {index}:** {text}");
             };
             (couple $opt:expr) => {
-                write_str!(
-                    result,
-                    "- **{}:** {}\n",
-                    get_label_for_ship_couple_encourage(game_data, $opt),
-                    escape_markdown(&$opt.line),
-                );
+                let label = ship_couple_encourage_label(game_data, $opt);
+                let text = escape_markdown(&$opt.line);
+                writeln_str!(result, "- **{label}:** {text}");
             };
         }
 
@@ -294,8 +292,8 @@ impl ViewPart {
     /// Determines whether this part shows any lines.
     fn has_texts(self, words: &ShipSkinWords) -> bool {
         macro_rules! check {
-            ($_:literal, $key:ident) => {
-                if words.$key.is_some() {
+            ($_:literal, $text:expr) => {
+                if $text.is_some() {
                     return true;
                 }
             };
@@ -334,19 +332,26 @@ impl ButtonReply for View<'_> {
 }
 
 /// Creates a label for a couple line.
-fn get_label_for_ship_couple_encourage(game_data: &GameData, opt: &ShipCoupleEncourage) -> String {
+fn ship_couple_encourage_label(
+    game_data: &GameData,
+    opt: &ShipCoupleEncourage,
+) -> impl fmt::Display {
     fn fmt_sortie_count<T>(
+        f: &mut fmt::Formatter<'_>,
         label: &str,
         amount: u32,
         items: &[T],
         to_name: impl Fn(&T) -> &str,
-    ) -> String {
+    ) -> fmt::Result {
         let plural = if amount != 1 { "s" } else { "" };
         let fmt = Join::OR.display_as(items, to_name);
-        format!("Sortie with {amount} more {fmt}{label}{plural}")
+        write!(f, "Sortie with {amount} more {fmt}{label}{plural}")
     }
 
-    match &opt.condition {
+    let condition = &opt.condition;
+    let amount = opt.amount;
+
+    utils::text::from_fn(move |f| match condition {
         ShipCouple::ShipGroup(ship_ids) => {
             let get_name = |&id| {
                 game_data
@@ -354,29 +359,25 @@ fn get_label_for_ship_couple_encourage(game_data: &GameData, opt: &ShipCoupleEnc
                     .map_or("<unknown>", |s| s.name.as_str())
             };
 
-            let amount = opt.amount;
             if ship_ids.len() == amount {
                 let fmt = Join::AND.display_as(ship_ids, get_name);
-                format!("Sortie with {fmt}")
+                write!(f, "Sortie with {fmt}")
             } else {
                 let fmt = Join::OR.display_as(ship_ids, get_name);
-                format!("Sortie with {amount} of {fmt}")
+                write!(f, "Sortie with {amount} of {fmt}")
             }
         },
         ShipCouple::HullType(hull_types) => {
-            fmt_sortie_count("", opt.amount, hull_types, |h| h.designation())
+            fmt_sortie_count(f, "", amount, hull_types, |h| h.designation())
         },
         ShipCouple::Rarity(rarities) => {
-            fmt_sortie_count(" ship", opt.amount, rarities, |r| r.name())
+            fmt_sortie_count(f, " ship", amount, rarities, |r| r.name())
         },
         ShipCouple::Faction(factions) => {
-            fmt_sortie_count(" ship", opt.amount, factions, |f| f.name())
+            fmt_sortie_count(f, " ship", amount, factions, |f| f.name())
         },
         ShipCouple::Illustrator => {
-            format!(
-                "Sortie with {} more ships by the same illustrator",
-                opt.amount,
-            )
+            write!(f, "Sortie with {amount} more ships by the same illustrator")
         },
-    }
+    })
 }
