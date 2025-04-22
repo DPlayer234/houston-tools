@@ -47,7 +47,10 @@ impl<'v> Nav<'v> {
     }
 
     #[must_use]
-    pub fn from_button_value<T: ButtonValue + Serialize>(args: &'v T) -> Self {
+    pub fn from_button_value<T>(args: &'v T) -> Self
+    where
+        T: ButtonValue + Serialize + fmt::Debug,
+    {
         Self(NavInner::Value(args))
     }
 }
@@ -74,7 +77,7 @@ impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
             type Value = Nav<'de>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("custom data bytes")
+                formatter.write_str("nav borrowed bytes")
             }
 
             fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
@@ -93,23 +96,21 @@ impl fmt::Debug for Nav<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
             NavInner::Slice(slice) => f.debug_tuple("Slice").field(&slice).finish(),
-            NavInner::Value(args) => f.debug_tuple("Value").field(&args.action_key()).finish(),
+            NavInner::Value(args) => f.debug_tuple("Value").field(&args).finish(),
         }
     }
 }
 
 /// Provides a dyn-compatible wrapper trait for serializing arbitrary structs
 /// into the encoding format.
-trait SerializeCustomIdToStackBuf: Send + Sync {
-    fn action_key(&self) -> usize;
+trait SerializeCustomIdToStackBuf: fmt::Debug + Send + Sync {
     fn write_inner_data(&self, buf: &mut encoding::StackBuf);
 }
 
-impl<T: ButtonValue + Serialize> SerializeCustomIdToStackBuf for T {
-    fn action_key(&self) -> usize {
-        const { T::ACTION.key }
-    }
-
+impl<T> SerializeCustomIdToStackBuf for T
+where
+    T: ButtonValue + Serialize + fmt::Debug,
+{
     fn write_inner_data(&self, buf: &mut encoding::StackBuf) {
         encoding::write_inner_data(buf, self);
     }

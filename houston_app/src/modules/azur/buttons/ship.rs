@@ -222,21 +222,12 @@ impl<'v> View<'v> {
         &'a mut self,
         base_ship: &'a ShipData,
     ) -> impl Iterator<Item = CreateButton<'b>> + 'a {
-        base_ship
-            .retrofits
-            .iter()
-            .enumerate()
-            .filter_map(|(index, retro)| {
-                let index = u8::try_from(index).ok()?;
-
-                // using team_type for the label since currently only DDGs have multiple
-                // retro states and their main identifier is what fleet they go in
-                let result = self
-                    .button_with_retrofit(Some(index))
-                    .label(format!("Retrofit ({})", retro.hull_type.team_type().name()));
-
-                Some(result)
-            })
+        (0..4u8).zip(&base_ship.retrofits).map(|(index, retro)| {
+            // using team_type for the label since currently only DDGs have multiple
+            // retro states and their main identifier is what fleet they go in
+            self.button_with_retrofit(Some(index))
+                .label(format!("Retrofit ({})", retro.hull_type.team_type().name()))
+        })
     }
 
     /// Gets a button that redirects to a different level.

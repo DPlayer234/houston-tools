@@ -66,10 +66,8 @@ impl<'v> View<'v> {
     ) -> (CreateEmbed<'a>, CreateActionRow<'a>) {
         let mut components = Vec::new();
 
-        for (t_index, skill) in iterator.enumerate().take(5) {
-            #[expect(clippy::cast_possible_truncation)]
-            let t_index = Some(t_index as u8);
-
+        for (t_index, skill) in (0..5u8).zip(iterator) {
+            let t_index = Some(t_index);
             if t_index == self.skill_index {
                 embed = embed
                     .color(skill.category.color_rgb())
@@ -110,18 +108,13 @@ impl<'v> View<'v> {
             .label("Back");
         let mut components = vec![components];
 
-        for (a_index, augment) in azur
-            .game_data()
-            .augments_by_ship_id(ship.group_id)
-            .enumerate()
-            .take(4)
-        {
+        let augments = azur.game_data().augments_by_ship_id(ship.group_id);
+        for (a_index, augment) in (0..4u8).zip(augments) {
             if a_index == 0 {
                 components.push(self.button_with_augment(None).label("Default"));
             }
 
-            #[expect(clippy::cast_possible_truncation)]
-            let a_index = Some(a_index as u8);
+            let a_index = Some(a_index);
             components.push(
                 self.button_with_augment(a_index)
                     .label(truncate(&augment.name, 80)),

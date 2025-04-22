@@ -113,11 +113,8 @@ impl<'v> View<'v> {
         ]));
 
         if ship.skins.len() > 1 {
-            let options: Vec<_> = ship
-                .skins
-                .iter()
-                .take(25)
-                .enumerate()
+            let options: Vec<_> = (0..25u8)
+                .zip(&ship.skins)
                 .map(|(index, skin)| self.select_with_skin_index(skin, index))
                 .collect();
 
@@ -161,12 +158,9 @@ impl<'v> View<'v> {
     fn select_with_skin_index<'a>(
         &mut self,
         skin: &'a ShipSkin,
-        index: usize,
+        index: u8,
     ) -> CreateSelectMenuOption<'a> {
-        // Just as-cast the index to u8 since we'd have problems long before an
-        // overflow.
-        #[expect(clippy::cast_possible_truncation)]
-        self.new_select_option(&skin.name, |s| &mut s.skin_index, index as u8)
+        self.new_select_option(&skin.name, |s| &mut s.skin_index, index)
     }
 
     /// Attempts to change to a part that has texts, if the view isn't already

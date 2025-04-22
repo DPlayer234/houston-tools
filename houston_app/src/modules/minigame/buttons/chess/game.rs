@@ -152,7 +152,7 @@ impl<'de> serde::Deserialize<'de> for Board {
             (num & 0x17) == num && (num & 0xF) <= 6
         }
 
-        let array = <[[u8; 5]; 5]>::deserialize(deserializer)?;
+        let array = <[[u8; N]; N]>::deserialize(deserializer)?;
         if array.as_flattened().iter().any(|n| !is_valid(*n)) {
             return Err(D::Error::custom("invalid chess piece"));
         }

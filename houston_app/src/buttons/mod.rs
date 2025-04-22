@@ -317,7 +317,7 @@ pub fn invoke_button_value<'ctx, T, I, F>(
     ctx: AnyContext<'ctx, I>,
     buf: encoding::Decoder<'ctx>,
     f: impl Fn(T, AnyContext<'ctx, I>) -> F,
-    label: &str,
+    kind: &str,
 ) -> BoxFuture<'ctx, Result>
 where
     T: fmt::Debug + Deserialize<'ctx>,
@@ -341,7 +341,7 @@ where
 
     match buf.into_button_value::<T>() {
         Ok(this) => {
-            log_interaction(label, ctx.interaction, &this);
+            log_interaction(kind, ctx.interaction, &this);
             Box::pin(f(this, ctx))
         },
         Err(why) => err_fut(why),

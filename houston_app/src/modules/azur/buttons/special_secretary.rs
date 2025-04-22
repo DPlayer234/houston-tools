@@ -128,14 +128,14 @@ macro_rules! impl_view_part_fn {
             }
             ViewPart::Chime1 => {
                 if let Some(chime) = &$words.chime {
-                    for (index, opt) in chime.iter().enumerate().take(12) {
+                    for (index, opt) in (0..12u8).zip(chime.iter()) {
                         $add!(chime index, opt);
                     }
                 }
             }
             ViewPart::Chime2 => {
                 if let Some(chime) = &$words.chime {
-                    for (index, opt) in chime.iter().enumerate().skip(12) {
+                    for (index, opt) in (0..24u8).zip(chime.iter()).skip(12) {
                         $add!(chime index, opt);
                     }
                 }
@@ -157,7 +157,7 @@ impl ViewPart {
             writeln_str!(result, "- **{label}:** {text}");
         }
 
-        fn chime(result: &mut String, hour: usize, text: &str) {
+        fn chime(result: &mut String, hour: u8, text: &str) {
             let text = escape_markdown(text);
             writeln_str!(result, "- **{hour:02}:00 Notification:** {text}");
         }
