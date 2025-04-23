@@ -22,7 +22,7 @@ bson = { version = "2.14.0", features = ["chrono-0_4"] }
 bytes = "1.10.1"
 chrono = { version = "0.4.40", default-features = false }
 dashmap = "6.1.0"
-extract_map = "0.2.0"
+extract_map = "0.3.1"
 indexmap = { version = "2.9.0", features = ["serde"] }
 log = { version = "0.4.27", features = ["serde"] }
 mongodb = "3.2.3"
