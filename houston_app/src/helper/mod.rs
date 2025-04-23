@@ -24,3 +24,27 @@ pub fn is_unique_set<T: Hash + Eq>(iter: impl IntoIterator<Item = T>) -> bool {
 
     true
 }
+
+/// Checks whether the `haystack` contains the `needle` with ASCII
+/// case-insensitive comparison.
+pub fn contains_ignore_case_ascii(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+
+    let mut haystack = haystack.as_bytes();
+    let needle = needle.as_bytes();
+    let len = needle.len();
+
+    while haystack.len() >= len {
+        // check if the new haystack part starts with the needle
+        if haystack[..len].eq_ignore_ascii_case(needle) {
+            return true;
+        }
+
+        // advance the starting position
+        haystack = &haystack[1..];
+    }
+
+    false
+}

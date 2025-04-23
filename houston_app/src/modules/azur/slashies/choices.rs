@@ -1,6 +1,59 @@
 use azur_lane::Faction;
 use azur_lane::equip::{AugmentRarity, EquipKind, EquipRarity};
 use azur_lane::ship::{HullType, ShipRarity};
+use houston_cmd::{Error, SlashArg};
+
+use crate::helper::contains_ignore_case_ascii;
+use crate::slashies::prelude::*;
+
+pub struct Ch<T>(T);
+
+impl<T> Ch<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+macro_rules! make_autocomplete_choice {
+    ($fn_name:ident, $Type:ty) => {
+        pub async fn $fn_name<'a>(
+            _ctx: Context<'a>,
+            partial: &'a str,
+        ) -> CreateAutocompleteResponse<'a> {
+            let choices: Vec<_> = <$Type>::ALL
+                .iter()
+                .enumerate()
+                .filter(|(_, t)| contains_ignore_case_ascii(t.name(), partial))
+                .take(25)
+                .map(|(i, t)| {
+                    AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i as u64))
+                })
+                .collect();
+
+            CreateAutocompleteResponse::new().set_choices(choices)
+        }
+
+        impl<'ctx> SlashArg<'ctx> for Ch<$Type> {
+            fn extract(
+                ctx: &Context<'ctx>,
+                resolved: &ResolvedValue<'ctx>,
+            ) -> Result<Self, Error<'ctx>> {
+                match resolved {
+                    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    ResolvedValue::Integer(index) => <$Type>::ALL
+                        .get(*index as usize)
+                        .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index"))
+                        .map(|&f| Self(f)),
+                    _ => Err(Error::structure_mismatch(*ctx, "expected integer")),
+                }
+            }
+
+            fn set_options(option: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
+                option.kind(CommandOptionType::Integer)
+            }
+        }
+    };
+}
 
 macro_rules! make_choice {
     ($NewType:ident for $OrigType:ident { $($(#[$attr:meta])* $name:ident),* $(,)? }) => {
@@ -23,82 +76,12 @@ macro_rules! make_choice {
     };
 }
 
-make_choice!(EFaction for Faction {
-    Unknown,
-    Universal,
-    #[name = "Eagle Union"] EagleUnion,
-    #[name = "Royal Navy"] RoyalNavy,
-    #[name = "Sakura Empire"] SakuraEmpire,
-    #[name = "Iron Blood"] IronBlood,
-    #[name = "Dragon Empery"] DragonEmpery,
-    #[name = "Sardegna Empire"] SardegnaEmpire,
-    #[name = "Northern Parliament"] NorthernParliament,
-    #[name = "Iris Libre"] IrisLibre,
-    #[name = "Vichya Dominion"] VichyaDominion,
-    #[name = "Iris Orthodoxy"] IrisOrthodoxy,
-    #[name = "Kingdom of Tulipa"] KingdomOfTulipa,
-    Tempesta,
-    #[name = "META"] Meta,
-    #[name = "Collab: Neptunia"] CollabNeptunia,
-    #[name = "Collab: Bilibili"] CollabBilibili,
-    #[name = "Collab: Utawarerumono"] CollabUtawarerumono,
-    #[name = "Collab: Kizuna AI"] CollabKizunaAI,
-    #[name = "Collab: Hololive"] CollabHololive,
-    #[name = "Collab: Venus Vacation"] CollabVenusVacation,
-    #[name = "Collab: Idolm@ster"] CollabIdolmaster,
-    #[name = "Collab: SSSS"] CollabSSSS,
-    #[name = "Collab: Atelier Ryza"] CollabAtelierRyza,
-    #[name = "Collab: Senran Kagura"] CollabSenranKagura,
-    #[name = "Collab: To Love Ru"] CollabToLoveRu,
-});
-
-make_choice!(EHullType for HullType {
-    #[name = "Unknown"] Unknown,
-    #[name = "Destroyer"] Destroyer,
-    #[name = "Light Cruiser"] LightCruiser,
-    #[name = "Heavy Cruiser"] HeavyCruiser,
-    #[name = "Battlecruiser"] Battlecruiser,
-    #[name = "Battleship"] Battleship,
-    #[name = "Light Carrier"] LightCarrier,
-    #[name = "Aircraft Carrier"] AircraftCarrier,
-    #[name = "Submarine"] Submarine,
-    #[name = "Aviation Battleship"] AviationBattleship,
-    #[name = "Repair Ship"] RepairShip,
-    #[name = "Monitor"] Monitor,
-    #[name = "Aviation Submarine"] AviationSubmarine,
-    #[name = "Large Cruiser"] LargeCruiser,
-    #[name = "Munition Ship"] MunitionShip,
-    #[name = "Missile Destroyer V"] MissileDestroyerV,
-    #[name = "Missile Destroyer M"] MissileDestroyerM,
-    #[name = "Sailing Frigate S"] FrigateS,
-    #[name = "Sailing Frigate V"] FrigateV,
-    #[name = "Sailing Frigate M"] FrigateM,
-});
+make_autocomplete_choice!(faction, Faction);
+make_autocomplete_choice!(hull_type, HullType);
+make_autocomplete_choice!(equip_kind, EquipKind);
 
 make_choice!(EShipRarity for ShipRarity {
     N, R, E, SR, UR,
-});
-
-make_choice!(EEquipKind for EquipKind {
-    #[name = "DD Gun"] DestroyerGun,
-    #[name = "CL Gun"] LightCruiserGun,
-    #[name = "CA Gun"] HeavyCruiserGun,
-    #[name = "CB Gun"] LargeCruiserGun,
-    #[name = "BB Gun"] BattleshipGun,
-    #[name = "Torpedo (Surface)"] SurfaceTorpedo,
-    #[name = "Torpedo (Submarine)"] SubmarineTorpedo,
-    #[name = "Anti-Air Gun"] AntiAirGun,
-    #[name = "Anti-Air Gun (Fuze)"] FuzeAntiAirGun,
-    #[name = "Fighter"] Fighter,
-    #[name = "Dive Bomber"] DiveBomber,
-    #[name = "Torpedo Bomber"] TorpedoBomber,
-    #[name = "Seaplane"] SeaPlane,
-    #[name = "Anti-Sub Weapon"] AntiSubWeapon,
-    #[name = "Anti-Sub Aircraft"] AntiSubAircraft,
-    #[name = "Helicopter"] Helicopter,
-    #[name = "Missile"] Missile,
-    #[name = "Cargo"] Cargo,
-    #[name = "Auxiliary"] Auxiliary,
 });
 
 make_choice!(EEquipRarity for EquipRarity {

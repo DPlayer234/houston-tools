@@ -1,4 +1,5 @@
 use super::BoardId;
+use crate::helper::contains_ignore_case_ascii;
 use crate::slashies::prelude::*;
 
 mod overview;
@@ -90,7 +91,7 @@ async fn autocomplete_board<'a>(
             .flat_map(|g| g.boards.values())
             // filter to ones whose name contains the input
             // if the input is empty, that's all of them
-            .filter(|board| board.name.contains(partial))
+            .filter(|board| contains_ignore_case_ascii(&board.name, partial))
             // map it to an autocomplete choice with the board id as the value
             .map(|board| {
                 AutocompleteChoice::new(

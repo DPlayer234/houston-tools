@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
 use serenity::builder::*;
+use serenity::model::application::InteractionResponseFlags;
+use serenity::model::channel::MessageFlags;
 
 /// Allows building a reply to an interaction, abstracting away
 /// the differences between initial responses, follow-ups, and edits.
@@ -10,8 +12,8 @@ pub struct CreateReply<'a> {
     pub(crate) embeds: Vec<CreateEmbed<'a>>,
     pub(crate) attachments: Vec<CreateAttachment<'a>>,
     pub(crate) components: Cow<'a, [CreateActionRow<'a>]>,
-    pub(crate) ephemeral: Option<bool>,
     pub(crate) allowed_mentions: Option<CreateAllowedMentions<'a>>,
+    pub(crate) flags: InteractionResponseFlags,
 }
 
 impl<'a> CreateReply<'a> {
@@ -48,7 +50,8 @@ impl<'a> CreateReply<'a> {
     ///
     /// This has no effect on edits.
     pub fn ephemeral(mut self, ephemeral: bool) -> Self {
-        self.ephemeral = Some(ephemeral);
+        self.flags
+            .set(InteractionResponseFlags::EPHEMERAL, ephemeral);
         self
     }
 
@@ -65,19 +68,17 @@ impl<'a> CreateReply<'a> {
             embeds,
             attachments,
             components,
-            ephemeral,
             allowed_mentions,
+            flags,
         } = self;
 
         let mut builder = CreateInteractionResponseMessage::new()
             .content(content)
             .embeds(embeds)
             .components(components)
-            .add_files(attachments);
+            .add_files(attachments)
+            .flags(flags);
 
-        if let Some(ephemeral) = ephemeral {
-            builder = builder.ephemeral(ephemeral);
-        }
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);
         }
@@ -92,19 +93,17 @@ impl<'a> CreateReply<'a> {
             embeds,
             attachments,
             components,
-            ephemeral,
             allowed_mentions,
+            flags,
         } = self;
 
         let mut builder = CreateInteractionResponseFollowup::new()
             .content(content)
             .embeds(embeds)
             .components(components)
-            .add_files(attachments);
+            .add_files(attachments)
+            .flags(MessageFlags::from_bits_retain(flags.bits()));
 
-        if let Some(ephemeral) = ephemeral {
-            builder = builder.ephemeral(ephemeral);
-        }
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);
         }
@@ -119,8 +118,8 @@ impl<'a> CreateReply<'a> {
             embeds,
             attachments,
             components,
-            ephemeral: _,
             allowed_mentions,
+            flags: _,
         } = self;
 
         let mut builder = EditInteractionResponse::new()

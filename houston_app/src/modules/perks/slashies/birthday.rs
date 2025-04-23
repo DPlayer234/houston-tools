@@ -60,16 +60,17 @@ pub mod birthday {
         use crate::modules::core::buttons::Delete;
         use crate::modules::perks::buttons::birthday::Set;
 
-        let components = CreateActionRow::buttons(vec![
+        let components = [
             CreateButton::new(Set::new(day_of_year, region).to_custom_id())
                 .label("Confirm")
                 .style(ButtonStyle::Success),
             CreateButton::new(Delete.to_custom_id())
                 .label("Cancel")
                 .style(ButtonStyle::Danger),
-        ]);
+        ];
 
-        let reply = CreateReply::new().embed(embed).components(vec![components]);
+        let components = [CreateActionRow::buttons(&components)];
+        let reply = CreateReply::new().embed(embed).components(&components);
 
         ctx.send(reply).await?;
         Ok(())

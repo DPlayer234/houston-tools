@@ -135,8 +135,8 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
             embeds,
             attachments,
             components,
-            ephemeral: _,
             allowed_mentions,
+            flags: _,
         } = value;
 
         let attachments = attachments.into_iter().map(Attachment::New).collect();
@@ -269,6 +269,7 @@ impl EditReply<'_> {
             components,
             allowed_mentions,
         } = self;
+
         let payload = Payload {
             r#type: 7, // UPDATE_MESSAGE
             data: EditData {
@@ -279,6 +280,7 @@ impl EditReply<'_> {
                 allowed_mentions,
             },
         };
+
         let files = payload
             .data
             .attachments
@@ -310,6 +312,7 @@ impl EditReply<'_> {
             components,
             allowed_mentions,
         } = self;
+
         let payload = EditData {
             content,
             embeds,
@@ -317,6 +320,7 @@ impl EditReply<'_> {
             components,
             allowed_mentions,
         };
+
         let files = payload
             .attachments
             .as_ref()

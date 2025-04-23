@@ -26,6 +26,10 @@ macro_rules! define_data_enum {
         }
 
         impl $name {
+            pub const ALL: &[$name] = &[
+                $(Self::$field),*
+            ];
+
             /// Gets the entire associated data structure.
             #[must_use]
             $vd const fn data(self) -> &'static $data {

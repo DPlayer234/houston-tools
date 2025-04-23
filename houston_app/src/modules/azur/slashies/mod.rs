@@ -5,7 +5,10 @@ mod autocomplete;
 mod choices;
 mod find;
 
-use choices::*;
+use azur_lane::Faction;
+use azur_lane::equip::EquipKind;
+use azur_lane::ship::HullType;
+use choices::{Ch, EAugmentRarity, EEquipRarity, EShipRarity};
 
 /// Information about mobile game Azur Lane.
 #[chat_command(
@@ -185,10 +188,12 @@ pub mod azur {
             /// A name to search for.
             name: Option<&str>,
             /// The faction to select.
-            faction: Option<EFaction>,
+            #[autocomplete = "choices::faction"]
+            faction: Option<Ch<Faction>>,
             /// The hull type to select.
             #[name = "hull-type"]
-            hull_type: Option<EHullType>,
+            #[autocomplete = "choices::hull_type"]
+            hull_type: Option<Ch<HullType>>,
             /// The rarity to select.
             rarity: Option<EShipRarity>,
             /// Whether the ships have a unique augment.
@@ -204,8 +209,8 @@ pub mod azur {
 
             let filter = Filter {
                 name,
-                faction: faction.map(EFaction::convert),
-                hull_type: hull_type.map(EHullType::convert),
+                faction: faction.map(Ch::into_inner),
+                hull_type: hull_type.map(Ch::into_inner),
                 rarity: rarity.map(EShipRarity::convert),
                 has_augment,
             };
@@ -224,9 +229,11 @@ pub mod azur {
             /// A name to search for.
             name: Option<&str>,
             /// The faction to select.
-            faction: Option<EFaction>,
+            #[autocomplete = "choices::faction"]
+            faction: Option<Ch<Faction>>,
             /// The kind to select.
-            kind: Option<EEquipKind>,
+            #[autocomplete = "choices::equip_kind"]
+            kind: Option<Ch<EquipKind>>,
             /// The rarity to select.
             rarity: Option<EEquipRarity>,
             /// Whether to show the response only to yourself.
@@ -239,8 +246,8 @@ pub mod azur {
 
             let filter = Filter {
                 name,
-                faction: faction.map(EFaction::convert),
-                kind: kind.map(EEquipKind::convert),
+                faction: faction.map(Ch::into_inner),
+                kind: kind.map(Ch::into_inner),
                 rarity: rarity.map(EEquipRarity::convert),
             };
 
@@ -259,7 +266,8 @@ pub mod azur {
             name: Option<&str>,
             /// The allowed hull type.
             #[name = "hull-type"]
-            hull_type: Option<EHullType>,
+            #[autocomplete = "choices::hull_type"]
+            hull_type: Option<Ch<HullType>>,
             /// The rarity to select.
             rarity: Option<EAugmentRarity>,
             /// The name of the ship it is uniquely for.
@@ -283,7 +291,7 @@ pub mod azur {
 
             let filter = Filter {
                 name,
-                hull_type: hull_type.map(EHullType::convert),
+                hull_type: hull_type.map(Ch::into_inner),
                 rarity: rarity.map(EAugmentRarity::convert),
                 unique_ship_id,
             };
