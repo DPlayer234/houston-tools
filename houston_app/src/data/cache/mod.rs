@@ -176,6 +176,7 @@ impl Cache {
     }
 
     /// Fetches a channel/thread via HTTP and caches it.
+    #[cold]
     async fn fetch_channel(
         &self,
         http: &Http,

@@ -40,7 +40,7 @@ pub struct GameData {
     special_secretary_simsearch: Search<()>,
 
     // use Bytes to avoid copying the data redundantly
-    chibi_sprite_cache: DashMap<String, Option<Bytes>>,
+    chibi_sprite_cache: DashMap<Box<str>, Option<Bytes>>,
 }
 
 impl GameData {
@@ -317,7 +317,7 @@ impl GameData {
                 // File read successfully, cache the data.
                 use dashmap::mapref::entry::Entry;
 
-                match self.chibi_sprite_cache.entry(image_key.to_owned()) {
+                match self.chibi_sprite_cache.entry(image_key.into()) {
                     // data race: loaded concurrently, too slow here. drop the newly read data.
                     Entry::Occupied(entry) => entry.get().clone(),
                     // still empty: wrap the current data and return it
@@ -334,9 +334,7 @@ impl GameData {
                     // attempts at loading the file.
                     NotFound | PermissionDenied => {
                         // insert, but do not replace a present entry
-                        self.chibi_sprite_cache
-                            .entry(image_key.to_owned())
-                            .or_default();
+                        self.chibi_sprite_cache.entry(image_key.into()).or_default();
                     },
                     _ => {
                         log::warn!("Failed to load chibi sprite '{image_key}': {err:?}");

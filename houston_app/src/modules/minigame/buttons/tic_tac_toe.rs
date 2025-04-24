@@ -2,10 +2,12 @@ use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
 use crate::helper::discord::unicode_emoji;
 
+const N: usize = 3;
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {
     players: PlayerState,
-    board: [[Option<Player>; 3]; 3],
+    board: [[Option<Player>; N]; N],
 }
 
 fn icon(data: &HBotData, p: Option<Player>) -> ReactionType {
@@ -17,7 +19,7 @@ fn icon(data: &HBotData, p: Option<Player>) -> ReactionType {
 }
 
 const fn flat_index(x: usize, y: usize) -> usize {
-    x + y * 3
+    x + y * N
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +36,7 @@ impl WinLine {
             Self::Row(y_actual) => y == y_actual,
             Self::Column(x_actual) => x == x_actual,
             Self::DiagTopLeft => x == y,
-            Self::DiagTopRight => 2usize.wrapping_sub(x) == y,
+            Self::DiagTopRight => (N - 1).wrapping_sub(x) == y,
         }
     }
 }
@@ -66,37 +68,32 @@ impl View {
         }
 
         macro_rules! check {
-            ($e:expr, $l:expr) => {{
-                let (p1, p2) = $e;
-                if p1 == 3 {
-                    return Some((Player::P1, $l));
+            ($e:expr, $l:expr) => {
+                match $e {
+                    (N, _) => return Some((Player::P1, $l)),
+                    (_, N) => return Some((Player::P2, $l)),
+                    _ => {},
                 }
-                if p2 == 3 {
-                    return Some((Player::P2, $l));
-                }
-            }};
+            };
         }
 
         // by column
-        for x in 0..3 {
+        for x in 0..N {
             check!(counts(self.board[x]), WinLine::Column(x));
         }
 
         // by row
-        for y in 0..3 {
-            check!(
-                counts([self.board[0][y], self.board[1][y], self.board[2][y]]),
-                WinLine::Row(y)
-            );
+        for y in 0..N {
+            check!(counts(self.board.iter().map(|r| r[y])), WinLine::Row(y));
         }
 
         // diagonals
         check!(
-            counts([self.board[0][0], self.board[1][1], self.board[2][2]]),
+            counts((0..N).map(|n| self.board[n][n])),
             WinLine::DiagTopLeft
         );
         check!(
-            counts([self.board[2][0], self.board[1][1], self.board[0][2]]),
+            counts((0..N).map(|n| self.board[n][N - n - 1])),
             WinLine::DiagTopRight
         );
 
@@ -112,11 +109,11 @@ impl View {
     where
         F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
-        let mut components = Vec::with_capacity(3);
+        let mut components = Vec::with_capacity(N);
 
-        for y in 0..3 {
-            let mut row = Vec::with_capacity(3);
-            for x in 0..3 {
+        for y in 0..N {
+            let mut row = Vec::with_capacity(N);
+            for x in 0..N {
                 let state = self.board[x][y];
 
                 #[expect(clippy::cast_possible_truncation)]
