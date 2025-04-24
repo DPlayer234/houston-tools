@@ -2,14 +2,14 @@ use darling::FromMeta as _;
 use proc_macro2::TokenStream;
 use syn::{ItemFn, ItemMod};
 
+use crate::any_command_impl::{to_command_option_shared, to_command_shared};
+use crate::args::{ChatCommandArgs, TopSubCommandArgs};
+
 mod command_emit;
 mod group_emit;
 
 use command_emit::to_command_option_command;
 use group_emit::to_command_option_group;
-
-use crate::any_command_impl::{to_command_option_shared, to_command_shared};
-use crate::args::{ChatCommandArgs, TopSubCommandArgs};
 
 pub fn entry_point(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let args = darling::ast::NestedMeta::parse_meta_list(args)?;

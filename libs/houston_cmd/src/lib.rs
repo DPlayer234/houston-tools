@@ -174,6 +174,8 @@
 //! [`InstallationContext`]: serenity::model::application::InstallationContext
 //! [`Permissions`]: serenity::model::Permissions
 
+pub use houston_cmd_macros::{chat_command, context_command, sub_command};
+
 mod args;
 mod context;
 mod error;
@@ -184,7 +186,6 @@ pub mod model;
 pub mod private;
 mod reply;
 
-pub use ::houston_cmd_macros::{chat_command, context_command, sub_command};
 pub use args::{
     ChoiceArg, FromStrArg, MessageContextArg, ResolvedOption, SlashArg, UserContextArg,
 };

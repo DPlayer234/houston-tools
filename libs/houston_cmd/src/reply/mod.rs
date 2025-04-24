@@ -1,8 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-pub use create::CreateReply;
-pub use edit::EditReply;
-pub use handle::ReplyHandle;
 use serenity::builder::*;
 
 use crate::context::Context;
@@ -10,6 +7,10 @@ use crate::context::Context;
 mod create;
 mod edit;
 mod handle;
+
+pub use create::CreateReply;
+pub use edit::EditReply;
+pub use handle::ReplyHandle;
 
 pub const UNSENT: usize = 0;
 const DEFER: usize = 1;

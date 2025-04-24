@@ -7,14 +7,13 @@ use criterion as _;
 
 pub mod fuzzy;
 pub mod iter;
+mod macros;
 pub mod mem;
+mod private;
 pub mod range;
 pub mod str_as_data;
 pub mod term;
 pub mod text;
-
-mod macros;
-mod private;
 
 #[expect(deprecated, reason = "to be removed in a future version")]
 pub use private::hash::{hash, hash_default};

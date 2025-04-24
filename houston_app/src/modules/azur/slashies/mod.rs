@@ -1,3 +1,7 @@
+use azur_lane::Faction;
+use azur_lane::equip::EquipKind;
+use azur_lane::ship::HullType;
+
 use super::buttons;
 use crate::slashies::prelude::*;
 
@@ -5,9 +9,6 @@ mod autocomplete;
 mod choices;
 mod find;
 
-use azur_lane::Faction;
-use azur_lane::equip::EquipKind;
-use azur_lane::ship::HullType;
 use choices::{Ch, EAugmentRarity, EEquipRarity, EShipRarity};
 
 /// Information about mobile game Azur Lane.

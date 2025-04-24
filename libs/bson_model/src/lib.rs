@@ -7,6 +7,8 @@
 //!
 //! See the documentation on the [`ModelDocument`] trait, which can be derived.
 
+pub use bson_model_macros::ModelDocument;
+
 mod filter;
 mod model;
 #[doc(hidden)]
@@ -14,7 +16,6 @@ pub mod private;
 mod sort;
 mod update;
 
-pub use bson_model_macros::ModelDocument;
 pub use filter::Filter;
 pub use model::{ModelDocument, ModelField};
 pub use sort::Sort;

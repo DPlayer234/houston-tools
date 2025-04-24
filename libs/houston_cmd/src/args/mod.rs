@@ -1,19 +1,19 @@
 use std::borrow::Cow;
 
+pub use houston_cmd_macros::ChoiceArg;
 use serenity::builder::CreateCommandOption;
 use serenity::model::prelude::*;
+
+use crate::context::Context;
+use crate::error::Error;
+use crate::model::Choice;
 
 mod impls;
 mod resolver;
 mod str_arg;
 
-pub use ::houston_cmd_macros::ChoiceArg;
 pub use resolver::CommandOptionResolver;
 pub use str_arg::FromStrArg;
-
-use crate::context::Context;
-use crate::error::Error;
-use crate::model::Choice;
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
