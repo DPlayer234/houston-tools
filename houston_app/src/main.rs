@@ -19,7 +19,6 @@ async fn main() -> anyhow::Result<()> {
 
     use crate::build::{GIT_HASH, VERSION};
     use crate::data::cache::CacheUpdateHandler;
-    use crate::modules::Module as _;
     use crate::prelude::*;
 
     // run the program and clean up
@@ -51,8 +50,9 @@ async fn main() -> anyhow::Result<()> {
         let bot_data = Arc::new(HBotData::new(config.bot));
         let init = bot_data.init()?;
 
-        let event_handler = buttons::EventHandler::new(init.buttons)?;
-        let event_handler = HEventHandler::new(event_handler, bot_data.config());
+        let event_handler = HEventHandler {
+            handlers: init.event_handlers.into_boxed_slice(),
+        };
 
         let framework = Framework::new()
             .commands(init.commands)
@@ -115,22 +115,6 @@ async fn main() -> anyhow::Result<()> {
     /// Type to handle various Discord events.
     struct HEventHandler {
         handlers: Box<[Box<dyn EventHandler>]>,
-    }
-
-    impl HEventHandler {
-        fn new(button_handler: buttons::EventHandler, config: &config::HBotConfig) -> Self {
-            let mut handlers = <Vec<Box<dyn EventHandler>>>::new();
-
-            // fixed handlers
-            handlers.push(Box::new(button_handler));
-
-            // add module handlers
-            handlers.extend(modules::iter_modules!(config, |m| m.event_handler()).flatten());
-
-            Self {
-                handlers: handlers.into_boxed_slice(),
-            }
-        }
     }
 
     #[serenity::async_trait]

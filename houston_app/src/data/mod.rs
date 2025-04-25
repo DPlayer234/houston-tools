@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use serenity::gateway::client::EventHandler;
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
@@ -88,14 +89,25 @@ impl HBotData {
 
     /// Gets the init data needed based on the enabled modules.
     pub fn init(&self) -> Result<HInit> {
+        use crate::buttons::EventHandler;
+
         let config = self.config();
         let mut startup = HInit::default();
+        let mut buttons = Vec::new();
+
         for_each_module!(config, |m| {
             m.validate(config)?;
             startup.intents |= m.intents(config);
             startup.commands.extend(m.commands(config));
-            startup.buttons.extend(m.buttons(config));
+            buttons.extend(m.buttons(config));
+            startup.event_handlers.extend(m.event_handler());
         });
+
+        if !buttons.is_empty() {
+            let button_handler = EventHandler::new(buttons)?;
+            startup.event_handlers.push(Box::new(button_handler));
+        }
+
         Ok(startup)
     }
 
@@ -155,14 +167,13 @@ impl HBotData {
 }
 
 /// Data needed for bot startup.
-#[derive(Debug)]
 pub struct HInit {
     /// Intents used by this app.
     pub intents: GatewayIntents,
     /// Commands to register.
     pub commands: Vec<houston_cmd::model::Command>,
-    /// Buttons to register.
-    pub buttons: Vec<crate::buttons::ButtonAction>,
+    /// Event handlers to register.
+    pub event_handlers: Vec<Box<dyn EventHandler>>,
 }
 
 impl Default for HInit {
@@ -171,7 +182,7 @@ impl Default for HInit {
             // default isn't empty but non_privileged
             intents: GatewayIntents::empty(),
             commands: Vec::new(),
-            buttons: Vec::new(),
+            event_handlers: Vec::new(),
         }
     }
 }

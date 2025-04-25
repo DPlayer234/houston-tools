@@ -57,14 +57,6 @@ macro_rules! for_each_module {
             $body
         }
     }};
-    (@inner(array) $module:expr, $config:expr, |$var:ident| $body:expr) => {{
-        let $var = $module;
-        if $crate::modules::Module::enabled(&$var, $config) {
-            ::std::option::Option::Some($body)
-        } else {
-            ::std::option::Option::None
-        }
-    }};
     (@mode($mode:tt) $config:expr, |$var:ident| $body:expr) => {[
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::core::Module, $config, |$var| $body),
         $crate::modules::for_each_module!(@inner($mode) $crate::modules::azur::Module, $config, |$var| $body),
@@ -81,16 +73,7 @@ macro_rules! for_each_module {
     }};
 }
 
-/// Run an expression against every enabled module and evalatues each expression
-/// as an iterator. The expression is eagerly evalualted.
-macro_rules! iter_modules {
-    ($config:expr, |$var:ident| $body:expr) => {{
-        let array = $crate::modules::for_each_module!(@mode(array) $config, |$var| $body);
-        ::std::iter::Iterator::flatten(::std::iter::IntoIterator::into_iter(array))
-    }};
-}
-
-pub(crate) use {for_each_module, iter_modules};
+pub(crate) use for_each_module;
 
 pub trait Module: Sized {
     /// Whether the module is enabled.
