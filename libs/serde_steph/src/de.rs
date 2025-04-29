@@ -29,6 +29,9 @@ where
 ///
 /// If you want to handle trailing bytes yourself, use
 /// [`Deserializer::from_reader`].
+///
+/// If you use multiple reader types, consider passing them as [`&mut dyn
+/// io::Read`](io::Read) to reduce the generated code size.
 pub fn from_reader<T, R>(reader: R) -> Result<T>
 where
     T: de::DeserializeOwned,
@@ -137,6 +140,9 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     /// This is gives more control than [`from_reader`], insofar that it allows
     /// manual handling of the remainder or continuing deserialization after the
     /// last object.
+    ///
+    /// If you use multiple reader types, consider passing them as [`&mut dyn
+    /// io::Read`](io::Read) to reduce the generated code size.
     ///
     /// # Examples
     ///

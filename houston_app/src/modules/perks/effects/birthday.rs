@@ -88,7 +88,6 @@ impl Shape for Birthday {
         }
 
         log::info!("End birthday of {} in {}.", args.user_id, args.guild_id);
-
         Ok(())
     }
 

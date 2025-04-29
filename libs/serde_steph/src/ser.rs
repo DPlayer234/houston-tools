@@ -20,6 +20,9 @@ where
 }
 
 /// Serializes a value to a [`io::Write`].
+///
+/// If you use multiple writer types, consider passing them as [`&mut dyn
+/// io::Write`](io::Write) to reduce the generated code size.
 pub fn to_writer<T, W>(writer: W, value: &T) -> Result<()>
 where
     T: ser::Serialize,
@@ -38,7 +41,10 @@ pub struct Serializer<W> {
 }
 
 impl<W: io::Write> Serializer<W> {
-    /// Creates a new deserializer that reads a value from a [`io::Write`].
+    /// Creates a new deserializer that writes a value to a [`io::Write`].
+    ///
+    /// If you use multiple writer types, consider passing them as [`&mut dyn
+    /// io::Write`](io::Write) to reduce the generated code size.
     pub fn from_writer(writer: W) -> Self {
         Self { writer }
     }
@@ -198,7 +204,7 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq> {
         let len = len.ok_or(Error::LengthRequired)?;
-        Ok(SerializeList(SerializeLen::new(self, len)?))
+        Ok(SerializeList(SerializeLen::begin(self, len)?))
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
@@ -226,11 +232,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
         let len = len.ok_or(Error::LengthRequired)?;
-        Ok(SerializeMap(SerializeLen::new(self, len)?))
+        Ok(SerializeMap(SerializeLen::begin(self, len)?))
     }
 
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
-        Ok(SerializeStruct(SerializeLen::new(self, len)?))
+        Ok(SerializeStruct(SerializeLen::begin(self, len)?))
     }
 
     fn serialize_struct_variant(
@@ -241,7 +247,7 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         self.serialize_u32(variant_index)?;
-        Ok(SerializeStruct(SerializeLen::new(self, len)?))
+        Ok(SerializeStruct(SerializeLen::begin(self, len)?))
     }
 
     fn collect_str<T>(self, value: &T) -> Result<()>
@@ -304,7 +310,7 @@ struct SerializeLen<'a, W> {
 
 impl<'a, W: io::Write> SerializeLen<'a, W> {
     /// Creates a new instance and writes the length prefix.
-    fn new(serializer: &'a mut Serializer<W>, len: usize) -> Result<Self> {
+    fn begin(serializer: &'a mut Serializer<W>, len: usize) -> Result<Self> {
         serializer.write_leb128(len)?;
         Ok(Self { serializer, len })
     }

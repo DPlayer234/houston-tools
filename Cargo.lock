@@ -2593,7 +2593,7 @@ dependencies = [
 
 [[package]]
 name = "serde_steph"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "indexmap 2.9.0",
  "serde",

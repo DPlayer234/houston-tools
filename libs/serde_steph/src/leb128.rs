@@ -31,6 +31,7 @@ trait Uleb128Encode:
     + From<u8>
 {
     type Buf: AsMut<[u8]> + Default;
+    const BITS: usize;
 
     fn trunc_u8(self) -> u8;
 }
@@ -57,14 +58,6 @@ impl<T: Uleb128Encode> Leb128 for T {
     fn from_unsigned(value: Self::Unsigned) -> Self {
         value
     }
-}
-
-const fn buf_size<T>() -> usize {
-    (bitness::<T>() + 7) / 7
-}
-
-const fn bitness<T>() -> usize {
-    size_of::<T>() * 8
 }
 
 pub fn write<T, W>(writer: W, x: T) -> Result<()>
@@ -130,7 +123,7 @@ where
         // ensure the shift for the next iteration isn't greater than the
         // bit-count of `T`. the compiler can turn this into a hard cutoff
         s += 7;
-        if s >= bitness::<T>() {
+        if s >= T::BITS {
             return Err(Error::IntegerOverflow);
         }
     }
@@ -139,7 +132,8 @@ where
 macro_rules! impl_uleb {
     ($($Ty:ty)*) => { $(
         impl Uleb128Encode for $Ty {
-            type Buf = [u8; buf_size::<Self>()];
+            type Buf = [u8; (Self::BITS as usize + 7) / 7];
+            const BITS: usize = Self::BITS as usize;
 
             #[expect(clippy::cast_possible_truncation)]
             fn trunc_u8(self) -> u8 {
