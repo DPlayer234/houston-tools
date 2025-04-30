@@ -117,7 +117,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     // when that doesn't work out, also fine, but usually the db isn't that slow.
     // ... except we also don't want to defer in the successful case because edits
     // can't trigger notifications. so don't defer at all if possible.
-    let (cooldown_check, defer) = if_too_long(cooldown_check, defer).await;
+    let (cooldown_check, defer) = if_too_long(pin!(cooldown_check), pin!(defer)).await;
 
     // evaluate cooldown result
     cooldown_check?;
@@ -208,12 +208,11 @@ async fn throw_cooldown_error(ctx: Context<'_>) -> Result {
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
 }
 
-async fn if_too_long<F, I>(fut: F, intercept: I) -> (F::Output, Option<I::Output>)
+async fn if_too_long<F, I>(mut fut: F, intercept: I) -> (F::Output, Option<I::Output>)
 where
-    F: Future,
-    I: Future,
+    F: Future + Unpin,
+    I: Future + Unpin,
 {
-    let mut fut = pin!(fut);
     match timeout(TOO_LONG, &mut fut).await {
         Ok(f) => (f, None),
         Err(_) => tokio::join!(fut, async { Some(intercept.await) }),

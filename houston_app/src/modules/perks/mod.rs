@@ -194,8 +194,10 @@ async fn check_expiry(ctx: &Context, now: DateTime<Utc>) -> Result {
             perk.guild
         );
 
+        // size of the `disable` future blows up the size `check_perks`
+        // so it is boxed here since it's also rarely reached
         let args = effects::Args::new(ctx, perk.guild, perk.user);
-        perk.effect.disable(args).await?;
+        Box::pin(perk.effect.disable(args)).await?;
 
         model::ActivePerk::collection(db)
             .delete_one(perk.self_filter())

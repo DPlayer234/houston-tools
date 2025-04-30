@@ -82,8 +82,9 @@ impl Shape for RainbowRole {
                     .colour(color)
                     .audit_log_reason("rainbow role cycle");
 
-                let role = guild
-                    .edit_role(&ctx.http, entry.role, edit)
+                // size of the `edit_role` future blows up the size `check_perks`
+                // so it is boxed here since it's also rarely reached
+                let role = Box::pin(guild.edit_role(&ctx.http, entry.role, edit))
                     .await
                     .context("could not update rainbow role color")?;
 

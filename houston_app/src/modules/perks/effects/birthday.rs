@@ -153,8 +153,11 @@ impl Shape for Birthday {
                         continue 'guild;
                     }
 
+                    // size of the `enable` future blows up the size `check_perks`
+                    // so it is boxed here since it's also rarely reached
                     let args = Args::new(ctx, guild, user);
-                    let result = self.enable(args, None).await;
+                    let result = Box::pin(self.enable(args, None)).await;
+
                     if super::is_known_member(result)? {
                         ActivePerk::collection(db)
                             .set_enabled(guild, user, Effect::Birthday, tomorrow)

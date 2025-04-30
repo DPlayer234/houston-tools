@@ -168,28 +168,28 @@ macro_rules! interaction_impl {
                 &self.user
             }
 
-            async fn create_response(
+            fn create_response(
                 &self,
                 http: &Http,
                 response: CreateInteractionResponse<'_>,
-            ) -> serenity::Result<()> {
-                self.create_response(http, response).await
+            ) -> impl Future<Output = serenity::Result<()>> {
+                self.create_response(http, response)
             }
 
-            async fn create_followup(
+            fn create_followup(
                 &self,
                 http: &Http,
                 response: CreateInteractionResponseFollowup<'_>,
-            ) -> serenity::Result<Message> {
-                self.create_followup(http, response).await
+            ) -> impl Future<Output = serenity::Result<Message>> {
+                self.create_followup(http, response)
             }
 
-            async fn edit_response(
+            fn edit_response(
                 &self,
                 http: &Http,
                 edit: EditInteractionResponse<'_>,
-            ) -> serenity::Result<Message> {
-                self.edit_response(http, edit).await
+            ) -> impl Future<Output = serenity::Result<Message>> {
+                self.edit_response(http, edit)
             }
         }
     )* };
