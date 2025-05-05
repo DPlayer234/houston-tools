@@ -467,10 +467,8 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
             .map(|m| unsafe { self.state.make_match(m) })
     }
 
-    fn last(self) -> Option<Self::Item> {
-        self.inner
-            .last()
-            .map(|m| unsafe { self.state.make_match(m) })
+    fn last(mut self) -> Option<Self::Item> {
+        self.next_back()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

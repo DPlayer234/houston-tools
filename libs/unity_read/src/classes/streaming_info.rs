@@ -42,9 +42,9 @@ impl StreamingInfo {
     pub fn load_data<'a>(&self, fs: &'a UnityFsFile<'a>) -> crate::Result<&'a [u8]> {
         let path = self
             .path
-            .split('/')
-            .last()
+            .rsplit_once('/')
             .ok_or(Error::InvalidData("streaming data path incorrect"))?
+            .1
             .as_bytes();
 
         let node = fs
