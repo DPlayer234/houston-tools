@@ -3,11 +3,11 @@ use std::fmt::{Display, Formatter, Result};
 use azur_lane::equip::*;
 use azur_lane::ship::StatKind;
 
-/// Implements [`Display`] to nicely format a equipment stats.
+/// Implements [`Display`] to nicely format equipment stats.
 #[must_use]
 pub struct EquipStats<'a>(&'a Equip);
 
-/// Implements [`Display`] to nicely format a augment stats.
+/// Implements [`Display`] to nicely format augment stats.
 #[must_use]
 pub struct AugmentStats<'a>(&'a Augment);
 

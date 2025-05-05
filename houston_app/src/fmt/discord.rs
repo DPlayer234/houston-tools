@@ -27,7 +27,9 @@ pub fn escape_markdown(input: &str) -> impl Display + '_ {
 
 #[must_use]
 pub fn id_suffix(id: impl Into<u64>) -> impl Display {
-    IdSuffix::new(id.into())
+    let id: u64 = id.into();
+    let id = (id % 10_000_000) as u32;
+    utils::format_owned!("..{id:07}")
 }
 
 #[must_use]
@@ -35,29 +37,16 @@ pub fn interaction_location(
     guild_id: Option<GuildId>,
     channel: Option<&GenericInteractionChannel>,
 ) -> impl Display + '_ {
-    enum Location<'a> {
-        Dm,
-        Guild(IdSuffix),
-        Channel(IdSuffix, &'a str),
-    }
-
-    impl Display for Location<'_> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            match self {
-                Location::Dm => f.write_str("DM"),
-                Location::Guild(guild) => write!(f, "{guild}"),
-                Location::Channel(guild, channel) => write!(f, "{guild} `{channel}`"),
-            }
+    utils::text::from_fn(move |f| {
+        match (
+            guild_id.map(id_suffix),
+            channel.and_then(|c| c.base().name.as_deref()),
+        ) {
+            (Some(guild_id), Some(channel)) => write!(f, "{guild_id} `{channel}`"),
+            (Some(guild_id), None) => write!(f, "{guild_id}"),
+            (None, _) => f.write_str("DM"),
         }
-    }
-
-    let guild_id = guild_id.map(|g| IdSuffix::new(g.into()));
-    let channel_name = channel.and_then(|c| c.base().name.as_deref());
-    match (guild_id, channel_name) {
-        (Some(guild_id), Some(channel_name)) => Location::Channel(guild_id, channel_name),
-        (Some(guild_id), None) => Location::Guild(guild_id),
-        (None, _) => Location::Dm,
-    }
+    })
 }
 
 /// Allows mentioning a timestamp in Discord messages.
@@ -254,18 +243,5 @@ fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> Re
         ResolvedTarget::User(v, _) => f.write_str(&v.name),
         ResolvedTarget::Message(v) => v.id.fmt(f),
         _ => f.write_str("<unknown>"),
-    }
-}
-struct IdSuffix(u32);
-
-impl Display for IdSuffix {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "..{:07}", self.0)
-    }
-}
-
-impl IdSuffix {
-    fn new(id: u64) -> Self {
-        Self((id % 10_000_000) as u32)
     }
 }

@@ -48,6 +48,19 @@ where
     }
 }
 
+/// Creates a [`Display`] value with [`format_args`] syntax that tries to own
+/// its captures.
+///
+/// Optionally, you may specify how additional named captures upfront:
+///
+/// ```
+/// let data = vec![0, 1, 2];
+/// // capture a clone of `data` as `c`
+/// let fmt = utils::format_owned!([c = data.clone()], "data is {c:?}");
+/// println!("{fmt}");
+/// ```
+///
+/// This macro returns a [`crate::text::FromFn`].
 #[macro_export]
 macro_rules! format_owned {
     ([$($n:ident = $cap:expr),* $(,)?], $($t:tt)*) => {{
