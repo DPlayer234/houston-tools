@@ -301,3 +301,142 @@ fn round_trip_io_read() {
     assert_eq!(*from_reader.cow, *b"abcde");
     assert_eq!(from_reader.vec, b"ABCDEFG");
 }
+
+#[test]
+fn de_faulty_seq_visitor() {
+    use std::fmt;
+    use std::result::Result;
+
+    use serde::{Deserializer as _, de};
+
+    let seq = Deserializer::from_slice(&[3, 1, 2, 3]).deserialize_seq(Faulty);
+    let map = Deserializer::from_slice(&[3, 1, 2, 3, 4, 5, 6]).deserialize_map(Faulty);
+    let tuple = Deserializer::from_slice(&[1, 2, 3]).deserialize_tuple(3, Faulty);
+
+    assert!(
+        matches!(seq, Err(Error::ShortSeqRead)),
+        "seq length must be wrong"
+    );
+    assert!(
+        matches!(map, Err(Error::ShortSeqRead)),
+        "map length must be wrong"
+    );
+    assert!(
+        matches!(tuple, Err(Error::ShortSeqRead)),
+        "tuple length must be wrong"
+    );
+
+    /// Visitor that always reads 2x [`u32`].
+    pub struct Faulty;
+
+    impl<'de> de::Visitor<'de> for Faulty {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("sequence")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            seq.next_element::<u32>()?;
+            seq.next_element::<u32>()?;
+            Ok(())
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::MapAccess<'de>,
+        {
+            map.next_entry::<u32, u32>()?;
+            Ok(())
+        }
+    }
+}
+
+#[test]
+fn ser_faulty_len() {
+    use std::result::Result;
+
+    use serde::ser::{SerializeMap as _, SerializeSeq as _, SerializeStruct as _};
+
+    let mut buf = [0u8; 256];
+
+    let seq_short = to_writer(buf.as_mut_slice(), &Seq(2, 3));
+    let seq_long = to_writer(buf.as_mut_slice(), &Seq(3, 2));
+    let map_short = to_writer(buf.as_mut_slice(), &Map(2, 3));
+    let map_long = to_writer(buf.as_mut_slice(), &Map(3, 2));
+    let struct_short = to_writer(buf.as_mut_slice(), &Struct(2, 3));
+    let struct_long = to_writer(buf.as_mut_slice(), &Struct(3, 2));
+
+    assert!(
+        matches!(seq_short, Err(Error::LengthIncorrect)),
+        "seq is too short"
+    );
+    assert!(
+        matches!(seq_long, Err(Error::LengthIncorrect)),
+        "seq is too long"
+    );
+    assert!(
+        matches!(map_short, Err(Error::LengthIncorrect)),
+        "map is too short"
+    );
+    assert!(
+        matches!(map_long, Err(Error::LengthIncorrect)),
+        "map is too long"
+    );
+    assert!(
+        matches!(struct_short, Err(Error::LengthIncorrect)),
+        "struct is too short"
+    );
+    assert!(
+        matches!(struct_long, Err(Error::LengthIncorrect)),
+        "struct is too long"
+    );
+
+    struct Seq(usize, usize);
+
+    impl Serialize for Seq {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let mut seq = serializer.serialize_seq(Some(self.0))?;
+            for _ in 0..self.1 {
+                seq.serialize_element(&1usize)?;
+            }
+            seq.end()
+        }
+    }
+
+    struct Map(usize, usize);
+
+    impl Serialize for Map {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let mut map = serializer.serialize_map(Some(self.0))?;
+            for _ in 0..self.1 {
+                map.serialize_entry(&1usize, &1usize)?;
+            }
+            map.end()
+        }
+    }
+
+    struct Struct(usize, usize);
+
+    impl Serialize for Struct {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let mut tuple = serializer.serialize_struct("Struct", self.0)?;
+            for _ in 0..self.1 {
+                tuple.serialize_field("hi", &1usize)?;
+            }
+            tuple.end()
+        }
+    }
+}

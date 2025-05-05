@@ -405,7 +405,8 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         let value = visitor.visit_seq(self.list_access(&mut len))?;
-        ensure_remainder_zero(value, len)
+        ensure_remainder_zero(len)?;
+        Ok(value)
     }
 
     fn deserialize_tuple_struct<V>(
@@ -426,7 +427,8 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     {
         let mut len: usize = self.read_leb128()?;
         let value = visitor.visit_map(self.list_access(&mut len))?;
-        ensure_remainder_zero(value, len)
+        ensure_remainder_zero(len)?;
+        Ok(value)
     }
 
     fn deserialize_struct<V>(
@@ -487,9 +489,9 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     }
 }
 
-fn ensure_remainder_zero<T>(value: T, len: usize) -> Result<T> {
+fn ensure_remainder_zero(len: usize) -> Result<()> {
     if len == 0 {
-        Ok(value)
+        Ok(())
     } else {
         Err(Error::ShortSeqRead)
     }
