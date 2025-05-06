@@ -3,59 +3,41 @@
 
 use std::fmt::{Arguments, Write};
 
-// re-export these macros so they are usable with a wildcard import
-pub use crate::{write_str, writeln_str};
-
-/// [`Write`] trait equivalent for the [`write_str`] macro.
+/// Infallible [`Write`] equivalent.
+///
+/// Intended for using the [`write`] macro with [`String`] without having to
+/// handle the invalid error case.
+///
+/// This trait does not provide functions such as `write_str`. Instead, use
+/// [`String::push_str`] or similar.
 pub trait WriteStr {
-    /// Writes the arguments to the buffer.
-    fn write_str_fmt(&mut self, args: Arguments<'_>);
-
-    /// Writes the arguments to the buffer, followed by a line-feed character
-    /// (`\n`).
-    fn writeln_str_fmt(&mut self, args: Arguments<'_>);
+    /// Glue for usage of the [`write!`] macro with implementors of this trait.
+    ///
+    /// This method should generally not be invoked manually, but rather through
+    /// the [`write!`] macro itself.
+    ///
+    /// This function may panic when debug assertions are enabled to report an
+    /// incorrect formatting implementation.
+    fn write_fmt(&mut self, args: Arguments<'_>);
 }
 
 impl WriteStr for String {
-    fn write_str_fmt(&mut self, args: Arguments<'_>) {
+    fn write_fmt(&mut self, args: Arguments<'_>) {
         #[cold]
         #[track_caller]
-        fn fail() {
+        fn fail_write_fmt() {
             panic!("write_fmt failed unexpectedly even though the buffer never returns an error");
         }
 
         let result = Write::write_fmt(self, args);
         if cfg!(debug_assertions) && result.is_err() {
-            fail();
+            fail_write_fmt();
         }
     }
+}
 
-    fn writeln_str_fmt(&mut self, args: Arguments<'_>) {
-        self.write_str_fmt(args);
-        self.push('\n');
+impl<W: WriteStr> WriteStr for &mut W {
+    fn write_fmt(&mut self, args: Arguments<'_>) {
+        (**self).write_fmt(args);
     }
-}
-
-/// Similar to [`write`], except it calls a method named `write_str_fmt`
-/// and is generally intended to be infallible.
-///
-/// The buffer would generally be [`String`] and [`WriteStr`] should be
-/// imported.
-#[macro_export]
-macro_rules! write_str {
-    ($buf:expr, $($t:tt)*) => {
-        $buf.write_str_fmt(::std::format_args!($($t)*))
-    };
-}
-
-/// Similar to [`writeln`], except it calls a method named `writeln_str_fmt`
-/// and is generally intended to be infallible.
-///
-/// The buffer would generally be [`String`] and [`WriteStr`] should be
-/// imported.
-#[macro_export]
-macro_rules! writeln_str {
-    ($buf:expr, $($t:tt)*) => {
-        $buf.writeln_str_fmt(::std::format_args!($($t)*))
-    };
 }

@@ -1,6 +1,6 @@
 use azur_lane::Faction;
 use azur_lane::ship::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::acknowledge_unloaded;
 use super::search::{Filtered, Filtering, PAGE_SIZE};
@@ -41,7 +41,7 @@ impl<'v> View<'v> {
         for ship in iter.by_ref().take(PAGE_SIZE) {
             let emoji = super::hull_emoji(ship.hull_type, data);
 
-            writeln_str!(
+            writeln!(
                 desc,
                 "- {emoji} **{}** [{} {} {}]",
                 ship.name,

@@ -1,5 +1,6 @@
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
+use crate::fmt::StringExt as _;
 use crate::modules::perks::Item;
 use crate::modules::perks::model::Wallet;
 use crate::slashies::prelude::*;
@@ -34,11 +35,11 @@ pub async fn wallet(
         let owned = wallet.item(item);
         if owned != 0 {
             let name = item.info(perks).name;
-            writeln_str!(description, "- **{name}:** x{owned}");
+            writeln!(description, "- **{name}:** x{owned}");
         }
     }
 
-    let description = crate::fmt::written_or(description, "<None>");
+    let description = description.or_default("<None>");
 
     let author = format!("{}: Wallet", member.display_name());
     let author = CreateEmbedAuthor::new(author).icon_url(member.face());

@@ -7,14 +7,31 @@ pub mod time;
 
 pub use join::Join;
 
-/// If non-empty, turns the string into a [`Cow::Owned`].
-///
-/// Otherwise returns a [`Cow::Borrowed`] with the `default`.
-pub fn written_or(string: String, default: &str) -> Cow<'_, str> {
-    if string.is_empty() {
-        Cow::Borrowed(default)
-    } else {
-        Cow::Owned(string)
+/// Extension methods for [`String`].
+pub trait StringExt {
+    /// Gets the written [`String`] if it isn't empty.
+    ///
+    /// Returns [`None`] if it is empty.
+    fn or_none(self) -> Option<String>;
+
+    /// Gets the written [`String`] if it isn't empty, or returns the `default`.
+    ///
+    /// Returns [`Cow::Owned`] with the written value if it isn't empty,
+    /// otherwise returns [`Cow::Borrowed`] with `default`.
+    fn or_default(self, default: &str) -> Cow<'_, str>;
+}
+
+impl StringExt for String {
+    fn or_none(self) -> Option<Self> {
+        (!self.is_empty()).then_some(self)
+    }
+
+    fn or_default(self, default: &str) -> Cow<'_, str> {
+        if self.is_empty() {
+            Cow::Borrowed(default)
+        } else {
+            Cow::Owned(self)
+        }
     }
 }
 
@@ -55,7 +72,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use utils::text::write_str::*;
+    use utils::text::WriteStr as _;
 
     use super::replace_holes;
 
@@ -66,8 +83,8 @@ mod tests {
         let haystack = "Look, look! {user} reached {role}!";
 
         let result = replace_holes(haystack, |out, n| match n {
-            "user" => write_str!(out, "<@{user}>"),
-            "role" => write_str!(out, "<@&{role}>"),
+            "user" => write!(out, "<@{user}>"),
+            "role" => write!(out, "<@&{role}>"),
             _ => {},
         });
 

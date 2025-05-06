@@ -288,8 +288,7 @@ impl ButtonReply for View<'_> {
 
 /// Constructs skill barrage display data.
 fn get_skills_extra_summary(skill: &Skill) -> String {
-    use utils::text::InlineStr;
-    use utils::text::write_str::*;
+    use utils::text::{InlineStr, WriteStr as _};
 
     let mut buf = String::new();
     write_join_map(
@@ -353,7 +352,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
                 write_barrage_summary(buf, bullets, Some(attack.target))
             },
             WeaponData::Aircraft(aircraft) => try_write_or_undo(buf, |buf| {
-                writeln_str!(
+                writeln!(
                     buf,
                     "`{: >5} |{: >3} x Aircraft                             |    `",
                     attack.target.short_name(),
@@ -398,7 +397,7 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
             } else {
                 " "
             };
-            write_str!(
+            write!(
                 buf,
                 // damage with coeff |
                 // ammo type & mods |

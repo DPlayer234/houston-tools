@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
 use crate::helper::time::get_startup_time;
@@ -43,21 +43,21 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
     let mut modules = String::new();
 
     // core must be enabled -- this command is part of it
-    writeln_str!(modules, "**core**");
+    writeln!(modules, "**core**");
 
     if crate::modules::azur::Module.enabled(config) {
         let azur = config.azur_raw()?;
         let load_label = if azur.loaded() { "loaded" } else { "unloaded" };
-        writeln_str!(modules, "**azur:** {load_label}");
+        writeln!(modules, "**azur:** {load_label}");
     }
 
     if crate::modules::media_react::Module.enabled(config) {
         let channels = config.media_react.len();
-        writeln_str!(modules, "**media_react:** channels: {channels}");
+        writeln!(modules, "**media_react:** channels: {channels}");
     }
 
     if crate::modules::minigame::Module.enabled(config) {
-        writeln_str!(modules, "**minigame**");
+        writeln!(modules, "**minigame**");
     }
 
     if crate::modules::perks::Module.enabled(config) {
@@ -84,11 +84,11 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
     }
 
     if crate::modules::profile::Module.enabled(config) {
-        writeln_str!(modules, "**profile**");
+        writeln!(modules, "**profile**");
     }
 
     if crate::modules::rep::Module.enabled(config) {
-        writeln_str!(modules, "**rep**");
+        writeln!(modules, "**rep**");
     }
 
     if crate::modules::starboard::Module.enabled(config) {
@@ -99,7 +99,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
             .map(|v| v.boards.len())
             .sum::<usize>();
 
-        writeln_str!(modules, "**starboard:** guilds: {guilds}, boards: {boards}");
+        writeln!(modules, "**starboard:** guilds: {guilds}, boards: {boards}");
     }
 
     let mut embed = CreateEmbed::new()

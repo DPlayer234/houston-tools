@@ -2,8 +2,7 @@ use bson::Document;
 use chrono::Utc;
 use serenity::prelude::*;
 use utils::iter::IteratorExt as _;
-use utils::text::truncate;
-use utils::text::write_str::*;
+use utils::text::{WriteStr as _, truncate};
 
 use crate::buttons::prelude::*;
 use crate::config::emoji;
@@ -107,14 +106,14 @@ impl View {
             buttons.push(button);
 
             if let Some(active) = find(&active, effect) {
-                writeln_str!(
+                writeln!(
                     description,
                     "- **{}:** ✅ until {}",
                     info.name,
                     active.until.short_date_time(),
                 );
             } else {
-                writeln_str!(
+                writeln!(
                     description,
                     "- **{}:** {}{} for {}",
                     info.name,
@@ -138,21 +137,19 @@ impl View {
 
             buttons.push(button);
 
-            write_str!(
+            write!(
                 description,
                 "- **{}:** {}{}",
-                info.name,
-                perks.cash_name,
-                st.cost,
+                info.name, perks.cash_name, st.cost,
             );
 
             if st.amount != 1 {
-                write_str!(description, " for x{}", st.amount);
+                write!(description, " for x{}", st.amount);
             }
 
             let owned = wallet.item(item);
             if owned != 0 {
-                write_str!(description, " [Held: {owned}]");
+                write!(description, " [Held: {owned}]");
             }
 
             description.push('\n');
@@ -197,10 +194,10 @@ impl View {
             .find_enabled(guild_id, user_id, effect)
             .await?;
 
-        let mut description = format!("> {}\n-# {BREAK}\n", info.description,);
+        let mut description = format!("> {}\n-# {BREAK}\n", info.description);
 
         if let Some(active) = &active {
-            write_str!(
+            write!(
                 description,
                 "~~Cost: {}{} for {}~~\n✅ until {}",
                 perks.cash_name,
@@ -209,7 +206,7 @@ impl View {
                 active.until.short_date_time(),
             );
         } else {
-            write_str!(
+            write!(
                 description,
                 "Cost: {}{} for {}",
                 perks.cash_name,
@@ -263,12 +260,12 @@ impl View {
         );
 
         if st.amount != 1 {
-            write_str!(description, " for x{}", st.amount);
+            write!(description, " for x{}", st.amount);
         }
 
         let owned = wallet.item(item);
         if owned != 0 {
-            write_str!(description, "\nHeld: {owned}");
+            write!(description, "\nHeld: {owned}");
         }
 
         let embed = base_shop_embed(perks, &wallet)

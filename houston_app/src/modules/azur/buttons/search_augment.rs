@@ -1,6 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::acknowledge_unloaded;
 use super::search::{Filtered, Filtering, PAGE_SIZE};
@@ -38,7 +38,7 @@ impl<'v> View<'v> {
         let mut options = Vec::new();
 
         for augment in iter.by_ref().take(PAGE_SIZE) {
-            writeln_str!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
+            writeln!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
 
             let view = super::augment::View::new(augment.augment_id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(

@@ -1,6 +1,6 @@
 use std::slice;
 
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::*;
 use crate::fmt::replace_holes;
@@ -39,8 +39,8 @@ impl Shape for Collectible {
 
                 if let Some(notice) = &guild_config.notice {
                     let message = replace_holes(&notice.text, |out, n| match n {
-                        "user" => write_str!(out, "{}", args.user_id.mention()),
-                        "role" => write_str!(out, "{}", role.mention()),
+                        "user" => write!(out, "{}", args.user_id.mention()),
+                        "role" => write!(out, "{}", role.mention()),
                         _ => out.push(char::REPLACEMENT_CHARACTER),
                     });
 

@@ -1,4 +1,4 @@
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::helper::discord::{id_as_u64, unicode_emoji};
@@ -110,8 +110,8 @@ impl View {
     fn create_ready_reply<'new>(self, data: &HBotData, ready: Ready) -> CreateReply<'new> {
         let mut description = String::with_capacity(64);
         match ready {
-            Ready::Winner(user) => writeln_str!(description, "## {} wins!", user.mention()),
-            Ready::Draw => writeln_str!(description, "## Draw!"),
+            Ready::Winner(user) => writeln!(description, "## {} wins!", user.mention()),
+            Ready::Draw => writeln!(description, "## Draw!"),
         }
 
         let match_icon = match ready {
@@ -120,7 +120,7 @@ impl View {
             Ready::Draw => "=",
         };
 
-        writeln_str!(
+        writeln!(
             description,
             "{} {} **{}** {} {}",
             self.states[0].user.mention(),

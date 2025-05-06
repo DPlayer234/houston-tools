@@ -1,5 +1,5 @@
 use chrono::Utc;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::buttons::ButtonValue as _;
 use crate::modules::core::buttons::Delete;
@@ -45,7 +45,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         if !message.attachments.is_empty() {
             let mut value = String::new();
             for attachment in &message.attachments {
-                writeln_str!(value, "- [{}]({})", attachment.filename, attachment.url);
+                writeln!(value, "- [{}]({})", attachment.filename, attachment.url);
             }
 
             embed = embed.field("Attachments", value, false);

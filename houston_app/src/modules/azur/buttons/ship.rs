@@ -2,7 +2,7 @@ use std::{fmt, iter};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
@@ -322,7 +322,7 @@ impl<'v> View<'v> {
             let slots = Join::simple("/")
                 .display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
 
-            write_str!(
+            write!(
                 text,
                 "**`{: >3.0}%`**`x{}` {slots}",
                 mount.efficiency * 100f64,
@@ -330,7 +330,7 @@ impl<'v> View<'v> {
             );
 
             if mount.preload != 0 {
-                write_str!(text, " `PRE x{}`", mount.preload);
+                write!(text, " `PRE x{}`", mount.preload);
             }
 
             if mount.parallel > 1 {
@@ -342,7 +342,8 @@ impl<'v> View<'v> {
             if !text.is_empty() {
                 text.push('\n');
             }
-            write_str!(
+
+            write!(
                 text,
                 "-# **`{: >3.0}%`** {}",
                 mount.efficiency * 100f64,
@@ -354,7 +355,8 @@ impl<'v> View<'v> {
             if !text.is_empty() {
                 text.push('\n');
             }
-            write_str!(text, "-# **`ASW:`** {}", equip.name);
+
+            write!(text, "-# **`ASW:`** {}", equip.name);
         }
 
         [embed_field_create("Equipment", text, false)]
@@ -375,7 +377,8 @@ impl<'v> View<'v> {
                 if !text.is_empty() {
                     text.push('\n');
                 }
-                write_str!(text, "{} **{}**", s.category.emoji(), s.name);
+
+                write!(text, "{} **{}**", s.category.emoji(), s.name);
             }
 
             let augments = azur.game_data().augments_by_ship_id(ship.group_id);
@@ -383,7 +386,8 @@ impl<'v> View<'v> {
                 if !text.is_empty() {
                     text.push('\n');
                 }
-                write_str!(text, "-# UA: **{}**", augment.name);
+
+                write!(text, "-# UA: **{}**", augment.name);
             }
 
             embed_field_create("Skills", text, false)

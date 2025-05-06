@@ -4,7 +4,7 @@ use std::str::FromStr;
 use rand::distr::Uniform;
 use rand::prelude::*;
 use smallvec::SmallVec;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::slashies::prelude::*;
 
@@ -45,7 +45,7 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
     let mut total_sum = 0u32;
 
     for &d in sets {
-        write_str!(content, "- **{}d{}:**", d.count, d.faces);
+        write!(content, "- **{}d{}:**", d.count, d.faces);
 
         let sample = Uniform::new_inclusive(1, u32::from(d.faces.get()))
             .expect("faces cannot be 0 so the range is always valid");
@@ -54,11 +54,11 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
             let roll = rng.sample(sample);
             local_sum += roll;
 
-            write_str!(content, " {}", roll);
+            write!(content, " {}", roll);
         }
 
         if d.count.get() > 1 && sets.len() > 1 {
-            write_str!(content, " *(\u{2211}{})*", local_sum);
+            write!(content, " *(\u{2211}{})*", local_sum);
         }
 
         total_sum += local_sum;

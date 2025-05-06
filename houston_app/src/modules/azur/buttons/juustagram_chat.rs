@@ -1,7 +1,6 @@
 use arrayvec::ArrayVec;
 use azur_lane::juustagram::*;
-use utils::text::truncate;
-use utils::text::write_str::*;
+use utils::text::{WriteStr as _, truncate};
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
@@ -83,19 +82,19 @@ impl<'v> View<'v> {
 
             // print the content of the chat entry
             match &entry.content {
-                ChatContent::Message { sender_id, text } => writeln_str!(
+                ChatContent::Message { sender_id, text } => writeln!(
                     content,
                     "- **{}:** {}",
                     get_sender_name(azur.game_data(), *sender_id),
                     escape_markdown(text)
                 ),
-                ChatContent::Sticker { sender_id, label } => writeln_str!(
+                ChatContent::Sticker { sender_id, label } => writeln!(
                     content,
                     "- **{}:** {}",
                     get_sender_name(azur.game_data(), *sender_id),
                     label
                 ),
-                ChatContent::System { text } => writeln_str!(content, "- [{}]", text),
+                ChatContent::System { text } => writeln!(content, "- [{}]", text),
             }
 
             // if there are options, we stop if we hold the flag for neither of them

@@ -1,5 +1,5 @@
 use bitflags::Flags;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
@@ -61,10 +61,10 @@ fn who_user_info(user: &User) -> String {
     let mut f = String::new();
 
     if let Some(global_name) = &user.global_name {
-        writeln_str!(f, "**Display Name:** {global_name}");
+        writeln!(f, "**Display Name:** {global_name}");
     }
 
-    write_str!(
+    write!(
         f,
         "**Snowflake:** `{}`\n\
         **Created At:** {}\n",
@@ -73,7 +73,7 @@ fn who_user_info(user: &User) -> String {
     );
 
     if let Some(avatar_url) = user.avatar_url() {
-        writeln_str!(f, "**Avatar:** [Click]({avatar_url})");
+        writeln!(f, "**Avatar:** [Click]({avatar_url})");
     }
 
     // Bots don't get banners.
@@ -90,7 +90,7 @@ fn who_user_info(user: &User) -> String {
         "User Account"
     };
 
-    writeln_str!(f, "**{label}**");
+    writeln!(f, "**{label}**");
 
     f
 }
@@ -103,20 +103,20 @@ fn who_member_info(user: &User, member: &PartialMember, guild_id: GuildId) -> St
     let mut f = String::new();
 
     if let Some(nick) = &member.nick {
-        writeln_str!(f, "**Nickname:** `{nick}`");
+        writeln!(f, "**Nickname:** `{nick}`");
     }
 
     if let Some(joined_at) = member.joined_at {
-        writeln_str!(f, "**Joined At:** {}", joined_at.short_date_time());
+        writeln!(f, "**Joined At:** {}", joined_at.short_date_time());
     }
 
     if let Some(hash) = &member.avatar {
         let avatar_url = guild_avatar_url(user.id, guild_id, hash);
-        writeln_str!(f, "**Guild Avatar:** [Click]({avatar_url})");
+        writeln!(f, "**Guild Avatar:** [Click]({avatar_url})");
     }
 
     if let Some(premium_since) = member.premium_since {
-        writeln_str!(f, "**Boosting Since:** {}", premium_since.short_date_time());
+        writeln!(f, "**Boosting Since:** {}", premium_since.short_date_time());
     }
 
     if let Some(permissions) = member.permissions.filter(|p| !p.is_empty()) {
@@ -157,7 +157,7 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
         flag!(ACTIVE_DEVELOPER),
     ];
 
-    write_str!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits());
+    write!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits());
 
     write_flags(f, public_flags, &FLAGS);
     f.push('\n');
@@ -228,7 +228,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         flag!(VIEW_CREATOR_MONETIZATION_ANALYTICS),
     ];
 
-    write_str!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits());
+    write!(f, "**Permissions:** `{:#x}`\n> -# ", permissions.bits());
 
     if permissions.administrator() {
         f.push_str("Administrator, *");

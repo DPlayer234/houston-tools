@@ -1,8 +1,9 @@
 use bson::doc;
 use chrono::*;
 use houston_cmd::model::{Command, CommandOptionData};
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
+use crate::fmt::StringExt as _;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::modules::perks::Config;
 use crate::modules::perks::effects::{Args, Effect};
@@ -135,7 +136,7 @@ mod root {
         let mut description = String::new();
 
         while let Some(perk) = query.try_next().await? {
-            writeln_str!(
+            writeln!(
                 description,
                 "- **{}:** Ends {}",
                 perk.effect.info(perks).name,
@@ -143,8 +144,7 @@ mod root {
             );
         }
 
-        let description = crate::fmt::written_or(description, "<None>");
-
+        let description = description.or_default("<None>");
         let title = format!("{}'s Perks", member.display_name());
 
         let embed = CreateEmbed::new()

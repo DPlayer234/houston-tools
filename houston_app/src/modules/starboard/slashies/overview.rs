@@ -1,7 +1,7 @@
 use bson::doc;
 use bson_model::Sort::Desc;
 use bson_model::{Filter, ModelDocument};
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::fmt::discord::MessageLink;
 use crate::helper::bson::id_as_i64;
@@ -120,7 +120,7 @@ pub async fn overview(
 
         value.push_str("- **Top Post:** ");
         match top_posts.iter().find(|t| t.board == board.id) {
-            Some(top_post) => writeln_str!(
+            Some(top_post) => writeln!(
                 value,
                 "{} by {}: {} {}",
                 MessageLink::new(guild, top_post.channel, top_post.message),
@@ -133,7 +133,7 @@ pub async fn overview(
 
         value.push_str("- **Top Poster:** ");
         match top_users.iter().find(|t| t.board == board.id) {
-            Some(top_user) => write_str!(
+            Some(top_user) => write!(
                 value,
                 "{}: {} {} from {} post(s)",
                 top_user.user.mention(),

@@ -3,7 +3,7 @@ use std::char;
 use bson_model::{Filter, ModelDocument as _};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::prelude::*;
 use crate::fmt::discord::MessageLink;
@@ -488,7 +488,7 @@ async fn pin_message_to_board(
         .unwrap_or("{user}, your post made it! Wow!");
 
     let notice = replace_holes(notice, |out, n| match n {
-        "user" => write_str!(out, "{}", message.author.mention()),
+        "user" => write!(out, "{}", message.author.mention()),
         _ => out.push(char::REPLACEMENT_CHARACTER),
     });
 

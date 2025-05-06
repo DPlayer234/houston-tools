@@ -1,8 +1,9 @@
 use bson::Document;
 use bson_model::Sort::Desc;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
+use crate::fmt::StringExt as _;
 use crate::fmt::discord::MessageLink;
 use crate::helper::discord::{id_as_u64, option_id_as_u64};
 use crate::modules::core::buttons::ToPage;
@@ -55,7 +56,7 @@ impl View {
         let mut index = 0u64;
 
         if let Some(by_user) = self.by_user {
-            writeln_str!(description, "-# By: {}", by_user.mention());
+            writeln!(description, "-# By: {}", by_user.mention());
         }
 
         while let Some(item) = cursor.try_next().await? {
@@ -71,9 +72,9 @@ impl View {
             let emoji = &board.emoji;
 
             if self.by_user.is_some() {
-                writeln_str!(description, "{rank}. {link}: {max_reacts} {emoji}");
+                writeln!(description, "{rank}. {link}: {max_reacts} {emoji}");
             } else {
-                writeln_str!(
+                writeln!(
                     description,
                     "{rank}. {link} by {}: {max_reacts} {emoji}",
                     item.user.mention(),
@@ -101,10 +102,10 @@ impl View {
 
         if self.by_user.is_some() && index == 0 {
             debug_assert!(!description.is_empty(), "by-user case always has content");
-            writeln_str!(description, "<None>");
+            writeln!(description, "<None>");
         }
 
-        let description = crate::fmt::written_or(description, "<None>");
+        let description = description.or_default("<None>");
 
         let embed = CreateEmbed::new()
             .title(format!("{} Top Posts", board.emoji))

@@ -1,7 +1,7 @@
 use std::fmt;
 
 use azur_lane::ship::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
@@ -253,7 +253,7 @@ impl ViewPart {
         // avoid duplicating the entire basic text code a million times
         fn basic(result: &mut String, label: &str, text: &str) {
             let text = escape_markdown(text);
-            writeln_str!(result, "- **{label}:** {text}");
+            writeln!(result, "- **{label}:** {text}");
         }
 
         macro_rules! add {
@@ -265,12 +265,12 @@ impl ViewPart {
             (main $line:expr) => {
                 let index = $line.index() + 1;
                 let text = escape_markdown($line.text());
-                writeln_str!(result, "- **Main Screen {index}:** {text}");
+                writeln!(result, "- **Main Screen {index}:** {text}");
             };
             (couple $opt:expr) => {
                 let label = ship_couple_encourage_label(game_data, $opt);
                 let text = escape_markdown(&$opt.line);
-                writeln_str!(result, "- **{label}:** {text}");
+                writeln!(result, "- **{label}:** {text}");
             };
         }
 

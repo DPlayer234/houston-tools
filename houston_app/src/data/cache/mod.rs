@@ -104,7 +104,7 @@ impl Cache {
 
     /// Provides a string with cache statistics.
     pub fn stats(&self) -> Option<String> {
-        use utils::text::write_str::*;
+        use utils::text::WriteStr as _;
 
         if matches!(self.guilds.len(), 0 | 11..) {
             return None;
@@ -114,7 +114,7 @@ impl Cache {
         for entry in &self.guilds {
             let guild = entry.value();
             let id = id_suffix(*entry.key());
-            writeln_str!(
+            writeln!(
                 out,
                 "**{id}:** channels: {}, threads: {}",
                 guild.channels.len(),

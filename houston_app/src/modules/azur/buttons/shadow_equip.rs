@@ -1,6 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::ship::View as ShipView;
 use super::{AzurParseError, acknowledge_unloaded};
@@ -39,7 +39,7 @@ impl<'v> View<'v> {
 
             let mut value = String::new();
             for weapon in weapons {
-                write_str!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon));
+                write!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon));
             }
 
             Some(value)

@@ -1,5 +1,5 @@
 use azur_lane::secretary::*;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
@@ -154,12 +154,12 @@ impl ViewPart {
         // avoid duplicating the entire basic text code a million times
         fn basic(result: &mut String, label: &str, text: &str) {
             let text = escape_markdown(text);
-            writeln_str!(result, "- **{label}:** {text}");
+            writeln!(result, "- **{label}:** {text}");
         }
 
         fn chime(result: &mut String, hour: u8, text: &str) {
             let text = escape_markdown(text);
-            writeln_str!(result, "- **{hour:02}:00 Notification:** {text}");
+            writeln!(result, "- **{hour:02}:00 Notification:** {text}");
         }
 
         macro_rules! add {
@@ -171,7 +171,7 @@ impl ViewPart {
             (main $line:expr) => {
                 let index = $line.index() + 1;
                 let text = escape_markdown($line.text());
-                writeln_str!(result, "- **Main Screen {index}:** {text}");
+                writeln!(result, "- **Main Screen {index}:** {text}");
             };
             (chime $index:expr, $opt:expr) => {
                 chime(&mut result, $index, $opt);

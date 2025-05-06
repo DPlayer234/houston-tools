@@ -1,7 +1,8 @@
 use bson_model::Sort::Desc;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
+use crate::fmt::StringExt as _;
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
@@ -55,7 +56,7 @@ impl View {
             }
 
             index += 1;
-            writeln_str!(
+            writeln!(
                 description,
                 "{}. {}: {} {} from {} post(s)",
                 offset + index,
@@ -84,7 +85,7 @@ impl View {
             self.page + 1
         };
 
-        let description = crate::fmt::written_or(description, "<None>");
+        let description = description.or_default("<None>");
 
         let embed = CreateEmbed::new()
             .title(format!("{} Leaderboards", board.emoji))

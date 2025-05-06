@@ -1,6 +1,5 @@
 use azur_lane::secretary::*;
-use utils::text::truncate;
-use utils::text::write_str::*;
+use utils::text::{WriteStr as _, truncate};
 
 use super::acknowledge_unloaded;
 use super::search::{All, Filtered, PAGE_SIZE};
@@ -34,7 +33,7 @@ impl<'v> View<'v> {
         let mut options = Vec::new();
 
         for secretary in iter.by_ref().take(PAGE_SIZE) {
-            writeln_str!(desc, "- **{}**", secretary.name);
+            writeln!(desc, "- **{}**", secretary.name);
 
             let view_chat = super::special_secretary::View::new(secretary.id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(

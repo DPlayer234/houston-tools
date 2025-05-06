@@ -1,6 +1,5 @@
 use azur_lane::juustagram::*;
-use utils::text::truncate;
-use utils::text::write_str::*;
+use utils::text::{WriteStr as _, truncate};
 
 use super::acknowledge_unloaded;
 use super::search::{All, Filtered, PAGE_SIZE};
@@ -36,10 +35,10 @@ impl View {
         for chat in iter.by_ref().take(PAGE_SIZE) {
             let chat_name: Cow<'_, str>;
             if let Some(ship) = azur.game_data().ship_by_id(chat.group_id) {
-                writeln_str!(desc, "- **{}** [{}]", chat.name, ship.name);
+                writeln!(desc, "- **{}** [{}]", chat.name, ship.name);
                 chat_name = format!("{} [{}]", chat.name, ship.name).into();
             } else {
-                writeln_str!(desc, "- **{}**", chat.name);
+                writeln!(desc, "- **{}**", chat.name);
                 chat_name = chat.name.as_str().into();
             }
 

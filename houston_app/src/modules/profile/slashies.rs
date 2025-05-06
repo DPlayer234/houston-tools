@@ -1,6 +1,7 @@
 use bson_model::Filter;
-use utils::text::write_str::*;
+use utils::text::WriteStr as _;
 
+use crate::fmt::StringExt as _;
 use crate::modules::Module as _;
 use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;
@@ -54,11 +55,11 @@ async fn profile_core(
 
     if crate::modules::perks::Module.enabled(data.config()) {
         if let Some(unique_role) = perks_unique_role(ctx, member).await? {
-            writeln_str!(description, "-# {}", unique_role.mention());
+            writeln!(description, "-# {}", unique_role.mention());
         }
 
         if let Some(birthday) = perks_birthday(ctx, member).await? {
-            writeln_str!(description, "-# **Birthday:** {birthday}");
+            writeln!(description, "-# **Birthday:** {birthday}");
         }
 
         if let Some(info) = perks_collectible_info(ctx, member).await? {
@@ -69,7 +70,7 @@ async fn profile_core(
     if crate::modules::rep::Module.enabled(data.config()) {
         let rep = rep_amount(ctx, member).await?;
         if rep != 0 {
-            writeln_str!(description, "-# **Reputation:** {rep}");
+            writeln!(description, "-# **Reputation:** {rep}");
         }
     }
 
@@ -168,9 +169,9 @@ async fn perks_collectible_info(
     if let Some(guild_config) = guild_config {
         for &(need, role) in &guild_config.prize_roles {
             if wallet.crab >= i64::from(need) {
-                write_str!(content, "\n- {}", role.mention());
+                write!(content, "\n- {}", role.mention());
             } else {
-                write_str!(content, "\n- -# 🔒 ({need})")
+                write!(content, "\n- -# 🔒 ({need})")
             }
         }
     }
@@ -206,16 +207,14 @@ async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
             .get(&entry.board)
             .context("board not found in config")?;
 
-        writeln_str!(
+        writeln!(
             description,
             "- {} {} from {} post(s)",
-            entry.score,
-            board.emoji,
-            entry.post_count,
+            entry.score, board.emoji, entry.post_count,
         );
     }
 
-    Ok((!description.is_empty()).then_some(description))
+    Ok(description.or_none())
 }
 
 async fn rep_amount(ctx: Context<'_>, member: SlashMember<'_>) -> Result<i64> {
