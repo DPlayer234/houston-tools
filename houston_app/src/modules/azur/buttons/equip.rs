@@ -80,7 +80,7 @@ impl<'v> View<'v> {
     }
 }
 
-button_value!(View<'_>, 7);
+button_value!(for<'v> View<'v>, 7);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         acknowledge_unloaded(&ctx).await?;

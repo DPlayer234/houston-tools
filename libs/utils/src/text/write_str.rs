@@ -16,8 +16,8 @@ pub trait WriteStr {
     /// This method should generally not be invoked manually, but rather through
     /// the [`write!`] macro itself.
     ///
-    /// This function may panic when debug assertions are enabled to report an
-    /// incorrect formatting implementation.
+    /// This function may panic when a formatting trait implementation returns
+    /// an error.
     fn write_fmt(&mut self, args: Arguments<'_>);
 }
 
@@ -26,11 +26,12 @@ impl WriteStr for String {
         #[cold]
         #[track_caller]
         fn fail_write_fmt() {
-            panic!("write_fmt failed unexpectedly even though the buffer never returns an error");
+            panic!(
+                "a formatting trait implementation returned an error when writing to a string cannot fail"
+            );
         }
 
-        let result = Write::write_fmt(self, args);
-        if cfg!(debug_assertions) && result.is_err() {
+        if Write::write_fmt(self, args).is_err() {
             fail_write_fmt();
         }
     }

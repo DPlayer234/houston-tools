@@ -1,24 +1,25 @@
 use std::mem::swap;
+use std::ptr;
 use std::sync::atomic::AtomicBool;
-use std::{fmt, ptr};
 
 use extract_map::{ExtractKey, ExtractMap};
 use houston_cmd::BoxFuture;
-use serde::Deserialize;
 use serenity::prelude::*;
 
-use crate::fmt::discord::interaction_location;
 use crate::modules::core::buttons::Noop;
 use crate::prelude::*;
 
 mod context;
 pub mod encoding;
 mod nav;
+#[doc(hidden)]
+pub mod private;
 #[cfg(test)]
 mod test;
 
 pub use context::{AnyContext, AnyInteraction, ButtonContext, ModalContext};
 pub use nav::Nav;
+pub(crate) use private::button_value;
 
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
@@ -272,15 +273,19 @@ pub trait ButtonValue: Send + Sync {
     }
 }
 
+async fn modal_reply_unsupported() -> Result {
+    anyhow::bail!("this button args type does not support modals");
+}
+
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonReply: Sized + Send {
     /// Replies to the component interaction.
-    async fn reply(self, ctx: ButtonContext<'_>) -> Result;
+    fn reply(self, ctx: ButtonContext<'_>) -> impl Future<Output = Result> + Send;
 
     /// Replies to the modal interaction.
-    async fn modal_reply(self, ctx: ModalContext<'_>) -> Result {
+    fn modal_reply(self, ctx: ModalContext<'_>) -> impl Future<Output = Result> + Send {
         _ = ctx;
-        anyhow::bail!("this button args type does not support modals");
+        modal_reply_unsupported()
     }
 }
 
@@ -308,86 +313,6 @@ impl ExtractKey<usize> for ButtonAction {
         &self.key
     }
 }
-
-/// Provides shared code for invoking button value actions.
-///
-/// Used by the [`button_value`] macro.
-#[doc(hidden)]
-pub fn invoke_button_value<'ctx, T, I, F>(
-    ctx: AnyContext<'ctx, I>,
-    buf: encoding::Decoder<'ctx>,
-    f: impl Fn(T, AnyContext<'ctx, I>) -> F,
-    kind: &str,
-) -> BoxFuture<'ctx, Result>
-where
-    T: fmt::Debug + Deserialize<'ctx>,
-    I: AnyInteraction,
-    F: Future<Output = Result> + Send + 'ctx,
-{
-    // less generic interaction logging
-    fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
-        log::info!(
-            "[{kind}] {}, {}: {args:?}",
-            interaction_location(interaction.guild_id(), interaction.channel()),
-            interaction.user().name,
-        );
-    }
-
-    // shared boxed future type for the outer error case
-    #[cold]
-    fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
-        Box::pin(async move { Err(why) })
-    }
-
-    match buf.into_button_value::<T>() {
-        Ok(this) => {
-            log_interaction(kind, ctx.interaction, &this);
-            Box::pin(f(this, ctx))
-        },
-        Err(why) => err_fut(why),
-    }
-}
-
-/// Implements the [`ButtonValue`] trait.
-/// Accepts the type and its action key as a [`usize`].
-///
-/// The type in question needs to implement the following:
-/// - [`ButtonReply`]
-/// - [`fmt::Debug`]
-/// - [`serde::Deserialize`]
-/// - [`serde::Serialize`]
-///
-/// If the type has lifetimes, specify them as `'_`.
-macro_rules! button_value {
-    ($Ty:ty, $key:literal) => {
-        impl $crate::buttons::ButtonValue for $Ty {
-            // somewhat strange emit with a fairly insane reason:
-            // i am not sure how to correctly constrain `$Ty` to `Deserialize<'_>` in
-            // a helper function generic so this actually still works.
-            const ACTION: $crate::buttons::ButtonAction = $crate::buttons::ButtonAction {
-                key: $key,
-                invoke_button: |ctx, buf| {
-                    let reply = <$Ty as $crate::buttons::ButtonReply>::reply;
-                    $crate::buttons::invoke_button_value(ctx, buf, reply, "Button")
-                },
-                invoke_modal: |ctx, buf| {
-                    let modal_reply = <$Ty as $crate::buttons::ButtonReply>::modal_reply;
-                    $crate::buttons::invoke_button_value(ctx, buf, modal_reply, "Modal")
-                },
-            };
-
-            fn to_custom_id(&self) -> String {
-                $crate::buttons::encoding::to_custom_id(self)
-            }
-
-            fn to_nav(&self) -> Nav<'_> {
-                $crate::buttons::Nav::from_button_value(self)
-            }
-        }
-    };
-}
-
-pub(crate) use button_value;
 
 /// Compile-time helper to assert that types are [`Send`] as expected.
 ///

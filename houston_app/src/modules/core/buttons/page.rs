@@ -125,7 +125,7 @@ where
     }
 }
 
-button_value!(ToPage<'_>, 13);
+button_value!(for<'v> ToPage<'v>, 13);
 impl ButtonReply for ToPage<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let input_text = CreateInputText::new(InputTextStyle::Short, "Page", "page")
