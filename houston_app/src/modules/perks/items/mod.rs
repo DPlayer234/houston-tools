@@ -48,18 +48,16 @@ impl Item {
 
     pub fn info(self, perks: &Config) -> ItemInfo<'_> {
         macro_rules! extract_or {
-            ($expr:expr, $name:literal) => {
-                $expr
-                    .as_ref()
-                    .map(|c| ItemInfo {
-                        name: &c.name,
-                        description: &c.description,
-                    })
-                    .unwrap_or(ItemInfo {
-                        name: $name,
-                        description: "<Disabled>",
-                    })
-            };
+            ($expr:expr, $name:literal) => {{
+                const DISABLED: ItemInfo<'static> = ItemInfo {
+                    name: $name,
+                    description: "<Disabled>",
+                };
+                $expr.as_ref().map_or(DISABLED, |c| ItemInfo {
+                    name: &c.name,
+                    description: &c.description,
+                })
+            }};
         }
 
         match self {

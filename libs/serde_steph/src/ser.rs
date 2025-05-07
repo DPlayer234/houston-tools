@@ -12,7 +12,7 @@ use crate::leb128;
 /// The resulting buffer will have exactly the length required.
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
-    T: ser::Serialize,
+    T: ?Sized + ser::Serialize,
 {
     let mut ser = Serializer::from_writer(Vec::new());
     value.serialize(&mut ser)?;
@@ -25,7 +25,7 @@ where
 /// io::Write`](io::Write) to reduce the generated code size.
 pub fn to_writer<T, W>(writer: W, value: &T) -> Result<()>
 where
-    T: ser::Serialize,
+    T: ?Sized + ser::Serialize,
     W: io::Write,
 {
     value.serialize(&mut Serializer::from_writer(writer))

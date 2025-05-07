@@ -238,11 +238,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
             now_reacts
         );
 
-        let filter = model::Message::filter()
-            .board(board.id)
-            .message(message.id)
-            .into_document()?;
-
+        let filter = board_message_filter(board, &message)?;
         let update = model::Message::update()
             .set_on_insert(|m| {
                 m.channel(message.channel_id)
@@ -253,7 +249,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
             .into_document()?;
 
         let record = model::Message::collection(db)
-            .find_one_and_update(filter.clone(), update)
+            .find_one_and_update(filter, update)
             .upsert(true)
             .return_document(ReturnDocument::Before)
             .await
@@ -275,12 +271,13 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
         // so as long it wasn't already pinned, we can do that now
         if !pinned {
             // update the record to be pinned
+            let filter = board_message_filter(board, &message)?;
             let update = model::Message::update()
                 .set(|w| w.pinned(true))
                 .into_document()?;
 
             let record = model::Message::collection(db)
-                .find_one_and_update(filter.clone(), update)
+                .find_one_and_update(filter, update)
                 .return_document(ReturnDocument::Before)
                 .await
                 .context("failed to update message pin state")?
@@ -289,7 +286,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
             // pin the message if the update just now changed the value
             if !record.pinned {
                 new_post = true;
-                pin_message_to_board(ctx, &message, guild_id, guild_config, board, filter).await?;
+                pin_message_to_board(ctx, &message, guild_id, guild_config, board).await?;
             }
         }
     };
@@ -466,7 +463,6 @@ async fn pin_message_to_board(
     guild_id: GuildId,
     guild_config: &config::StarboardGuild,
     board: &config::StarboardEntry,
-    filter: bson::Document,
 ) -> Result {
     let pin_kind = PinKind::determine(ctx, message, guild_id, board).await;
 
@@ -484,8 +480,7 @@ async fn pin_message_to_board(
     let notice = board
         .notices
         .choose(&mut rand::rng())
-        .map(String::as_str)
-        .unwrap_or("{user}, your post made it! Wow!");
+        .map_or("{user}, your post made it! Wow!", String::as_str);
 
     let notice = replace_holes(notice, |out, n| match n {
         "user" => write!(out, "{}", message.author.mention()),
@@ -575,6 +570,7 @@ async fn pin_message_to_board(
     drop(pin_guard);
 
     // also associate what messages are the pins
+    let filter = board_message_filter(board, message)?;
     let update = model::Message::update()
         .set(|m| m.pin_messages(pin_messages))
         .into_document()?;
@@ -587,6 +583,18 @@ async fn pin_message_to_board(
         .await
         .context("failed to set message pin_messages")?;
     Ok(())
+}
+
+// constructed repeatedly to avoid carrying the document across awaits and
+// needing extra inline Future size. heap allocs should be unaffected.
+fn board_message_filter(
+    board: &config::StarboardEntry,
+    message: &Message,
+) -> bson::ser::Result<bson::Document> {
+    model::Message::filter()
+        .board(board.id)
+        .message(message.id)
+        .into_document()
 }
 
 fn ok_forward_failed<T>(result: Result<T, serenity::Error>) -> Result<Option<T>, serenity::Error> {

@@ -74,13 +74,11 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         derive_partial: model_meta
             .derive_partial
             .as_deref()
-            .map(Vec::as_slice)
-            .unwrap_or(&default_derive),
+            .map_or(&default_derive, Vec::as_slice),
         derive_filter: model_meta
             .derive_filter
             .as_deref()
-            .map(Vec::as_slice)
-            .unwrap_or(&default_derive),
+            .map_or(&default_derive, Vec::as_slice),
     };
 
     let internals = emit_internals(&args);

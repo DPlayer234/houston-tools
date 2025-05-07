@@ -92,14 +92,10 @@ impl Effect {
         };
 
         match self {
-            Self::RainbowRole => perks
-                .rainbow
-                .as_ref()
-                .map(|r| EffectInfo {
-                    name: &r.name,
-                    description: &r.description,
-                })
-                .unwrap_or(UNSET),
+            Self::RainbowRole => perks.rainbow.as_ref().map_or(UNSET, |r| EffectInfo {
+                name: &r.name,
+                description: &r.description,
+            }),
             Self::Birthday => EffectInfo {
                 name: "Birthday Haver",
                 description: "Party time.",
