@@ -58,17 +58,12 @@ async fn message(ctx: &Context, new_message: &Message, is_edit: bool) {
 
     let message_link = MessageLink::from(new_message);
 
-    if let Err(why) = message_inner(ctx, new_message, guild_id, is_edit).await {
+    if let Err(why) = message_inner(ctx, new_message, guild_id, is_edit) {
         log::error!("Message handling failed for {message_link:#}: {why:?}");
     }
 }
 
-async fn message_inner(
-    ctx: &Context,
-    new_message: &Message,
-    guild_id: GuildId,
-    is_edit: bool,
-) -> Result {
+fn message_inner(ctx: &Context, new_message: &Message, guild_id: GuildId, is_edit: bool) -> Result {
     // we only consider regular messages from users, not bots.
     // also ignore messages that have neither content nor attachments or ones that
     // have a lot of content. attachments aren't currently retained, but they are
@@ -117,12 +112,12 @@ async fn message_delete(
 
     let message_link = MessageLink::new(guild_id, channel_id, message_id);
 
-    if let Err(why) = message_delete_inner(ctx, guild_id, message_id).await {
+    if let Err(why) = message_delete_inner(ctx, guild_id, message_id) {
         log::error!("Message delete handling failed for {message_link:#}: {why:?}");
     }
 }
 
-async fn message_delete_inner(ctx: &Context, guild_id: GuildId, message_id: MessageId) -> Result {
+fn message_delete_inner(ctx: &Context, guild_id: GuildId, message_id: MessageId) -> Result {
     let data = ctx.data_ref::<HContextData>();
     let Some(snipe) = data.config().snipe.get(&guild_id) else {
         return Ok(());
