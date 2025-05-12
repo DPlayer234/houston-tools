@@ -86,7 +86,7 @@ async fn message_inner(
         return Ok(());
     };
 
-    let mut state = snipe.state.write().expect("should not be poisoned");
+    let mut state = snipe.state.lock().expect("should not be poisoned");
     if is_edit {
         // if edited, try to look for the original and replace it
         // we don't bother to insert it as new since it may be old
@@ -128,7 +128,7 @@ async fn message_delete_inner(ctx: &Context, guild_id: GuildId, message_id: Mess
         return Ok(());
     };
 
-    let mut state = snipe.state.write().expect("should not be poisoned");
+    let mut state = snipe.state.lock().expect("should not be poisoned");
     if let Some(message) = state.get_message_mut(message_id) {
         message.deleted = true;
     }

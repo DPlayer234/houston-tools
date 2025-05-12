@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::num::NonZero;
-use std::sync::RwLock;
+use std::sync::Mutex;
 
 use chrono::TimeDelta;
 
@@ -26,5 +26,5 @@ pub struct GuildConfig {
     pub max_cache_size: NonZero<usize>,
 
     #[serde(skip)]
-    pub state: RwLock<GuildState>,
+    pub state: Mutex<GuildState>,
 }

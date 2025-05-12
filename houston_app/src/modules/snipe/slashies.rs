@@ -26,7 +26,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
             .context("max_age lands before beginning of time")?;
 
         // can't hold this lock across awaits, and it should be released asap anyways
-        let mut state = snipe.state.write().expect("should not be poisoned");
+        let mut state = snipe.state.lock().expect("should not be poisoned");
         state.take_last(move |m| {
             m.deleted && m.channel_id == channel_id && *m.timestamp >= min_timestamp
         })
