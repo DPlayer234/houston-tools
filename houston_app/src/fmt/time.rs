@@ -3,6 +3,7 @@ use std::fmt;
 use chrono::TimeDelta;
 
 #[derive(Debug, Clone, Copy)]
+#[must_use]
 pub struct HumanDuration(TimeDelta);
 
 fn divrem(a: i64, b: i64) -> (i64, i64) {

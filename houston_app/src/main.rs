@@ -18,6 +18,7 @@ async fn main() -> anyhow::Result<()> {
     use serenity::prelude::*;
 
     use crate::build::{GIT_HASH, VERSION};
+    use crate::config::HConfig;
     use crate::data::cache::CacheUpdateHandler;
     use crate::prelude::*;
 
@@ -140,8 +141,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    fn build_config() -> Result<config::HConfig> {
-        use config::setup::{Builder, Env, File, TomlText};
+    fn build_config() -> Result<HConfig> {
+        use crate::config::setup::{Builder, Env, File, TomlText};
 
         let profile = profile()?;
         let profile_config = format!("houston_app.{profile}.toml");
@@ -156,7 +157,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     fn init_logging(config: log4rs::config::RawConfig) -> anyhow::Result<()> {
-        let (appenders, errors) = config.appenders_lossy(&logging::deserializers());
+        let deserializers = crate::logging::deserializers();
+        let (appenders, errors) = config.appenders_lossy(&{ deserializers });
         if !errors.is_empty() {
             return Err(errors.into());
         }

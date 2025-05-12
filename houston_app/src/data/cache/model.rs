@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Minimal cached information about a guild channel.
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct CachedChannel {
     pub id: ChannelId,
     #[expect(dead_code, reason = "parallel, useful for debugging")]
@@ -14,6 +15,7 @@ pub struct CachedChannel {
 
 /// Minimal cached information about a thread.
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct CachedThread {
     pub id: ThreadId,
     pub kind: ChannelType,
@@ -23,6 +25,7 @@ pub struct CachedThread {
 
 /// Cached Channel or Thread
 #[derive(Debug, Clone)]
+#[must_use]
 pub enum Ccot {
     Channel(CachedChannel),
     Thread(CachedThread),

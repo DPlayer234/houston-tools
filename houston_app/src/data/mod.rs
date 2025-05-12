@@ -22,6 +22,7 @@ pub type HContextData = HBotData;
 /// A simple error that can return any error message.
 #[derive(Debug, Clone, thiserror::Error)]
 #[error("{msg}")]
+#[must_use]
 pub struct HArgError {
     /// The error message
     pub msg: Cow<'static, str>,

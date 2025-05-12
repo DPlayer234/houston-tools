@@ -8,6 +8,7 @@ use toml::map::Entry;
 use toml::{Table, Value};
 
 /// Provides a layered builder for deserializing configuration files.
+#[must_use]
 pub struct Builder {
     table: Result<Table>,
 }
@@ -47,6 +48,7 @@ pub trait Layer {
 }
 
 /// A TOML file configuration layer.
+#[must_use]
 pub struct File {
     path: PathBuf,
     required: bool,
@@ -75,6 +77,7 @@ impl File {
 }
 
 /// A TOML text configuration layer.
+#[must_use]
 pub struct TomlText<'a> {
     text: &'a str,
 }
@@ -93,6 +96,7 @@ impl<'a> TomlText<'a> {
 /// separator, (i.e. `DISCORD__TOKEN` will refer to `discord.token`).
 ///
 /// Currently, all values are treated as strings.
+#[must_use]
 pub struct Env(());
 
 impl Env {
