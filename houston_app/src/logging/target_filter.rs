@@ -27,10 +27,9 @@ impl Filter for TargetFilter {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum TargetMode {
-    #[default]
     RejectMismatch,
     AcceptMismatch,
     RejectMatch,
