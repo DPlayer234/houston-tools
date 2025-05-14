@@ -84,6 +84,12 @@ impl<T> Grid<T> {
     }
 }
 
+impl Grid<bool> {
+    fn flag_tile(&mut self, pos: Pos) {
+        *self.get_mut(pos).expect("pos should be within grid range") = true;
+    }
+}
+
 // choose a more compact serialization format for the board
 impl serde::Serialize for Board {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -246,15 +252,13 @@ impl Move for MovePawn {
         let pos = origin.add_y(y_dir);
         if let Some(tile) = board.get(pos) {
             if tile.is_none() {
-                // same size so this must succeed
-                *out.get_mut(pos).unwrap() = true;
+                out.flag_tile(pos);
             }
 
             for cap in [pos.add_x(-1), pos.add_x(1)] {
                 if let Some(cap_tile) = board.get(cap) {
                     if cap_tile.is_some_and(|p| p.player != player) {
-                        // same size so this must succeed
-                        *out.get_mut(cap).unwrap() = true;
+                        out.flag_tile(cap);
                     }
                 }
             }
@@ -284,7 +288,7 @@ impl Move for MoveKnight {
             let pos = origin.add_offset(dir);
             if let Some(tile) = board.get(pos) {
                 if tile.is_none_or(|t| t.player != player) {
-                    *out.get_mut(pos).unwrap() = true;
+                    out.flag_tile(pos);
                 }
             }
         }
@@ -302,7 +306,7 @@ impl Move for MoveKing {
             let pos = origin.add_offset(dir);
             if let Some(tile) = board.get(pos) {
                 if tile.is_none_or(|t| t.player != player) {
-                    *out.get_mut(pos).unwrap() = true;
+                    out.flag_tile(pos);
                 }
             }
         }
@@ -357,9 +361,9 @@ impl<D: MoveDirs> Move for D {
             let mut pos = origin.add_offset(dir);
             'm: while let Some(tile) = board.get(pos) {
                 match tile {
-                    None => *out.get_mut(pos).unwrap() = true,
+                    None => out.flag_tile(pos),
                     Some(t) if t.player != player => {
-                        *out.get_mut(pos).unwrap() = true;
+                        out.flag_tile(pos);
                         break 'm;
                     },
                     Some(_) => break 'm,
@@ -386,7 +390,7 @@ impl Board {
         let opponent = player.next();
         for (pos, piece) in self.iter_pieces(opponent) {
             let targets = piece.get_move().target_mask(self, pos, opponent);
-            if *targets.get(king_at).unwrap() {
+            if *targets.get(king_at).expect("must be in range") {
                 return true;
             }
         }

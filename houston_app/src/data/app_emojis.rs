@@ -150,7 +150,7 @@ async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Resu
 
     let emoji = ctx.create_application_emoji(&map).await?;
 
-    log::info!("Added Application Emoji: {}", emoji);
+    log::info!("Added Application Emoji: {emoji}");
     Ok(staticify_emoji_name(emoji.into(), name))
 }
 

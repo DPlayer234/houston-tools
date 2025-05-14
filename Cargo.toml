@@ -102,6 +102,9 @@ str_to_string = "deny"
 unused_result_ok = "warn"
 unused_trait_names = "warn"
 
+# style
+uninlined_format_args = "warn"
+
 # nursery
 as_ptr_cast_mut = "deny"
 collection_is_never_read = "warn"

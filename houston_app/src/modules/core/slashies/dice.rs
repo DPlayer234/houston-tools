@@ -28,7 +28,7 @@ pub async fn dice(
 
     let (total_sum, content) = get_dice_roll_result(sets);
     let embed = CreateEmbed::new()
-        .title(format!("Total \u{2211}{}", total_sum))
+        .title(format!("Total \u{2211}{total_sum}"))
         .description(content)
         .color(ctx.data_ref().config().embed_color);
 
@@ -54,11 +54,11 @@ fn get_dice_roll_result(sets: &[DiceSet]) -> (u32, String) {
             let roll = rng.sample(sample);
             local_sum += roll;
 
-            write!(content, " {}", roll);
+            write!(content, " {roll}");
         }
 
         if d.count.get() > 1 && sets.len() > 1 {
-            write!(content, " *(\u{2211}{})*", local_sum);
+            write!(content, " *(\u{2211}{local_sum})*");
         }
 
         total_sum += local_sum;

@@ -65,7 +65,7 @@ impl<'v> View<'v> {
         if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
             if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
                 let filename = format!("{}.webp", skin.image_key);
-                embed = embed.thumbnail(format!("attachment://{}", filename));
+                embed = embed.thumbnail(format!("attachment://{filename}"));
                 create = create.attachment(CreateAttachment::bytes(image_data, filename));
             }
         }

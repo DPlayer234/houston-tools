@@ -1,5 +1,3 @@
-use std::char;
-
 use bson_model::{Filter, ModelDocument as _};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
@@ -640,6 +638,11 @@ async fn has_reaction_by_user(
         message_id: message.id,
         reaction: &emoji.as_data(),
     };
+
+    #[derive(serde::Deserialize)]
+    struct User {
+        id: UserId,
+    }
 
     // since we only grab 1 user at most, use `ArrayVec` to avoid an allocation
     let request = Request::new(route, LightMethod::Get).params(&params);

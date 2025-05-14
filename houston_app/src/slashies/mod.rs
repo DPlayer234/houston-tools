@@ -32,7 +32,7 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
     match error {
         houston_cmd::Error::Command { error, ctx } => command_error(ctx, error).await,
         houston_cmd::Error::ArgInvalid { message, ctx } => {
-            let msg = format!("Argument invalid: {}", message);
+            let msg = format!("Argument invalid: {message}");
             context_error(ctx, msg.into()).await
         },
         houston_cmd::Error::ArgParse { error, input, ctx } => {

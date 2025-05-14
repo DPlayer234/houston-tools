@@ -47,5 +47,5 @@ pub fn include_git_commit_hash() {
 
     let git_hash = String::from_utf8(output.stdout);
     let git_hash = ensure::ok_or!(git_hash, _ => "git commit hash is invalid utf-8");
-    println!("cargo::rustc-env=GIT_HASH={}", git_hash);
+    println!("cargo::rustc-env=GIT_HASH={git_hash}");
 }

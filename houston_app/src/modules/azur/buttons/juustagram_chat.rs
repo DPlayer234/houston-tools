@@ -94,7 +94,7 @@ impl<'v> View<'v> {
                     get_sender_name(azur.game_data(), *sender_id),
                     label
                 ),
-                ChatContent::System { text } => writeln!(content, "- [{}]", text),
+                ChatContent::System { text } => writeln!(content, "- [{text}]"),
             }
 
             // if there are options, we stop if we hold the flag for neither of them
