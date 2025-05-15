@@ -289,7 +289,9 @@ fn try_flush(sender: &Sender<Msg>) {
     let res: Result = tokio::task::block_in_place(move || {
         tokio::runtime::Handle::current().block_on(async {
             let semaphore = Arc::new(Semaphore::new(1));
-            let notify = Arc::clone(&semaphore).acquire_owned().await?;
+            let notify = Arc::clone(&semaphore)
+                .try_acquire_owned()
+                .expect("new semaphore cannot be locked");
             let msg = Msg::Notify(notify);
 
             // we essentially wait until the semaphore lets us grab another permit

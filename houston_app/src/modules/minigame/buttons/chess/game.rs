@@ -85,6 +85,10 @@ impl<T> Grid<T> {
 }
 
 impl Grid<bool> {
+    fn iter_true(&self) -> impl Iterator<Item = Pos> + use<'_> {
+        self.iter_grid().filter(|t| *t.1).map(|t| t.0)
+    }
+
     fn flag_tile(&mut self, pos: Pos) {
         *self.get_mut(pos).expect("pos should be within grid range") = true;
     }
@@ -169,7 +173,7 @@ impl<'de> serde::Deserialize<'de> for Board {
 
 // Black (P2) starts at Y=0
 // White (P1) starts at Y=N
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Tile {
     pub player: Player,
     pub piece: Piece,
@@ -199,7 +203,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Piece {
     Pawn,
     Rook,
@@ -374,12 +378,6 @@ impl<D: MoveDirs> Move for D {
         }
 
         out
-    }
-}
-
-impl Grid<bool> {
-    fn iter_true(&self) -> impl Iterator<Item = Pos> + use<'_> {
-        self.iter_grid().filter(|t| *t.1).map(|t| t.0)
     }
 }
 
