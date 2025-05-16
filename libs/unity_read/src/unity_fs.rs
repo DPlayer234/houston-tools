@@ -10,7 +10,7 @@ use std::io::{Cursor, SeekFrom};
 
 use binrw::{BinRead as _, NullString, binread};
 use modular_bitfield::specifiers::*;
-use modular_bitfield::{BitfieldSpecifier, bitfield};
+use modular_bitfield::{Specifier, bitfield};
 use num_enum::TryFromPrimitive;
 
 use crate::error::Error;
@@ -141,7 +141,7 @@ struct Node {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, BitfieldSpecifier)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, Specifier)]
 #[bits = 6]
 enum Compression {
     None = 0,
