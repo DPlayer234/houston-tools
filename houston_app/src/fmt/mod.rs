@@ -42,26 +42,26 @@ where
     let mut out = String::with_capacity(haystack.len());
 
     while let Some(start) = haystack.find('{') {
-        let (l, r) = haystack.split_at(start);
-        out.push_str(l);
+        let (raw, rest) = haystack.split_at(start);
+        out.push_str(raw);
 
-        if let Some(end) = r.find('}') {
-            let (l, r) = r.split_at(end + 1);
-            debug_assert!(l.len() >= 2, "must be at least 2 bytes long");
+        if let Some(end) = rest.find('}') {
+            let (hole, rest) = rest.split_at(end + 1);
+            debug_assert!(hole.len() >= 2, "must be at least 2 bytes long");
 
             // SAFETY: we must have at least 2 bytes here now, `{` and `}`.
             // `end` is within the range (due to successful split), and must be >=1.
-            let name = unsafe { l.get_unchecked(1..end) };
+            let name = unsafe { hole.get_unchecked(1..end) };
 
             // call user append function
             f(&mut out, name);
 
             // update haystack to be the remainder
-            haystack = r;
+            haystack = rest;
         } else {
-            // no closing found, just push the rest and exit
-            out.push_str(r);
-            return out;
+            // no closing found, mark the rest to be pushed and break out
+            haystack = rest;
+            break;
         }
     }
 

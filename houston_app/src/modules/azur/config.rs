@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::hint;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
@@ -189,7 +190,7 @@ impl<'a> LoadedConfig<'a> {
         match self.raw.game_data.get() {
             Some(Some(data)) => data,
             // SAFETY: `new` ensures that the game data is already loaded and not `None`
-            _ => unsafe { std::hint::unreachable_unchecked() },
+            _ => unsafe { hint::unreachable_unchecked() },
         }
     }
 }

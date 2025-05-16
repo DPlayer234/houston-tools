@@ -79,6 +79,8 @@ macro_rules! titlecase {
 
             // Transmute result back to a str.
     const __BYTES: &[::std::primitive::u8] = $crate::titlecase!(b: __INPUT_STR.as_bytes());
+
+            // SAFETY: `titlecase!` does not affect UTF-8 validity and input was `&str`.
             unsafe { ::std::primitive::str::from_utf8_unchecked(__BYTES) }
         }
     };
