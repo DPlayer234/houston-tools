@@ -194,9 +194,10 @@ impl Parameter {
         .required(self.required)
         .set_autocomplete(self.autocomplete.is_some());
 
-        #[expect(clippy::cast_possible_wrap)]
-        for (index, choice) in (self.choices)().iter().enumerate() {
-            option = option.add_int_choice(choice.name.clone(), index as i64);
+        // hitting an overflow here would require more memory
+        // than is even addressable on a 64-bit system
+        for (index, choice) in (0i64..).zip((self.choices)().iter()) {
+            option = option.add_int_choice(choice.name.clone(), index);
         }
 
         (self.type_setter)(option)

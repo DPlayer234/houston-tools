@@ -20,14 +20,11 @@ macro_rules! make_autocomplete_choice {
             _ctx: Context<'a>,
             partial: &'a str,
         ) -> CreateAutocompleteResponse<'a> {
-            let choices: Vec<_> = <$Type>::ALL
-                .iter()
-                .enumerate()
+            let choices: Vec<_> = (0u64..)
+                .zip(<$Type>::ALL)
                 .filter(|(_, t)| contains_ignore_case_ascii(t.name(), partial))
                 .take(25)
-                .map(|(i, t)| {
-                    AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i as u64))
-                })
+                .map(|(i, t)| AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i)))
                 .collect();
 
             CreateAutocompleteResponse::new().set_choices(choices)
@@ -39,11 +36,11 @@ macro_rules! make_autocomplete_choice {
                 resolved: &ResolvedValue<'ctx>,
             ) -> Result<Self, Error<'ctx>> {
                 match resolved {
-                    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                    ResolvedValue::Integer(index) => <$Type>::ALL
-                        .get(*index as usize)
-                        .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index"))
-                        .map(|&f| Self(f)),
+                    ResolvedValue::Integer(index) => usize::try_from(*index)
+                        .ok()
+                        .and_then(|i| <$Type>::ALL.get(i))
+                        .map(|&f| Self(f))
+                        .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index")),
                     _ => Err(Error::structure_mismatch(*ctx, "expected integer")),
                 }
             }

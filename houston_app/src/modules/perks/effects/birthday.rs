@@ -98,9 +98,12 @@ impl Shape for Birthday {
             return Ok(());
         };
 
-        'regions: for (region_id, region) in birthday.regions.iter().enumerate() {
-            let region_id = u16::try_from(region_id)?;
+        debug_assert!(
+            u16::try_from(birthday.regions.len()).is_ok(),
+            "startup validate ensures len does not overflow u16"
+        );
 
+        'regions: for (region_id, region) in (0u16..).zip(&birthday.regions) {
             // calculate the correct date with the current time and offset
             let today = now
                 .checked_add_signed(region.time_offset)

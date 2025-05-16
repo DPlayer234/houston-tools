@@ -2,8 +2,9 @@ use chrono::*;
 use mongodb::options::ReturnDocument;
 
 use crate::buttons::ButtonValue as _;
+use crate::helper::contains_ignore_case_ascii;
 use crate::modules::perks::DayOfYear;
-use crate::modules::perks::config::BirthdayRegionConfig;
+use crate::modules::perks::config::{BirthdayConfig, BirthdayRegionConfig};
 use crate::modules::perks::model::*;
 use crate::slashies::prelude::*;
 
@@ -194,13 +195,12 @@ impl EMonth {
     }
 }
 
+fn birthday_config(ctx: Context<'_>) -> Option<&BirthdayConfig> {
+    ctx.data_ref().config().perks.as_ref()?.birthday.as_ref()
+}
+
 fn get_region(ctx: Context<'_>, region: u16) -> Result<&BirthdayRegionConfig> {
-    let region = ctx
-        .data_ref()
-        .config()
-        .perks()?
-        .birthday
-        .as_ref()
+    let region = birthday_config(ctx)
         .context("birthday feature must be enabled")?
         .regions
         .get(usize::from(region))
@@ -213,24 +213,21 @@ async fn autocomplete_region<'a>(
     ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
-    let regions: Vec<_> = ctx
-        .data_ref()
-        .config()
-        .perks
-        .as_ref()
-        // flatten the options and vecs down into one iterator
-        .into_iter()
-        .filter_map(|p| p.birthday.as_ref())
-        .flat_map(|p| &p.regions)
-        .enumerate()
-        // filter to ones whose name contains the input
-        // if the input is empty, that's all of them
-        .filter(|(_, region)| region.name.contains(partial))
-        // map it to an autocomplete choice with the region index as the value
-        .map(|(index, region)| {
-            AutocompleteChoice::new(&region.name, AutocompleteValue::Integer(index as u64))
-        })
-        .collect();
+    if let Some(config) = birthday_config(ctx) {
+        let regions: Vec<_> = (0u64..)
+            .zip(&config.regions)
+            // filter to ones whose name contains the input
+            // if the input is empty, that's all of them
+            .filter(|(_, region)| contains_ignore_case_ascii(&region.name, partial))
+            .take(25)
+            // map it to an autocomplete choice with the region index as the value
+            .map(|(index, region)| {
+                AutocompleteChoice::new(&region.name, AutocompleteValue::Integer(index))
+            })
+            .collect();
 
-    CreateAutocompleteResponse::new().set_choices(regions)
+        CreateAutocompleteResponse::new().set_choices(regions)
+    } else {
+        CreateAutocompleteResponse::new()
+    }
 }

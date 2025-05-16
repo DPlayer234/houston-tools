@@ -21,10 +21,6 @@ mod tests;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    /// The data was invalid.
-    #[error("input data is invalid")]
-    #[deprecated = "not returned anymore, to be removed"]
-    Invalid,
     /// The written buffer returned an error.
     #[error(transparent)]
     Io(#[from] std::io::Error),
