@@ -90,9 +90,8 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         self.write_byte(v.into())
     }
 
-    #[expect(clippy::cast_sign_loss)]
     fn serialize_i8(self, v: i8) -> Result<()> {
-        self.write_byte(v as u8)
+        self.write_byte(v.cast_unsigned())
     }
 
     fn serialize_i16(self, v: i16) -> Result<()> {

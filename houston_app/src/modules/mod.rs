@@ -144,7 +144,7 @@ macro_rules! impl_handler {
                 #[allow(clippy::let_underscore_untyped)]
                 let $this = self;
                 match event {
-                    $( $pat => Box::pin($block), )*
+                    $( $pat => ::std::boxed::Box::pin($block), )*
                     // users are allowed to exhaustively match
                     #[allow(unreachable_patterns)]
                     _ => $crate::helper::noop_future(),

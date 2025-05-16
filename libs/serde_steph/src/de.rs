@@ -214,13 +214,12 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
         visitor.visit_bool(v)
     }
 
-    #[expect(clippy::cast_possible_wrap)]
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'de>,
     {
         let [b] = self.reader.read_bytes()?;
-        visitor.visit_i8(b as i8)
+        visitor.visit_i8(b.cast_signed())
     }
 
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
@@ -319,11 +318,11 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
         let len: usize = self.read_leb128()?;
         match self.reader.try_read_bytes_borrow(len) {
             Some(v) => {
-                let v = std::str::from_utf8(v?).map_err(|_| Error::InvalidUtf8)?;
+                let v = str::from_utf8(v?).map_err(|_| Error::InvalidUtf8)?;
                 visitor.visit_borrowed_str(v)
             },
             None => self.reader.read_byte_view(len, |v| {
-                let v = std::str::from_utf8(v).map_err(|_| Error::InvalidUtf8)?;
+                let v = str::from_utf8(v).map_err(|_| Error::InvalidUtf8)?;
                 visitor.visit_str(v)
             }),
         }

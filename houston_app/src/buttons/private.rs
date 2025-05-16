@@ -83,11 +83,11 @@ macro_rules! button_value {
                 $crate::buttons::private::make_action::<__Dispatch>($key)
             };
 
-            fn to_custom_id(&self) -> String {
+            fn to_custom_id(&self) -> ::std::string::String {
                 $crate::buttons::encoding::to_custom_id(self)
             }
 
-            fn to_nav(&self) -> Nav<'_> {
+            fn to_nav(&self) -> $crate::buttons::Nav<'_> {
                 $crate::buttons::Nav::from_button_value(self)
             }
         }

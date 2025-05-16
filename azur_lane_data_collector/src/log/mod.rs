@@ -9,14 +9,14 @@ mod write;
 /// Creates an action builder with the given label.
 macro_rules! action {
     ($($t:tt)*) => {
-        $crate::log::ActionBuilder::new(std::format!($($t)*))
+        $crate::log::ActionBuilder::new(::std::format!($($t)*))
     };
 }
 
 /// Prints an info message while no action is active.
 macro_rules! info {
     ($($t:tt)*) => {
-        $crate::log::__info(std::format_args!($($t)*))
+        $crate::log::__info(::std::format_args!($($t)*))
     };
 }
 

@@ -99,13 +99,13 @@ macro_rules! impl_debug {
     };
     // recursively add another field
     (@struct ($pref:expr) $field:ident $(, $($rest:tt)*)?) => {
-        $crate::impl_debug!(@struct ($pref.field(stringify!($field), &$field)) $($($rest)*)?)
+        $crate::impl_debug!(@struct ($pref.field(::std::stringify!($field), &$field)) $($($rest)*)?)
     };
     // recursively add another field, but:
     // tt instead of ident for $field so it can be used with tuple structs
     // $as is the renamed local but is otherwise meaningless
     (@struct ($pref:expr) $field:tt: $as:ident $(, $($rest:tt)*)?) => {
-        $crate::impl_debug!(@struct ($pref.field(stringify!($field), &$as)) $($($rest)*)?)
+        $crate::impl_debug!(@struct ($pref.field(::std::stringify!($field), &$as)) $($($rest)*)?)
     };
 
     // omit remaining fields
@@ -130,7 +130,7 @@ macro_rules! impl_debug {
     (@enum $self:expr, $f:expr, ($($pat:pat),*) ($($out:expr),*) $Var:ident $(, $($body:tt)*)?) => {
         $crate::impl_debug!(@enum $self, $f,
             ($($pat,)* Self::$Var)
-            ($($out,)* $f.write_str(stringify!($Var)))
+            ($($out,)* $f.write_str(::std::stringify!($Var)))
             $($($body)*)?
         )
     };
@@ -138,7 +138,7 @@ macro_rules! impl_debug {
     (@enum $self:expr, $f:expr, ($($pat:pat),*) ($($out:expr),*) $Var:ident $var_body:tt $(, $($body:tt)*)?) => {
         $crate::impl_debug!(@enum $self, $f,
             ($($pat,)* Self::$Var $var_body)
-            ($($out,)* $crate::impl_debug!(@bodystart $f, stringify!($Var), $var_body))
+            ($($out,)* $crate::impl_debug!(@bodystart $f, ::std::stringify!($Var), $var_body))
             $($($body)*)?
         )
     };

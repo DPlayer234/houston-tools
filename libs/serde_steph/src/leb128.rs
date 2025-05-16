@@ -148,22 +148,20 @@ macro_rules! impl_uleb_signed {
         impl Leb128 for $Ty {
             type Unsigned = $Unsigned;
 
-            #[expect(clippy::cast_sign_loss)]
             fn into_unsigned(self) -> Self::Unsigned {
-                let mut x = (self as $Unsigned) << 1;
+                let mut x = self.cast_unsigned() << 1;
                 if self < 0 {
                     x = !x;
                 }
                 x
             }
 
-            #[expect(clippy::cast_possible_wrap)]
             fn from_unsigned(value: Self::Unsigned) -> Self {
                 let mut x = value >> 1;
                 if value & 1 != 0 {
                     x = !x;
                 }
-                x as $Ty
+                x.cast_signed()
             }
         }
     )* };

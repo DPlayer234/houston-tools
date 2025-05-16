@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "bson_model"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bson",
  "bson_model_macros",

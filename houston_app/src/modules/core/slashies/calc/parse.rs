@@ -96,10 +96,10 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
     }
 
     unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
-        debug_assert!(std::str::from_utf8(bytes).is_ok(), "bytes must be utf8");
+        debug_assert!(str::from_utf8(bytes).is_ok(), "bytes must be utf8");
 
         // SAFETY: only splitting on ASCII characters
-        let text = unsafe { std::str::from_utf8_unchecked(bytes) };
+        let text = unsafe { str::from_utf8_unchecked(bytes) };
         Token { text, token_index }
     }
 

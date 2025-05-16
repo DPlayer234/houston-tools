@@ -3,6 +3,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem::transmute;
 use std::ops::{Deref, DerefMut};
+use std::str::Utf8Error;
 
 /// Represents a [`str`] with a fixed length and ownership semantics.
 /// Essentially, it is to [`&str`](str) what `[T; LEN]` is to `&[T]`.
@@ -30,9 +31,9 @@ pub struct FromStrError(());
 impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].
     ///
-    /// This has the same semantics as [`std::str::from_utf8`].
-    pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, std::str::Utf8Error> {
-        match std::str::from_utf8(&bytes) {
+    /// This has the same semantics as [`str::from_utf8`].
+    pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, Utf8Error> {
+        match str::from_utf8(&bytes) {
             Ok(..) => Ok(unsafe {
                 // SAFETY: from_utf8 checks validity
                 Self::from_utf8_unchecked(bytes)
@@ -44,7 +45,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`] without checking the string
     /// contains valid UTF-8.
     ///
-    /// Refer to [`std::str::from_utf8`] for exact semantics.
+    /// Refer to [`str::from_utf8`] for exact semantics.
     ///
     /// # Safety
     ///
@@ -86,7 +87,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     pub const fn as_str(&self) -> &str {
         unsafe {
             // SAFETY: Only constructed with valid UTF-8
-            std::str::from_utf8_unchecked(&self.0)
+            str::from_utf8_unchecked(&self.0)
         }
     }
 
@@ -95,7 +96,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     pub const fn as_mut_str(&mut self) -> &mut str {
         unsafe {
             // SAFETY: Only constructed with valid UTF-8
-            std::str::from_utf8_unchecked_mut(&mut self.0)
+            str::from_utf8_unchecked_mut(&mut self.0)
         }
     }
 

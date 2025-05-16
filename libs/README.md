@@ -4,6 +4,7 @@ Versioned via semver, so you _could_ depend on them.
 Except `azur_lane`, `bson_model`, and `houston_cmd`. I consider these to be somewhat internal so these _may_ be a bit funky in terms of versioning.
 
 Do however note that versions are only incremented when there's changes after a "release".
+Additionally, I don't version them with MSRV changes since those happen on the workspace level and I can't be bothered. I do expect the latest Rust version most of the time.
 
 Please also refer to the documentation in the crate if you intend to use these.
 

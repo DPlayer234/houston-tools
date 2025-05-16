@@ -75,28 +75,28 @@ macro_rules! titlecase {
     ($input:expr) => {
         const {
             // Ensure input is a `&'static str`
-            const INPUT_STR: &str = $input;
+            const __INPUT_STR: &::std::primitive::str = $input;
 
             // Transmute result back to a str.
-    const BYTES: &[u8] = $crate::titlecase!(b: INPUT_STR.as_bytes());
-            unsafe { ::std::str::from_utf8_unchecked(BYTES) }
+    const __BYTES: &[::std::primitive::u8] = $crate::titlecase!(b: __INPUT_STR.as_bytes());
+            unsafe { ::std::primitive::str::from_utf8_unchecked(__BYTES) }
         }
     };
     (b: $input:expr) => {
         const {
             // Ensure input is a `&'static [u8]`
-            const INPUT: &[u8] = $input;
+            const __INPUT: &[::std::primitive::u8] = $input;
 
             // Reusable const for byte length
-            const N: usize = INPUT.len();
+            const __N: ::std::primitive::usize = __INPUT.len();
 
             // Include length in constant for next call.
-            const RESULT: [u8; N] = {
-                let mut value = *$crate::mem::as_sized(INPUT);
+            const __RESULT: [::std::primitive::u8; __N] = {
+                let mut value = *$crate::mem::as_sized(__INPUT);
                 $crate::text::private::to_titlecase_u8(&mut value);
                 value
             };
-            &RESULT as &[u8]
+            &__RESULT as &[::std::primitive::u8]
         }
     };
 }

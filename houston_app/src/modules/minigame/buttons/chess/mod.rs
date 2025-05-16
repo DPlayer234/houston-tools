@@ -42,9 +42,8 @@ enum Action {
     Move(Pos, Pos),
 }
 
-#[expect(clippy::cast_possible_truncation)]
 fn flat_index(pos: Pos) -> u16 {
-    u16::from(pos.x) * N as u16 + u16::from(pos.y)
+    u16::from(pos.x) * u16::from(N_U8) + u16::from(pos.y)
 }
 
 impl View {

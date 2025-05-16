@@ -59,8 +59,7 @@ pub mod starboard {
 fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
     let guild_id = ctx.guild_id().context("command only available in guilds")?;
 
-    #[expect(clippy::cast_possible_wrap)]
-    let board = BoardId::new(board as i64);
+    let board = BoardId::new(board.cast_signed());
     _ = ctx
         .data_ref()
         .config()
@@ -96,8 +95,7 @@ async fn autocomplete_board<'a>(
             .map(|board| {
                 AutocompleteChoice::new(
                     board.name.as_str(),
-                    #[expect(clippy::cast_sign_loss)]
-                    AutocompleteValue::Integer(board.id.get() as u64),
+                    AutocompleteValue::Integer(board.id.get().cast_unsigned()),
                 )
             })
             .collect();

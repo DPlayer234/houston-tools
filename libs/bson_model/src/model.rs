@@ -195,7 +195,7 @@ impl ModelField {
         };
 
         // SAFETY: string always begins with '$', so the tail after is valid UTF-8
-        unsafe { std::str::from_utf8_unchecked(bytes) }
+        unsafe { str::from_utf8_unchecked(bytes) }
     }
 
     /// Gets the expression of this field. That is, the name of the field

@@ -19,26 +19,25 @@ pub struct Pos {
     pub y: u8,
 }
 
-#[expect(clippy::cast_sign_loss)]
 impl Pos {
     pub const fn new(x: u8, y: u8) -> Self {
         Self { x, y }
     }
 
     const fn add_x(mut self, x: i8) -> Self {
-        self.x = self.x.wrapping_add(x as u8);
+        self.x = self.x.wrapping_add(x.cast_unsigned());
         self
     }
 
     const fn add_y(mut self, y: i8) -> Self {
-        self.y = self.y.wrapping_add(y as u8);
+        self.y = self.y.wrapping_add(y.cast_unsigned());
         self
     }
 
     const fn add_offset(self, offset: Offset) -> Self {
         Self::new(
-            self.x.wrapping_add(offset.x as u8),
-            self.y.wrapping_add(offset.y as u8),
+            self.x.wrapping_add(offset.x.cast_unsigned()),
+            self.y.wrapping_add(offset.y.cast_unsigned()),
         )
     }
 }

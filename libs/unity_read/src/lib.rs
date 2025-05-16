@@ -32,8 +32,9 @@ pub trait SeekRead: Read + Seek {
 
         if offset != 0 {
             // offset is within (0..=u16::MAX) and thus cannot wrap
-            #[expect(clippy::cast_possible_wrap)]
-            self.seek(io::SeekFrom::Current(i64::from(align) - offset as i64))?;
+            self.seek(io::SeekFrom::Current(
+                i64::from(align) - offset.cast_signed(),
+            ))?;
         }
 
         Ok(())

@@ -115,8 +115,7 @@ pub mod id_as_i64 {
         D: Deserializer<'de>,
         T: From<u64>,
     {
-        #[expect(clippy::cast_sign_loss)]
-        let int = i64::deserialize(deserializer)? as u64;
+        let int = i64::deserialize(deserializer)?.cast_unsigned();
         if int != u64::MAX {
             Ok(T::from(int))
         } else {

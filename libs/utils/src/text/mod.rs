@@ -33,14 +33,14 @@ pub use write_str::WriteStr;
 #[macro_export]
 macro_rules! join {
     ($str:expr) => { const {
-        const STR: &str = $str;
-        STR
+        const __STR: &::std::primitive::str = $str;
+        __STR
     }};
     ($($str:expr),*) => { const {
-        const STRS: &[&str] = &[$($str),*];
-        const N: usize = $crate::text::private::count_str_const(STRS);
-        const JOIN: $crate::text::InlineStr<N> = $crate::text::private::join_str_const(STRS);
-        JOIN.as_str()
+        const __STRS: &[&::std::primitive::str] = &[$($str),*];
+        const __N: ::std::primitive::usize = $crate::text::private::count_str_const(__STRS);
+        const __JOIN: $crate::text::InlineStr<__N> = $crate::text::private::join_str_const(__STRS);
+        __JOIN.as_str()
     }};
 }
 
