@@ -1,6 +1,7 @@
 use bson_model::{Filter, ModelDocument as _};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
+use serenity::small_fixed_array::FixedString;
 use utils::text::WriteStr as _;
 
 use super::prelude::*;
@@ -478,7 +479,7 @@ async fn pin_message_to_board(
     let notice = board
         .notices
         .choose(&mut rand::rng())
-        .map_or("{user}, your post made it! Wow!", String::as_str);
+        .map_or("{user}, your post made it! Wow!", FixedString::as_str);
 
     let notice = replace_holes(notice, |out, n| match n {
         "user" => write!(out, "{}", message.author.mention()),

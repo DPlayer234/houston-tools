@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serenity::small_fixed_array::FixedArray;
+
 use crate::config::HEmoji;
 use crate::prelude::*;
 
@@ -11,7 +13,7 @@ fn default_with_threads() -> bool {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MediaReactChannel {
-    pub emojis: Vec<MediaReactEntry>,
+    pub emojis: FixedArray<MediaReactEntry>,
     #[serde(default = "default_with_threads")]
     pub with_threads: bool,
 }

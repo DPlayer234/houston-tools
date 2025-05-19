@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::hint;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
@@ -6,6 +5,7 @@ use std::sync::{Arc, OnceLock};
 use anyhow::Context as _;
 use azur_lane::ship::ShipData;
 use serenity::builder::CreateEmbedAuthor;
+use serenity::small_fixed_array::FixedString;
 use utils::join;
 
 use super::GameData;
@@ -79,52 +79,61 @@ impl Config {
 #[derive(Debug, serde::Deserialize)]
 #[serde(default)]
 pub struct WikiUrls {
-    pub ship_base: Cow<'static, str>,
-    pub ship_list: Cow<'static, str>,
-    pub equipment_list: Cow<'static, str>,
-    pub dd_gun_list: Cow<'static, str>,
-    pub cl_gun_list: Cow<'static, str>,
-    pub ca_gun_list: Cow<'static, str>,
-    pub cb_gun_list: Cow<'static, str>,
-    pub bb_gun_list: Cow<'static, str>,
-    pub surface_torpedo_list: Cow<'static, str>,
-    pub sub_torpedo_list: Cow<'static, str>,
-    pub aa_gun_list: Cow<'static, str>,
-    pub fuze_aa_gun_list: Cow<'static, str>,
-    pub auxiliary_list: Cow<'static, str>,
-    pub cargo_list: Cow<'static, str>,
-    pub anti_sub_list: Cow<'static, str>,
-    pub fighter_list: Cow<'static, str>,
-    pub dive_bomber_list: Cow<'static, str>,
-    pub torpedo_bomber_list: Cow<'static, str>,
-    pub seaplane_list: Cow<'static, str>,
-    pub augment_list: Cow<'static, str>,
+    pub ship_base: FixedString<u16>,
+    pub ship_list: FixedString<u16>,
+    pub equipment_list: FixedString<u16>,
+    pub dd_gun_list: FixedString<u16>,
+    pub cl_gun_list: FixedString<u16>,
+    pub ca_gun_list: FixedString<u16>,
+    pub cb_gun_list: FixedString<u16>,
+    pub bb_gun_list: FixedString<u16>,
+    pub surface_torpedo_list: FixedString<u16>,
+    pub sub_torpedo_list: FixedString<u16>,
+    pub aa_gun_list: FixedString<u16>,
+    pub fuze_aa_gun_list: FixedString<u16>,
+    pub auxiliary_list: FixedString<u16>,
+    pub cargo_list: FixedString<u16>,
+    pub anti_sub_list: FixedString<u16>,
+    pub fighter_list: FixedString<u16>,
+    pub dive_bomber_list: FixedString<u16>,
+    pub torpedo_bomber_list: FixedString<u16>,
+    pub seaplane_list: FixedString<u16>,
+    pub augment_list: FixedString<u16>,
 }
 
 impl Default for WikiUrls {
     fn default() -> Self {
+        macro_rules! fs {
+            ($($s:expr),*) => {{
+                const VAL: &str = join!($($s),*);
+                let f = FixedString::from_static_trunc(VAL);
+                assert_eq!(VAL.len(), f.len() as usize, "wiki url default too long");
+                f
+            }};
+        }
+
         const BASE: &str = "https://azurlane.koumakan.jp/wiki/";
         Self {
-            ship_base: BASE.into(),
-            ship_list: join!(BASE, "List_of_Ships").into(),
-            equipment_list: join!(BASE, "Equipment_List").into(),
-            dd_gun_list: join!(BASE, "List_of_Destroyer_Guns").into(),
-            cl_gun_list: join!(BASE, "List_of_Light_Cruiser_Guns").into(),
-            ca_gun_list: join!(BASE, "List_of_Heavy_Cruiser_Guns").into(),
-            cb_gun_list: join!(BASE, "List_of_Large_Cruiser_Guns").into(),
-            bb_gun_list: join!(BASE, "List_of_Battleship_Guns").into(),
-            surface_torpedo_list: join!(BASE, "List_of_Torpedoes").into(),
-            sub_torpedo_list: join!(BASE, "List_of_Submarine_Torpedoes").into(),
-            aa_gun_list: join!(BASE, "List_of_AA_Guns").into(),
-            fuze_aa_gun_list: join!(BASE, "List_of_AA_Time_Fuze_Guns").into(),
-            auxiliary_list: join!(BASE, "List_of_Auxiliary_Equipment").into(),
-            cargo_list: join!(BASE, "List_of_Cargo").into(),
-            anti_sub_list: join!(BASE, "List_of_ASW_Equipment").into(),
-            fighter_list: join!(BASE, "List_of_Fighters").into(),
-            dive_bomber_list: join!(BASE, "List_of_Dive_Bombers").into(),
-            torpedo_bomber_list: join!(BASE, "List_of_Torpedo_Bombers").into(),
-            seaplane_list: join!(BASE, "List_of_Seaplanes").into(),
-            augment_list: join!(BASE, "List_of_Augment_Modules").into(),
+            ship_base: fs!(BASE),
+            ship_list: fs!(BASE, "List_of_Ships"),
+            equipment_list: fs!(BASE, "Equipment_List"),
+            dd_gun_list: fs!(BASE, "List_of_Destroyer_Guns"),
+            cl_gun_list: fs!(BASE, "List_of_Light_Cruiser_Guns"),
+            ca_gun_list: fs!(BASE, "List_of_Heavy_Cruiser_Guns"),
+            cb_gun_list: fs!(BASE, "List_of_Large_Cruiser_Guns"),
+            bb_gun_list: fs!(BASE, "List_of_Battleship_Guns"),
+            surface_torpedo_list: fs!(BASE, "List_of_Torpedoes"),
+            sub_torpedo_list: fs!(BASE, "List_of_Submarine_Torpedoes"),
+            aa_gun_list: fs!(BASE, "List_of_AA_Guns"),
+            fuze_aa_gun_list: fs!(BASE, "List_of_AA_Time_Fuze_Guns"),
+            auxiliary_list: fs!(BASE, "List_of_Auxiliary_Equipment"),
+            cargo_list: fs!(BASE, "List_of_Cargo"),
+            anti_sub_list: fs!(BASE, "List_of_ASW_Equipment"),
+            fighter_list: fs!(BASE, "List_of_Fighters"),
+            dive_bomber_list: fs!(BASE, "List_of_Dive_Bombers"),
+            torpedo_bomber_list: fs!(BASE, "List_of_Torpedo_Bombers"),
+            seaplane_list: fs!(BASE, "List_of_Seaplanes"),
+            augment_list: fs!(BASE, "List_of_Augment_Modules"),
         }
     }
 }

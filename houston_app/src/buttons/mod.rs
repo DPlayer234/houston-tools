@@ -273,10 +273,6 @@ pub trait ButtonValue: Send + Sync {
     }
 }
 
-async fn modal_reply_unsupported() -> Result {
-    anyhow::bail!("this button args type does not support modals");
-}
-
 /// Provides a way for button arguments to reply to the interaction.
 pub trait ButtonReply: Sized + Send {
     /// Replies to the component interaction.
@@ -284,8 +280,12 @@ pub trait ButtonReply: Sized + Send {
 
     /// Replies to the modal interaction.
     fn modal_reply(self, ctx: ModalContext<'_>) -> impl Future<Output = Result> + Send {
+        async fn unsupported() -> Result {
+            anyhow::bail!("this button args type does not support modals");
+        }
+
         _ = ctx;
-        modal_reply_unsupported()
+        unsupported()
     }
 }
 

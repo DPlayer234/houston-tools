@@ -7,6 +7,7 @@ pub mod emoji;
 pub mod setup;
 
 pub use emoji::HEmoji;
+use serenity::small_fixed_array::FixedString;
 
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
@@ -19,7 +20,7 @@ pub struct HConfig {
 #[derive(Debug, Deserialize)]
 pub struct HDiscordConfig {
     pub token: Token,
-    pub status: Option<String>,
+    pub status: Option<FixedString>,
 }
 
 const fn default_embed_color() -> Color {
@@ -35,7 +36,7 @@ pub struct HBotConfig {
     #[serde(default = "default_embed_color")]
     pub embed_color: Color,
     pub azur: Option<crate::modules::azur::Config>,
-    pub mongodb_uri: Option<String>,
+    pub mongodb_uri: Option<FixedString>,
     #[serde(default)]
     pub media_react: crate::modules::media_react::Config,
     pub perks: Option<crate::modules::perks::Config>,

@@ -2,15 +2,25 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use indexmap::IndexMap;
+use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
 use tokio::sync::RwLock;
 
 use super::Item;
 use crate::helper::time::serde_time_delta;
 use crate::prelude::*;
 
-fn default_cash_name() -> String {
-    "$".to_owned()
+macro_rules! fsd {
+    ($fn:ident = $str:literal) => {
+        fn $fn<LenT: ValidLength>() -> FixedString<LenT> {
+            let s = $str;
+            let f = <FixedString<LenT>>::from_static_trunc(s);
+            assert_eq!(s.len(), f.len().to_usize(), "{} too long", stringify!($fn));
+            f
+        }
+    };
 }
+
+fsd!(default_cash_name = "$");
 
 fn default_check_interval() -> TimeDelta {
     // 2 minutes is about the minimum safe interval for constant role updates
@@ -21,7 +31,7 @@ fn default_check_interval() -> TimeDelta {
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     #[serde(default = "default_cash_name")]
-    pub cash_name: String,
+    pub cash_name: FixedString<u8>,
     #[serde(with = "serde_time_delta", default = "default_check_interval")]
     pub check_interval: TimeDelta,
     pub rainbow: Option<RainbowConfig>,
@@ -52,20 +62,15 @@ pub struct ItemPrice {
     pub amount: u32,
 }
 
-fn default_rainbow_name() -> String {
-    "Rainbow Role".to_owned()
-}
-
-fn default_rainbow_description() -> String {
-    "A role with regularly changing color.".to_owned()
-}
+fsd!(default_rainbow_name = "Rainbow Role");
+fsd!(default_rainbow_description = "A role with regularly changing color.");
 
 #[derive(Debug, serde::Deserialize)]
 pub struct RainbowConfig {
     #[serde(default = "default_rainbow_name")]
-    pub name: String,
+    pub name: FixedString<u8>,
     #[serde(default = "default_rainbow_description")]
-    pub description: String,
+    pub description: FixedString<u16>,
     #[serde(flatten)]
     pub price: EffectPrice,
     #[serde(flatten)]
@@ -77,46 +82,36 @@ pub struct RainbowRoleEntry {
     pub role: RoleId,
 }
 
-fn default_pushpin_name() -> String {
-    "Pushpin".to_owned()
-}
-
-fn default_pushpin_description() -> String {
-    "Let's you pin or unpin any message.".to_owned()
-}
+fsd!(default_pushpin_name = "Pushpin");
+fsd!(default_pushpin_description = "Let's you pin or unpin any message.");
 
 #[derive(Debug, serde::Deserialize)]
 pub struct PushpinConfig {
     #[serde(default = "default_pushpin_name")]
-    pub name: String,
+    pub name: FixedString<u8>,
     #[serde(default = "default_pushpin_description")]
-    pub description: String,
+    pub description: FixedString<u16>,
     #[serde(flatten)]
     pub price: ItemPrice,
 }
 
-fn default_role_edit_name() -> String {
-    "Role Edit".to_owned()
-}
-
-fn default_role_edit_description() -> String {
-    "Let's you change the name/color of your role.".to_owned()
-}
+fsd!(default_role_edit_name = "Role Edit");
+fsd!(default_role_edit_description = "Let's you change the name/color of your role.");
 
 #[derive(Debug, serde::Deserialize)]
 pub struct RoleEditConfig {
     #[serde(default = "default_role_edit_name")]
-    pub name: String,
+    pub name: FixedString<u8>,
     #[serde(default = "default_role_edit_description")]
-    pub description: String,
+    pub description: FixedString<u16>,
     #[serde(flatten)]
     pub price: ItemPrice,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleConfig {
-    pub name: String,
-    pub description: String,
+    pub name: FixedString<u8>,
+    pub description: FixedString<u16>,
     #[serde(flatten)]
     pub price: ItemPrice,
     #[serde(flatten)]
@@ -126,13 +121,13 @@ pub struct CollectibleConfig {
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleGuildEntry {
     pub notice: Option<CollectibleNotice>,
-    pub prize_roles: Vec<(u32, RoleId)>,
+    pub prize_roles: FixedArray<(u32, RoleId)>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CollectibleNotice {
     pub channel: GenericChannelId,
-    pub text: String,
+    pub text: FixedString,
 }
 
 fn default_birthday_duration() -> TimeDelta {
@@ -143,14 +138,14 @@ fn default_birthday_duration() -> TimeDelta {
 pub struct BirthdayConfig {
     #[serde(with = "serde_time_delta", default = "default_birthday_duration")]
     pub duration: TimeDelta,
-    pub regions: Vec<BirthdayRegionConfig>,
+    pub regions: FixedArray<BirthdayRegionConfig>,
     #[serde(default, flatten)]
     pub guilds: IndexMap<GuildId, BirthdayGuildConfig>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayRegionConfig {
-    pub name: String,
+    pub name: FixedString<u8>,
     #[serde(with = "serde_time_delta", default)]
     pub time_offset: TimeDelta,
 
@@ -163,25 +158,26 @@ pub struct BirthdayGuildConfig {
     pub role: Option<RoleId>,
     pub notice: Option<BirthdayNotice>,
     #[serde(with = "check_gifts", default)]
-    pub gifts: Vec<(Item, i64)>,
+    pub gifts: FixedArray<(Item, i64)>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayNotice {
     pub channel: GenericChannelId,
-    pub text: String,
+    pub text: FixedString,
 }
 
 mod check_gifts {
     use serde::de::{Deserialize as _, Deserializer, Error as _};
+    use serenity::small_fixed_array::FixedArray;
 
     use super::Item;
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<(Item, i64)>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<FixedArray<(Item, i64)>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let v = <Vec<(Item, i64)>>::deserialize(deserializer)?;
+        let v = <FixedArray<(Item, i64)>>::deserialize(deserializer)?;
 
         for &(_, amount) in &v {
             u32::try_from(amount).map_err(|_| D::Error::custom("birthday gift must fit in u32"))?;

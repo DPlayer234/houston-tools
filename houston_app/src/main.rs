@@ -66,11 +66,14 @@ async fn main() -> anyhow::Result<()> {
         // or add a `ready` method to the modules and call that in the event.
         let startup = Arc::clone(&bot_data).startup();
         let discord = async move {
+            let status = config
+                .discord
+                .status
+                .map(String::from)
+                .unwrap_or_else(|| VERSION.to_owned());
+
             let mut client = Client::builder(config.discord.token, init.intents)
-                .activity(ActivityData::custom(
-                    // this accepts `Into<String>`, not `Into<Cow<'_, str>>`
-                    config.discord.status.unwrap_or_else(|| VERSION.to_owned()),
-                ))
+                .activity(ActivityData::custom(status))
                 .raw_event_handler(CacheUpdateHandler)
                 .framework(framework)
                 .event_handler(event_handler)

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use extract_map::ExtractKey;
+use serenity::small_fixed_array::{FixedArray, FixedString};
 use tokio::sync::Semaphore;
 
 use crate::config::HEmoji;
@@ -53,12 +54,12 @@ pub struct StarboardGuild {
 #[derive(Debug, serde::Deserialize)]
 pub struct StarboardEntry {
     pub id: BoardId,
-    pub name: String,
+    pub name: FixedString<u8>,
     pub channel: GenericChannelId,
     pub emoji: HEmoji,
     pub reacts: u32,
-    #[serde(default = "Vec::new")]
-    pub notices: Vec<String>,
+    #[serde(default = "FixedArray::new")]
+    pub notices: FixedArray<FixedString>,
     #[serde(default, alias = "cash")]
     pub cash_gain: i32,
     #[serde(default, alias = "cash_pin")]
