@@ -373,5 +373,8 @@ fn ship_couple_encourage_label(
         ShipCouple::Illustrator => {
             write!(f, "Sortie with {amount} more ships by the same illustrator")
         },
+        _ => {
+            write!(f, "Unknown couple encourage")
+        },
     })
 }

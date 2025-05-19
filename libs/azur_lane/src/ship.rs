@@ -248,6 +248,10 @@ pub enum ShipCouple {
     /// Actual in-game data specifies which one, but it's only ever used to
     /// refer to the same one as the source ship's.
     Illustrator,
+    /// Triggered based on team type. Unused?
+    Team,
+    /// Unknown trigger types.
+    Unknown,
 }
 
 define_data_enum! {

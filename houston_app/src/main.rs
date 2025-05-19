@@ -63,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
 
         // note: if any module ever needs access to `Http` at this point, manually
         // create one and use `ClientBuilder::new_with_http` instead.
-        // or add a `ready` method to the modules and call that in the event.
         let startup = Arc::clone(&bot_data).startup();
         let discord = async move {
             let status = config

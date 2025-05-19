@@ -177,13 +177,18 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
             .with_context(context!("couple_encourage 3 for skin {}", set.skin_id))?
             .trunc_into(),
         condition: match mode {
-            // CMBK: check whether the seemingly incorrect lines for Hatsuharu and Richelieu work,
-            // fix this up if so
+            // note:
+            // - Warspite, Admiral Hipper, Zeppy, and Peter Strasser define lines without a filter
+            //   type, clearly intended to be ShipGroup. these lines do not work, but we include
+            //   them as intended anyways
+            // - Hatsuharu and Richelieu have lines defined with the wrong filter type
+            None | Some(0) => ShipCouple::ShipGroup(filter.trunc_into()),
             Some(1) => ShipCouple::HullType(map(filter, convert_al::to_hull_type)),
             Some(2) => ShipCouple::Rarity(map(filter, convert_al::to_rarity)),
             Some(3) => ShipCouple::Faction(map(filter, convert_al::to_faction)),
             Some(4) => ShipCouple::Illustrator,
-            _ => ShipCouple::ShipGroup(filter.trunc_into()),
+            Some(5) => ShipCouple::Team,
+            _ => ShipCouple::Unknown,
         },
     })
 }
