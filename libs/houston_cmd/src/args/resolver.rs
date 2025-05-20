@@ -44,10 +44,9 @@ impl<'a> CommandOptionResolver<'a> {
     ///
     /// Returns an error if there are further sub commands or if a command value
     /// must be rejected.
-    pub fn options(self) -> Result<Vec<ResolvedOption<'a>>, &'static str> {
-        let resolved = self.resolved;
-        self.opts
-            .iter()
+    pub fn options(self) -> Result<Box<[ResolvedOption<'a>]>, &'static str> {
+        let Self { resolved, opts } = self;
+        opts.iter()
             .map(|o| {
                 let value = match &o.value {
                     CommandDataOptionValue::SubCommand(_) => {

@@ -37,11 +37,11 @@ impl fmt::Debug for Context<'_> {
 #[derive(Debug)]
 pub struct ContextInner<'a> {
     pub reply_state: AtomicUsize,
-    pub options: &'a [ResolvedOption<'a>],
+    pub options: Box<[ResolvedOption<'a>]>,
 }
 
 impl<'a> ContextInner<'a> {
-    pub fn with_options(options: &'a [ResolvedOption<'a>]) -> Self {
+    pub fn with_options(options: Box<[ResolvedOption<'a>]>) -> Self {
         Self {
             reply_state: AtomicUsize::new(UNSENT),
             options,
@@ -49,7 +49,7 @@ impl<'a> ContextInner<'a> {
     }
 
     pub fn empty() -> Self {
-        Self::with_options(&[])
+        Self::with_options(Box::default())
     }
 }
 
@@ -95,7 +95,7 @@ impl<'a> Context<'a> {
 
     /// Gets the resolved options.
     pub fn options(self) -> &'a [ResolvedOption<'a>] {
-        self.inner.options
+        &self.inner.options
     }
 
     /// Gets the resolved value for an option by its name.

@@ -139,7 +139,7 @@ impl Framework {
             },
         };
 
-        let ctx_inner = ContextInner::with_options(&options);
+        let ctx_inner = ContextInner::with_options(options);
         let ctx = Context::new(ctx, interaction, &ctx_inner);
         if let Err(why) = self.run_command_or(ctx, command).await {
             self.handle_error(why).await;
@@ -157,7 +157,7 @@ impl Framework {
             },
         };
 
-        let ctx_inner = ContextInner::with_options(&options);
+        let ctx_inner = ContextInner::with_options(options);
         let ctx = Context::new(ctx, interaction, &ctx_inner);
         if let Err(why) = self.run_autocomplete_or(ctx, command).await {
             self.handle_error(why).await;
@@ -234,7 +234,7 @@ impl Framework {
     fn find_command<'ctx>(
         &self,
         interaction: &'ctx CommandInteraction,
-    ) -> Result<(&SubCommandData, Vec<ResolvedOption<'ctx>>), &'static str> {
+    ) -> Result<(&SubCommandData, Box<[ResolvedOption<'ctx>]>), &'static str> {
         let data = &interaction.data;
         let name = data.name.as_str();
 
