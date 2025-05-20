@@ -322,12 +322,15 @@ impl<'v> View<'v> {
             let slots = Join::simple("/")
                 .display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
 
-            write!(
-                text,
-                "**`{: >3.0}%`**`x{}` {slots}",
-                mount.efficiency * 100f64,
-                mount.mounts
-            );
+            write!(text, "**`{: >3.0}%`**", mount.efficiency * 100f64);
+
+            match (mount.mounts, mount.retriggers) {
+                (m, 0) => write!(text, "`x{m}`"),
+                (1, r) => write!(text, "`x{}`", r + 1),
+                (m, r) => write!(text, "`x{}x{m}`", r + 1),
+            }
+
+            write!(text, " {slots}");
 
             if mount.preload != 0 {
                 write!(text, " `PRE x{}`", mount.preload);

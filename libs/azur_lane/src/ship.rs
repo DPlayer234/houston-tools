@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign};
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
+use crate::data_def::is_default;
 use crate::equip::*;
 use crate::skill::*;
 use crate::{Faction, define_data_enum};
@@ -111,7 +112,13 @@ pub struct EquipWeaponMount {
     ///
     /// This is only meaningful for Battleship main guns, torpedoes, and
     /// missiles.
+    #[serde(default, skip_serializing_if = "is_default")]
     pub preload: u8,
+    /// How many retriggers the gun has on fire.
+    ///
+    /// This is only meaningful for Battleship main guns.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub retriggers: u8,
 }
 
 /// Provides information about "shadow" equipment; inherent gear that is not

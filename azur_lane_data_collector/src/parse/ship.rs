@@ -46,28 +46,28 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     // Speaking of, skill 1 is BB MGM+1 and skill 2 is BB MGM+2, so let's just
     // hard-code this. The actual skill data re-fires the weapon, so it would
     // work as a multiplier.
-    let main_mount_mult: u8 = if hide_buff_list.contains(&2) {
-        3
-    } else if hide_buff_list.contains(&1) {
-        2
-    } else {
-        1
+    let retriggers = match hide_buff_list.iter().min() {
+        Some(2) => 2,
+        Some(1) => 1,
+        _ => 0,
     };
 
     /// Makes an equip slot. The first one specifies the template data.
     /// The second one optionally specifies which index the mount data uses.
     macro_rules! make_equip_slot {
         ($allowed_at:literal, $index:literal) => {{
-            let mut mounts: u8 = read!(base_list, $index);
-            if $index == 1 { mounts *= main_mount_mult; }
-
             EquipSlot {
                 allowed: make_equip_slot!(@allowed $allowed_at),
                 mount: Some(EquipWeaponMount {
                     efficiency: read!(equipment_proficiency, $index),
-                    mounts,
+                    mounts: read!(base_list, $index),
                     parallel: read!(parallel_max, $index),
                     preload: read!(preload_count, $index),
+                    retriggers: if $index == 1 {
+                        retriggers
+                    } else {
+                        0
+                    },
                 }),
             }
         }};
