@@ -42,6 +42,10 @@ impl ObjectRef<'_> {
     }
 
     /// Gets the block of memory with the object data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the object points to data out of bounds.
     pub fn data(&self) -> crate::Result<&[u8]> {
         let offset = usize::from_int(self.object.start + self.file.data_offset)?;
         let size = usize::from_int(self.object.size)?;
@@ -58,6 +62,10 @@ impl ObjectRef<'_> {
     }
 
     /// Tries to read the object into the specified type.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if this object cannot be parsed as `T`.
     pub fn try_into_class<T: UnityClass>(&self) -> crate::Result<T> {
         T::try_from_obj(self)
     }

@@ -85,6 +85,11 @@ impl<T> Default for Update<T> {
 
 impl<T: Serialize> Update<T> {
     /// Tries to serialize this value into a BSON document.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the update could not be serialized as a [`Document`].
+    /// This could imply that `Self` is not compatible with BSON serialization.
     pub fn into_document(self) -> bson::ser::Result<Document> {
         bson::to_document(&self)
     }

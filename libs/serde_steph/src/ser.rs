@@ -10,6 +10,11 @@ use crate::leb128;
 /// Serializes a value to a [`Vec<u8>`].
 ///
 /// The resulting buffer will have exactly the length required.
+///
+/// # Errors
+///
+/// Returns [`Err`] when the [`serde::Serialize`] implementation of `T` returns
+/// [`Err`] or attempts an operation that is not supported by STEPH.
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ?Sized + ser::Serialize,
@@ -23,6 +28,12 @@ where
 ///
 /// If you use multiple writer types, consider passing them as [`&mut dyn
 /// io::Write`](io::Write) to reduce the generated code size.
+///
+/// # Errors
+///
+/// Returns [`Err`] when an I/O occurs, or the [`serde::Serialize`]
+/// implementation of `T` returns [`Err`] or attempts an operation that is not
+/// supported by STEPH.
 pub fn to_writer<T, W>(writer: W, value: &T) -> Result<()>
 where
     T: ?Sized + ser::Serialize,

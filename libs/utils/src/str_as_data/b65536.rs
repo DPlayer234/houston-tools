@@ -60,7 +60,9 @@ pub fn to_string(bytes: &[u8]) -> String {
 ///
 /// Use [`decode`] to reverse the operation.
 ///
-/// This can only return an [`Err`] if the `writer` does so.
+/// # Errors
+///
+/// Returns [`Err`] if and only if `writer` returns [`Err`].
 pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     let skip_last = bytes.len() % 2 != 0;
     writer.write_char(match skip_last {
@@ -85,6 +87,8 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
 
 /// Decodes a string holding "base 65536" data.
 ///
+/// # Errors
+///
 /// Returns [`Err`] if the data is invalid or lacks the required markers.
 pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     // Extending the logic in `to_string`, less than ~130% is also common.
@@ -99,8 +103,10 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
 
 /// Decodes a string holding "base 65536" data, writing the bytes to a buffer.
 ///
-/// Returns [`Err`] if the data is invalid, lacks the required markers, or the
-/// writer returned an error.
+/// # Errors
+///
+/// Returns [`Err`] if the data is invalid, lacks the required markers, or
+/// `writer` returns [`Err`].
 pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let (skip_last, input) = strip_input(input)?;
 

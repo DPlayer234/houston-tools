@@ -20,15 +20,30 @@ fn eof() -> Error {
 /// `'de` represents that borrowed lifetime and is otherwise unused.
 pub trait Read<'de>: io::Read {
     /// Reads a constant size chunk of bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs or less than `N` bytes can be
+    /// provided.
     fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N]>;
 
     /// Reads a chunk of bytes, possibly borrowed from the reader for the
     /// duration of the call.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs, less than `len` bytes can be
+    /// provided, or the provided closure returns [`Err`] itself.
     fn read_byte_view<F, T>(&mut self, len: usize, access: F) -> Result<T>
     where
         F: FnOnce(&[u8]) -> Result<T>;
 
     /// Reads a chunk of bytes, returning it as a newly allocated [`Vec`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs or less than `len` bytes can be
+    /// provided.
     fn read_byte_vec(&mut self, len: usize) -> Result<Vec<u8>>;
 
     /// Attempts to read a chunk of bytes, borrowing from the reader.
@@ -39,6 +54,11 @@ pub trait Read<'de>: io::Read {
     ///
     /// If [`None`] was returned, calling another reader method with the same
     /// `len` must have the same result as if this method was never called.
+    ///
+    /// # Errors
+    ///
+    /// If the reader supports this method but an I/O error occurs or less than
+    /// `len` bytes can be provided, returns `Some(Err(_))`.
     fn try_read_bytes_borrow(&mut self, len: usize) -> Option<Result<&'de [u8]>> {
         _ = len;
         None

@@ -541,6 +541,11 @@ fn emit_into_document(
     quote::quote! {
         impl #impl_gen #ty_name #ty_gen #where_clause {
             /// Tries to serialize this value into a BSON document.
+            ///
+            /// # Errors
+            ///
+            /// Returns `Err` if the update could not be serialized as a `Document`.
+            /// This could imply that `Self` is not compatible with BSON serialization.
             pub fn into_document(self) -> #crate_::private::bson::ser::Result<#crate_::private::bson::Document> {
                 #crate_::private::bson::to_document(&self)
             }

@@ -39,6 +39,11 @@ impl StreamingInfo {
     }
 
     /// Loads the streaming data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the streaming info points at an invalid path or
+    /// section of data.
     pub fn load_data<'a>(&self, fs: &'a UnityFsFile<'a>) -> crate::Result<&'a [u8]> {
         let path = self
             .path
@@ -65,6 +70,13 @@ impl StreamingInfo {
         Ok(slice)
     }
 
+    /// Loads the streaming data, if its path is not empty. If it is empty,
+    /// instead returns the `fallback`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the streaming info is specified and points at an
+    /// invalid path or section of data.
     pub fn load_data_or_else<'t, 'fs: 't>(
         &self,
         fs: &'fs UnityFsFile<'fs>,

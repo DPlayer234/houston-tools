@@ -26,6 +26,11 @@ pub trait UnityClass: Sized {
     /// Parses a tree into a structure.
     ///
     /// `tree` holds the necessary part of the tree to parse children.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `Self` cannot be parsed from the given tree or the
+    /// tree is invalid.
     fn parse_tree(
         r: &mut Cursor<&[u8]>,
         is_big_endian: bool,
@@ -34,6 +39,11 @@ pub trait UnityClass: Sized {
     ) -> crate::Result<Self>;
 
     /// Tries to load a structure from an object reference.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `Self` cannot be parsed from the tree type specified
+    /// by the object or its tree is invalid.
     fn try_from_obj(obj: &ObjectRef<'_>) -> crate::Result<Self> {
         let cursor = &mut Cursor::new(obj.data()?);
         if let Some((root, tree)) = obj.ser_type.type_tree.split_first() {

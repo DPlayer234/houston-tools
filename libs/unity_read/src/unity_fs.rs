@@ -160,6 +160,11 @@ struct BlockOffset {
 
 impl<'a> UnityFsFile<'a> {
     /// Reads a UnityFS from a reader.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `buf` cannot be read as a [`UnityFsFile`], the header
+    /// data is invalid, or an I/O error occurs.
     pub fn open(mut buf: &'a mut dyn SeekRead) -> crate::Result<Self> {
         let header = UnityFsHeader::read(&mut buf)?;
 
@@ -305,6 +310,11 @@ impl<'a> UnityFsNode<'a> {
     }
 
     /// Reads the raw binary data for this node.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs or the data cannot be
+    /// decompressed or is compressed in an unsupported format.
     pub fn read_raw(&self) -> crate::Result<&'a [u8]> {
         Ok(self
             .node
@@ -313,6 +323,12 @@ impl<'a> UnityFsNode<'a> {
     }
 
     /// Reads the data for this node.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs, the data cannot be decompressed
+    /// or is compressed in an unsupported format, or the data appears to be a
+    /// [`SerializedFile`] but cannot be read as such.
     pub fn read(&self) -> crate::Result<UnityFsData<'a>> {
         let buf = self.read_raw()?;
         if SerializedFile::is_serialized_file(buf) {

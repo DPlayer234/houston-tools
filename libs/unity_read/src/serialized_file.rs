@@ -122,6 +122,11 @@ impl<'a> SerializedFile<'a> {
     }
 
     /// Reads a buffer into a [`SerializedFile`] struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `buf` cannot be read as a [`SerializedFile`] or its
+    /// header data is invalid.
     pub fn read(buf: &'a [u8]) -> crate::Result<Self> {
         let cursor = &mut Cursor::new(buf);
 

@@ -11,10 +11,18 @@ pub use crate::read::{IoRead, Read, SliceRead};
 /// Deserializes a value from a byte slice.
 ///
 /// This assumes that `buf` contains just one object. If there are trailing
-/// bytes, this function returns [`Error::TrailingBytes`].
+/// bytes, this function returns [`Error::TrailingBytes`]. If you want to handle
+/// trailing bytes yourself, use [`Deserializer::from_slice`] and
+/// [`Deserializer::remainder`].
 ///
-/// If you want to handle trailing bytes yourself, use
-/// [`Deserializer::from_slice`] and [`Deserializer::remainder`].
+/// # Errors
+///
+/// This function may fail and return [`Err`] when the bytes are invalid for the
+/// STEPH format or trailing bytes are found after the value. It may also fail
+/// due to the [`Deserialize`] implementation for `T` attempting unsupported
+/// operations or the data being invalid for `T`.
+///
+/// [`Deserialize`]: serde::Deserialize
 pub fn from_slice<'de, T>(buf: &'de [u8]) -> Result<T>
 where
     T: de::Deserialize<'de>,
@@ -25,13 +33,20 @@ where
 /// Deserializes a value from a [`io::Read`].
 ///
 /// This assumes that `reader` yields only one object. If it provides trailing
-/// bytes, this function returns [`Error::TrailingBytes`].
-///
-/// If you want to handle trailing bytes yourself, use
-/// [`Deserializer::from_reader`].
+/// bytes, this function returns [`Error::TrailingBytes`]. If you want to handle
+/// trailing bytes yourself, use [`Deserializer::from_reader`].
 ///
 /// If you use multiple reader types, consider passing them as [`&mut dyn
 /// io::Read`](io::Read) to reduce the generated code size.
+///
+/// # Errors
+///
+/// This function may fail and return [`Err`] when an I/O error occurs, the read
+/// bytes are invalid for the STEPH format or trailing bytes are found after the
+/// value. It may also fail due to the [`Deserialize`] implementation for `T`
+/// attempting unsupported operations or the data being invalid for `T`.
+///
+/// [`Deserialize`]: serde::Deserialize
 pub fn from_reader<T, R>(reader: R) -> Result<T>
 where
     T: de::DeserializeOwned,
@@ -74,6 +89,10 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     /// This behavior also means that the corresponding reader should be
     /// considered exhausted after this point. If you intend to use the reader
     /// after this, you probably shouldn't call this.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if underlying reader wasn't exhausted or an I/O occured.
     pub fn end(&mut self) -> Result<()> {
         if self.reader.read(&mut [0u8])? == 0 {
             Ok(())
@@ -83,12 +102,16 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     }
 
     /// Deserializes a single object, followed by a call to [`Self::end`].
+    ///
+    /// This is a shared function used to implement [`from_slice`] and
+    /// [`from_reader`].
     pub(crate) fn read_to_end<T: de::Deserialize<'de>>(&mut self) -> Result<T> {
         let value = T::deserialize(&mut *self)?;
         self.end()?;
         Ok(value)
     }
 
+    /// Reads an LEB128 encoded integer.
     fn read_leb128<T: leb128::Leb128>(&mut self) -> Result<T> {
         leb128::read(&mut self.reader)
     }

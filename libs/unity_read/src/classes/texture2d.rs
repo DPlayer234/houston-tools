@@ -32,6 +32,10 @@ impl Texture2D {
     }
 
     /// Reads the texture data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the associated streaming info is invalid.
     pub fn read_data<'t, 'fs: 't>(
         &'t self,
         fs: &'fs UnityFsFile<'fs>,
@@ -71,6 +75,11 @@ impl Texture2DData<'_> {
     }
 
     /// Decodes the image data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the image cannot be decoded or is in an unsupported
+    /// format.
     pub fn decode(&self) -> crate::Result<RgbaImage> {
         let width = u32::from_int(self.texture.width)?;
         let height = u32::from_int(self.texture.height)?;

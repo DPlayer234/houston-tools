@@ -97,6 +97,10 @@ pub struct MeshVertexData<'t> {
 
 impl Mesh {
     /// Reads the mesh's vertex data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the associated streaming info is invalid.
     pub fn read_vertex_data<'t, 'fs: 't>(
         &'t self,
         fs: &'fs UnityFsFile<'fs>,
@@ -110,8 +114,13 @@ impl Mesh {
     }
 }
 
+// Only assuming Unity 2018 and newer.
 impl MeshVertexData<'_> {
-    // Only assuming Unity 2018 and newer.
+    //// Resolves the mesh data.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the mesh data is invalid or unsupported.
     pub fn resolve_meshes(&self) -> crate::Result<Vec<ResolvedMesh>> {
         // Would you believe me if this handles barely anything a mesh can store?
         let (index_size, index_buffer) = self.load_index_buffer()?;

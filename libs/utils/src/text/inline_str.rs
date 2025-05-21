@@ -32,6 +32,10 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Converts an array to an [`InlineStr`].
     ///
     /// This has the same semantics as [`str::from_utf8`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the slice is not valid UTF-8.
     pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, Utf8Error> {
         match str::from_utf8(&bytes) {
             Ok(..) => Ok(unsafe {
@@ -56,10 +60,13 @@ impl<const LEN: usize> InlineStr<LEN> {
         Self(bytes)
     }
 
-    /// Creates a reference to an [`InlineStr`] from a [`&str`](str).
-    /// The returned reference points to the same memory.
+    /// Creates a reference to an [`InlineStr`] from a [`&str`](str). The
+    /// returned reference points to the same memory and must have the same
+    /// length.
     ///
-    /// Returns an error if the length does not match.
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the length of the slice does not match `N`.
     pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
         match crate::mem::try_as_sized(str.as_bytes()) {
             Some(slice) => Ok(unsafe {

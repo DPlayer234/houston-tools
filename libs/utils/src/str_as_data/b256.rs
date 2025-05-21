@@ -43,7 +43,9 @@ pub fn to_string(bytes: &[u8]) -> String {
 ///
 /// Use [`decode`] to reverse the operation.
 ///
-/// This can only return an [`Err`] if the `writer` does so.
+/// # Errors
+///
+/// Returns [`Err`] if and only if `writer` returns [`Err`].
 pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     writer.write_char('#')?;
     for b in bytes {
@@ -53,7 +55,14 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     writer.write_char('&')
 }
 
+/// Decodes a string holding "base 65536" data, writing the bytes to a
+/// [`Vec<u8>`].
+///
 /// Equivalent to [`decode`] with a [`Vec<u8>`] as the buffer.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the data is invalid or lacks the required markers.
 pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     let expected_size = input.len();
     let mut result = Vec::with_capacity(expected_size);
@@ -64,8 +73,10 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
 
 /// Decodes a string holding "base 65536" data, writing the bytes to a buffer.
 ///
-/// Returns [`Err`] if the data is invalid, lacks the required markers, or the
-/// writer returned an error.
+/// # Errors
+///
+/// Returns [`Err`] if the data is invalid, lacks the required markers, or
+/// `writer` returns [`Err`].
 pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let input = strip_input(input)?;
 

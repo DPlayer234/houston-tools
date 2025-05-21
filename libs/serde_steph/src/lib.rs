@@ -48,6 +48,20 @@
 //! - `#[serde(flatten)]` is unsupported because it means the container does not
 //!   provide all data needed during serialization.
 //!
+//! Additionally, the following should be considered for manual [`Serialize`]
+//! and [`Deserialize`] implementations:
+//!
+//! - [`Serialize`] implementations must provide _accurate_ lengths to
+//!   [`Serializer`]. Omitting them is not allowed either.
+//! - [`Deserialize`] implementations must not call
+//!   `Deserializer::deserialize_any` or
+//!   `Deserializer::deserialize_ignored_any`.
+//! - [`Deserialize`] implementations must read structs, tuples, sequences, and
+//!   maps to completion.
+//!
+//! [`Serialize`]: serde::Serialize
+//! [`Deserialize`]: serde::Deserialize
+//!
 //! ## Future Proofing
 //!
 //! Because this format isn't self-describing and doesn't store anything such as

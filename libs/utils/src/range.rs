@@ -97,7 +97,9 @@ macro_rules! impl_range {
 
             /// Creates a new bounded range, both values being inclusive.
             ///
-            /// Returns an error if either value is outside the allowed range or
+            /// # Errors
+            ///
+            /// Returns [`Err`] if either value is outside the allowed range or
             /// the high value is less than the low value.
             ///
             /// # Example
@@ -120,9 +122,11 @@ macro_rules! impl_range {
             }
 
             /// Checks if the value is within range.
+            /// If within range, returns [`Ok`] with the input.
             ///
-            /// If within range, returns the same number.
-            /// Otherwise, returns an error.
+            /// # Errors
+            ///
+            /// Returns [`Err`] when the number is out of range.
             pub const fn check(n: $Num) -> Result<$Num, OutOfRange<$Num>> {
                 const { Self::assert_valid(); }
 

@@ -25,6 +25,12 @@ pub type Result<T> = std::result::Result<T, error::Error>;
 ///
 /// Blanket-implemented for any type that implements both [`Read`] and [`Seek`].
 pub trait SeekRead: Read + Seek {
+    /// Advances the reader the minimal amount so its position is aligned to
+    /// `align`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if an I/O error occurs. Also see [`Seek::seek`].
     #[inline]
     fn align_to(&mut self, align: u16) -> io::Result<()> {
         let pos = self.stream_position()?;
