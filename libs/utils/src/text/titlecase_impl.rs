@@ -77,11 +77,10 @@ macro_rules! titlecase {
             // Ensure input is a `&'static str`
             const __INPUT_STR: &::std::primitive::str = $input;
 
-            // Transmute result back to a str.
-    const __BYTES: &[::std::primitive::u8] = $crate::titlecase!(b: __INPUT_STR.as_bytes());
-
             // SAFETY: `titlecase!` does not affect UTF-8 validity and input was `&str`.
-            unsafe { ::std::primitive::str::from_utf8_unchecked(__BYTES) }
+            unsafe { ::std::primitive::str::from_utf8_unchecked(
+                $crate::titlecase!(b: __INPUT_STR.as_bytes())
+            ) }
         }
     };
     (b: $input:expr) => {

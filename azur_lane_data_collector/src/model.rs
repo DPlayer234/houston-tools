@@ -20,8 +20,9 @@ pub struct Config {
 }
 
 /// The app config. Statically embed as JSON.
-pub static CONFIG: LazyLock<Config> =
-    LazyLock::new(|| serde_json::from_str(include_str!("../assets/config.json")).unwrap());
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../assets/config.json")).expect("config must be valid")
+});
 
 /// A group of ships.
 #[derive(Debug)]

@@ -718,7 +718,8 @@ fn search_referenced_weapons_in_effect_entry(
     if !attacks.is_empty() {
         if sc.quota != 1 {
             // multiply attacks by quota
-            let len = attacks.len() * usize::try_from(sc.quota).unwrap();
+            let quota = usize::try_from(sc.quota).expect("skill quota should not overflow");
+            let len = attacks.len() * quota;
             attacks = attacks.into_iter().cycle().take(len).collect();
         }
 

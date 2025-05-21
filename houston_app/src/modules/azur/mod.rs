@@ -38,6 +38,7 @@ impl super::Module for Module {
     }
 
     async fn startup(self, data: Arc<HBotData>) -> Result {
+        #[expect(clippy::unwrap_used)]
         let azur = data.config().azur_raw().unwrap();
         if azur.early_load {
             // load the data on its own thread if requested

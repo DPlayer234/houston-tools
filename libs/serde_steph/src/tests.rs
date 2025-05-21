@@ -281,13 +281,15 @@ fn round_trip_io_read() {
         vec: b"ABCDEFG".to_vec(),
     };
 
-    let buf = to_vec(&source).unwrap();
+    let buf = to_vec(&source).expect("test data should serialize");
     let buf = buf.as_slice();
 
-    let from_slice: Test<'_> = from_slice(buf).unwrap();
+    let from_slice: Test<'_> =
+        from_slice(buf).expect("test data buf should deserialize from slice");
+
     let from_reader: Test<'_> = Deserializer::from_reader(Cursor::new(buf))
         .read_to_end()
-        .unwrap();
+        .expect("test data buf should deserialize from reader");
 
     assert_eq!(from_slice, source);
     assert_eq!(from_reader, source);

@@ -58,7 +58,12 @@ fn round_trip_b20bit() {
 
     let data: Vec<u8> = b20bit_range()
         .into_iter()
-        .flat_map(|u| *(u | (u << 20)).to_le_bytes().first_chunk::<5>().unwrap())
+        .flat_map(|u| {
+            *(u | (u << 20))
+                .to_le_bytes()
+                .first_chunk::<5>()
+                .expect("`u64::to_le_bytes` always has 8 bytes")
+        })
         .collect();
 
     round_trip_core(&data, b20bit::to_string, b20bit::from_str);

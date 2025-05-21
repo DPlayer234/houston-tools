@@ -18,6 +18,7 @@ impl super::Module for Module {
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
+        #[expect(clippy::unwrap_used)]
         let rep = config.rep().unwrap();
 
         anyhow::ensure!(

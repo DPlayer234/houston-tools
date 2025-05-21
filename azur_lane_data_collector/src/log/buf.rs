@@ -17,7 +17,7 @@ use std::sync::{Mutex, MutexGuard};
 pub fn buf_stderr() -> BufStderr {
     static INSTANCE: Mutex<Option<LineWriter<Stderr>>> = Mutex::new(None);
 
-    let mut inner = INSTANCE.lock().unwrap();
+    let mut inner = INSTANCE.lock().expect("mutex should not be poisoned");
     inner.get_or_insert_with(|| LineWriter::new(stderr()));
 
     BufStderr { inner }

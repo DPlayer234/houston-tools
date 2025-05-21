@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -1081,7 +1081,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.12.1"
+version = "2.12.2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -3365,7 +3365,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utils"
-version = "8.0.0"
+version = "8.0.1"
 dependencies = [
  "anstyle-query",
  "arrayvec",

@@ -71,7 +71,7 @@ pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     let mut iter = bytes.chunks_exact(2);
     for chunk in iter.by_ref() {
         // Conversion cannot fail and check is optimized out.
-        let chunk = <[u8; 2]>::try_from(chunk).unwrap();
+        let chunk = <[u8; 2]>::try_from(chunk).expect("len should be exact");
         writer.write_char(bytes_to_char(chunk))?;
     }
 

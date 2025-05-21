@@ -226,55 +226,55 @@ mod tests {
     #[test]
     fn parse_date_time1() {
         let input = "2024-02-16 15:31";
-        let parsed = parse_date_time(input, Utc).unwrap();
+        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
 
         assert_eq!(
             parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").unwrap()
+            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
         );
     }
 
     #[test]
     fn parse_date_time2() {
         let input = "02/16/2024 03:31pm";
-        let parsed = parse_date_time(input, Utc).unwrap();
+        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
 
         assert_eq!(
             parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").unwrap()
+            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
         );
     }
 
     #[test]
     fn parse_date_time3() {
         let input = "16.02.2024 15:31";
-        let parsed = parse_date_time(input, Utc).unwrap();
+        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
 
         assert_eq!(
             parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").unwrap()
+            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
         );
     }
 
     #[test]
     fn parse_date_time4() {
         let input = "February 16, 2024 15:31";
-        let parsed = parse_date_time(input, Utc).unwrap();
+        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
 
         assert_eq!(
             parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").unwrap()
+            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
         );
     }
 
     #[test]
     fn parse_date_time_with_offset() {
         let input = "2024-02-16 15:31 +0230";
-        let parsed = parse_date_time(input, Utc).unwrap();
+        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
 
         assert_eq!(
             parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00+02:30").unwrap()
+            DateTime::parse_from_rfc3339("2024-02-16T15:31:00+02:30").expect("must be valid")
         );
     }
 
@@ -311,14 +311,14 @@ mod tests {
     #[test]
     fn parse_serde_time_delta_hms() {
         let input = "12:34:56";
-        let parsed = serde_time_delta::parse_str(input).unwrap();
+        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
         assert_eq!(parsed, TimeDelta::seconds(((12 * 60 + 34) * 60) + 56));
     }
 
     #[test]
     fn parse_serde_time_delta_dhms() {
         let input = "8.12:34:56";
-        let parsed = serde_time_delta::parse_str(input).unwrap();
+        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
         assert_eq!(
             parsed,
             TimeDelta::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)

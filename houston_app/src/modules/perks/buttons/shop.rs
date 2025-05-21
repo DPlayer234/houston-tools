@@ -424,13 +424,13 @@ mod tests {
             .guild(guild_id)
             .user(user_id)
             .into_document()
-            .unwrap();
+            .expect("perk filter should serialize");
 
         let filter_wallet = Wallet::filter()
             .guild(guild_id)
             .user(user_id)
             .into_document()
-            .unwrap();
+            .expect("wallet filter should serialize");
 
         assert_eq!(filter_active_perk, filter_wallet);
     }

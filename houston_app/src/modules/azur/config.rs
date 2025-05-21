@@ -105,9 +105,9 @@ impl Default for WikiUrls {
     fn default() -> Self {
         macro_rules! fs {
             ($($s:expr),*) => {{
-                const VAL: &str = join!($($s),*);
-                let f = FixedString::from_static_trunc(VAL);
-                assert_eq!(VAL.len(), f.len() as usize, "wiki url default too long");
+                let val = join!($($s),*);
+                let f = FixedString::from_static_trunc(val);
+                assert_eq!(val.len(), f.len() as usize, "wiki url default too long");
                 f
             }};
         }

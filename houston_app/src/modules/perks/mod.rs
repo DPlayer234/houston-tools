@@ -28,6 +28,7 @@ impl super::Module for Module {
     }
 
     fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = Command> {
+        #[expect(clippy::unwrap_used)]
         let perks = config.perks().unwrap();
         let mut c = vec![
             slashies::perk_admin::perk_admin(perks),
@@ -60,6 +61,7 @@ impl super::Module for Module {
     }
 
     fn buttons(&self, config: &HBotConfig) -> impl IntoIterator<Item = ButtonAction> {
+        #[expect(clippy::unwrap_used)]
         let perks = config.perks().unwrap();
         let mut b = vec![buttons::shop::View::ACTION];
 
@@ -71,6 +73,7 @@ impl super::Module for Module {
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
+        #[expect(clippy::unwrap_used)]
         let perks = config.perks().unwrap();
 
         anyhow::ensure!(
@@ -100,6 +103,7 @@ impl super::Module for Module {
     }
 
     async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
+        #[expect(clippy::unwrap_used)]
         let perks = data.config().perks().unwrap();
 
         model::Wallet::update_indices(&db).await?;

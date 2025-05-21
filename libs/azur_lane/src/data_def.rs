@@ -1,58 +1,55 @@
 macro_rules! define_data_enum {
     {
-        $(#[$attr:meta])*
-        $v:vis enum $name:ident for $vd:vis $data:ident {
-            $($(#[$data_attr:meta])* $data_vis:vis $data_name:ident : $data_type:ty),* ;
-            $($(#[$field_attr:meta])* $field:ident $arg:tt),*
+        $(#[$container_attr:meta])*
+        $v:vis enum $Enum:ident for $vd:vis $Data:ident {
+            $($(#[$data_field_attr:meta])* $data_field_vis:vis $data_field:ident : $DataFieldTy:ty),* ;
+            $($(#[$variant_attr:meta])* $variant:ident $arg:tt),*
         }
     } => {
-        $(#[$attr])*
+        $(#[$container_attr])*
         #[derive(Debug, Clone)]
         #[non_exhaustive]
-        $vd struct $data {
+        $vd struct $Data {
             $(
-                $(#[$data_attr])*
-                $data_vis $data_name : $data_type
+                $(#[$data_field_attr])*
+                $data_field_vis $data_field : $DataFieldTy
             ),*
         }
 
-        $(#[$attr])*
+        $(#[$container_attr])*
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-        $v enum $name {
+        $v enum $Enum {
             $(
-                $(#[$field_attr])*
-                $field
+                $(#[$variant_attr])*
+                $variant
             ),*
         }
 
-        impl $name {
-            pub const ALL: &[$name] = &[
-                $(Self::$field),*
+        impl $Enum {
+            pub const ALL: &[$Enum] = &[
+                $(Self::$variant),*
             ];
 
             /// Gets the entire associated data structure.
             #[must_use]
-            $vd const fn data(self) -> &'static $data {
-                const fn make_val($($data_name : $data_type),*) -> $data {
-                    $data { $($data_name),* }
+            $vd const fn data(self) -> &'static $Data {
+                const fn make_val($($data_field : $DataFieldTy),*) -> $Data {
+                    $Data { $($data_field),* }
                 }
 
                 match self {
                     $(
-                        $name::$field => {
-                            const VAL: $data = make_val $arg;
-                            &VAL
-                        }
+                        $Enum::$variant => const { &make_val $arg }
                     ),*
                 }
             }
 
             $(
-                $(#[$data_attr])*
+                $(#[$data_field_attr])*
                 #[must_use]
                 #[inline]
-                $data_vis const fn $data_name (self) -> $data_type {
-                    self.data().$data_name
+                $data_field_vis const fn $data_field (self) -> $DataFieldTy {
+                    self.data().$data_field
                 }
             )*
         }

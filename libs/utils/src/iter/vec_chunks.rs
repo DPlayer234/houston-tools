@@ -35,8 +35,8 @@ impl<I: Iterator> Iterator for VecChunks<I> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let (lower, upper) = self.inner.size_hint();
         (
-            to_chunk_count(lower, self.chunk_size),
-            upper.map(|upper| to_chunk_count(upper, self.chunk_size)),
+            lower.div_ceil(self.chunk_size),
+            upper.map(|upper| upper.div_ceil(self.chunk_size)),
         )
     }
 }
@@ -46,13 +46,8 @@ impl<I: Iterator> Iterator for VecChunks<I> {
 // trusted for that either.
 impl<I: ExactSizeIterator> ExactSizeIterator for VecChunks<I> {
     fn len(&self) -> usize {
-        to_chunk_count(self.inner.len(), self.chunk_size)
+        self.inner.len().div_ceil(self.chunk_size)
     }
-}
-
-fn to_chunk_count(len: usize, chunk_size: usize) -> usize {
-    // written this way to avoid overflows
-    len / chunk_size + usize::from(len % chunk_size != 0)
 }
 
 #[cfg(test)]

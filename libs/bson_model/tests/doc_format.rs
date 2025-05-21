@@ -93,7 +93,7 @@ fn partial_full() {
         .user(user)
         .score(score)
         .into_document()
-        .unwrap();
+        .expect("example partial should serialize");
 
     assert_eq!(
         partial,
@@ -109,7 +109,10 @@ fn partial_full() {
 fn partial_just_id() {
     let oid = ObjectId::new();
 
-    let partial = Example::partial().id(oid).into_document().unwrap();
+    let partial = Example::partial()
+        .id(oid)
+        .into_document()
+        .expect("example partial should serialize");
 
     assert_eq!(
         partial,
@@ -130,7 +133,7 @@ fn filter_full() {
         .user(user)
         .score(score)
         .into_document()
-        .unwrap();
+        .expect("example filter should serialize");
 
     assert_eq!(
         filter,
@@ -173,7 +176,7 @@ fn update() {
         .max(|s| s.score(10000))
         .min(|s| s.score(0))
         .into_document()
-        .unwrap();
+        .expect("example update should serialize");
 
     assert_eq!(
         update,
@@ -225,7 +228,7 @@ fn serialize_filter() {
         .basic(64)
         .with(64)
         .into_document()
-        .unwrap();
+        .expect("for filter should serialize");
 
     assert_eq!(
         f_eq,

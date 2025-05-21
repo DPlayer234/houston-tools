@@ -91,6 +91,10 @@ impl fmt::Display for DayOfYear {
 mod tests {
     use super::*;
 
+    fn date(year: i32, month: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(year, month, day).expect("test date should be valid")
+    }
+
     #[test]
     fn consts_correct() {
         assert!(
@@ -117,27 +121,27 @@ mod tests {
     #[test]
     fn exact_day_only() {
         assert_eq!(
-            DayOfYear::search_days(NaiveDate::from_ymd_opt(2024, 12, 8).unwrap()).as_slice(),
-            &[DayOfYear::from_md(Month::December, 8).unwrap()],
+            DayOfYear::search_days(date(2024, 12, 8)).as_slice(),
+            &[DayOfYear::from_md(Month::December, 8).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(NaiveDate::from_ymd_opt(2024, 3, 1).unwrap()).as_slice(),
-            &[DayOfYear::from_md(Month::March, 1).unwrap()],
+            DayOfYear::search_days(date(2024, 3, 1)).as_slice(),
+            &[DayOfYear::from_md(Month::March, 1).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(NaiveDate::from_ymd_opt(2024, 2, 29).unwrap()).as_slice(),
-            &[DayOfYear::from_md(Month::February, 29).unwrap()],
+            DayOfYear::search_days(date(2024, 2, 29)).as_slice(),
+            &[DayOfYear::from_md(Month::February, 29).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(NaiveDate::from_ymd_opt(2022, 4, 1).unwrap()).as_slice(),
-            &[DayOfYear::from_md(Month::April, 1).unwrap()],
+            DayOfYear::search_days(date(2022, 4, 1)).as_slice(),
+            &[DayOfYear::from_md(Month::April, 1).expect("checked day should be valid")],
         );
     }
 
     #[test]
     fn non_leap_day_adjustment() {
         assert_eq!(
-            DayOfYear::search_days(NaiveDate::from_ymd_opt(2022, 3, 1).unwrap()).as_slice(),
+            DayOfYear::search_days(date(2022, 3, 1)).as_slice(),
             &[DayOfYear::FEB_29, DayOfYear::MAR_1],
         );
     }

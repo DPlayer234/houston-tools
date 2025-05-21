@@ -7,7 +7,9 @@ mod ensure;
 ///
 /// Uses the [`winresource`] crate.
 pub fn embed_windows_resources() {
-    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    let target_os =
+        env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS env var should be set");
+
     if target_os == "windows" {
         println!("cargo::rerun-if-changed=Cargo.toml");
 
