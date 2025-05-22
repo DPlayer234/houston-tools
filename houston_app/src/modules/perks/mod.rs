@@ -24,7 +24,9 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES
+        // both intents just to get update triggers. it's also weird to enable this
+        // without starboard, at which point these intents are enabled anyways.
+        GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS
     }
 
     fn commands(&self, config: &HBotConfig) -> impl IntoIterator<Item = Command> {

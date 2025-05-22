@@ -24,9 +24,11 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
+        // `GUILDS` for cache, `GUILD_MESSAGE_REACTIONS` to listen for added reactions,
+        // and `GUILD_MESSAGES` to remove deleted messages from boards
         GatewayIntents::GUILDS
-            | GatewayIntents::GUILD_MESSAGE_REACTIONS
             | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {

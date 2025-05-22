@@ -180,7 +180,7 @@ pub struct HInit {
 impl Default for HInit {
     fn default() -> Self {
         Self {
-            // default isn't empty but non_privileged
+            // default isn't empty but non_privileged and we need empty
             intents: GatewayIntents::empty(),
             commands: Vec::new(),
             event_handlers: Vec::new(),

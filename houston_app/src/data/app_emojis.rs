@@ -11,13 +11,9 @@ macro_rules! generate {
     ({ $($key:ident = $name:literal, $path:literal $(if $condition:expr)?;)* }) => {
         #[derive(Debug)]
         pub struct HAppEmojiStore {
-            $(pub $key: ReactionType,)*
+            $($key: ReactionType,)*
         }
 
-        #[derive(Debug, Clone, Copy)]
-        pub struct HAppEmojis<'a>(pub(super) Option<&'a HAppEmojiStore>);
-
-        #[allow(dead_code, reason = "macro generated in bulk")]
         impl<'a> HAppEmojis<'a> {
             $(
                 #[must_use]
@@ -63,6 +59,9 @@ macro_rules! generate {
         }
     };
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct HAppEmojis<'a>(pub(super) Option<&'a HAppEmojiStore>);
 
 impl<'a> HAppEmojis<'a> {
     pub fn fallback(self) -> &'a ReactionType {

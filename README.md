@@ -345,6 +345,9 @@ There may be up to 20 emojis per channel. The "emoji" value is declared in the s
 
 Emojis are added in declaration order.
 
+> [!IMPORTANT]
+> When this module is enabled, the `MESSAGE_CONTENT` intent is requested over the gateway. `MESSAGE_CONTENT` is a priviledged intent and must be enabled in the developer dashboard for your application. You cannot enable this module without enabling the intent.
+
 ## Snipe
 
 Enables message-sniping, allowing users to reveal the most recent, deleted message in a channel.
@@ -367,6 +370,9 @@ max_cache_size = 64
 # enabled for another guild with the default settings
 [bot.snipe.233587951353856000]
 ```
+
+> [!IMPORTANT]
+> When this module is enabled, the `MESSAGE_CONTENT` intent is requested over the gateway. `MESSAGE_CONTENT` is a priviledged intent and must be enabled in the developer dashboard for your application. You cannot enable this module without enabling the intent.
 
 ## Azur Lane
 

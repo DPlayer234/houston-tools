@@ -17,7 +17,9 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        GatewayIntents::GUILDS | GatewayIntents::MESSAGE_CONTENT
+        // `GUILDS` for cache, `GUILD_MESSAGES` to know what to react to, and
+        // `MESSAGE_CONTENT` to check whether to react
+        GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {
