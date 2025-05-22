@@ -57,7 +57,9 @@ use crate::private::ptr::RawRef;
 // exists to save some memory.
 // this only becomes an issue once more than 4 BILLION elements have been added
 // to the Search. at that point, the current behavior is to panic.
-// for 32- or 16-bit systems, allocating for the values Vec will panic first.
+// for 32- or 16-bit systems, allocating the values Vec is guaranteed to panic
+// before then. for 64-bit systems, this panic would occur at over 16 GB
+// of allocated memory, and will likely run into an OOM.
 #[cfg(not(target_pointer_width = "16"))]
 type MatchIndex = u32;
 #[cfg(target_pointer_width = "16")]
@@ -69,6 +71,18 @@ type MatchIndex = u16;
 const MATCH_INLINE: usize = 4;
 #[cfg(not(target_pointer_width = "64"))]
 const MATCH_INLINE: usize = 2;
+
+#[inline(always)]
+const fn to_usize(index: MatchIndex) -> usize {
+    const {
+        assert!(
+            size_of::<MatchIndex>() <= size_of::<usize>(),
+            "MatchIndex as usize cast must be lossless"
+        );
+    }
+
+    index as usize
+}
 
 /// Provides a fuzzy text searcher.
 ///
@@ -111,7 +125,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         const {
             assert!(MIN <= MAX, "MIN must be <= MAX");
             assert!(MIN > 0, "MIN must be > 0");
-            assert!(MAX < MatchIndex::MAX as usize, "MAX must be < u32::MAX");
+            assert!(MAX < to_usize(MatchIndex::MAX), "MAX must be < u32::MAX");
         }
 
         Self {
@@ -173,7 +187,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
             }
         }
 
-        index as usize
+        to_usize(index)
     }
 
     /// Searches for a given text.
@@ -240,7 +254,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
             for &index in match_entry {
                 debug_assert!(
-                    (index as usize) < self.values.len(),
+                    to_usize(index) < self.values.len(),
                     "Search safety invariant not met"
                 );
 
@@ -253,7 +267,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
                             count: 1,
                             index,
                             // SAFETY: entry index must be valid into `self.values`
-                            len: unsafe { self.values.get_unchecked(index as usize).len },
+                            len: unsafe { self.values.get_unchecked(to_usize(index)).len },
                         })
                     },
                 }
@@ -378,7 +392,7 @@ impl<'st, T> MatchIter<'st, T> {
         debug_assert!(
             inner
                 .iter()
-                .all(|m| (m.index as usize) < search_values.len()),
+                .all(|m| to_usize(m.index) < search_values.len()),
             "MatchIter safety invariant not met"
         );
 
@@ -405,13 +419,13 @@ impl<'st, T> MatchIterState<'st, T> {
     unsafe fn make_match(&self, info: MatchInfo) -> Match<'st, T> {
         Match {
             score: f64::from(info.count) / self.total,
-            index: info.index as usize,
+            index: to_usize(info.index),
             // SAFETY: caller guarantees the match info comes from the inner iterator,
             // `new` requires that the indices are valid for the search values
             data: unsafe {
                 &self
                     .search_values
-                    .add(info.index as usize)
+                    .add(to_usize(info.index))
                     .as_ref()
                     .userdata
             },

@@ -227,7 +227,8 @@ pub trait ButtonValue: Send + Sync {
         if disabled {
             // This value is intended to be unique for a given object.
             // It isn't used in any way other than as a discriminator.
-            let sentinel_key = ptr::from_ref(field_ref) as u16;
+            #[expect(clippy::cast_possible_truncation)]
+            let sentinel_key = ptr::from_ref(field_ref).addr() as u16;
 
             let sentinel = Noop::new(sentinel_key, sentinel(value));
             let custom_id = sentinel.to_custom_id();

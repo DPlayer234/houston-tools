@@ -100,7 +100,8 @@ impl View {
                     if action == Action::Idle {
                         use crate::modules::core::buttons::Noop;
 
-                        let key = ptr::from_ref(&self.action) as u16;
+                        #[expect(clippy::cast_possible_truncation)]
+                        let key = ptr::from_ref(&self.action).addr() as u16;
                         let value = flat_index(pos);
                         CreateButton::new(Noop::new(key, value).to_custom_id()).disabled(true)
                     } else {
