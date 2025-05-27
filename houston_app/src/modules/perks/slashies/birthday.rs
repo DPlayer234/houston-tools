@@ -2,7 +2,7 @@ use chrono::*;
 use mongodb::options::ReturnDocument;
 
 use crate::buttons::ButtonValue as _;
-use crate::helper::contains_ignore_case_ascii;
+use crate::helper::contains_ignore_ascii_case;
 use crate::modules::perks::DayOfYear;
 use crate::modules::perks::config::{BirthdayConfig, BirthdayRegionConfig};
 use crate::modules::perks::model::*;
@@ -218,7 +218,7 @@ async fn autocomplete_region<'a>(
             .zip(&config.regions)
             // filter to ones whose name contains the input
             // if the input is empty, that's all of them
-            .filter(|(_, region)| contains_ignore_case_ascii(&region.name, partial))
+            .filter(|(_, region)| contains_ignore_ascii_case(&region.name, partial))
             .take(25)
             // map it to an autocomplete choice with the region index as the value
             .map(|(index, region)| {

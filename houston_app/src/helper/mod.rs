@@ -27,7 +27,7 @@ pub fn is_unique_set<T: Hash + Eq>(iter: impl IntoIterator<Item = T>) -> bool {
 
 /// Checks whether the `haystack` contains the `needle` with ASCII
 /// case-insensitive comparison.
-pub fn contains_ignore_case_ascii(haystack: &str, needle: &str) -> bool {
+pub fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
     if needle.is_empty() {
         return true;
     }

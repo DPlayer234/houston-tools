@@ -1,5 +1,3 @@
-use std::iter::Take;
-
 /// Iterates over chunks of values, yielded as vectors.
 pub struct VecChunks<I> {
     chunk_size: usize,
@@ -16,19 +14,13 @@ impl<I> VecChunks<I> {
     }
 }
 
-impl<I: Iterator> VecChunks<I> {
-    fn next_chunk_iter(&mut self) -> Take<&mut I> {
-        self.inner.by_ref().take(self.chunk_size)
-    }
-}
-
 impl<I: Iterator> Iterator for VecChunks<I> {
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // this figures out the correct capacity for the vec if the iterator provides
         // a useful size hint. take never consumes more than size elements.
-        let chunk: Vec<I::Item> = self.next_chunk_iter().collect();
+        let chunk: Vec<I::Item> = self.inner.by_ref().take(self.chunk_size).collect();
         (!chunk.is_empty()).then_some(chunk)
     }
 
@@ -41,9 +33,32 @@ impl<I: Iterator> Iterator for VecChunks<I> {
     }
 }
 
-// exact-size is reasonable, but double-ended isn't because there is no way to
-// always know how large the last chunk is. and exact-size can't be fully
-// trusted for that either.
+impl<I> DoubleEndedIterator for VecChunks<I>
+where
+    I: DoubleEndedIterator + ExactSizeIterator,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        // figure out how many elements are in the tail
+        // if len is wrong, this will just be buggy
+        let tail = match self.inner.len() % self.chunk_size {
+            0 => self.chunk_size,
+            t => t,
+        };
+
+        // this figures out the correct capacity for the vec.
+        // take never consumes more than `tail` elements.
+        let mut chunk: Vec<I::Item> = self.inner.by_ref().rev().take(tail).collect();
+        if !chunk.is_empty() {
+            // reverse the chunk so the input order is retained
+            // note: `rev` on `Take` drains the rest of the iterator so don't
+            chunk.reverse();
+            Some(chunk)
+        } else {
+            None
+        }
+    }
+}
+
 impl<I: ExactSizeIterator> ExactSizeIterator for VecChunks<I> {
     fn len(&self) -> usize {
         self.inner.len().div_ceil(self.chunk_size)
@@ -64,6 +79,31 @@ mod tests {
         assert_eq!(chunks.next(), Some(vec![7, 8, 9]));
         assert_eq!(chunks.next(), Some(vec![10]));
         assert_eq!(chunks.next(), None);
+    }
+
+    #[test]
+    fn vec_chunks_back() {
+        let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let mut chunks = data.into_iter().vec_chunks(3);
+
+        assert_eq!(chunks.next_back(), Some(vec![10]));
+        assert_eq!(chunks.next_back(), Some(vec![7, 8, 9]));
+        assert_eq!(chunks.next_back(), Some(vec![4, 5, 6]));
+        assert_eq!(chunks.next_back(), Some(vec![1, 2, 3]));
+        assert_eq!(chunks.next_back(), None);
+    }
+
+    #[test]
+    fn vec_chunks_mixed() {
+        let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let mut chunks = data.into_iter().vec_chunks(3);
+
+        assert_eq!(chunks.next(), Some(vec![1, 2, 3]));
+        assert_eq!(chunks.next_back(), Some(vec![10]));
+        assert_eq!(chunks.next(), Some(vec![4, 5, 6]));
+        assert_eq!(chunks.next_back(), Some(vec![7, 8, 9]));
+        assert_eq!(chunks.next(), None);
+        assert_eq!(chunks.next_back(), None);
     }
 
     #[test]

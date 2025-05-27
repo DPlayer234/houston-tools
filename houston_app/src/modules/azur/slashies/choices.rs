@@ -3,7 +3,7 @@ use azur_lane::equip::{AugmentRarity, EquipKind, EquipRarity};
 use azur_lane::ship::{HullType, ShipRarity};
 use houston_cmd::{Error, SlashArg};
 
-use crate::helper::contains_ignore_case_ascii;
+use crate::helper::contains_ignore_ascii_case;
 use crate::slashies::prelude::*;
 
 pub struct Ch<T>(T);
@@ -22,7 +22,7 @@ macro_rules! make_autocomplete_choice {
         ) -> CreateAutocompleteResponse<'a> {
             let choices: Vec<_> = (0u64..)
                 .zip(<$Type>::ALL)
-                .filter(|(_, t)| contains_ignore_case_ascii(t.name(), partial))
+                .filter(|(_, t)| contains_ignore_ascii_case(t.name(), partial))
                 .take(25)
                 .map(|(i, t)| AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i)))
                 .collect();
