@@ -14,18 +14,6 @@ struct DateTimeCell {
 
 unsafe impl Sync for DateTimeCell {}
 
-impl DateTimeCell {
-    const fn unix_epoch() -> Self {
-        Self {
-            value: UnsafeCell::new(DateTime::UNIX_EPOCH),
-        }
-    }
-
-    const fn get(&self) -> *mut DateTime<Utc> {
-        self.value.get()
-    }
-}
-
 /// Stores a timestamp on when the application was started.
 //
 // I don't think it's actually possible to cause safety issues on _expected
@@ -33,7 +21,9 @@ impl DateTimeCell {
 // those are small enough to have atomic writes/reads - as long as you don't
 // keep references around. Either way, it's still UB to Rust, so we treat it
 // with the appropriate care.
-static STARTUP_TIME: DateTimeCell = DateTimeCell::unix_epoch();
+static STARTUP_TIME: DateTimeCell = DateTimeCell {
+    value: UnsafeCell::new(DateTime::UNIX_EPOCH),
+};
 
 /// Marks the current time as the startup time of the application.
 ///
@@ -46,7 +36,7 @@ static STARTUP_TIME: DateTimeCell = DateTimeCell::unix_epoch();
 pub unsafe fn mark_startup_time() {
     // SAFETY: Caller guarantees exclusive access
     unsafe {
-        *STARTUP_TIME.get() = Utc::now();
+        *STARTUP_TIME.value.get() = Utc::now();
     }
 }
 
@@ -57,7 +47,7 @@ pub unsafe fn mark_startup_time() {
 #[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
     // SAFETY: only concurrent reads
-    unsafe { *STARTUP_TIME.get() }
+    unsafe { *STARTUP_TIME.value.get() }
 }
 
 /// Tries to parse a date time from some default formats, in the context of a
