@@ -126,7 +126,7 @@ pub async fn overview(
                 MessageLink::new(guild, top_post.channel, top_post.message),
                 top_post.user.mention(),
                 top_post.max_reacts,
-                board.emoji,
+                board.emoji(),
             ),
             None => value.push_str("<None>\n"),
         }
@@ -138,13 +138,13 @@ pub async fn overview(
                 "{}: {} {} from {} post(s)",
                 top_user.user.mention(),
                 top_user.score,
-                board.emoji,
+                board.emoji(),
                 top_user.post_count,
             ),
             None => value.push_str("<None>"),
         }
 
-        embed = embed.field(format!("{} {}", board.emoji, board.name), value, false);
+        embed = embed.field(format!("{} {}", board.emoji(), board.name), value, false);
     }
 
     ctx.send(CreateReply::new().embed(embed)).await?;

@@ -29,6 +29,23 @@ pub fn unicode_emoji(text: &'static str) -> ReactionType {
     ReactionType::Unicode(text)
 }
 
+/// Checks whether two emojis are equivalent.
+///
+/// That is either:
+/// - Both are custom emojis with the same ID.
+/// - Both are identical unicode emoji.
+pub fn emoji_equivalent(a: &ReactionType, b: &ReactionType) -> bool {
+    match (a, b) {
+        (ReactionType::Custom { id: self_id, .. }, ReactionType::Custom { id: other_id, .. }) => {
+            self_id == other_id
+        },
+        (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => {
+            self_name == other_name
+        },
+        _ => false,
+    }
+}
+
 pub fn guild_avatar_url(user_id: UserId, guild_id: GuildId, hash: &ImageHash) -> String {
     let ext = if hash.is_animated() { "gif" } else { "webp" };
     format!(

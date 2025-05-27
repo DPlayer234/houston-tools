@@ -210,7 +210,9 @@ async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
         writeln!(
             description,
             "- {} {} from {} post(s)",
-            entry.score, board.emoji, entry.post_count,
+            entry.score,
+            board.emoji(),
+            entry.post_count,
         );
     }
 

@@ -69,7 +69,7 @@ impl View {
             let rank = offset + index;
             let link = MessageLink::new(self.guild, item.channel, item.message);
             let max_reacts = item.max_reacts;
-            let emoji = &board.emoji;
+            let emoji = board.emoji();
 
             if self.by_user.is_some() {
                 writeln!(description, "{rank}. {link}: {max_reacts} {emoji}");
@@ -108,7 +108,7 @@ impl View {
         let description = description.or_default("<None>");
 
         let embed = CreateEmbed::new()
-            .title(format!("{} Top Posts", board.emoji))
+            .title(format!("{} Top Posts", board.emoji()))
             .color(data.config().embed_color)
             .description(description);
 

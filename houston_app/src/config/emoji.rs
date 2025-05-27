@@ -6,6 +6,8 @@ use serenity::model::channel::ReactionType;
 use serenity::model::id::ParseIdError;
 use serenity::small_fixed_array::FixedString;
 
+use crate::helper::discord::emoji_equivalent;
+
 /// Config-compatible Discord emoji with [`Hash`] and [`Eq`] based on just ID
 /// for custom emojis and character for unicode ones.
 #[derive(Debug)]
@@ -17,16 +19,7 @@ impl HEmoji {
     }
 
     pub fn equivalent_to(&self, other: &ReactionType) -> bool {
-        match (self.as_emoji(), other) {
-            (
-                ReactionType::Custom { id: self_id, .. },
-                ReactionType::Custom { id: other_id, .. },
-            ) => self_id == other_id,
-            (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => {
-                self_name == other_name
-            },
-            _ => false,
-        }
+        emoji_equivalent(self.as_emoji(), other)
     }
 }
 

@@ -7,6 +7,7 @@ use utils::text::WriteStr as _;
 use super::prelude::*;
 use crate::fmt::discord::MessageLink;
 use crate::fmt::replace_holes;
+use crate::helper::discord::emoji_equivalent;
 use crate::helper::is_unique_set;
 
 pub mod buttons;
@@ -162,7 +163,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
     let board = guild_config
         .boards
         .values()
-        .find(|b| b.emoji.equivalent_to(&reaction.emoji));
+        .find(|b| b.has_emoji(&reaction.emoji));
 
     let Some(board) = board else {
         return Ok(());
@@ -184,7 +185,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
     let reaction = message
         .reactions
         .iter()
-        .find(|r| board.emoji.equivalent_to(&r.reaction_type))
+        .find(|r| emoji_equivalent(&reaction.emoji, &r.reaction_type))
         .context("could not find message reaction data")?;
 
     let db = data.database()?;

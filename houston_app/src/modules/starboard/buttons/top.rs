@@ -62,7 +62,7 @@ impl View {
                 offset + index,
                 item.user.mention(),
                 item.score,
-                board.emoji.as_emoji(),
+                board.emoji(),
                 item.post_count,
             );
         }
@@ -88,7 +88,7 @@ impl View {
         let description = description.or_default("<None>");
 
         let embed = CreateEmbed::new()
-            .title(format!("{} Leaderboards", board.emoji))
+            .title(format!("{} Leaderboards", board.emoji()))
             .color(data.config().embed_color)
             .description(description);
 
