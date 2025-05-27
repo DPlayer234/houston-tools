@@ -19,8 +19,7 @@ pub struct SnipedMessage {
     pub channel_id: GenericChannelId,
     pub author: SnipedAuthor,
     pub content: FixedString<u16>,
-    pub attachments: FixedArray<SnipedAttachment>,
-    pub timestamp: Timestamp,
+    pub attachments: FixedArray<SnipedAttachment, u8>,
     pub deleted: bool,
 }
 
@@ -36,7 +35,7 @@ pub struct SnipedAttachment {
     pub url: FixedString,
 }
 
-fn capture_attachments(attachments: &[Attachment]) -> FixedArray<SnipedAttachment> {
+fn capture_attachments(attachments: &[Attachment]) -> FixedArray<SnipedAttachment, u8> {
     let attachments = attachments
         .iter()
         .map(|a| SnipedAttachment {
@@ -62,7 +61,6 @@ impl SnipedMessage {
             author,
             content: msg.content.clone(),
             attachments: capture_attachments(&msg.attachments),
-            timestamp: msg.timestamp,
             deleted: false,
         }
     }

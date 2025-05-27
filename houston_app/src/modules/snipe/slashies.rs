@@ -28,7 +28,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         // can't hold this lock across awaits, and it should be released asap anyways
         let mut state = snipe.state.lock().expect("should not be poisoned");
         state.take_last(move |m| {
-            m.deleted && m.channel_id == channel_id && *m.timestamp >= min_timestamp
+            m.deleted && m.channel_id == channel_id && *m.id.created_at() >= min_timestamp
         })
     };
 
@@ -39,7 +39,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         let mut embed = CreateEmbed::new()
             .author(author)
             .description(message.content)
-            .timestamp(message.timestamp)
+            .timestamp(message.id.created_at())
             .color(data.config().embed_color);
 
         if !message.attachments.is_empty() {
