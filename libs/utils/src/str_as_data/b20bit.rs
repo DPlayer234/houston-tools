@@ -105,6 +105,7 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
 pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     let (skip_last, input) = strip_input(input)?;
 
+    // note: we don't check that the skipped bytes are zero
     let mut chars = input.chars().peekable();
     while let Some(c1) = chars.next() {
         let c1 = char_to_code(c1)?;
@@ -113,11 +114,16 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
             let c2 = char_to_code(c2)?;
             let chunk = codes_to_chunk([c1, c2]);
             writer.write_all(match (chars.peek(), skip_last) {
+                // if there are more bytes, take the full chunk
+                // if at the end, skip the last bytes as indicated by the header
                 (Some(_), _) | (None, SkipLast::Zero) => &chunk[..],
                 (None, SkipLast::One) => &chunk[..4],
                 (None, SkipLast::Two) => &chunk[..3],
             })?;
         } else {
+            // half chunks are treated as if they were 3 bytes, but they can only fully
+            // encode 2 bytes. subsequently, we treat this `[u8; 2]` half-chunk as if it was
+            // followed by a phantom zero-byte. zero-skip is invalid due to this.
             let chunk = code_to_half_chunk(c1)?;
             writer.write_all(match skip_last {
                 // we never encode anything like this
@@ -139,6 +145,11 @@ enum SkipLast {
 }
 
 /// Tries to strip an input, returning `skip_last` and the stripped input.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the start or end marker is incorrect, or the prefix
+/// cannot possibly match the data length.
 fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
     // strip the end marker
     let s = s.strip_suffix('&').ok_or(Error::PrefixSuffix)?;
@@ -166,15 +177,20 @@ fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
     Err(Error::PrefixSuffix)
 }
 
+/// Packs a 16-bit prefix and 4-bit suffix into a 20-bit code.
 fn pack_code(prefix: u16, suffix: u8) -> u32 {
     debug_assert!(suffix <= 0xF, "suffix must be at most 4 bits");
     u32::from(prefix) | (u32::from(suffix) << 16)
 }
 
+/// Converts a half-chunk into a 20-bit code.
 fn half_chunk_to_code(chunk: [u8; 2]) -> u32 {
     pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), 0)
 }
 
+/// Converts a full chunk into two 20-bit codes.
+///
+/// The nibbles of the 3rd byte are encoded as the suffixes.
 fn chunk_to_codes(chunk: [u8; 5]) -> [u32; 2] {
     [
         pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), chunk[2] & 0xF),
@@ -185,12 +201,18 @@ fn chunk_to_codes(chunk: [u8; 5]) -> [u32; 2] {
     ]
 }
 
+/// Unpacks a 20-bit code back into 16-bit prefix and a 4-bit suffix.
 #[expect(clippy::cast_possible_truncation)]
 fn unpack_code(code: u32) -> (u16, u8) {
     debug_assert!(code <= MAX_CODE, "invalid code out of range");
     (code as u16, (code >> 16) as u8)
 }
 
+/// Converts a 20-bit code to a half-chunk.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the suffix is non-zero.
 fn code_to_half_chunk(code: u32) -> Result<[u8; 2], Error> {
     let (prefix, suffix) = unpack_code(code);
     if suffix == 0 {
@@ -202,6 +224,7 @@ fn code_to_half_chunk(code: u32) -> Result<[u8; 2], Error> {
     }
 }
 
+/// Converts two 20-bit codes into a full chunk.
 fn codes_to_chunk(codes: [u32; 2]) -> [u8; 5] {
     let (prefix1, suffix1) = unpack_code(codes[0]);
     let (prefix2, suffix2) = unpack_code(codes[1]);
@@ -216,7 +239,7 @@ fn codes_to_chunk(codes: [u32; 2]) -> [u8; 5] {
     ]
 }
 
-/// Tthe size of the gap in the middle of valid unicode code points.
+/// The size of the gap in the middle of valid unicode code points.
 /// b20bit codes larger than `0xD7FF` have `OFFSET` added to them in the
 /// encoded format. When decoding, char codes in the upper range are subtracted
 /// by `OFFSET`.
@@ -227,6 +250,11 @@ const OFFSET: u32 = 0xE000 - 0xD800;
 /// input is rejected.
 const MAX_CODE: u32 = 0xFFFFF;
 
+/// Converts a [`char`] to a 20-bit code.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the character code would need more than 20 bits.
 fn char_to_code(c: char) -> Result<u32, Error> {
     // the exclusive end of valid char codes.
     // char codes greater than or equal to this will be never be emitted by the
@@ -240,6 +268,7 @@ fn char_to_code(c: char) -> Result<u32, Error> {
     }
 }
 
+/// Converts a 20-bit code to a [`char`].
 fn code_to_char(code: u32) -> char {
     match code {
         // SAFETY: reverse of `char_to_code`.
