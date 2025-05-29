@@ -108,14 +108,9 @@ mod multi_emojis {
         D: Deserializer<'de>,
     {
         match HEmojiList::deserialize(deserializer)? {
-            HEmojiList::Array(array) => {
-                if array.is_empty() {
-                    return Err(D::Error::custom("emoji list cannot be empty"));
-                }
-
-                Ok(array)
-            },
             HEmojiList::Single(emoji) => Ok(FixedArray::from_vec_trunc(vec![emoji])),
+            HEmojiList::Array(array) if !array.is_empty() => Ok(array),
+            _ => Err(D::Error::custom("emoji list cannot be empty")),
         }
     }
 }

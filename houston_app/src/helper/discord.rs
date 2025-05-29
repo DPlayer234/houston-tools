@@ -35,13 +35,11 @@ pub fn unicode_emoji(text: &'static str) -> ReactionType {
 /// - Both are custom emojis with the same ID.
 /// - Both are identical unicode emoji.
 pub fn emoji_equivalent(a: &ReactionType, b: &ReactionType) -> bool {
+    use ReactionType as R;
+
     match (a, b) {
-        (ReactionType::Custom { id: self_id, .. }, ReactionType::Custom { id: other_id, .. }) => {
-            self_id == other_id
-        },
-        (ReactionType::Unicode(self_name), ReactionType::Unicode(other_name)) => {
-            self_name == other_name
-        },
+        (R::Custom { id: a_id, .. }, R::Custom { id: b_id, .. }) => a_id == b_id,
+        (R::Unicode(a_name), R::Unicode(b_name)) => a_name == b_name,
         _ => false,
     }
 }
