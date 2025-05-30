@@ -114,7 +114,7 @@ notices = [
 
 The board ID is used database-side to identify the board globally. As such, the board ID must be unique _globally_, not just per guild. Moving a board to another channel or emoji may have side effects but it won't break the scores.
 
-The board emoji must either be a unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631". The board emojis must be unique per guild. Unicode emojis are matched exactly, while custom emojis are matched by ID. The bot must be able to post to the channel.
+The board emoji must either be a unicode emoji or "&lt;name&gt;:&lt;id&gt;", i.e. "wowie:1305835613790146631". The board emojis must be unique per guild. Unicode emojis are matched exactly, while custom emojis are matched by ID. The bot must be able to post to the channel. You may also specify multiple emojis for the same board by specifying a list.
 
 The board channel is not required to be unique and multiple boards may use the same channel.
 
