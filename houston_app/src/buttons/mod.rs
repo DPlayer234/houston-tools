@@ -203,13 +203,15 @@ pub trait ButtonValue: Send + Sync {
     // me why that changes anything at all.
     const ACTION: ButtonAction;
 
-    /// Converts this instance to a component custom ID.
-    #[must_use]
-    fn to_custom_id(&self) -> String;
-
     /// Converts this instance to a [`Nav`].
     #[must_use]
     fn to_nav(&self) -> Nav<'_>;
+
+    /// Converts this instance to a component custom ID.
+    #[must_use]
+    fn to_custom_id(&self) -> String {
+        self.to_nav().to_custom_id()
+    }
 
     /// Creates a new button that would switch to a state where one field is
     /// changed.

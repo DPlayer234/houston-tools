@@ -18,8 +18,8 @@ pub trait ButtonDispatch {
 pub const fn make_action<T: ButtonDispatch + 'static>(key: usize) -> ButtonAction {
     ButtonAction {
         key,
-        invoke_button: |ctx, buf| invoke(ctx, buf, T::This::<'_>::reply, "Button"),
-        invoke_modal: |ctx, buf| invoke(ctx, buf, T::This::<'_>::modal_reply, "Modal"),
+        invoke_button: |ctx, buf| invoke(ctx, buf, T::This::reply, "Button"),
+        invoke_modal: |ctx, buf| invoke(ctx, buf, T::This::modal_reply, "Modal"),
     }
 }
 
@@ -82,10 +82,6 @@ macro_rules! button_value {
 
                 $crate::buttons::private::make_action::<__Dispatch>($key)
             };
-
-            fn to_custom_id(&self) -> ::std::string::String {
-                $crate::buttons::encoding::to_custom_id(self)
-            }
 
             fn to_nav(&self) -> $crate::buttons::Nav<'_> {
                 $crate::buttons::Nav::from_button_value(self)

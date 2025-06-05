@@ -12,6 +12,7 @@ const STACK: usize = b20bit::max_byte_len(100);
 pub type StackBuf = ArrayVec<u8, STACK>;
 
 /// Allows decoding a button action value.
+#[derive(Debug)]
 pub struct Decoder<'de>(Deserializer<SliceRead<'de>>);
 
 impl<'de> Decoder<'de> {
@@ -26,13 +27,6 @@ impl<'de> Decoder<'de> {
         self.0.end()?;
         Ok(value)
     }
-}
-
-/// Encodes a button value as a custom ID.
-pub fn to_custom_id<T: ButtonValue + Serialize>(action: &T) -> String {
-    let mut buf = StackBuf::new();
-    write_inner_data(&mut buf, action);
-    encode_custom_id(&buf)
 }
 
 /// Encodes a button buffer as a custom ID.

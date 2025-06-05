@@ -15,6 +15,9 @@ use std::ops::{BitOr, BitOrAssign, Shl, Shr, ShrAssign};
 use crate::de;
 use crate::error::{Error, Result};
 
+const STEP_SHIFT: usize = 7;
+const CONT_BIT: u8 = 0x80;
+
 /// Supports the en-/decoding functions.
 ///
 /// Implemented for unsigned integers.
@@ -30,9 +33,16 @@ trait Uleb128Encode:
     + BitOrAssign
     + From<u8>
 {
+    /// A buffer type with the correct size to be able to encode any allowed
+    /// value into.
+    ///
+    /// Expected to just be `[u8; N]`.
     type Buf: AsMut<[u8]> + Default;
+
+    /// The amount of bits in this type.
     const BITS: usize;
 
+    /// Truncates this value to just its least significant 8 bits.
     fn trunc_u8(self) -> u8;
 }
 
@@ -41,21 +51,28 @@ trait Uleb128Encode:
 /// This type essentially specifies a conversion to/from an unsigned type that
 /// implements [`Uleb128Encode`]. For unsigned integers, that is a no-op.
 pub trait Leb128: Sized + Copy {
+    /// The corresponding unsigned type.
+    ///
+    /// If `Self` implements [`Uleb128Encode`] already, this is `Self` and the
+    /// conversion functions in this trait are noops.
     #[expect(private_bounds)]
     type Unsigned: Uleb128Encode;
 
+    /// Converts this value into an unsigned LEB128 encodable value.
     fn into_unsigned(self) -> Self::Unsigned;
+
+    /// Converts an unsigned value into the `Self` type.
     fn from_unsigned(value: Self::Unsigned) -> Self;
 }
 
 impl<T: Uleb128Encode> Leb128 for T {
     type Unsigned = Self;
 
-    fn into_unsigned(self) -> Self::Unsigned {
+    fn into_unsigned(self) -> Self {
         self
     }
 
-    fn from_unsigned(value: Self::Unsigned) -> Self {
+    fn from_unsigned(value: Self) -> Self {
         value
     }
 }
@@ -76,9 +93,9 @@ where
     let mut buf = T::Buf::default();
     let buf = buf.as_mut();
     let mut i = 0usize;
-    while x >= T::from(0x80) {
-        buf[i] = x.trunc_u8() | 0x80;
-        x >>= 7;
+    while x >= T::from(CONT_BIT) {
+        buf[i] = x.trunc_u8() | CONT_BIT;
+        x >>= STEP_SHIFT;
         i += 1;
     }
 
@@ -102,28 +119,28 @@ where
     R: de::Read<'de>,
 {
     let mut x = T::default();
-    let mut s = 0usize;
+    let mut shift = 0usize;
     loop {
         let [b] = reader.read_bytes()?;
 
         // convert to shifted `T` and ensure that all bits fit into `T`
         // the compiler can elide this for all but the last iteration
-        let tb = T::from(b & 0x7F);
-        let ts = tb << s;
-        if ts >> s != tb {
+        let tb = T::from(b & !CONT_BIT);
+        let ts = tb << shift;
+        if ts >> shift != tb {
             return Err(Error::IntegerOverflow);
         }
 
         x |= ts;
-        if b < 0x80 {
+        if b < CONT_BIT {
             // No continuation bit is set
             return Ok(x);
         }
 
         // ensure the shift for the next iteration isn't greater than the
         // bit-count of `T`. the compiler can turn this into a hard cutoff
-        s += 7;
-        if s >= T::BITS {
+        shift += STEP_SHIFT;
+        if shift >= T::BITS {
             return Err(Error::IntegerOverflow);
         }
     }
@@ -143,6 +160,10 @@ macro_rules! impl_uleb {
     )* };
 }
 
+// the signed conversion is implemented in terms of a transformation into the
+// unsigned type. the long and short is that we move the sign bit to the start
+// and encode the remainder as if it was positive. this can be undone with the
+// inverse set of operations.
 macro_rules! impl_uleb_signed {
     ($($Ty:ty as $Unsigned:ty),* $(,)?) => { $(
         impl Leb128 for $Ty {
