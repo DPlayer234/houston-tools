@@ -1,4 +1,5 @@
 /// Iterates over chunks of values, yielded as vectors.
+#[derive(Debug, Clone)]
 pub struct VecChunks<I> {
     chunk_size: usize,
     inner: I,

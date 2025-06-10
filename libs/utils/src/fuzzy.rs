@@ -222,10 +222,6 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         }
 
         self.values.shrink_to_fit();
-
-        // println!("seg: {}, mem: ~{}", self.match_map.len(),
-        // self.match_map.len() * 60 + self.match_map.values().map(|v|
-        // v.len()).sum::<usize>() * size_of::<MatchIndex>());
     }
 
     /// Adds the segments of the `norm` slice to [`Self::match_map`].
@@ -244,10 +240,11 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         const MAX_MATCHES: usize = 32;
 
         let mut results = <ArrayVec<MatchInfoLen, MAX_MATCHES>>::new();
-        let mut total = 0usize;
 
-        for segment in iter_segments(norm, size) {
-            total += 1;
+        let segments = iter_segments(norm, size);
+        let total = segments.len();
+
+        for segment in segments {
             let Some(match_entry) = self.match_map.get(&segment) else {
                 continue;
             };
@@ -538,7 +535,7 @@ unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
 fn iter_segments<const N: usize>(
     slice: &[u16],
     size: usize,
-) -> impl Iterator<Item = Segment<N>> + '_ {
+) -> impl ExactSizeIterator<Item = Segment<N>> {
     assert!(
         (1..=N).contains(&size),
         "size must be within 1..={N}, but is {size}"
