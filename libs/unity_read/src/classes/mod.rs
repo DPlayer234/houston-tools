@@ -249,16 +249,15 @@ macro_rules! define_unity_class {
     };
 }
 
-macro_rules! check_mismatch {
-    ($root:expr, $expected:literal $(| $extra:literal)*) => {{
-        match $root.type_name.as_str() {
-            $expected $(| $extra)* => (),
-            _ => Err(Error::Mismatch {
+macro_rules! assert_type_name {
+    ($root:expr, $expected:literal $(| $extra:literal)*) => {
+        if !matches!($root.type_name.as_str(), $expected $(| $extra)*) {
+            return Err(Error::Mismatch {
                 expected: $expected.to_owned(),
                 received: $root.type_name.clone(),
-            })?
+            });
         }
-    }};
+    };
 }
 
 impl UnityClass for String {
@@ -268,7 +267,7 @@ impl UnityClass for String {
         root: &TypeTreeNode,
         tree: &[TypeTreeNode],
     ) -> crate::Result<Self> {
-        check_mismatch!(root, "string");
+        assert_type_name!(root, "string");
 
         // string should always have an Array of char nested
         let (next, children) = tree.split_first().ok_or(Error::InvalidData(
@@ -315,7 +314,7 @@ impl<T: UnityClass> UnityClass for Vec<T> {
             return Ok(result);
         }
 
-        check_mismatch!(root, "Array" | "TypelessData");
+        assert_type_name!(root, "Array" | "TypelessData");
 
         // The first element is the size, and the second is the child data.
         // We assume that there cannot be siblings after that.
@@ -343,11 +342,16 @@ impl<T: UnityClass> UnityClass for Vec<T> {
 macro_rules! impl_unity_class_primitive {
     ($Type:ty, $expected:literal $(| $extra:literal)*) => {
         impl UnityClass for $Type {
-            fn parse_tree(r: &mut Cursor<&[u8]>, is_big_endian: bool, root: &TypeTreeNode, _tree: &[TypeTreeNode]) -> crate::Result<Self> {
-                check_mismatch!(root, $expected $(| $extra)*);
+            fn parse_tree(
+                r: &mut Cursor<&[u8]>,
+                is_big_endian: bool,
+                root: &TypeTreeNode,
+                _tree: &[TypeTreeNode],
+            ) -> crate::Result<Self> {
+                assert_type_name!(root, $expected $(| $extra)*);
 
                 let value = <$Type>::read_endian(r, is_big_endian)?;
-                if (root.meta_flags & 0x4000) != 0 {
+                if root.needs_align_after() {
                     Self::align_reader(r)?;
                 }
 

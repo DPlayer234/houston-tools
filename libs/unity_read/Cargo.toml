@@ -1,6 +1,6 @@
 [package]
 name = "unity_read"
-version = "5.0.1"
+version = "5.0.2"
 edition.workspace = true
 rust-version.workspace = true
 
