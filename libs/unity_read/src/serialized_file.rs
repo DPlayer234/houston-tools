@@ -368,7 +368,7 @@ impl<'a> SerializedFile<'a> {
                 "did not read big id flag for serialized file version {} in 7..=13",
                 self.version
             ),
-            (..=6, Some(_)) | (14.., Some(_)) => unreachable!(
+            (..=6 | 14.., Some(_)) => unreachable!(
                 "read big id flag for serialized file version {} in ..=6 or 14..",
                 self.version
             ),
