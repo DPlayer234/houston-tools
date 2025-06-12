@@ -2,7 +2,7 @@ use azur_lane::equip::*;
 use mlua::prelude::*;
 use small_fixed_array::TruncatingInto as _;
 
-use crate::intl_util::IterExt as _;
+use crate::intl_util::{IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al, parse};
 
@@ -37,22 +37,22 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
 
     // For unique augments, there is a list of skill upgrades.
     // In practice, this is never more than one.
-    let skill_upgrade: Vec<LuaTable> = read!("skill_upgrade");
-    let skill_upgrade = match skill_upgrade.into_iter().next() {
-        Some(skill_upgrade) => {
+    let skill_upgrades: Vec<LuaTable> = read!("skill_upgrade");
+    let skill_upgrades = skill_upgrades
+        .into_iter()
+        .map(|skill_upgrade| {
             let original_id: u32 = skill_upgrade
                 .get(1)
                 .with_context(context!("skill_upgrade original id for augment {}", set.id))?;
             let skill_id: u32 = skill_upgrade
                 .get(2)
                 .with_context(context!("skill_upgrade id for augment {}", set.id))?;
-            Some(AugmentSkillUpgrade {
+            Ok::<_, LuaError>(AugmentSkillUpgrade {
                 original_id,
                 skill: parse::skill::load_skill(lua, skill_id)?,
             })
-        },
-        None => None,
-    };
+        })
+        .try_collect_fixed_array()?;
 
     // ID of the only ship group this can be equipped to, if unique.
     // As with the effect, always present but 0 if not used.
@@ -98,6 +98,6 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
         .trunc_into(),
         usability,
         effect,
-        skill_upgrade,
+        skill_upgrades,
     })
 }

@@ -121,8 +121,8 @@ impl<'v> View<'v> {
             );
 
             if a_index == self.augment_index {
-                // replace upgraded skill
-                if let Some(upgrade) = &augment.skill_upgrade {
+                // replace upgraded skills
+                for upgrade in &augment.skill_upgrades {
                     if let Some(skill) =
                         skills.iter_mut().find(|s| s.buff_id == upgrade.original_id)
                     {
@@ -161,7 +161,7 @@ impl<'v> View<'v> {
         let skills = augment
             .effect
             .iter()
-            .chain(augment.skill_upgrade.as_ref().map(|s| &s.skill));
+            .chain(augment.skill_upgrades.iter().map(|s| &s.skill));
 
         let nav_row = CreateActionRow::buttons(vec![
             CreateButton::new(self.back.to_custom_id())

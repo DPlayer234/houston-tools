@@ -228,8 +228,8 @@ pub struct Augment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<Skill>,
     /// The augment's skill upgrade.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub skill_upgrade: Option<AugmentSkillUpgrade>,
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub skill_upgrades: FixedArray<AugmentSkillUpgrade>,
 }
 
 /// Represents who an Augment Module can be used on.

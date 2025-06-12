@@ -44,10 +44,12 @@ impl<'v> View<'v> {
             .description(description)
             .color(augment.rarity.color_rgb())
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
-            .fields(self.get_skill_field(
-                "Skill Upgrade",
-                augment.skill_upgrade.as_ref().map(|s| &s.skill),
-            ));
+            .fields(
+                augment
+                    .skill_upgrades
+                    .iter()
+                    .filter_map(|s| self.get_skill_field("Skill Upgrade", Some(&s.skill))),
+            );
 
         let mut components = Vec::new();
 
@@ -59,7 +61,7 @@ impl<'v> View<'v> {
             );
         }
 
-        if augment.effect.is_some() || augment.skill_upgrade.is_some() {
+        if augment.effect.is_some() || !augment.skill_upgrades.is_empty() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
             let view_skill = super::skill::View::with_back(source, self.to_nav());
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
