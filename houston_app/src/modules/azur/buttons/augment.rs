@@ -1,6 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::skill::*;
-use utils::text::truncate;
+use utils::text::{WriteStr as _, truncate};
 
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
@@ -44,10 +44,7 @@ impl<'v> View<'v> {
             .description(description)
             .color(augment.rarity.color_rgb())
             .fields(self.get_skill_field("Effect", augment.effect.as_ref()))
-            .fields(self.get_skill_field(
-                "Skill Upgrade",
-                augment.skill_upgrade.as_ref().map(|s| &s.skill),
-            ));
+            .fields(self.get_skill_upgrade_field("Skill Upgrades", &augment.skill_upgrades));
 
         let mut components = Vec::new();
 
@@ -59,7 +56,7 @@ impl<'v> View<'v> {
             );
         }
 
-        if augment.effect.is_some() || augment.skill_upgrade.is_some() {
+        if augment.effect.is_some() || !augment.skill_upgrades.is_empty() {
             let source = super::skill::ViewSource::Augment(augment.augment_id);
             let view_skill = super::skill::View::with_back(source, self.to_nav());
             components.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
@@ -104,6 +101,26 @@ impl<'v> View<'v> {
                 format!("{} **{}**", s.category.emoji(), s.name),
                 false,
             )
+        })
+    }
+
+    /// Creates the field for the skill upgrades' summary.
+    fn get_skill_upgrade_field<'a>(
+        &self,
+        label: &'a str,
+        skills: &[AugmentSkillUpgrade],
+    ) -> Option<EmbedFieldCreate<'a>> {
+        (!skills.is_empty()).then(|| {
+            let mut text = String::new();
+            for s in skills {
+                if !text.is_empty() {
+                    text.push('\n');
+                }
+
+                write!(text, "{} **{}**", s.skill.category.emoji(), s.skill.name);
+            }
+
+            embed_field_create(label, text, false)
         })
     }
 }

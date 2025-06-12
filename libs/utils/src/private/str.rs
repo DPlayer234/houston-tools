@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn nth() {
         let s = "héllo😊";
-        for i in 0..6 {
+        for i in 0..=6 {
             assert_eq!(
                 Indices::new(s).nth(i),
                 s.char_indices().nth(i).map(|(i, _)| i),
@@ -114,14 +114,12 @@ mod tests {
     #[test]
     fn count() {
         let s = "héllo😊";
-        let indices = Indices::new(s);
-        assert_eq!(indices.count(), s.chars().count());
+        assert_eq!(Indices::new(s).count(), s.chars().count());
     }
 
     #[test]
     fn size_hint() {
         let s = "héllo😊";
-        let indices = Indices::new(s);
-        assert_eq!(indices.size_hint(), s.chars().size_hint());
+        assert_eq!(Indices::new(s).size_hint(), s.chars().size_hint());
     }
 }
