@@ -3,6 +3,7 @@ use std::num::NonZero;
 
 use arrayvec::ArrayVec;
 use chrono::{Datelike as _, Month, NaiveDate};
+use num_traits::cast::FromPrimitive as _;
 
 /// Represents a day of a year, without a specific year number.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -100,8 +101,7 @@ impl DayOfYear {
     fn into_month_day(self) -> (Month, u32) {
         let date = self.into_date();
         let month = date.month();
-        let month = u8::try_from(month).expect("month number must fit into `u8`");
-        let month = Month::try_from(month).expect("month number must be convertible to `Month`");
+        let month = Month::from_u32(month).expect("month number must be convertible to `Month`");
         (month, date.day())
     }
 }

@@ -1100,6 +1100,7 @@ dependencies = [
  "log",
  "log4rs",
  "mongodb",
+ "num-traits",
  "rand 0.9.1",
  "serde",
  "serde_json",
