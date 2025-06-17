@@ -46,7 +46,7 @@
 
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::ptr::{self, NonNull};
+use std::ptr;
 use std::vec::IntoIter as VecIntoIter;
 
 use arrayvec::ArrayVec;
@@ -408,13 +408,16 @@ impl<'st, T> MatchIter<'st, T> {
 }
 
 impl<'st, T> MatchIterState<'st, T> {
-    /// Constructs a match.
+    /// Creates a `Fn` that maps a [`MatchInfo`] to a [`Match`] with `self`.
     ///
     /// # Safety
     ///
-    /// The `info` must come from the associated `inner` iterator.
-    unsafe fn make_match(&self, info: MatchInfo) -> Match<'st, T> {
-        Match {
+    /// The returned `Fn` must only be called with infos coming from the `inner`
+    /// iterator associated with `self`.
+    unsafe fn mapper(self) -> impl Fn(MatchInfo) -> Match<'st, T> {
+        // share a single closure type to minimize the amount of types that
+        // need to be generated for the iterator adapter delegation
+        move |info| Match {
             score: f64::from(info.count) / self.total,
             index: to_usize(info.index),
             // SAFETY: caller guarantees the match info comes from the inner iterator,
@@ -449,33 +452,24 @@ impl<T> Clone for MatchIterState<'_, T> {
 impl<T> Default for MatchIter<'_, T> {
     /// Creates an empty iterator with no matches.
     fn default() -> Self {
-        Self {
-            inner: VecIntoIter::default(),
-            state: MatchIterState {
-                total: 0.0,
-                // no sound code would be able to index this anyways
-                search_values: NonNull::dangling().into(),
-            },
-        }
+        // SAFETY: this is equivalent to `Search::search` with an empty `Search`, except
+        // it isn't tied to the lifetime of another variable.
+        // empty `search_values` are also necessarily valid with empty `inner` matches.
+        unsafe { Self::new(0.0, Vec::new(), &[]) }
     }
 }
 
-// to not repeat the same safety comment for every unsafe block wrapping
-// make_match: SAFETY: make_match is safe to call when used with a value coming
-// from the inner iterator
+// to avoid repeating the same safety comment for every use of `state.mapper`:
+// SAFETY: `mapper` is safe to call with a value coming from the inner iterator
 impl<'st, T> Iterator for MatchIter<'st, T> {
     type Item = Match<'st, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner
-            .next()
-            .map(|m| unsafe { self.state.make_match(m) })
+        self.inner.next().map(unsafe { self.state.mapper() })
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner
-            .nth(n)
-            .map(|m| unsafe { self.state.make_match(m) })
+        self.inner.nth(n).map(unsafe { self.state.mapper() })
     }
 
     fn last(mut self) -> Option<Self::Item> {
@@ -488,23 +482,17 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
 
     fn collect<B: FromIterator<Self::Item>>(self) -> B {
         // this should optimize a bit better than a direct collect()
-        self.inner
-            .map(|m| unsafe { self.state.make_match(m) })
-            .collect()
+        self.inner.map(unsafe { self.state.mapper() }).collect()
     }
 }
 
 impl<T> DoubleEndedIterator for MatchIter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner
-            .next_back()
-            .map(|m| unsafe { self.state.make_match(m) })
+        self.inner.next_back().map(unsafe { self.state.mapper() })
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner
-            .nth_back(n)
-            .map(|m| unsafe { self.state.make_match(m) })
+        self.inner.nth_back(n).map(unsafe { self.state.mapper() })
     }
 }
 
@@ -541,6 +529,7 @@ fn iter_segments<const N: usize>(
         "size must be within 1..={N}, but is {size}"
     );
 
+    // SAFETY: asserted that size is <= N
     slice.windows(size).map(|w| unsafe { new_segment(w) })
 }
 

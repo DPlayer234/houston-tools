@@ -19,7 +19,7 @@ impl<S> ConstIter<S> {
     /// # let slice: &[i32] = &[1, 2, 3];
     /// # fn do_something(_: &i32) {}
     /// # _ = stringify! {
-    /// let slice = ...;
+    /// let slice: &[i32] = ...;
     /// # };
     ///
     /// let mut iter = ConstIter::new(slice);

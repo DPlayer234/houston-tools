@@ -7,6 +7,9 @@ use crate::iter::ConstIter;
 
 /// Counts the total length of all [`str`] slices.
 ///
+/// This function is generally not useful and exists primarily to support the
+/// [`join`](crate::join) macro.
+///
 /// # Panic
 ///
 /// Panics if the total length of all slices overflows [`usize`].
@@ -35,24 +38,32 @@ pub const fn count_str_const(slices: &[&str]) -> usize {
 #[must_use]
 pub const fn join_str_const<const N: usize>(slices: &[&str]) -> InlineStr<N> {
     let mut out = [0u8; N];
+    join_str_const_into(slices, &mut out);
 
-    let mut rem: &mut [u8] = &mut out;
+    // SAFETY: `out` contains only valid UTF-8.
+    unsafe { InlineStr::from_utf8_unchecked(out) }
+}
+
+/// Non-generic helper for [`join_str_const`].
+///
+/// When this function does not panic, it is guaranteed that `out` has been
+/// fully written and only contains valid UTF-8.
+///
+/// # Panic
+///
+/// Panics if `out.len()` is not equal to the sum of the length of all slices.
+const fn join_str_const_into(slices: &[&str], mut out: &mut [u8]) {
     let mut iter = ConstIter::new(slices);
     while let Some(&slice) = iter.next() {
-        let Some((part, rest)) = rem.split_at_mut_checked(slice.len()) else {
+        let Some((part, rest)) = out.split_at_mut_checked(slice.len()) else {
             panic!("N was shorter than total input length");
         };
 
         part.copy_from_slice(slice.as_bytes());
-        rem = rest;
+        out = rest;
     }
 
-    assert!(rem.is_empty(), "total input length must be N");
-
-    unsafe {
-        // SAFETY: Only UTF-8 data was joined.
-        InlineStr::from_utf8_unchecked(out)
-    }
+    assert!(out.is_empty(), "total input length must be N");
 }
 
 #[cfg(test)]
