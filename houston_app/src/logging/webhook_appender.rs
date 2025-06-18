@@ -9,6 +9,7 @@
 //! message size. This probably shouldn't be used for all logging messages but
 //! just a subset, i.e. filtered to just warnings and errors.
 
+use std::convert::Infallible;
 use std::io::{self, Write as _};
 use std::time::Duration;
 
@@ -20,7 +21,7 @@ use log4rs::encode::{self, Encode, EncoderConfig, Style};
 use serenity::http::Http;
 use serenity::secrets::SecretString;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::sync::oneshot;
 use utils::text::push_str_lossy;
 
 use super::WRITE_BUF_SIZE;
@@ -88,10 +89,15 @@ struct LogWriter {
     buf: ArrayVec<u8, WRITE_BUF_SIZE>,
 }
 
+/// A message to send to the worker task.
 #[derive(Debug)]
 enum Msg {
+    /// A message to log, preferably in UTF-8.
     Log(Vec<u8>),
-    Notify(OwnedSemaphorePermit),
+    /// A oneshot sender that will be _closed_ after the batch it was received
+    /// with is sent. Awaiting the receiver can then be used to synchronize with
+    /// the worker.
+    Notify(oneshot::Sender<Infallible>),
 }
 
 impl io::Write for LogWriter {
@@ -274,20 +280,14 @@ fn try_flush(sender: &Sender<Msg>) {
     // "doesn't block other threads"
 
     // async-over-sync from an async context is... great
-    let res: Result = tokio::task::block_in_place(move || {
+    let res: Result = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(async {
-            let semaphore = Arc::new(Semaphore::new(1));
-            let notify = Arc::clone(&semaphore)
-                .try_acquire_owned()
-                .expect("new semaphore cannot be locked");
-            let msg = Msg::Notify(notify);
-
-            // we essentially wait until the semaphore lets us grab another permit
-            // this should happen when `notify` of the `msg` is dropped,
-            // which happens after the final batch send
+            // the worker notifies us of completion by dropping the oneshot-sender we pass
+            // to it. this closes the channel, which is the only receiver error condition.
             let task = async move {
-                sender.send(msg).await?;
-                _ = semaphore.acquire().await?;
+                let (tx, rx) = oneshot::channel();
+                sender.send(Msg::Notify(tx)).await?;
+                let Err(_) = rx.await;
                 Ok(())
             };
 
