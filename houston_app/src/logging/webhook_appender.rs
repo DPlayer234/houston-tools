@@ -45,7 +45,7 @@ impl Append for WebhookAppender {
     fn append(&self, record: &Record<'_>) -> Result {
         let mut buf = LogWriter::default();
         self.encoder.encode(&mut buf, record)?;
-        self.sender.try_send(Msg::Log(buf.buf.to_vec()))?;
+        self.sender.try_send(buf.into_msg())?;
         Ok(())
     }
 
@@ -74,11 +74,19 @@ impl WebhookClient {
     }
 }
 
+// prefix and suffix together create a code block supporting ANSI-like escapes.
+const LOG_PREFIX: &str = "```ansi\n";
+
+// include a new-line in the log suffix. if the last message didn't end with a
+// new-line already, this will ensure the formatting is correct. and if it did,
+// discord won't render two new-lines anyways
+const LOG_SUFFIX: &str = "\n```";
+
 // Discord messages are limited to 2000 characters.
-// we use 1984 instead of 2000 to also consider a little bit of extra space we
-// use for formatting. when a message would exceed this limit, it's re-queued
-// instead of being added to the batch.
-const BATCH_TEXT_LIMIT: usize = 1984;
+// the prefix is already included in this limit since it has been added already,
+// but the suffix will be appended afterwards. when a message would exceed this
+// limit, it's re-queued instead of being added to the batch.
+const BATCH_TEXT_LIMIT: usize = 2000 - LOG_SUFFIX.len();
 
 /// A temporary buffer for messages to write to the webhook.
 ///
@@ -89,15 +97,11 @@ struct LogWriter {
     buf: ArrayVec<u8, WRITE_BUF_SIZE>,
 }
 
-/// A message to send to the worker task.
-#[derive(Debug)]
-enum Msg {
-    /// A message to log, preferably in UTF-8.
-    Log(Vec<u8>),
-    /// A oneshot sender that will be _closed_ after the batch it was received
-    /// with is sent. Awaiting the receiver can then be used to synchronize with
-    /// the worker.
-    Notify(oneshot::Sender<Infallible>),
+impl LogWriter {
+    /// Converts this buffer into a log message.
+    fn into_msg(self) -> Msg {
+        Msg::Log(self.buf.to_vec())
+    }
 }
 
 impl io::Write for LogWriter {
@@ -153,6 +157,17 @@ impl encode::Write for LogWriter {
 
         Ok(())
     }
+}
+
+/// A message to send to the worker task.
+#[derive(Debug)]
+enum Msg {
+    /// A message to log, preferably in UTF-8.
+    Log(Vec<u8>),
+    /// A oneshot sender that will be _closed_ after the batch it was received
+    /// with is sent. Awaiting the receiver can then be used to synchronize with
+    /// the worker.
+    Notify(oneshot::Sender<Infallible>),
 }
 
 /// Helper for batching receives.
@@ -212,8 +227,8 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
         };
 
         // make sure there's enough space for at least the first message in the batch
-        text.reserve(buf.len() + 16);
-        text.push_str("```ansi\n");
+        text.reserve(LOG_PREFIX.len() + LOG_SUFFIX.len() + buf.len());
+        text.push_str(LOG_PREFIX);
 
         push_str_lossy(&mut text, &buf);
 
@@ -237,10 +252,7 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
             }
         }
 
-        // include a new-line here also
-        // if it didn't, this will ensure the formatting is correct
-        // if the last message ended with a new-line, it won't render twice
-        text.push_str("\n```");
+        text.push_str(LOG_SUFFIX);
 
         let res = webhook
             .http
