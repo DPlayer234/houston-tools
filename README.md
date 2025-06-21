@@ -348,6 +348,33 @@ Emojis are added in declaration order.
 > [!IMPORTANT]
 > When this module is enabled, the `MESSAGE_CONTENT` intent is requested over the gateway. `MESSAGE_CONTENT` is a priviledged intent and must be enabled in the developer dashboard for your application. You cannot enable this module without enabling the intent.
 
+## Self-Role
+
+Allows self-assignable roles. Every role must be below the bot's highest role. Names are required for command autocomplete.
+
+Self-roles are defined in groups per guild, where each group may have a limit on assigned roles within the group.
+
+```toml
+# a group of roles without a limit
+# you may assign any amount of these roles to yourself
+# the numeric value in the path is the guild id
+[[bot.self_role.1293210831923974204.groups]]
+roles = [
+    { id = 1306289457040982149, name = "yes way" },
+    { id = 1385998802946887783, name = "best role" },
+]
+
+# a group with a limit of 1
+# you may assign 1 crab role to yourself
+[[bot.self_role.1293210831923974204.groups]]
+limit = 2
+roles = [
+    { id = 1309970796516610119, name = "Fake Crab" },
+    { id = 1309970817882259498, name = "Sea Crab" },
+    { id = 1309970846491742339, name = "Cooked Crab" },
+]
+```
+
 ## Snipe
 
 Enables message-sniping, allowing users to reveal the most recent, deleted message in a channel.
