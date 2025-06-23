@@ -76,18 +76,14 @@ async fn autocomplete_role<'a>(
     ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
-    if let Some(guild_id) = ctx.guild_id() {
-        let roles = ctx
-            .data_ref()
-            .config()
-            .self_role
-            .get(&guild_id)
-            .into_iter()
-            .flat_map(|c| &c.groups)
-            .flat_map(|g| &g.roles);
-
+    // get the config for this guild, return empty if none
+    if let Some(guild_config) = ctx
+        .guild_id()
+        .and_then(|id| ctx.data_ref().config().self_role.get(&id))
+    {
+        // flatten the role groups and assign indices to them
         let choices: Vec<_> = (0u64..)
-            .zip(roles)
+            .zip(guild_config.groups.iter().flat_map(|g| &g.roles))
             .filter(|(_, r)| contains_ignore_ascii_case(&r.name, partial))
             .map(|(index, r)| AutocompleteChoice::new(&r.name, AutocompleteValue::Integer(index)))
             .collect();

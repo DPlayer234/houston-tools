@@ -79,15 +79,14 @@ async fn autocomplete_board<'a>(
     ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
-    if let Some(guild_id) = ctx.guild_id() {
-        let choices: Vec<_> = ctx
-            .data_ref()
-            .config()
-            .starboard
-            // get the config for this guild and flatten into the board iter
-            .get(&guild_id)
-            .into_iter()
-            .flat_map(|g| g.boards.values())
+    // get the config for this guild, return empty if none
+    if let Some(guild_config) = ctx
+        .guild_id()
+        .and_then(|id| ctx.data_ref().config().starboard.get(&id))
+    {
+        let choices: Vec<_> = guild_config
+            .boards
+            .values()
             // filter to ones whose name contains the input
             // if the input is empty, that's all of them
             .filter(|board| contains_ignore_ascii_case(&board.name, partial))
