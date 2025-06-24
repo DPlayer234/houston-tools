@@ -13,11 +13,11 @@ pub async fn self_role(
     role: u64,
 ) -> Result {
     let data = ctx.data_ref();
+    let member = ctx.member().context("requires guild")?;
     let (group, role) =
         find_role_group(ctx, role).ok_or(HArgError::new_const("Unknown claimable role."))?;
 
     ctx.defer(true).await?;
-    let member = ctx.member().context("requires guild")?;
 
     let description = if member.roles.contains(&role.id) {
         // if you already have the role, unconditionally remove it
@@ -27,19 +27,7 @@ pub async fn self_role(
         format!("Removed {}.", role.id.mention())
     } else {
         // if there is a limit, make sure the user isn't already at/above the limit
-        if let Some(limit) = group.limit {
-            let owned_in_group = member
-                .roles
-                .iter()
-                .filter(|&&id| group.roles.iter().any(move |role| role.id == id))
-                .count();
-
-            if usize::from(limit.get()) <= owned_in_group {
-                let roles = Join::AND.display_as(&group.roles, |r| r.id.mention());
-                let message = format!("May only have **{limit}** of {roles}.");
-                anyhow::bail!(HArgError::new(message));
-            }
-        }
+        check_role_group_limit(member, group)?;
 
         member
             .add_role(ctx.http(), role.id, Some("claimed via /self-role"))
@@ -53,6 +41,27 @@ pub async fn self_role(
 
     ctx.send(CreateReply::new().embed(embed)).await?;
     Ok(())
+}
+
+/// Returns [`Err`] if the member cannot claim more group roles.
+fn check_role_group_limit(member: &Member, group: &RoleGroup) -> Result {
+    let Some(limit) = group.limit else {
+        return Ok(());
+    };
+
+    let owned_in_group = member
+        .roles
+        .iter()
+        .filter(|&&id| group.roles.iter().any(move |role| role.id == id))
+        .count();
+
+    if usize::from(limit.get()) <= owned_in_group {
+        let roles = Join::AND.display_as(&group.roles, |r| r.id.mention());
+        let message = format!("May only have **{limit}** of {roles}.");
+        Err(HArgError::new(message).into())
+    } else {
+        Ok(())
+    }
 }
 
 fn find_role_group(ctx: Context<'_>, mut index: u64) -> Option<(&RoleGroup, &RoleEntry)> {
