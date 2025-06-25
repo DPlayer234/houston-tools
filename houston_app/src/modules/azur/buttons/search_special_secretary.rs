@@ -37,7 +37,7 @@ impl<'v> View<'v> {
 
             let view_chat = super::special_secretary::View::new(secretary.id).back(self.to_nav());
             options.push(CreateSelectMenuOption::new(
-                truncate(secretary.name.as_str(), 100),
+                truncate(&secretary.name, 100),
                 view_chat.to_custom_id(),
             ));
         }

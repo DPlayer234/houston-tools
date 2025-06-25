@@ -1125,7 +1125,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "anyhow",
  "houston_cmd_macros",
@@ -3402,7 +3402,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utils"
-version = "8.1.0"
+version = "8.1.1"
 dependencies = [
  "anstyle-query",
  "arrayvec",

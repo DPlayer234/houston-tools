@@ -48,21 +48,27 @@ macro_rules! impl_message_context {
     };
 }
 
+fn member_error(ctx: Context<'_>) -> Error<'_> {
+    Error::arg_invalid(ctx, "unknown server member")
+}
+
 impl_slash!('ctx f32 => |_, Number(x)| x as f32);
 impl_slash!('ctx f64 => |_, Number(x)| x);
 impl_slash!('ctx i64 => |_, Integer(x)| x);
 impl_slash!('ctx bool => |_, Boolean(x)| x);
 impl_slash!('ctx &'ctx str => |_, String(x)| x);
 impl_slash!('ctx &'ctx User => |_, User(user, _)| user);
-impl_slash!('ctx &'ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?);
+impl_slash!('ctx &'ctx PartialMember => |ctx, User(_, member)| member.ok_or_else(|| member_error(*ctx))?);
 impl_slash!('ctx &'ctx Role => |_, Role(role)| role);
 impl_slash!('ctx &'ctx GenericInteractionChannel => |_, Channel(channel)| channel);
 impl_slash!('ctx &'ctx Attachment => |_, Attachment(attachment)| attachment);
 
 impl_slash!('ctx (&'ctx User, Option<&'ctx PartialMember>) => |_, User(user, member)| (user, member));
+impl_slash!('ctx (&'ctx User, &'ctx PartialMember) => |ctx, User(user, member)| (user, member.ok_or_else(|| member_error(*ctx))?));
 
 impl_user_context!('ctx &'ctx User => |_, user, _| user);
 impl_user_context!('ctx (&'ctx User, Option<&'ctx PartialMember>) => |_, user, member| (user, member));
+impl_user_context!('ctx (&'ctx User, &'ctx PartialMember) => |ctx, user, member| (user, member.ok_or_else(|| member_error(*ctx))?));
 
 impl_message_context!('ctx &'ctx Message => |_, message| message);
 
@@ -74,16 +80,18 @@ macro_rules! impl_slash_int {
                 resolved: &ResolvedValue<'ctx>,
             ) -> Result<Self, Error<'ctx>> {
                 match *resolved {
-                    ResolvedValue::Integer(x) => x.try_into()
-                        .map_err(|_| Error::structure_mismatch(*ctx, "received integer out of range")),
-                    _ => Err(Error::structure_mismatch(*ctx, concat!("expected integer"))),
+                    ResolvedValue::Integer(x) => x.try_into().map_err(|_| {
+                        Error::structure_mismatch(*ctx, concat!("received integer out of range for ", stringify!($ty)))
+                    }),
+                    _ => Err(Error::structure_mismatch(*ctx, "expected Integer")),
                 }
             }
 
             fn set_options(option: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
-                option.kind(CommandOptionType::Integer)
-                    .min_number_value(f64::max(<$ty>::MIN as f64, -9007199254740991f64))
-                    .max_number_value(f64::min(<$ty>::MAX as f64, 9007199254740991f64))
+                option
+                    .kind(CommandOptionType::Integer)
+                    .min_number_value(const { f64::max(<$ty>::MIN as f64, -9007199254740991f64) })
+                    .max_number_value(const { f64::min(<$ty>::MAX as f64, 9007199254740991f64) })
             }
         }
     )* };

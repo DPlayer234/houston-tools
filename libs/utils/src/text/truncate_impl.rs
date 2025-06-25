@@ -105,37 +105,39 @@ impl<'a, S: AsRef<str> + ?Sized> Truncate for &'a S {
     type Output = Cow<'a, str>;
 
     fn truncate(this: Self, len: usize) -> Self::Output {
-        let this: &str = this.as_ref();
-        Truncate::truncate(Cow::Borrowed(this), len)
+        let this = this.as_ref();
+        if let Some(end_at) = find_truncate_at(this, len) {
+            Cow::Owned(to_truncated_at(this, end_at))
+        } else {
+            Cow::Borrowed(this)
+        }
     }
 }
 
-impl Truncate for Cow<'_, str> {
-    type Output = Self;
+macro_rules! delegate_to_by_mut {
+    ($($Ty:ty),*) => { $(
+        impl Truncate for $Ty {
+            type Output = Self;
 
-    fn truncate(mut this: Self, len: usize) -> Self::Output {
-        Truncate::truncate(&mut this, len);
-        this
-    }
+            fn truncate(mut this: Self, len: usize) -> Self::Output {
+                <&mut Self as Truncate>::truncate(&mut this, len);
+                this
+            }
+        }
+    )* };
 }
 
-impl Truncate for String {
-    type Output = Self;
-
-    fn truncate(mut this: Self, len: usize) -> Self::Output {
-        Truncate::truncate(&mut this, len);
-        this
-    }
-}
+delegate_to_by_mut!(Cow<'_, str>, String);
 
 impl Truncate for &mut Cow<'_, str> {
     type Output = ();
 
     fn truncate(this: Self, len: usize) -> Self::Output {
         if let Some(end_at) = find_truncate_at(this, len) {
-            let str = this.to_mut();
-            str.truncate(end_at);
-            str.push(ELLIPSIS);
+            match this {
+                Cow::Borrowed(src) => *this = Cow::Owned(to_truncated_at(src, end_at)),
+                Cow::Owned(buf) => truncate_at(buf, end_at),
+            }
         }
     }
 }
@@ -145,29 +147,64 @@ impl Truncate for &mut String {
 
     fn truncate(this: Self, len: usize) -> Self::Output {
         if let Some(end_at) = find_truncate_at(this, len) {
-            this.truncate(end_at);
-            this.push(ELLIPSIS);
+            truncate_at(this, end_at);
         }
     }
+}
+
+/// Creates a [`String`] with the content of `src` truncated at `end_at`.
+///
+/// The capacity of the result should be the minimum needed.
+fn to_truncated_at(src: &str, end_at: usize) -> String {
+    debug_assert!(src.len() > end_at, "must actually truncate");
+    debug_assert!(src.is_char_boundary(end_at), "must truncate on boundary");
+
+    let new_len = end_at + ELLIPSIS.len_utf8();
+    let mut buf = String::with_capacity(new_len);
+    buf.push_str(&src[..end_at]);
+    buf.push(ELLIPSIS);
+    buf
+}
+
+/// Truncates a [`String`] at `end_at`.
+///
+/// When truncating near the end, avoids overallocating the buffer.
+fn truncate_at(buf: &mut String, end_at: usize) {
+    debug_assert!(buf.len() > end_at, "must actually truncate");
+    debug_assert!(buf.is_char_boundary(end_at), "must truncate on boundary");
+
+    buf.truncate(end_at);
+    buf.reserve_exact(ELLIPSIS.len_utf8());
+    buf.push(ELLIPSIS);
 }
 
 #[cfg(test)]
 mod test {
     use std::borrow::Cow;
 
-    use super::truncate;
+    use super::{Truncate, truncate};
+
+    #[expect(clippy::ptr_arg)]
+    fn is_borrowed(t: &Cow<'_, str>) -> bool {
+        matches!(t, Cow::Borrowed(_))
+    }
+
+    #[expect(clippy::ptr_arg)]
+    fn is_owned(t: &Cow<'_, str>) -> bool {
+        matches!(t, Cow::Owned(_))
+    }
+
+    #[expect(clippy::ptr_arg)]
+    fn is_owned_exact_cap(t: &Cow<'_, str>) -> bool {
+        matches!(t, Cow::Owned(x) if x.len() == x.capacity())
+    }
 
     #[test]
     fn truncate_string() {
-        let mut to_single = "hello".to_owned();
-        let mut to_one_down = "hello".to_owned();
-        let mut to_exact = "hello".to_owned();
-        let mut too_much = "hello".to_owned();
-
-        truncate(&mut to_single, 1);
-        truncate(&mut to_one_down, 4);
-        truncate(&mut to_exact, 5);
-        truncate(&mut too_much, 10);
+        let to_single = truncate("hello".to_owned(), 1);
+        let to_one_down = truncate("hello".to_owned(), 4);
+        let to_exact = truncate("hello".to_owned(), 5);
+        let too_much = truncate("hello".to_owned(), 10);
 
         assert!(
             to_single == "…" && to_single.chars().count() == 1,
@@ -189,33 +226,46 @@ mod test {
 
     #[test]
     fn truncate_ref() {
-        let text = "hello";
+        truncate_into_cow(&|| "hello", &is_owned_exact_cap, &is_borrowed);
+    }
 
-        let to_single = truncate(text, 1);
-        let to_one_down = truncate(text, 4);
-        let to_exact = truncate(text, 5);
-        let too_much = truncate(text, 10);
+    #[test]
+    fn truncate_cow_borrowed() {
+        truncate_into_cow(
+            &|| Cow::Borrowed("hello"),
+            &is_owned_exact_cap,
+            &is_borrowed,
+        );
+    }
 
-        assert!(
-            matches!(to_single, Cow::Owned(_))
-                && to_single == "…"
-                && to_single.chars().count() == 1
+    #[test]
+    fn truncate_cow_owned() {
+        truncate_into_cow(
+            &|| Cow::Owned("hello".to_owned()),
+            &is_owned,
+            &is_owned_exact_cap,
         );
+    }
+
+    fn truncate_into_cow<'a, T>(
+        text: &dyn Fn() -> T,
+        match_trunc: &dyn Fn(&Cow<'a, str>) -> bool,
+        match_no_trunc: &dyn Fn(&Cow<'a, str>) -> bool,
+    ) where
+        T: 'a + Truncate<Output = Cow<'a, str>>,
+    {
+        let to_single = truncate(text(), 1);
+        let to_one_down = truncate(text(), 4);
+        let to_exact = truncate(text(), 5);
+        let too_much = truncate(text(), 10);
+
+        assert!(match_trunc(&to_single) && to_single == "…" && to_single.chars().count() == 1);
         assert!(
-            matches!(to_one_down, Cow::Owned(_))
-                && to_one_down == "hel…"
-                && to_one_down.chars().count() == 4
+            // if the initial capacity was 5, this actually needs to reserve more capacity
+            match_trunc(&to_one_down) && to_one_down == "hel…" && to_one_down.chars().count() == 4
         );
-        assert!(
-            matches!(to_exact, Cow::Borrowed(_))
-                && to_exact == "hello"
-                && to_exact.chars().count() == 5
-        );
-        assert!(
-            matches!(too_much, Cow::Borrowed(_))
-                && too_much == "hello"
-                && too_much.chars().count() == 5
-        );
+        assert!(match_no_trunc(&to_exact) && to_exact == "hello" && to_exact.chars().count() == 5);
+        assert!(match_no_trunc(&too_much) && too_much == "hello" && too_much.chars().count() == 5);
     }
 
     #[test]
