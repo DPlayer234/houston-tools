@@ -70,12 +70,9 @@ pub fn truncate<T: Truncate>(str: T, len: usize) -> T::Output {
     T::truncate(str, len)
 }
 
-// Note: allowing `&mut &mut str` seems tempting, but the ellipsis character
-// takes 3 bytes in UTF-8. Furthermore, actually mutating a `&mut str` not only
-// requires unsafe code, it would need to be unsafe to call because the caller
-// has to make sure the source reference isn't used anymore as the full buffer
-// may no longer even be valid UTF-8. Plus, I don't have a reason for it
-// currently.
+// Note: allowing `&mut &mut str` may be useful, but experiments show that it
+// ends up being very hard to call due to limitations between the borrow checker
+// and trait implementations on `&mut T`.
 
 #[inline]
 fn find_truncate_at(s: &str, len: usize) -> Option<usize> {

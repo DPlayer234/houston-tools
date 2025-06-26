@@ -505,6 +505,8 @@ impl<T> ExactSizeIterator for MatchIter<'_, T> {
 /// A search segment. Used as a key.
 type Segment<const N: usize> = [u16; N];
 
+/// # Safety
+/// `pts.len()` must be less than or equal to `N`.
 unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
     let mut res = [0xFFFFu16; N];
     debug_assert!(

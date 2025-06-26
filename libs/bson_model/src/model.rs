@@ -191,7 +191,7 @@ impl ModelField {
         // essentially `self.expr.get_unchecked(1..)` but const
         let [_, bytes @ ..] = self.expr.as_bytes() else {
             // SAFETY: string always begins with '$', so it can't be empty
-            unsafe { hint::unreachable_unchecked() };
+            unsafe { hint::unreachable_unchecked() }
         };
 
         // SAFETY: string always begins with '$', so the tail after is valid UTF-8

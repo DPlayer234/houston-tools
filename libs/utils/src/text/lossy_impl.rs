@@ -6,6 +6,8 @@
 /// # Examples
 ///
 /// ```
+/// use utils::text::push_str_lossy;
+///
 /// // "Hello " + invalid UTF-8 + "World!"
 /// let buf = b"Hello \xF0\x90\x80World!";
 /// let mut target = String::new();

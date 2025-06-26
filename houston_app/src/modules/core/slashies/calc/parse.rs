@@ -95,6 +95,8 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
         )
     }
 
+    /// # Safety
+    /// `bytes` must be valid UTF-8.
     unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
         debug_assert!(str::from_utf8(bytes).is_ok(), "bytes must be utf8");
 
@@ -115,6 +117,7 @@ pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
         })
         .filter(|s| !s.is_empty())
         .enumerate()
+        // SAFETY: `str.as_bytes().split` on ascii whitespace must only return valid utf-8 chunks
         .map(|(i, s)| unsafe { token_from_utf8(i, s) });
 
     // this is only generic over `I` because we can't spell out the iterator name

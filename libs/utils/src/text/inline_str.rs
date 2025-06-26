@@ -38,10 +38,8 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Returns [`Err`] if the slice is not valid UTF-8.
     pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, Utf8Error> {
         match str::from_utf8(&bytes) {
-            Ok(..) => Ok(unsafe {
-                // SAFETY: from_utf8 checks validity
-                Self::from_utf8_unchecked(bytes)
-            }),
+            // SAFETY: `from_utf8` returns Ok only on valid UTF-8
+            Ok(..) => Ok(unsafe { Self::from_utf8_unchecked(bytes) }),
             Err(err) => Err(err),
         }
     }
@@ -69,10 +67,9 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Returns [`Err`] if the length of the slice does not match `N`.
     pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
         match crate::mem::try_as_sized(str.as_bytes()) {
-            Some(slice) => Ok(unsafe {
-                // SAFETY: InlineStr<LEN> is a transparent wrapper around [u8; LEN].
-                transmute::<&[u8; LEN], &Self>(slice)
-            }),
+            // SAFETY: `InlineStr<LEN>` is a transparent wrapper around `[u8; LEN]`
+            // and `array` is derived from a `str`, so it must be valid UTF-8.
+            Some(array) => Ok(unsafe { transmute::<&[u8; LEN], &Self>(array) }),
             None => Err(FromStrError(())),
         }
     }
@@ -92,19 +89,15 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// Converts this value to a [`str`] slice.
     #[must_use]
     pub const fn as_str(&self) -> &str {
-        unsafe {
-            // SAFETY: Only constructed with valid UTF-8
-            str::from_utf8_unchecked(&self.0)
-        }
+        // SAFETY: `self` must have been constructed with valid UTF-8
+        unsafe { str::from_utf8_unchecked(&self.0) }
     }
 
     /// Converts this value to a mutable [`str`] slice.
     #[must_use]
     pub const fn as_mut_str(&mut self) -> &mut str {
-        unsafe {
-            // SAFETY: Only constructed with valid UTF-8
-            str::from_utf8_unchecked_mut(&mut self.0)
-        }
+        // SAFETY: `self` must have been constructed with valid UTF-8
+        unsafe { str::from_utf8_unchecked_mut(&mut self.0) }
     }
 
     /// Converts a string to a byte array.
