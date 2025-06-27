@@ -166,10 +166,10 @@ impl<'v> View<'v> {
     /// Attempts to change to a part that has texts, if the view isn't already
     /// on one.
     fn try_redirect_to_non_empty_part(&mut self, words: &ShipSkinWords) {
-        if !self.part.has_texts(words) {
-            if let Some(part) = first_non_empty_part(words) {
-                self.part = part;
-            }
+        if !self.part.has_texts(words)
+            && let Some(part) = first_non_empty_part(words)
+        {
+            self.part = part;
         }
     }
 }

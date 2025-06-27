@@ -98,22 +98,22 @@ impl<'v> View<'v> {
             }
 
             // if there are options, we stop if we hold the flag for neither of them
-            if let Some(options) = &entry.options {
-                if options.iter().all(|o| !self.flags.contains(&o.flag)) {
-                    for option in options {
-                        let mut new_flags = self.flags.clone();
-                        _ = new_flags.try_push(option.flag);
+            if let Some(options) = &entry.options
+                && options.iter().all(|o| !self.flags.contains(&o.flag))
+            {
+                for option in options {
+                    let mut new_flags = self.flags.clone();
+                    _ = new_flags.try_push(option.flag);
 
-                        let button = self
-                            .new_button(|s| &mut s.flags, new_flags, |_| option.flag.into())
-                            .label(truncate(&option.value, 80))
-                            .style(ButtonStyle::Secondary);
+                    let button = self
+                        .new_button(|s| &mut s.flags, new_flags, |_| option.flag.into())
+                        .label(truncate(&option.value, 80))
+                        .style(ButtonStyle::Secondary);
 
-                        components.push(CreateActionRow::buttons(vec![button]));
-                    }
-
-                    break;
+                    components.push(CreateActionRow::buttons(vec![button]));
                 }
+
+                break;
             }
         }
 

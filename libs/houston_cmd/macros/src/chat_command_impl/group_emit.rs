@@ -26,13 +26,13 @@ pub fn to_command_option_group(
     let mut warnings = Vec::new();
 
     for item in take(content) {
-        if let Some(vis) = item_vis(&item) {
-            if *vis != Visibility::Inherited {
-                warnings.push(warning(
-                    vis.span(),
-                    "remove this `pub`, visibility has no effect within a command group",
-                ));
-            }
+        if let Some(vis) = item_vis(&item)
+            && *vis != Visibility::Inherited
+        {
+            warnings.push(warning(
+                vis.span(),
+                "remove this `pub`, visibility has no effect within a command group",
+            ));
         }
 
         match item {

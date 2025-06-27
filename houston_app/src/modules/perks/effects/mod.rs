@@ -126,10 +126,10 @@ fn ok_allowed_discord_error<T>(
 ) -> Result<Option<T>, serenity::Error> {
     use serenity::http::{HttpError, JsonErrorCode as J};
 
-    if let Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = &result {
-        if matches!(why.error.code, J::UnknownMember | J::UnknownUser) {
-            return Ok(None);
-        }
+    if let Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = &result
+        && matches!(why.error.code, J::UnknownMember | J::UnknownUser)
+    {
+        return Ok(None);
     }
 
     result.map(Some)
@@ -143,13 +143,11 @@ fn ok_allowed_discord_error<T>(
 fn is_known_member(result: Result) -> Result<bool> {
     use serenity::http::{HttpError, JsonErrorCode as J};
 
-    if let Err(why) = &result {
-        let why = why.downcast_ref();
-        if let Some(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = why {
-            if matches!(why.error.code, J::UnknownMember | J::UnknownUser) {
-                return Ok(false);
-            }
-        }
+    if let Err(why) = &result
+        && let Some(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = why.downcast_ref()
+        && matches!(why.error.code, J::UnknownMember | J::UnknownUser)
+    {
+        return Ok(false);
     }
 
     result.map(|_| true)

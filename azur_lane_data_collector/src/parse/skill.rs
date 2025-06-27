@@ -30,11 +30,11 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         .with_context(context!("desc_add of skill with id {}", skill_id))?;
 
     for (slot, data_set) in desc_add.iter().enumerate() {
-        if let Some(last) = data_set.last() {
-            if let Some(text) = last.first() {
-                let placeholder = format!("${}", slot + 1);
-                desc = desc.replace(&placeholder, text);
-            }
+        if let Some(last) = data_set.last()
+            && let Some(text) = last.first()
+        {
+            let placeholder = format!("${}", slot + 1);
+            desc = desc.replace(&placeholder, text);
         }
     }
 
@@ -217,15 +217,14 @@ pub fn load_wequips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<WEquipLoad>
     equip_ids
         .into_iter()
         .map(|id| {
-            if let Ok(equip) = load_equip(lua, id) {
-                if let [weapon] = equip.weapons.as_slice() {
-                    if weapon.weapon_id == id {
-                        return Ok(WEquipLoad {
-                            name: equip.name,
-                            weapons: equip.weapons,
-                        });
-                    }
-                }
+            if let Ok(equip) = load_equip(lua, id)
+                && let [weapon] = equip.weapons.as_slice()
+                && weapon.weapon_id == id
+            {
+                return Ok(WEquipLoad {
+                    name: equip.name,
+                    weapons: equip.weapons,
+                });
             }
 
             if let Some(weapon) = load_weapon(lua, id)? {
@@ -581,19 +580,19 @@ fn search_referenced_weapons(
     sc: SkillContext<'_>,
 ) -> LuaResult<()> {
     let len = sc.skill.len()?;
-    if let Ok(len) = usize::try_from(len) {
-        if len != 0 {
-            let level_entry: LuaTable = sc
-                .skill
-                .get(len)
-                .with_context(context!("level entry {len} of skill/buff"))?;
-            let effect_list: Option<Vec<LuaTable>> = level_entry
-                .get("effect_list")
-                .with_context(context!("effect_list of skill/buff level entry {len}"))?;
-            if let Some(effect_list) = effect_list {
-                search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
-                return Ok(());
-            }
+    if let Ok(len) = usize::try_from(len)
+        && len != 0
+    {
+        let level_entry: LuaTable = sc
+            .skill
+            .get(len)
+            .with_context(context!("level entry {len} of skill/buff"))?;
+        let effect_list: Option<Vec<LuaTable>> = level_entry
+            .get("effect_list")
+            .with_context(context!("effect_list of skill/buff level entry {len}"))?;
+        if let Some(effect_list) = effect_list {
+            search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
+            return Ok(());
         }
     }
 

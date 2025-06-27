@@ -47,10 +47,10 @@ async fn profile_core(
 
     let mut description = String::new();
 
-    if crate::modules::starboard::Module.enabled(data.config()) {
-        if let Some(starboard) = starboard_info(ctx, member).await? {
-            embed = embed.field("Starboard", starboard, true);
-        }
+    if crate::modules::starboard::Module.enabled(data.config())
+        && let Some(starboard) = starboard_info(ctx, member).await?
+    {
+        embed = embed.field("Starboard", starboard, true);
     }
 
     if crate::modules::perks::Module.enabled(data.config()) {

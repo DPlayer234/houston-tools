@@ -259,10 +259,10 @@ impl Move for MovePawn {
             }
 
             for cap in [pos.add_x(-1), pos.add_x(1)] {
-                if let Some(cap_tile) = board.get(cap) {
-                    if cap_tile.is_some_and(|p| p.player != player) {
-                        out.flag_tile(cap);
-                    }
+                if let Some(cap_tile) = board.get(cap)
+                    && cap_tile.is_some_and(|p| p.player != player)
+                {
+                    out.flag_tile(cap);
                 }
             }
         }
@@ -289,10 +289,10 @@ impl Move for MoveKnight {
 
         for &dir in DIRS {
             let pos = origin.add_offset(dir);
-            if let Some(tile) = board.get(pos) {
-                if tile.is_none_or(|t| t.player != player) {
-                    out.flag_tile(pos);
-                }
+            if let Some(tile) = board.get(pos)
+                && tile.is_none_or(|t| t.player != player)
+            {
+                out.flag_tile(pos);
             }
         }
 
@@ -307,10 +307,10 @@ impl Move for MoveKing {
 
         for &dir in MoveQueen::DIRS {
             let pos = origin.add_offset(dir);
-            if let Some(tile) = board.get(pos) {
-                if tile.is_none_or(|t| t.player != player) {
-                    out.flag_tile(pos);
-                }
+            if let Some(tile) = board.get(pos)
+                && tile.is_none_or(|t| t.player != player)
+            {
+                out.flag_tile(pos);
             }
         }
 

@@ -69,22 +69,21 @@ impl Shape for Birthday {
     }
 
     async fn disable(&self, args: Args<'_>) -> Result {
-        if let Ok(config) = get_guild_config(&args) {
-            if let Some(role) = config.role {
-                let result = args
-                    .ctx
-                    .http
-                    .remove_member_role(
-                        args.guild_id,
-                        args.user_id,
-                        role,
-                        Some("their birthday is over"),
-                    )
-                    .await;
+        if let Ok(config) = get_guild_config(&args)
+            && let Some(role) = config.role
+        {
+            let result = args
+                .ctx
+                .http
+                .remove_member_role(
+                    args.guild_id,
+                    args.user_id,
+                    role,
+                    Some("their birthday is over"),
+                )
+                .await;
 
-                super::ok_allowed_discord_error(result)
-                    .context("could not remove birthday role")?;
-            }
+            super::ok_allowed_discord_error(result).context("could not remove birthday role")?;
         }
 
         log::info!("End birthday of {} in {}.", args.user_id, args.guild_id);

@@ -48,12 +48,11 @@ fn update_event(ctx: &Context, event: &Event) {
 impl Cache {
     /// Removes a thread from the cache, if it is a private thread.
     fn remove_thread_if_private(&self, guild_id: GuildId, thread_id: ThreadId) {
-        if let Some(mut guild) = self.guilds.get_mut(&guild_id) {
-            if let Some(thread) = guild.threads.get(&thread_id) {
-                if thread.kind == ChannelType::PrivateThread {
-                    guild.threads.remove(&thread_id);
-                }
-            }
+        if let Some(mut guild) = self.guilds.get_mut(&guild_id)
+            && let Some(thread) = guild.threads.get(&thread_id)
+            && thread.kind == ChannelType::PrivateThread
+        {
+            guild.threads.remove(&thread_id);
         }
     }
 }

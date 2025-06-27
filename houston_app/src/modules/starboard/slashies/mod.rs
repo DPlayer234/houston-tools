@@ -80,9 +80,8 @@ async fn autocomplete_board<'a>(
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
     // get the config for this guild, return empty if none
-    if let Some(guild_config) = ctx
-        .guild_id()
-        .and_then(|id| ctx.data_ref().config().starboard.get(&id))
+    if let Some(guild_id) = ctx.guild_id()
+        && let Some(guild_config) = ctx.data_ref().config().starboard.get(&guild_id)
     {
         let choices: Vec<_> = guild_config
             .boards

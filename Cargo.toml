@@ -16,7 +16,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.87"
+rust-version = "1.88"
 
 [profile.release]
 lto = true
@@ -65,7 +65,6 @@ manual_assert = "warn"
 manual_is_variant_and = "warn"
 manual_let_else = "warn"
 manual_string_new = "deny"
-match_on_vec_items = "warn"
 mismatching_type_param_order = "deny"
 missing_errors_doc = "warn"
 needless_for_each = "deny"

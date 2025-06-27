@@ -62,12 +62,12 @@ impl<'v> View<'v> {
 
         let mut create = CreateReply::new();
 
-        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id) {
-            if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
-                let filename = format!("{}.webp", skin.image_key);
-                embed = embed.thumbnail(format!("attachment://{filename}"));
-                create = create.attachment(CreateAttachment::bytes(image_data, filename));
-            }
+        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
+            && let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key)
+        {
+            let filename = format!("{}.webp", skin.image_key);
+            embed = embed.thumbnail(format!("attachment://{filename}"));
+            create = create.attachment(CreateAttachment::bytes(image_data, filename));
         }
 
         create.embed(embed).components(rows)

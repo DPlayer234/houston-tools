@@ -86,9 +86,8 @@ async fn autocomplete_role<'a>(
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
     // get the config for this guild, return empty if none
-    if let Some(guild_config) = ctx
-        .guild_id()
-        .and_then(|id| ctx.data_ref().config().self_role.get(&id))
+    if let Some(guild_id) = ctx.guild_id()
+        && let Some(guild_config) = ctx.data_ref().config().self_role.get(&guild_id)
     {
         // flatten the role groups and assign indices to them
         let choices: Vec<_> = (0u64..)
