@@ -104,7 +104,7 @@ macro_rules! impl_op_via_assign {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::ops::{Add, AddAssign, Sub, SubAssign};
 
     #[derive(Clone, Copy, PartialEq, Eq)]

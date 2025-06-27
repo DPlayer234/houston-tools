@@ -72,7 +72,7 @@ fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
 ///
 /// [`ButtonValue`]: super::ButtonValue
 macro_rules! button_value {
-    (for<$l:lifetime> $Ty:ty, $key:literal) => {
+    (for<$l:lifetime> $Ty:ty, $key:expr) => {
         impl<$l> $crate::buttons::ButtonValue for $Ty {
             const ACTION: $crate::buttons::ButtonAction = {
                 enum __Dispatch {}

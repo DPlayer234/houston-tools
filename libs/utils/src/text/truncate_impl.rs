@@ -176,7 +176,7 @@ fn truncate_at(buf: &mut String, end_at: usize) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::borrow::Cow;
 
     use super::{Truncate, truncate};

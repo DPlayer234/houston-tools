@@ -15,7 +15,7 @@ mod nav;
 #[doc(hidden)]
 pub mod private;
 #[cfg(test)]
-mod test;
+mod tests;
 
 pub use context::{AnyContext, AnyInteraction, ButtonContext, ModalContext};
 pub use nav::Nav;

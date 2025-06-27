@@ -136,7 +136,7 @@ impl fmt::Display for DataError {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::sync::LazyLock;
 
     #[test]

@@ -241,7 +241,7 @@ impl_range!(RangeI128, i128);
 impl_range!(RangeIsize, isize);
 
 #[cfg(test)]
-mod test {
+mod tests {
     macro_rules! impl_test {
         ($fn:ident, $Type:ident) => {
             #[test]

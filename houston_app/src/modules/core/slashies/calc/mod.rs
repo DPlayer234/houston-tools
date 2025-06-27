@@ -121,7 +121,7 @@ fn eval_text(text: &str) -> Result<'_, f64> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::eval_text;
 
     macro_rules! is_correct {
