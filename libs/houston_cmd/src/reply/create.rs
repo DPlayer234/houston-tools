@@ -39,6 +39,12 @@ impl<'a> CreateReply<'a> {
         self
     }
 
+    /// Set components for this message.
+    pub fn components_v2(mut self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
+        self.flags.insert(MessageFlags::IS_COMPONENTS_V2);
+        self.components(components)
+    }
+
     /// Add an attachment.
     pub fn attachment(mut self, attachment: CreateAttachment<'a>) -> Self {
         self.attachments.push(attachment);
@@ -100,7 +106,7 @@ impl<'a> CreateReply<'a> {
             .embeds(embeds)
             .components(components)
             .add_files(attachments)
-            .flags(MessageFlags::from_bits_retain(flags.bits()));
+            .flags(flags);
 
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);

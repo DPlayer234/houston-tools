@@ -6,6 +6,7 @@ use rand::prelude::*;
 use smallvec::SmallVec;
 use utils::text::WriteStr as _;
 
+use crate::helper::discord::components_array;
 use crate::slashies::prelude::*;
 
 /// Rolls some dice.
@@ -27,12 +28,19 @@ pub async fn dice(
     }
 
     let (total_sum, content) = get_dice_roll_result(sets);
-    let embed = CreateEmbed::new()
-        .title(format!("Total \u{2211}{total_sum}"))
-        .description(content)
-        .color(ctx.data_ref().config().embed_color);
 
-    ctx.send(create_reply(ephemeral).embed(embed)).await?;
+    let components = components_array![
+        format!("## Total \u{2211}{total_sum}"),
+        CreateSeparator::new(true),
+        content,
+    ];
+
+    let components = components_array![
+        CreateContainer::new(&components).accent_color(ctx.data_ref().config().embed_color)
+    ];
+
+    ctx.send(create_reply(ephemeral).components_v2(&components))
+        .await?;
     Ok(())
 }
 

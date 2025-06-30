@@ -2,6 +2,7 @@ use chrono::Utc;
 use utils::text::WriteStr as _;
 
 use crate::buttons::ButtonValue as _;
+use crate::helper::discord::components_array;
 use crate::modules::core::buttons::Delete;
 use crate::slashies::prelude::*;
 
@@ -56,10 +57,9 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
             .label("Delete");
 
         let row = [button];
-        let row = CreateComponent::ActionRow(CreateActionRow::buttons(&row));
-        let row = &[row];
+        let row = components_array![CreateActionRow::buttons(&row)];
 
-        let reply = CreateReply::new().embed(embed).components(row);
+        let reply = CreateReply::new().embed(embed).components(&row);
         ctx.send(reply).await?;
     } else {
         let content = format!(

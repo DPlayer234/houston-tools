@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::helper::discord::components_array;
 use crate::slashies::prelude::*;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged
@@ -28,11 +29,7 @@ pub async fn upload(
     }
 
     let buttons = [CreateButton::new_link(attachment.url.as_str()).label("Download")];
-
-    let components = [CreateComponent::ActionRow(CreateActionRow::buttons(
-        &buttons,
-    ))];
-
+    let components = components_array![CreateActionRow::buttons(&buttons)];
     let reply = create_reply(Ephemeral).embed(embed).components(&components);
 
     ctx.send(reply).await?;

@@ -11,6 +11,8 @@ use crate::slashies::prelude::*;
 /// Manage your birthday.
 #[chat_command(contexts = "Guild | BotDm", integration_types = "Guild")]
 pub mod birthday {
+    use crate::helper::discord::components_array;
+
     /// Add your birthday.
     #[sub_command]
     async fn add(
@@ -70,9 +72,7 @@ pub mod birthday {
                 .style(ButtonStyle::Danger),
         ];
 
-        let components = [CreateComponent::ActionRow(CreateActionRow::buttons(
-            &components,
-        ))];
+        let components = components_array![CreateActionRow::buttons(&components)];
 
         let reply = CreateReply::new().embed(embed).components(&components);
 

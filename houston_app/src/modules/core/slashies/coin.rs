@@ -1,5 +1,6 @@
 use rand::prelude::*;
 
+use crate::helper::discord::components_array;
 use crate::slashies::prelude::*;
 
 /// Flips a coin.
@@ -24,10 +25,12 @@ pub async fn coin(
         }
     };
 
-    let embed = CreateEmbed::new()
-        .description(content)
-        .color(ctx.data_ref().config().embed_color);
+    let components = components_array![content];
+    let components = components_array![
+        CreateContainer::new(&components).accent_color(ctx.data_ref().config().embed_color),
+    ];
 
-    ctx.send(create_reply(ephemeral).embed(embed)).await?;
+    ctx.send(create_reply(ephemeral).components_v2(&components))
+        .await?;
     Ok(())
 }

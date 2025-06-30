@@ -2,8 +2,8 @@ use bitflags::Flags;
 use utils::text::WriteStr as _;
 use utils::titlecase;
 
-use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
-use crate::helper::discord::guild_avatar_url;
+use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
+use crate::helper::discord::{components, components_array, guild_avatar_url};
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.
@@ -33,41 +33,71 @@ pub async fn who(
 }
 
 async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>) -> Result {
-    let mut embed = who_user_embed(user.user)
-        .color(ctx.data_ref().config().embed_color)
-        .thumbnail(user.face());
+    let user_info = who_user_info(user.user);
+    let user_info = section(user_info, Some(user.user.face()));
+
+    let mut components = components![user_info];
 
     if let Some(member) = user.member {
-        embed = embed.field(
-            "Server Member Info",
-            who_member_info(user.user, member, ctx.guild_id().unwrap_or_default()),
-            false,
-        );
+        let guild_id = ctx.guild_id().unwrap_or_default();
+
+        let avatar = member
+            .avatar
+            .as_ref()
+            .map(|hash| guild_avatar_url(user.user.id, guild_id, hash));
+
+        let member_info = who_member_info(user.user, member, guild_id);
+        let member_info = section(member_info, avatar);
+
+        components.push(CreateSeparator::new(true));
+        components.push(member_info);
     }
 
-    ctx.send(create_reply(ephemeral).embed(embed)).await?;
+    let container =
+        CreateContainer::new(components).accent_color(ctx.data_ref().config().embed_color);
+    let components = components_array![container];
+
+    ctx.send(
+        create_reply(ephemeral)
+            .components_v2(&components)
+            .allowed_mentions(CreateAllowedMentions::new()),
+    )
+    .await?;
     Ok(())
 }
 
 /* Format the embeds */
 
-fn who_user_embed(user: &User) -> CreateEmbed<'_> {
-    CreateEmbed::new()
-        .author(CreateEmbedAuthor::new(get_unique_username(user)))
-        .description(who_user_info(user))
+fn section<'new>(content: String, face: Option<String>) -> CreateComponent<'new> {
+    let text = CreateTextDisplay::new(content);
+    match face {
+        None => CreateComponent::TextDisplay(text),
+        Some(face) => CreateComponent::Section(CreateSection::new(
+            vec![CreateSectionComponent::TextDisplay(text)],
+            CreateSectionAccessory::Thumbnail(CreateThumbnail::new(CreateUnfurledMediaItem::new(
+                face,
+            ))),
+        )),
+    }
 }
 
 fn who_user_info(user: &User) -> String {
-    let mut f = String::new();
+    let label = if user.bot() {
+        "Bot"
+    } else if user.system() {
+        "System"
+    } else {
+        "User"
+    };
 
-    if let Some(global_name) = &user.global_name {
-        writeln!(f, "**Display Name:** {global_name}");
-    }
-
-    write!(
-        f,
-        "**Snowflake:** `{}`\n\
-        **Created At:** {}\n",
+    let mut f = format!(
+        "### **{}** [{}]\n\
+         **Display Name:** {}\n\
+         **Snowflake:** `{}`\n\
+         **Created At:** {}\n",
+        get_unique_username(user),
+        label,
+        escape_markdown(user.global_name.as_deref().unwrap_or("`<unset>`")),
         user.id,
         user.id.created_at().short_date_time(),
     );
@@ -82,16 +112,6 @@ fn who_user_info(user: &User) -> String {
         write_public_flags(&mut f, public_flags);
     }
 
-    let label = if user.bot() {
-        "Bot Account"
-    } else if user.system() {
-        "System Account"
-    } else {
-        "User Account"
-    };
-
-    writeln!(f, "**{label}**");
-
     f
 }
 
@@ -103,7 +123,7 @@ fn who_member_info(user: &User, member: &PartialMember, guild_id: GuildId) -> St
     let mut f = String::new();
 
     if let Some(nick) = &member.nick {
-        writeln!(f, "**Nickname:** `{nick}`");
+        writeln!(f, "**Nickname:** {}", escape_markdown(nick));
     }
 
     if let Some(joined_at) = member.joined_at {

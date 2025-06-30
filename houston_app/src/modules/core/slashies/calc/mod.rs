@@ -1,5 +1,6 @@
 use parse::Token;
 
+use crate::helper::discord::components_array;
 use crate::slashies::prelude::*;
 
 mod ops;
@@ -16,67 +17,76 @@ pub async fn calc(
     #[max_length = 3000]
     expression: &str,
     /// Whether to show the response only to yourself.
-    ephemeral: Option<bool>,
+    mut ephemeral: Option<bool>,
 ) -> anyhow::Result<()> {
     let expression = expression.to_ascii_lowercase();
 
-    macro_rules! error_embed {
-        ($($t:tt)*) => {
-            CreateEmbed::new()
-                .description(format!($($t)*))
-                .color(ERROR_EMBED_COLOR)
-        };
+    macro_rules! calc_error {
+        ($($t:tt)*) => {{
+            ephemeral = Some(true);
+            (format!($($t)*), ERROR_EMBED_COLOR)
+        }};
     }
 
-    let embed = match eval_text(&expression) {
-        Ok(result) => CreateEmbed::new()
-            .description(format!("{expression} = **{result}**"))
-            .color(ctx.data_ref().config().embed_color),
+    let (content, color) = match eval_text(&expression) {
+        Ok(result) => (
+            format!("{expression} = **{result}**"),
+            ctx.data_ref().config().embed_color,
+        ),
 
         Err(MathError::ExprExpected(Some(at))) => {
-            error_embed!("Expected expression at `{at}`.{}", at.error_fmt())
+            calc_error!("Expected expression at `{at}`.{}", at.error_fmt())
         },
 
-        Err(MathError::ExprExpected(None)) => error_embed!("Unexpected empty expression."),
+        Err(MathError::ExprExpected(None)) => calc_error!("Unexpected empty expression."),
 
         Err(MathError::InvalidNumber(num)) => {
-            error_embed!("`{num}` is not a valid number.{}", num.error_fmt())
+            calc_error!("`{num}` is not a valid number.{}", num.error_fmt())
         },
 
         Err(MathError::InvalidUnaryOperator(op)) => {
-            error_embed!("`{op}` is not a unary operator.{}", op.error_fmt())
+            calc_error!("`{op}` is not a unary operator.{}", op.error_fmt())
         },
 
         Err(MathError::InvalidBinaryOperator(op)) => {
-            error_embed!("`{op}` is not a binary operator.{}", op.error_fmt())
+            calc_error!("`{op}` is not a binary operator.{}", op.error_fmt())
         },
 
         Err(MathError::InvalidFunction(function)) => {
-            error_embed!(
+            calc_error!(
                 "The function `{function}` is unknown.{}",
                 function.error_fmt(),
             )
         },
 
         Err(MathError::InvalidParameterCount { function, count: 1 }) => {
-            error_embed!(
+            calc_error!(
                 "The function `{function}` takes 1 parameter.{}",
                 function.error_fmt(),
             )
         },
 
-        Err(MathError::InvalidParameterCount { function, count }) => error_embed!(
+        Err(MathError::InvalidParameterCount { function, count }) => calc_error!(
             "The function `{function}` takes {count} parameters.{}",
             function.error_fmt(),
         ),
 
-        Err(MathError::FunctionCallExpected(function)) => error_embed!(
+        Err(MathError::FunctionCallExpected(function)) => calc_error!(
             "`{function}` is a function and requires `(...)` after it.{}",
             function.error_fmt(),
         ),
     };
 
-    ctx.send(create_reply(ephemeral).embed(embed)).await?;
+    let components = components_array![content];
+    let container = CreateContainer::new(&components).accent_color(color);
+    let components = components_array![container];
+
+    ctx.send(
+        create_reply(ephemeral)
+            .components_v2(&components)
+            .allowed_mentions(CreateAllowedMentions::new()),
+    )
+    .await?;
     Ok(())
 }
 
