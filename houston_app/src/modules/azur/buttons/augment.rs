@@ -6,7 +6,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components;
+use crate::helper::discord::components::components;
 use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.

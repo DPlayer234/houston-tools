@@ -3,7 +3,8 @@ use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
-use crate::helper::discord::{CreateComponents, id_as_u64};
+use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 

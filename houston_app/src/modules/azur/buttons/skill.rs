@@ -7,7 +7,7 @@ use utils::text::truncate;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::helper::discord::CreateComponents;
+use crate::helper::discord::components::CreateComponents;
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.

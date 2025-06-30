@@ -1,6 +1,6 @@
 use parse::Token;
 
-use crate::helper::discord::components_array;
+use crate::helper::discord::components::components_array;
 use crate::slashies::prelude::*;
 
 mod ops;

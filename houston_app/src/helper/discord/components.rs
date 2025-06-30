@@ -4,6 +4,19 @@ use serenity::small_fixed_array::FixedString;
 
 use crate::prelude::*;
 
+pub fn create_string_select_menu_row<'a>(
+    custom_id: impl Into<Cow<'a, str>>,
+    options: impl Into<Cow<'a, [CreateSelectMenuOption<'a>]>>,
+    placeholder: impl Into<Cow<'a, str>>,
+) -> CreateActionRow<'a> {
+    let kind = CreateSelectMenuKind::String {
+        options: options.into(),
+    };
+
+    let select = CreateSelectMenu::new(custom_id, kind).placeholder(placeholder);
+    CreateActionRow::SelectMenu(select)
+}
+
 /// A collection of [`CreateComponent`]s.
 ///
 /// This is a thin wrapper around a [`Vec`] and derefs to it.
@@ -151,12 +164,12 @@ impl_text_into_component!(&'a FixedString<u32>);
 /// # Examples
 ///
 /// ```
-/// components![];
+/// _ = components![];
 /// ```
 macro_rules! components {
     [$($e:expr),* $(,)?] => {
-        $crate::helper::discord::CreateComponents::from(::std::vec![
-            $($crate::helper::discord::IntoComponent::into_component($e)),*
+        $crate::helper::discord::components::CreateComponents::from(::std::vec![
+            $($crate::helper::discord::components::IntoComponent::into_component($e)),*
         ])
     };
 }
@@ -169,7 +182,7 @@ macro_rules! components {
 macro_rules! components_array {
     [$($e:expr),* $(,)?] => {
         [
-            $($crate::helper::discord::IntoComponent::into_component($e)),*
+            $($crate::helper::discord::components::IntoComponent::into_component($e)),*
         ]
     };
 }
@@ -177,14 +190,15 @@ macro_rules! components_array {
 /// # Examples
 ///
 /// ```
-/// let _: Vec<()> = components_array![];
+/// _ = components_array![];
 /// ```
 macro_rules! section_components {
-    [$($e:expr),* $(,)?] => {
-        ::std::vec![
-            $($crate::helper::discord::IntoSectionComponent::into_section_component($e)),*
-        ]
-    };
+    [$($e:expr),* $(,)?] => {{
+        let v: ::std::vec::Vec<::serenity::builder::CreateSectionComponent<'_>> = ::std::vec![
+            $($crate::helper::discord::components::IntoSectionComponent::into_section_component($e)),*
+        ];
+        v
+    }};
 }
 
 pub(crate) use {components, components_array, section_components};

@@ -108,7 +108,7 @@ pub(crate) use pagination;
 mod pagination_impl {
     use super::search::PAGE_SIZE;
     use crate::buttons::prelude::*;
-    use crate::helper::discord::{CreateComponents, create_string_select_menu_row};
+    use crate::helper::discord::components::{CreateComponents, create_string_select_menu_row};
     use crate::modules::core::buttons::ToPage;
 
     pub fn no_results<'new>(page: u16) -> Result<CreateReply<'new>> {

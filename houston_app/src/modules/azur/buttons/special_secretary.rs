@@ -4,7 +4,7 @@ use utils::text::WriteStr as _;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::helper::discord::CreateComponents;
+use crate::helper::discord::components::CreateComponents;
 
 /// Views ship lines.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

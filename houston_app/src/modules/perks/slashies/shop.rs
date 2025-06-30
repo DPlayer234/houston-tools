@@ -1,4 +1,4 @@
-use crate::helper::discord::components;
+use crate::helper::discord::components::components;
 use crate::slashies::prelude::*;
 
 /// View the server shop.

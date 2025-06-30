@@ -4,22 +4,6 @@ use crate::prelude::*;
 
 pub mod components;
 
-pub use components::{CreateComponents, IntoComponent, IntoSectionComponent};
-pub(crate) use components::{components, components_array, section_components};
-
-pub fn create_string_select_menu_row<'a>(
-    custom_id: impl Into<Cow<'a, str>>,
-    options: impl Into<Cow<'a, [CreateSelectMenuOption<'a>]>>,
-    placeholder: impl Into<Cow<'a, str>>,
-) -> CreateActionRow<'a> {
-    let kind = CreateSelectMenuKind::String {
-        options: options.into(),
-    };
-
-    let select = CreateSelectMenu::new(custom_id, kind).placeholder(placeholder);
-    CreateActionRow::SelectMenu(select)
-}
-
 /// Creates a unicode [`ReactionType`] from a string with just the corresponding
 /// unicode code symbol without allocating any memory.
 ///

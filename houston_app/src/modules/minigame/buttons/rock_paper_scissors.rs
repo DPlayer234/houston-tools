@@ -1,7 +1,8 @@
 use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::{components, id_as_u64, unicode_emoji};
+use crate::helper::discord::components::components;
+use crate::helper::discord::{id_as_u64, unicode_emoji};
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct View {

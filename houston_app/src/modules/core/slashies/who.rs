@@ -3,7 +3,8 @@ use utils::text::WriteStr as _;
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
-use crate::helper::discord::{components, components_array, guild_avatar_url, section_components};
+use crate::helper::discord::components::{components, components_array, section_components};
+use crate::helper::discord::guild_avatar_url;
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.

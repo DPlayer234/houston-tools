@@ -19,7 +19,7 @@ use std::ptr;
 
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
-use crate::helper::discord::{CreateComponents, components};
+use crate::helper::discord::components::{CreateComponents, components};
 
 mod game;
 #[cfg(test)]

@@ -7,7 +7,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::{CreateComponents, create_string_select_menu_row};
+use crate::helper::discord::components::{CreateComponents, create_string_select_menu_row};
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
