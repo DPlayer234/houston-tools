@@ -32,11 +32,19 @@ use std::{fmt, io};
 
 use super::Error;
 
+/// Byte count of a chunk.
+const CHUNK: usize = 2;
+
+/// Extra bytes in the encoded format that don't encode source data directly.
+///
+/// This represents the 1 byte for the start and end marker each.
+const EXTRA: usize = 2;
+
 /// The maximum byte length a specified count of characters may decode to.
 ///
 /// This can be used to reserve space in a buffer.
 pub const fn max_byte_len(char_count: usize) -> usize {
-    (char_count - 2) * 2
+    (char_count - EXTRA) * CHUNK
 }
 
 /// Encodes bytes as "base 65535", returning a [`String`] with the result.
@@ -48,7 +56,7 @@ pub const fn max_byte_len(char_count: usize) -> usize {
 pub fn to_string(bytes: &[u8]) -> String {
     // Testing indicates more than 100% is normal, usually about ~130%.
     // But more is still common and more than 200% is rare, so we go for that.
-    let expected_size = 2 + (bytes.len() << 1);
+    let expected_size = EXTRA + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
     encode(&mut result, bytes).expect("write to String cannot fail");
@@ -64,20 +72,18 @@ pub fn to_string(bytes: &[u8]) -> String {
 ///
 /// Returns [`Err`] if and only if `writer` returns [`Err`].
 pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
-    let skip_last = bytes.len() % 2 != 0;
-    writer.write_char(match skip_last {
-        false => '&',
-        true => '%',
+    writer.write_char(match bytes.len() % CHUNK {
+        0 => '&',
+        1 => '%',
+        _ => unreachable!(),
     })?;
 
-    let mut iter = bytes.chunks_exact(2);
-    for chunk in iter.by_ref() {
-        // Conversion cannot fail and check is optimized out.
-        let chunk = <[u8; 2]>::try_from(chunk).expect("len should be exact");
+    let (chunks, remainder) = bytes.as_chunks::<CHUNK>();
+    for &chunk in chunks {
         writer.write_char(bytes_to_char(chunk))?;
     }
 
-    if let &[last] = iter.remainder() {
+    if let &[last] = remainder {
         let chunk = [last, 0];
         writer.write_char(bytes_to_char(chunk))?;
     }
@@ -120,32 +126,38 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
         }
 
         writer.write_all(match skip_last {
-            false => &last[..],
-            true => &last[..1],
+            SkipLast::Zero => &last[..],
+            SkipLast::One => &last[..1],
         })?;
     }
 
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum SkipLast {
+    Zero,
+    One,
+}
+
 /// Tries to strip a base 65536 input, returning `skip_last` and the stripped
 /// input.
-fn strip_input(s: &str) -> Result<(bool, &str), Error> {
+fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
     // strip the end marker
     let s = s.strip_suffix('&').ok_or(Error::PrefixSuffix)?;
 
     // the start marker is & if the last byte is included
     s.strip_prefix('&')
-        .map(|s| (false, s))
+        .map(|s| (SkipLast::Zero, s))
         // otherwise, % may be used to indicate the last byte is skipped
-        .or_else(|| s.strip_prefix('%').map(|s| (true, s)))
-        .filter(|(skip_last, s)| !skip_last || !s.is_empty())
+        .or_else(|| s.strip_prefix('%').map(|s| (SkipLast::One, s)))
+        .filter(|(skip_last, s)| *skip_last == SkipLast::Zero || !s.is_empty())
         .ok_or(Error::PrefixSuffix)
 }
 
 const OFFSET: u32 = 0xE000 - 0xD800;
 
-fn char_to_bytes(c: char) -> Result<[u8; 2], Error> {
+fn char_to_bytes(c: char) -> Result<[u8; CHUNK], Error> {
     let int = match c {
         '\0'..='\u{D7FF}' => u32::from(c),
         '\u{E000}'..='\u{10FFFF}' => u32::from(c) - OFFSET,
@@ -159,7 +171,7 @@ fn char_to_bytes(c: char) -> Result<[u8; 2], Error> {
 }
 
 #[must_use]
-fn bytes_to_char(bytes: [u8; 2]) -> char {
+fn bytes_to_char(bytes: [u8; CHUNK]) -> char {
     let int = u32::from(u16::from_le_bytes(bytes));
     match int {
         // SAFETY: Reverse of `char_to_bytes`.

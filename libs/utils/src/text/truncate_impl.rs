@@ -74,6 +74,20 @@ pub fn truncate<T: Truncate>(str: T, len: usize) -> T::Output {
 // ends up being very hard to call due to limitations between the borrow checker
 // and trait implementations on `&mut T`.
 
+/// If the input is longer than `len` _characters_, returns [`Some`] with a
+/// _byte index_ to truncate the input at such that, if another character is
+/// appended after the returned index point, that the total string is `len`
+/// characters long.
+///
+/// In effect, this returns the byte index of the character at position `len -
+/// 1` if it has more than `len` characters.
+///
+/// Returns [`None`] if the string is at most `len` characters long and doesn't
+/// need to be truncated.
+///
+/// # Panics
+///
+/// Panics if `len` is less than 1.
 #[inline]
 fn find_truncate_at(s: &str, len: usize) -> Option<usize> {
     assert!(len >= 1, "cannot truncate to less than 1 character");

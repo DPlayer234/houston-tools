@@ -67,8 +67,8 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
 
         let reply = create_reply(Ephemeral).embed(embed);
         if let Err(err) = ctx.send(reply).await {
-            log::error!("Error in error handler: {err:?}")
-        };
+            log::error!("Error in error handler: {err:?}");
+        }
     }
 }
 

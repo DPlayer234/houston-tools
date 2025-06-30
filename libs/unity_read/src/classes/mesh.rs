@@ -279,15 +279,11 @@ impl MeshVertexData<'_> {
         macro_rules! map_buffer {
             ($Ty:ty) => {{
                 const N: usize = size_of::<$Ty>();
-                let vec = self
-                    .mesh
-                    .index_buffer
-                    .chunks_exact(N)
-                    .map(|chunk| {
-                        // cannot fail since chunk size == N
-                        let chunk = <[u8; N]>::try_from(chunk).unwrap();
-                        <$Ty>::from_le_bytes(chunk).into()
-                    })
+
+                let (chunks, _) = self.mesh.index_buffer.as_chunks::<N>();
+                let vec = chunks
+                    .iter()
+                    .map(|&chunk| <$Ty>::from_le_bytes(chunk).into())
                     .collect();
 
                 #[expect(clippy::cast_possible_truncation)]

@@ -8,11 +8,25 @@ use std::{fmt, io};
 
 use super::Error;
 
+/// Byte count of a full chunk.
+const FULL: usize = 5;
+
+/// Byte count of a half chunk.
+const HALF: usize = FULL / 2;
+
+/// Amount of [`char`]s a full chunk is packed into.
+const PACK: usize = 2;
+
+/// Extra bytes in the encoded format that don't encode source data directly.
+///
+/// This represents the 1 byte for the start and end marker each.
+const EXTRA: usize = 2;
+
 /// The maximum byte length a specified count of characters may decode to.
 ///
 /// This can be used to reserve space in a buffer.
 pub const fn max_byte_len(char_count: usize) -> usize {
-    (char_count - 2) * 5 / 2
+    (char_count - EXTRA) * FULL / PACK
 }
 
 /// Encodes bytes as "base 20-bit", returning a [`String`] with the result.
@@ -24,7 +38,7 @@ pub const fn max_byte_len(char_count: usize) -> usize {
 pub fn to_string(bytes: &[u8]) -> String {
     // Testing indicates more than 100% is normal, usually about ~130%.
     // But more is still common and more than 200% is rare, so we go for that.
-    let expected_size = 2 + (bytes.len() << 1);
+    let expected_size = EXTRA + (bytes.len() << 1);
     let mut result = String::with_capacity(expected_size);
 
     encode(&mut result, bytes).expect("write to String cannot fail");
@@ -41,33 +55,31 @@ pub fn to_string(bytes: &[u8]) -> String {
 /// Returns [`Err`] if and only if `writer` returns [`Err`].
 pub fn encode<W: fmt::Write>(mut writer: W, bytes: &[u8]) -> fmt::Result {
     #[inline]
-    fn write_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; 5]) -> fmt::Result {
+    fn write_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; FULL]) -> fmt::Result {
         let codes = chunk_to_codes(chunk);
         writer.write_char(code_to_char(codes[0]))?;
         writer.write_char(code_to_char(codes[1]))
     }
 
     #[inline]
-    fn write_half_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; 2]) -> fmt::Result {
+    fn write_half_chunk<W: fmt::Write>(writer: &mut W, chunk: [u8; HALF]) -> fmt::Result {
         let code = half_chunk_to_code(chunk);
         writer.write_char(code_to_char(code))
     }
 
-    writer.write_char(match bytes.len() % 5 {
+    writer.write_char(match bytes.len() % FULL {
         0 => 'A',
         2 | 4 => 'B',
         1 | 3 => 'C',
         _ => unreachable!(),
     })?;
 
-    let mut iter = bytes.chunks_exact(5);
-    for chunk in iter.by_ref() {
-        // Conversion cannot fail and check is optimized out.
-        let chunk = <[u8; 5]>::try_from(chunk).expect("len should be exact");
+    let (chunks, remainder) = bytes.as_chunks::<FULL>();
+    for &chunk in chunks {
         write_chunk(&mut writer, chunk)?;
     }
 
-    match *iter.remainder() {
+    match *remainder {
         [] => {},
         [a] => write_half_chunk(&mut writer, [a, 0])?,
         [a, b] => write_half_chunk(&mut writer, [a, b])?,
@@ -89,7 +101,7 @@ pub fn from_str(input: &str) -> Result<Vec<u8>, Error> {
     // Extending the logic in `to_string`, less than ~130% is also common.
     // This almost always has enough space and rarely leads to more than
     // half the capacity going entirely unused.
-    let expected_size = input.len().saturating_sub(2);
+    let expected_size = input.len().saturating_sub(EXTRA);
     let mut result = Vec::with_capacity(expected_size);
 
     decode(&mut result, input)?;
@@ -184,14 +196,14 @@ fn pack_code(prefix: u16, suffix: u8) -> u32 {
 }
 
 /// Converts a half-chunk into a 20-bit code.
-fn half_chunk_to_code(chunk: [u8; 2]) -> u32 {
+fn half_chunk_to_code(chunk: [u8; HALF]) -> u32 {
     pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), 0)
 }
 
 /// Converts a full chunk into two 20-bit codes.
 ///
 /// The nibbles of the 3rd byte are encoded as the suffixes.
-fn chunk_to_codes(chunk: [u8; 5]) -> [u32; 2] {
+fn chunk_to_codes(chunk: [u8; FULL]) -> [u32; PACK] {
     [
         pack_code(u16::from_le_bytes([chunk[0], chunk[1]]), chunk[2] & 0xF),
         pack_code(
@@ -213,7 +225,7 @@ fn unpack_code(code: u32) -> (u16, u8) {
 /// # Errors
 ///
 /// Returns [`Err`] if the suffix is non-zero.
-fn code_to_half_chunk(code: u32) -> Result<[u8; 2], Error> {
+fn code_to_half_chunk(code: u32) -> Result<[u8; HALF], Error> {
     let (prefix, suffix) = unpack_code(code);
     if suffix == 0 {
         Ok(prefix.to_le_bytes())
@@ -225,7 +237,7 @@ fn code_to_half_chunk(code: u32) -> Result<[u8; 2], Error> {
 }
 
 /// Converts two 20-bit codes into a full chunk.
-fn codes_to_chunk(codes: [u32; 2]) -> [u8; 5] {
+fn codes_to_chunk(codes: [u32; PACK]) -> [u8; FULL] {
     let (prefix1, suffix1) = unpack_code(codes[0]);
     let (prefix2, suffix2) = unpack_code(codes[1]);
     let prefix1 = prefix1.to_le_bytes();
