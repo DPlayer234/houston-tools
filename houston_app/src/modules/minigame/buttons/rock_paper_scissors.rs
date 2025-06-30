@@ -94,19 +94,24 @@ impl View {
             self.states[1].user.mention(),
         );
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
-
         let buttons = CreateActionRow::buttons(vec![
             self.new_action_button(Choice::Rock).label("Rock"),
             self.new_action_button(Choice::Paper).label("Paper"),
             self.new_action_button(Choice::Scissors).label("Scissors"),
         ]);
 
+        let components = components![
+            CreateContainer::new(components![
+                description,
+                CreateSeparator::new(true),
+                buttons,
+            ])
+            .accent_color(data.config().embed_color)
+        ];
+
         CreateReply::new()
-            .embed(embed)
-            .components(components![buttons])
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 
     fn create_ready_reply<'new>(self, data: &HBotData, ready: Ready) -> CreateReply<'new> {
@@ -132,11 +137,13 @@ impl View {
             self.states[1].user.mention(),
         );
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
+        let components = components![
+            CreateContainer::new(components![description]).accent_color(data.config().embed_color)
+        ];
 
-        CreateReply::new().embed(embed)
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 
     fn new_action_button<'new>(&mut self, choice: Choice) -> CreateButton<'new> {

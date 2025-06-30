@@ -19,7 +19,7 @@ use std::ptr;
 
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
-use crate::helper::discord::CreateComponents;
+use crate::helper::discord::{CreateComponents, components};
 
 mod game;
 #[cfg(test)]
@@ -62,8 +62,10 @@ impl View {
         }
     }
 
-    fn board_buttons<'a>(&mut self, data: &'a HBotData) -> CreateComponents<'a> {
-        let mut components = CreateComponents::with_capacity(N);
+    fn board_components<'a>(&mut self, data: &'a HBotData, label: String) -> CreateComponents<'a> {
+        let mut components = CreateComponents::with_capacity(N + 2);
+        components.push(label);
+        components.push(CreateSeparator::new(true));
 
         let moves = match self.action {
             Action::Selected(pos) => self.board.get(pos).copied().flatten().map(|t| {
@@ -119,8 +121,14 @@ impl View {
         components
     }
 
-    fn no_act_board_buttons<'a>(&self, data: &'a HBotData) -> CreateComponents<'a> {
-        let mut components = CreateComponents::with_capacity(N);
+    fn no_act_board_components<'a>(
+        &self,
+        data: &'a HBotData,
+        label: String,
+    ) -> CreateComponents<'a> {
+        let mut components = CreateComponents::with_capacity(N + 2);
+        components.push(label);
+        components.push(CreateSeparator::new(true));
 
         for y in 0..N_U8 {
             let mut row = Vec::with_capacity(N);
@@ -178,13 +186,14 @@ impl View {
             ),
         };
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
+        let components = self.board_components(data, description);
 
-        let components = self.board_buttons(data);
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
 
-        CreateReply::new().embed(embed).components(components)
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 
     fn create_win_reply(self, data: &HBotData) -> CreateReply<'_> {
@@ -199,13 +208,14 @@ impl View {
             self.players.p2.mention(),
         );
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
+        let components = self.no_act_board_components(data, description);
 
-        let components = self.no_act_board_buttons(data);
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
 
-        CreateReply::new().embed(embed).components(components)
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 }
 

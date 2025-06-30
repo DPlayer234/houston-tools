@@ -1,6 +1,6 @@
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
-use crate::helper::discord::{CreateComponents, unicode_emoji};
+use crate::helper::discord::{CreateComponents, components, unicode_emoji};
 
 const N: usize = 3;
 
@@ -100,16 +100,19 @@ impl View {
         None
     }
 
-    fn board_buttons<'a, F>(
+    fn board_components<'a, F>(
         &mut self,
         data: &'a HBotData,
+        label: String,
         current: Player,
         modify: F,
     ) -> CreateComponents<'a>
     where
         F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
-        let mut components = CreateComponents::with_capacity(N);
+        let mut components = CreateComponents::with_capacity(N + 2);
+        components.push(label);
+        components.push(CreateSeparator::new(true));
 
         for y in 0..N {
             let mut row = Vec::with_capacity(N);
@@ -149,15 +152,17 @@ impl View {
             ),
         };
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
+        let components =
+            self.board_components(data, description, self.players.turn, |b, _, _, s| {
+                b.disabled(s.is_some())
+            });
 
-        let components = self.board_buttons(data, self.players.turn, |b, _, _, s| {
-            b.disabled(s.is_some())
-        });
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
 
-        CreateReply::new().embed(embed).components(components)
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 
     fn create_win_reply(
@@ -177,11 +182,7 @@ impl View {
             self.players.p2.mention(),
         );
 
-        let embed = CreateEmbed::new()
-            .description(description)
-            .color(data.config().embed_color);
-
-        let components = self.board_buttons(data, Player::P1, |b, x, y, _| {
+        let components = self.board_components(data, description, Player::P1, |b, x, y, _| {
             b.disabled(true).style(if win_line.is_match(x, y) {
                 ButtonStyle::Success
             } else {
@@ -189,11 +190,16 @@ impl View {
             })
         });
 
-        CreateReply::new().embed(embed).components(components)
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 
     fn create_draw_reply(mut self, data: &HBotData) -> CreateReply<'_> {
-        let embed = format!(
+        let description = format!(
             "## Draw!\n\
              -# ❌ {}\n\
              -# ⭕ {}",
@@ -201,15 +207,16 @@ impl View {
             self.players.p2.mention(),
         );
 
-        let description = CreateEmbed::new()
-            .description(embed)
-            .color(data.config().embed_color);
-
-        let components = self.board_buttons(data, Player::P1, |b, _, _, _| {
+        let components = self.board_components(data, description, Player::P1, |b, _, _, _| {
             b.disabled(true).style(ButtonStyle::Secondary)
         });
 
-        CreateReply::new().embed(description).components(components)
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+
+        CreateReply::new()
+            .components_v2(components)
+            .allowed_mentions(CreateAllowedMentions::new())
     }
 }
 
