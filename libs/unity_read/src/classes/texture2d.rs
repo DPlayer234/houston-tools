@@ -81,24 +81,44 @@ impl Texture2DData<'_> {
     /// Returns [`Err`] if the image cannot be decoded or is in an unsupported
     /// format.
     pub fn decode(&self) -> crate::Result<RgbaImage> {
+        use TextureFormat::*;
+
         let width = u32::from_int(self.texture.width)?;
         let height = u32::from_int(self.texture.height)?;
 
         let args = Args::new(width, height)?;
         match self.texture.format() {
-            TextureFormat::RGBA32 => {
+            RGBA32 => {
                 // this matches the Rgba<u8> layout
-                let image = RgbaImage::from_raw(width, height, self.data.to_vec())
-                    .ok_or(Error::InvalidData("image data size incorrect"))?;
-
-                Ok(image)
+                RgbaImage::from_raw(width, height, self.data.to_vec())
+                    .ok_or(Error::InvalidData("image data size incorrect"))
             },
-            TextureFormat::ETC2_RGBA8 => args.decode_with(|args, buf| {
+            ETC2_RGBA8 => args.decode_with(|args, buf| {
                 texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
                     .map_err(Error::InvalidData)
             }),
-            TextureFormat::ASTC_RGB_6x6 => args.decode_with(|args, buf| {
+            ASTC_RGB_4x4 | ASTC_RGBA_4x4 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_4_4(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            ASTC_RGB_5x5 | ASTC_RGBA_5x5 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_5_5(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            ASTC_RGB_6x6 | ASTC_RGBA_6x6 => args.decode_with(|args, buf| {
                 texture2ddecoder::decode_astc_6_6(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            ASTC_RGB_8x8 | ASTC_RGBA_8x8 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_8_8(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            ASTC_RGB_10x10 | ASTC_RGBA_10x10 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_10_10(self.data, args.width, args.height, buf)
+                    .map_err(Error::InvalidData)
+            }),
+            ASTC_RGB_12x12 | ASTC_RGBA_12x12 => args.decode_with(|args, buf| {
+                texture2ddecoder::decode_astc_12_12(self.data, args.width, args.height, buf)
                     .map_err(Error::InvalidData)
             }),
             _ => Err(Error::Unsupported(format!(
