@@ -1,14 +1,13 @@
 use bson::Document;
 use chrono::Utc;
 use serenity::prelude::*;
-use utils::iter::IteratorExt as _;
-use utils::text::{WriteStr as _, truncate};
+use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::fmt::time::HumanDuration;
-use crate::helper::discord::components;
+use crate::helper::discord::{CreateComponents, components, section_components};
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
@@ -29,13 +28,6 @@ enum Action {
     BuyItem(Item, u16),
 }
 
-// 20 EM dashes.
-const BREAK: &str = "\
-    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
-    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
-    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\
-    \u{2014}\u{2014}\u{2014}\u{2014}\u{2014}";
-
 // used for wallet and active perks
 fn filter(guild_id: GuildId, user_id: UserId) -> Result<Document> {
     Ok(Wallet::filter()
@@ -44,9 +36,9 @@ fn filter(guild_id: GuildId, user_id: UserId) -> Result<Document> {
         .into_document()?)
 }
 
-fn base_shop_embed<'new>(perks: &Config, wallet: &Wallet) -> CreateEmbed<'new> {
-    CreateEmbed::new().footer(CreateEmbedFooter::new(format!(
-        "Wallet: {}{}",
+fn shop_footer<'new>(perks: &Config, wallet: &Wallet) -> CreateComponent<'new> {
+    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+        "-# **Wallet:** {}{}",
         perks.cash_name, wallet.cash
     )))
 }
@@ -85,8 +77,8 @@ impl View {
             active.iter().find(|p| p.effect == effect)
         }
 
-        let mut description = String::new();
-        let mut buttons = Vec::new();
+        let mut components = CreateComponents::new();
+        components.push("### Server Shop");
 
         // add all effects first
         for &effect in Effect::all() {
@@ -101,28 +93,28 @@ impl View {
 
             let info = effect.info(perks);
 
-            let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
-            let button = CreateButton::new(custom_id).label(truncate(info.name, 25));
-
-            buttons.push(button);
-
-            if let Some(active) = find(&active, effect) {
-                writeln!(
-                    description,
-                    "- **{}:** ✅ until {}",
+            let content = match find(&active, effect) {
+                Some(active) => format!(
+                    "**{}:** ✅\n-# [Active until {}]",
                     info.name,
                     active.until.short_date_time(),
-                );
-            } else {
-                writeln!(
-                    description,
-                    "- **{}:** {}{} for {}",
+                ),
+                None => format!(
+                    "**{}:** {}{} for {}\n-# [Inactive]",
                     info.name,
                     perks.cash_name,
                     st.cost,
                     HumanDuration::new(st.duration),
-                );
-            }
+                ),
+            };
+
+            let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
+            let button = CreateButton::new(custom_id).emoji(emoji::right());
+
+            let content = section_components![content];
+            let button = CreateSectionAccessory::Button(button);
+
+            components.push(CreateSection::new(content, button));
         }
 
         // add the items individually after
@@ -133,42 +125,31 @@ impl View {
 
             let info = item.info(perks);
 
-            let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
-            let button = CreateButton::new(custom_id).label(truncate(info.name, 25));
-
-            buttons.push(button);
-
-            write!(
-                description,
-                "- **{}:** {}{}",
-                info.name, perks.cash_name, st.cost,
-            );
+            let mut content = format!("**{}:** {}{}", info.name, perks.cash_name, st.cost);
 
             if st.amount != 1 {
-                write!(description, " for x{}", st.amount);
+                write!(content, " for x{}", st.amount);
             }
 
             let owned = wallet.item(item);
-            if owned != 0 {
-                write!(description, " [Held: {owned}]");
-            }
+            write!(content, "\n-# [**Held:** {owned}]");
 
-            description.push('\n');
+            let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
+            let button = CreateButton::new(custom_id).emoji(emoji::right());
+
+            let content = section_components![content];
+            let button = CreateSectionAccessory::Button(button);
+
+            components.push(CreateSection::new(content, button));
         }
 
-        let embed = base_shop_embed(perks, &wallet)
-            .title("Server Shop")
-            .description(description)
-            .color(data.config().embed_color);
+        components.push(CreateSeparator::new(true));
+        components.push(shop_footer(perks, &wallet));
 
-        let components: Vec<_> = buttons
-            .into_iter()
-            .vec_chunks(5)
-            .map(CreateActionRow::buttons)
-            .map(CreateComponent::ActionRow)
-            .collect();
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
 
-        let reply = CreateReply::new().embed(embed).components(components);
+        let reply = CreateReply::new().components_v2(components);
         Ok(reply)
     }
 
@@ -196,31 +177,21 @@ impl View {
             .find_enabled(guild_id, user_id, effect)
             .await?;
 
-        let mut description = format!("> {}\n-# {BREAK}\n", info.description);
-
-        if let Some(active) = &active {
-            write!(
-                description,
-                "~~Cost: {}{} for {}~~\n✅ until {}",
+        let cost = match &active {
+            Some(active) => format!(
+                "~~**Cost:** {}{} for {}~~\n✅ until {}",
                 perks.cash_name,
                 st.cost,
                 HumanDuration::new(st.duration),
                 active.until.short_date_time(),
-            );
-        } else {
-            write!(
-                description,
-                "Cost: {}{} for {}",
+            ),
+            _ => format!(
+                "**Cost:** {}{} for {}",
                 perks.cash_name,
                 st.cost,
                 HumanDuration::new(st.duration),
-            );
-        }
-
-        let embed = base_shop_embed(perks, &wallet)
-            .title(truncate(info.name, 100))
-            .description(description)
-            .color(data.config().embed_color);
+            ),
+        };
 
         let back = Self::new().to_custom_id();
         let back = CreateButton::new(back).emoji(emoji::back()).label("Back");
@@ -231,8 +202,20 @@ impl View {
             .style(ButtonStyle::Success)
             .disabled(wallet.cash < i64::from(st.cost) || active.is_some());
 
-        let components = components![CreateActionRow::buttons(vec![back, buy])];
-        let reply = CreateReply::new().embed(embed).components(components);
+        let components = components![
+            format!("### {}", info.name),
+            info.description,
+            CreateSeparator::new(true),
+            cost,
+            CreateActionRow::buttons(vec![back, buy]),
+            CreateSeparator::new(true),
+            shop_footer(perks, &wallet),
+        ];
+
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+
+        let reply = CreateReply::new().components_v2(components);
         Ok(reply)
     }
 
@@ -256,24 +239,14 @@ impl View {
             .await?
             .unwrap_or_default();
 
-        let mut description = format!(
-            "> {}\n-# {BREAK}\nCost: {}{}",
-            info.description, perks.cash_name, st.cost,
-        );
+        let mut cost = format!("**Cost:** {}{}", perks.cash_name, st.cost);
 
         if st.amount != 1 {
-            write!(description, " for x{}", st.amount);
+            write!(cost, " for x{}", st.amount);
         }
 
         let owned = wallet.item(item);
-        if owned != 0 {
-            write!(description, "\nHeld: {owned}");
-        }
-
-        let embed = base_shop_embed(perks, &wallet)
-            .title(truncate(info.name, 100))
-            .description(description)
-            .color(data.config().embed_color);
+        write!(cost, "\n**Held:** {owned}");
 
         let back = Self::new().to_custom_id();
         let back = CreateButton::new(back).emoji(emoji::back()).label("Back");
@@ -310,8 +283,20 @@ impl View {
             buttons.push(buy_button(&wallet, st, item, 250));
         }
 
-        let components = components![CreateActionRow::buttons(buttons)];
-        let reply = CreateReply::new().embed(embed).components(components);
+        let components = components![
+            format!("### {}", info.name),
+            info.description,
+            CreateSeparator::new(true),
+            cost,
+            CreateActionRow::buttons(buttons),
+            CreateSeparator::new(true),
+            shop_footer(perks, &wallet),
+        ];
+
+        let components =
+            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+
+        let reply = CreateReply::new().components_v2(components);
         Ok(reply)
     }
 

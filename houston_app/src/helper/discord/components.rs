@@ -81,11 +81,31 @@ impl<'a> IntoComponent<'a> for CreateComponent<'a> {
     }
 }
 
+pub trait IntoSectionComponent<'a> {
+    fn into_section_component(self) -> CreateSectionComponent<'a>;
+}
+
+impl<'a> IntoSectionComponent<'a> for CreateSectionComponent<'a> {
+    fn into_section_component(self) -> Self {
+        self
+    }
+}
+
 macro_rules! impl_into_component {
     ($Ty:ty, $var:ident) => {
         impl<'a> IntoComponent<'a> for $Ty {
             fn into_component(self) -> CreateComponent<'a> {
                 CreateComponent::$var(self)
+            }
+        }
+    };
+}
+
+macro_rules! impl_into_section_component {
+    ($Ty:ty, $var:ident) => {
+        impl<'a> IntoSectionComponent<'a> for $Ty {
+            fn into_section_component(self) -> CreateSectionComponent<'a> {
+                CreateSectionComponent::$var(self)
             }
         }
     };
@@ -99,11 +119,19 @@ impl_into_component!(CreateFile<'a>, File);
 impl_into_component!(CreateSeparator, Separator);
 impl_into_component!(CreateContainer<'a>, Container);
 
+impl_into_section_component!(CreateTextDisplay<'a>, TextDisplay);
+
 macro_rules! impl_text_into_component {
     ($Ty:ty) => {
         impl<'a> IntoComponent<'a> for $Ty {
             fn into_component(self) -> CreateComponent<'a> {
                 CreateComponent::TextDisplay(CreateTextDisplay::new(self))
+            }
+        }
+
+        impl<'a> IntoSectionComponent<'a> for $Ty {
+            fn into_section_component(self) -> CreateSectionComponent<'a> {
+                CreateSectionComponent::TextDisplay(CreateTextDisplay::new(self))
             }
         }
     };
@@ -136,7 +164,7 @@ macro_rules! components {
 /// # Examples
 ///
 /// ```
-/// let _: [(); 0] components_array![];
+/// let _: [(); 0] = components_array![];
 /// ```
 macro_rules! components_array {
     [$($e:expr),* $(,)?] => {
@@ -146,4 +174,17 @@ macro_rules! components_array {
     };
 }
 
-pub(crate) use {components, components_array};
+/// # Examples
+///
+/// ```
+/// let _: Vec<()> = components_array![];
+/// ```
+macro_rules! section_components {
+    [$($e:expr),* $(,)?] => {
+        ::std::vec![
+            $($crate::helper::discord::IntoSectionComponent::into_section_component($e)),*
+        ]
+    };
+}
+
+pub(crate) use {components, components_array, section_components};

@@ -4,8 +4,8 @@ use crate::prelude::*;
 
 pub mod components;
 
-pub use components::{CreateComponents, IntoComponent};
-pub(crate) use components::{components, components_array};
+pub use components::{CreateComponents, IntoComponent, IntoSectionComponent};
+pub(crate) use components::{components, components_array, section_components};
 
 pub fn create_string_select_menu_row<'a>(
     custom_id: impl Into<Cow<'a, str>>,

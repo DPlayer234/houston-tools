@@ -3,7 +3,7 @@ use utils::text::WriteStr as _;
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
-use crate::helper::discord::{components, components_array, guild_avatar_url};
+use crate::helper::discord::{components, components_array, guild_avatar_url, section_components};
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.
@@ -73,7 +73,7 @@ fn section<'new>(content: String, face: Option<String>) -> CreateComponent<'new>
     match face {
         None => CreateComponent::TextDisplay(text),
         Some(face) => CreateComponent::Section(CreateSection::new(
-            vec![CreateSectionComponent::TextDisplay(text)],
+            section_components![text],
             CreateSectionAccessory::Thumbnail(CreateThumbnail::new(CreateUnfurledMediaItem::new(
                 face,
             ))),
