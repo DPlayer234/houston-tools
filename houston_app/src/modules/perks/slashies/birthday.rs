@@ -70,7 +70,10 @@ pub mod birthday {
                 .style(ButtonStyle::Danger),
         ];
 
-        let components = [CreateActionRow::buttons(&components)];
+        let components = [CreateComponent::ActionRow(CreateActionRow::buttons(
+            &components,
+        ))];
+
         let reply = CreateReply::new().embed(embed).components(&components);
 
         ctx.send(reply).await?;

@@ -2,6 +2,11 @@ use serenity::small_fixed_array::FixedString;
 
 use crate::prelude::*;
 
+pub mod components;
+
+pub(crate) use components::components;
+pub use components::{CreateComponents, IntoComponent};
+
 pub fn create_string_select_menu_row<'a>(
     custom_id: impl Into<Cow<'a, str>>,
     options: impl Into<Cow<'a, [CreateSelectMenuOption<'a>]>>,

@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use serenity::builder::*;
-use serenity::model::application::InteractionResponseFlags;
 use serenity::model::channel::MessageFlags;
 
 /// Allows building a reply to an interaction, abstracting away
@@ -11,9 +10,9 @@ pub struct CreateReply<'a> {
     pub(crate) content: Cow<'a, str>,
     pub(crate) embeds: Vec<CreateEmbed<'a>>,
     pub(crate) attachments: Vec<CreateAttachment<'a>>,
-    pub(crate) components: Cow<'a, [CreateActionRow<'a>]>,
+    pub(crate) components: Cow<'a, [CreateComponent<'a>]>,
     pub(crate) allowed_mentions: Option<CreateAllowedMentions<'a>>,
-    pub(crate) flags: InteractionResponseFlags,
+    pub(crate) flags: MessageFlags,
 }
 
 impl<'a> CreateReply<'a> {
@@ -35,7 +34,7 @@ impl<'a> CreateReply<'a> {
     }
 
     /// Set components for this message.
-    pub fn components(mut self, components: impl Into<Cow<'a, [CreateActionRow<'a>]>>) -> Self {
+    pub fn components(mut self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
         self.components = components.into();
         self
     }
@@ -50,8 +49,7 @@ impl<'a> CreateReply<'a> {
     ///
     /// This has no effect on edits.
     pub fn ephemeral(mut self, ephemeral: bool) -> Self {
-        self.flags
-            .set(InteractionResponseFlags::EPHEMERAL, ephemeral);
+        self.flags.set(MessageFlags::EPHEMERAL, ephemeral);
         self
     }
 

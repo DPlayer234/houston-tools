@@ -19,6 +19,7 @@ use std::ptr;
 
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
+use crate::helper::discord::CreateComponents;
 
 mod game;
 #[cfg(test)]
@@ -61,8 +62,8 @@ impl View {
         }
     }
 
-    fn board_buttons<'a>(&mut self, data: &'a HBotData) -> Vec<CreateActionRow<'a>> {
-        let mut components = Vec::with_capacity(N);
+    fn board_buttons<'a>(&mut self, data: &'a HBotData) -> CreateComponents<'a> {
+        let mut components = CreateComponents::with_capacity(N);
 
         let moves = match self.action {
             Action::Selected(pos) => self.board.get(pos).copied().flatten().map(|t| {
@@ -118,8 +119,8 @@ impl View {
         components
     }
 
-    fn no_act_board_buttons<'a>(&self, data: &'a HBotData) -> Vec<CreateActionRow<'a>> {
-        let mut components = Vec::with_capacity(N);
+    fn no_act_board_buttons<'a>(&self, data: &'a HBotData) -> CreateComponents<'a> {
+        let mut components = CreateComponents::with_capacity(N);
 
         for y in 0..N_U8 {
             let mut row = Vec::with_capacity(N);

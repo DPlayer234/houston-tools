@@ -7,6 +7,7 @@ use utils::text::truncate;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
+use crate::helper::discord::CreateComponents;
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
@@ -246,7 +247,7 @@ impl<'v> View<'v> {
     }
 }
 
-fn rows_without_empty<'a, I>(rows: I) -> Vec<CreateActionRow<'a>>
+fn rows_without_empty<'a, I>(rows: I) -> CreateComponents<'a>
 where
     I: IntoIterator<Item = CreateActionRow<'a>>,
 {

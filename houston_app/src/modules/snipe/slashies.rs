@@ -56,7 +56,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
             .label("Delete");
 
         let row = [button];
-        let row = CreateActionRow::buttons(&row);
+        let row = CreateComponent::ActionRow(CreateActionRow::buttons(&row));
         let row = &[row];
 
         let reply = CreateReply::new().embed(embed).components(row);

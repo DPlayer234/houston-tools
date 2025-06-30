@@ -8,7 +8,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::unicode_emoji;
+use crate::helper::discord::{CreateComponents, unicode_emoji};
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
 
@@ -113,7 +113,7 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
-    ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
+    ) -> (CreateEmbed<'a>, CreateComponents<'a>) {
         let description = format!(
             "[{}] {:★<star_pad$}\n{} {} {}",
             ship.rarity.name(),
@@ -132,7 +132,7 @@ impl<'v> View<'v> {
             .fields(self.get_equip_field(azur, ship))
             .fields(self.get_skills_field(azur, ship));
 
-        let mut rows = Vec::new();
+        let mut rows = CreateComponents::new();
         self.add_upgrade_row(&mut rows);
         self.add_retro_state_row(base_ship, &mut rows);
         self.add_nav_row(ship, &mut rows);
@@ -140,7 +140,7 @@ impl<'v> View<'v> {
         (embed, rows)
     }
 
-    fn add_upgrade_row(&mut self, rows: &mut Vec<CreateActionRow<'_>>) {
+    fn add_upgrade_row(&mut self, rows: &mut CreateComponents<'_>) {
         let mut row = vec![
             self.button_with_level(120).label("Lv.120"),
             self.button_with_level(125).label("Lv.125"),
@@ -164,7 +164,7 @@ impl<'v> View<'v> {
         rows.push(CreateActionRow::buttons(row));
     }
 
-    fn add_nav_row(&self, ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
+    fn add_nav_row(&self, ship: &ShipData, rows: &mut CreateComponents<'_>) {
         let mut row = Vec::new();
 
         if !ship.skills.is_empty() {
@@ -202,7 +202,7 @@ impl<'v> View<'v> {
         }
     }
 
-    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut Vec<CreateActionRow<'_>>) {
+    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut CreateComponents<'_>) {
         let base_button = self.button_with_retrofit(None).label("Base");
 
         match base_ship.retrofits.len() {

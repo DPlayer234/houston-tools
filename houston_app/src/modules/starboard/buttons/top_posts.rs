@@ -5,7 +5,7 @@ use utils::text::WriteStr as _;
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
 use crate::fmt::discord::MessageLink;
-use crate::helper::discord::{id_as_u64, option_id_as_u64};
+use crate::helper::discord::{CreateComponents, id_as_u64, option_id_as_u64};
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 
@@ -112,7 +112,7 @@ impl View {
             .color(data.config().embed_color)
             .description(description);
 
-        let components = Vec::from_iter(
+        let components = CreateComponents::from_iter(
             ToPage::build_row(&mut self, |s| &mut s.page)
                 .auto_page_count(page_count, has_more, MAX_PAGE)
                 .end(),

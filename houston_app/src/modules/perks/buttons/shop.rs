@@ -8,6 +8,7 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::fmt::time::HumanDuration;
+use crate::helper::discord::components;
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
@@ -164,6 +165,7 @@ impl View {
             .into_iter()
             .vec_chunks(5)
             .map(CreateActionRow::buttons)
+            .map(CreateComponent::ActionRow)
             .collect();
 
         let reply = CreateReply::new().embed(embed).components(components);
@@ -229,7 +231,7 @@ impl View {
             .style(ButtonStyle::Success)
             .disabled(wallet.cash < i64::from(st.cost) || active.is_some());
 
-        let components = vec![CreateActionRow::buttons(vec![back, buy])];
+        let components = components![CreateActionRow::buttons(vec![back, buy])];
         let reply = CreateReply::new().embed(embed).components(components);
         Ok(reply)
     }
@@ -308,7 +310,7 @@ impl View {
             buttons.push(buy_button(&wallet, st, item, 250));
         }
 
-        let components = vec![CreateActionRow::buttons(buttons)];
+        let components = components![CreateActionRow::buttons(buttons)];
         let reply = CreateReply::new().embed(embed).components(components);
         Ok(reply)
     }

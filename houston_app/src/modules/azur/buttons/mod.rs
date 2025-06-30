@@ -108,7 +108,7 @@ pub(crate) use pagination;
 mod pagination_impl {
     use super::search::PAGE_SIZE;
     use crate::buttons::prelude::*;
-    use crate::helper::discord::create_string_select_menu_row;
+    use crate::helper::discord::{CreateComponents, create_string_select_menu_row};
     use crate::modules::core::buttons::ToPage;
 
     pub fn no_results<'new>(page: u16) -> Result<CreateReply<'new>> {
@@ -129,13 +129,13 @@ mod pagination_impl {
         iter: I,
         label: Cow<'a, str>,
         page: F,
-    ) -> Vec<CreateActionRow<'a>>
+    ) -> CreateComponents<'a>
     where
         T: ButtonValue,
         I: Iterator,
         F: Fn(&mut T) -> &mut u16,
     {
-        let mut rows = Vec::new();
+        let mut rows = CreateComponents::new();
 
         #[expect(clippy::cast_possible_truncation)]
         let page_count = 1 + *page(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;

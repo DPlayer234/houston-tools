@@ -29,7 +29,9 @@ pub async fn upload(
 
     let buttons = [CreateButton::new_link(attachment.url.as_str()).label("Download")];
 
-    let components = [CreateActionRow::buttons(&buttons)];
+    let components = [CreateComponent::ActionRow(CreateActionRow::buttons(
+        &buttons,
+    ))];
 
     let reply = create_reply(Ephemeral).embed(embed).components(&components);
 

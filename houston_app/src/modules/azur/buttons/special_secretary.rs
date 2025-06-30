@@ -4,6 +4,7 @@ use utils::text::WriteStr as _;
 use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
+use crate::helper::discord::CreateComponents;
 
 /// Views ship lines.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -49,7 +50,7 @@ impl<'v> View<'v> {
             .author(CreateEmbedAuthor::new(&secretary.name))
             .description(self.part.get_description(secretary));
 
-        let mut components = Vec::new();
+        let mut components = CreateComponents::new();
 
         let mut top_row = Vec::new();
         if let Some(back) = &self.back {

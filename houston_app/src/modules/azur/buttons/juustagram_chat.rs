@@ -6,6 +6,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
+use crate::helper::discord::CreateComponents;
 use crate::modules::azur::{GameData, LoadedConfig};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -41,7 +42,7 @@ impl<'v> View<'v> {
         chat: &'a Chat,
     ) -> CreateReply<'a> {
         let mut content = String::new();
-        let mut components = Vec::new();
+        let mut components = CreateComponents::new();
 
         let mut nav_row = Vec::new();
         if let Some(back) = &self.back {

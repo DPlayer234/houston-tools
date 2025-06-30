@@ -7,7 +7,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::create_string_select_menu_row;
+use crate::helper::discord::{CreateComponents, create_string_select_menu_row};
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
@@ -73,7 +73,7 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
-    ) -> (CreateEmbed<'a>, Vec<CreateActionRow<'a>>) {
+    ) -> (CreateEmbed<'a>, CreateComponents<'a>) {
         let words = match &skin.words_extra {
             Some(words) if self.extra => words,
             _ => {
@@ -88,7 +88,7 @@ impl<'v> View<'v> {
             .author(azur.wiki_urls().ship(ship))
             .description(self.part.get_description(azur.game_data(), words));
 
-        let mut components = Vec::new();
+        let mut components = CreateComponents::new();
 
         let top_row = CreateButton::new(self.back.to_custom_id())
             .emoji(emoji::back())

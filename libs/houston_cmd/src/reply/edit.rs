@@ -13,7 +13,7 @@ pub struct EditReply<'a> {
     content: Option<Cow<'a, str>>,
     embeds: Option<Vec<CreateEmbed<'a>>>,
     attachments: Option<InEditAttachments<'a>>,
-    components: Option<Cow<'a, [CreateActionRow<'a>]>>,
+    components: Option<Cow<'a, [CreateComponent<'a>]>>,
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
 }
 
@@ -48,7 +48,7 @@ impl<'a> EditReply<'a> {
     }
 
     /// Set components for this message.
-    pub fn components(mut self, components: impl Into<Cow<'a, [CreateActionRow<'a>]>>) -> Self {
+    pub fn components(mut self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
         self.components = Some(components.into());
         self
     }
@@ -236,7 +236,7 @@ struct EditData<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     attachments: Option<InEditAttachments<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    components: Option<Cow<'a, [CreateActionRow<'a>]>>,
+    components: Option<Cow<'a, [CreateComponent<'a>]>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
 }

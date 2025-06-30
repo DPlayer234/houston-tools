@@ -1,6 +1,6 @@
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
-use crate::helper::discord::unicode_emoji;
+use crate::helper::discord::{CreateComponents, unicode_emoji};
 
 const N: usize = 3;
 
@@ -105,11 +105,11 @@ impl View {
         data: &'a HBotData,
         current: Player,
         modify: F,
-    ) -> Vec<CreateActionRow<'a>>
+    ) -> CreateComponents<'a>
     where
         F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
-        let mut components = Vec::with_capacity(N);
+        let mut components = CreateComponents::with_capacity(N);
 
         for y in 0..N {
             let mut row = Vec::with_capacity(N);

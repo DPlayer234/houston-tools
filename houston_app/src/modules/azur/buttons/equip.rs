@@ -5,6 +5,7 @@ use super::{AzurParseError, acknowledge_unloaded};
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
+use crate::helper::discord::components;
 
 /// Views an augment.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -62,9 +63,9 @@ impl<'v> View<'v> {
                 let button = CreateButton::new(back.to_custom_id())
                     .emoji(emoji::back())
                     .label("Back");
-                vec![CreateActionRow::buttons(vec![button])]
+                components![CreateActionRow::buttons(vec![button,])]
             },
-            None => vec![],
+            None => components![],
         };
 
         CreateReply::new().embed(embed).components(components)
