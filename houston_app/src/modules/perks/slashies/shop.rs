@@ -14,7 +14,7 @@ pub async fn shop(ctx: Context<'_>) -> Result {
     // back when it works via edit.
     let reply = CreateReply::new()
         .ephemeral(true)
-        .components_v2(components!["Please wait..."]);
+        .components_v2(components![CreateTextDisplay::new("Please wait...")]);
 
     let msg = ctx.send(reply).await?;
 

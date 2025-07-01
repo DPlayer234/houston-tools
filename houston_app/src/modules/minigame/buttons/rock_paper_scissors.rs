@@ -103,7 +103,7 @@ impl View {
 
         let components = components![
             CreateContainer::new(components![
-                description,
+                CreateTextDisplay::new(description),
                 CreateSeparator::new(true),
                 buttons,
             ])
@@ -139,7 +139,8 @@ impl View {
         );
 
         let components = components![
-            CreateContainer::new(components![description]).accent_color(data.config().embed_color)
+            CreateContainer::new(components![CreateTextDisplay::new(description)])
+                .accent_color(data.config().embed_color)
         ];
 
         CreateReply::new()

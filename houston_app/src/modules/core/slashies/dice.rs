@@ -30,9 +30,9 @@ pub async fn dice(
     let (total_sum, content) = get_dice_roll_result(sets);
 
     let components = components_array![
-        format!("## Total \u{2211}{total_sum}"),
+        CreateTextDisplay::new(format!("## Total \u{2211}{total_sum}")),
         CreateSeparator::new(true),
-        content,
+        CreateTextDisplay::new(content),
     ];
 
     let components = components_array![

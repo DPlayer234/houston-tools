@@ -64,7 +64,7 @@ impl View {
 
     fn board_components<'a>(&mut self, data: &'a HBotData, label: String) -> CreateComponents<'a> {
         let mut components = CreateComponents::with_capacity(N + 2);
-        components.push(label);
+        components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 
         let moves = match self.action {
@@ -127,7 +127,7 @@ impl View {
         label: String,
     ) -> CreateComponents<'a> {
         let mut components = CreateComponents::with_capacity(N + 2);
-        components.push(label);
+        components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 
         for y in 0..N_U8 {
@@ -187,12 +187,10 @@ impl View {
         };
 
         let components = self.board_components(data, description);
-
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
         CreateReply::new()
-            .components_v2(components)
+            .components_v2(components![container])
             .allowed_mentions(CreateAllowedMentions::new())
     }
 
@@ -209,12 +207,10 @@ impl View {
         );
 
         let components = self.no_act_board_components(data, description);
-
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
         CreateReply::new()
-            .components_v2(components)
+            .components_v2(components![container])
             .allowed_mentions(CreateAllowedMentions::new())
     }
 }

@@ -112,7 +112,7 @@ impl View {
         F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
         let mut components = CreateComponents::with_capacity(N + 2);
-        components.push(label);
+        components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 
         for y in 0..N {
@@ -158,11 +158,10 @@ impl View {
                 b.disabled(s.is_some())
             });
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
         CreateReply::new()
-            .components_v2(components)
+            .components_v2(components![container])
             .allowed_mentions(CreateAllowedMentions::new())
     }
 
@@ -191,11 +190,10 @@ impl View {
             })
         });
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
         CreateReply::new()
-            .components_v2(components)
+            .components_v2(components![container])
             .allowed_mentions(CreateAllowedMentions::new())
     }
 
@@ -212,11 +210,10 @@ impl View {
             b.disabled(true).style(ButtonStyle::Secondary)
         });
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
         CreateReply::new()
-            .components_v2(components)
+            .components_v2(components![container])
             .allowed_mentions(CreateAllowedMentions::new())
     }
 }

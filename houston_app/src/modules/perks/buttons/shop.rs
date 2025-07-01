@@ -78,7 +78,7 @@ impl View {
         }
 
         let mut components = CreateComponents::new();
-        components.push("### Server Shop");
+        components.push(CreateTextDisplay::new("### Server Shop"));
 
         // add all effects first
         for &effect in Effect::all() {
@@ -111,10 +111,10 @@ impl View {
             let custom_id = Self::with_action(Action::ViewEffect(effect)).to_custom_id();
             let button = CreateButton::new(custom_id).emoji(emoji::right());
 
-            let content = section_components![content];
-            let button = CreateSectionAccessory::Button(button);
-
-            components.push(CreateSection::new(content, button));
+            components.push(CreateSection::new(
+                section_components![CreateTextDisplay::new(content)],
+                CreateSectionAccessory::Button(button),
+            ));
         }
 
         // add the items individually after
@@ -137,20 +137,18 @@ impl View {
             let custom_id = Self::with_action(Action::ViewItem(item)).to_custom_id();
             let button = CreateButton::new(custom_id).emoji(emoji::right());
 
-            let content = section_components![content];
-            let button = CreateSectionAccessory::Button(button);
-
-            components.push(CreateSection::new(content, button));
+            components.push(CreateSection::new(
+                section_components![CreateTextDisplay::new(content)],
+                CreateSectionAccessory::Button(button),
+            ));
         }
 
         components.push(CreateSeparator::new(true));
         components.push(shop_footer(perks, &wallet));
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
-        let reply = CreateReply::new().components_v2(components);
-        Ok(reply)
+        Ok(CreateReply::new().components_v2(components![container]))
     }
 
     async fn view_effect(
@@ -203,20 +201,18 @@ impl View {
             .disabled(wallet.cash < i64::from(st.cost) || active.is_some());
 
         let components = components![
-            format!("### {}", info.name),
-            info.description,
+            CreateTextDisplay::new(format!("### {}", info.name)),
+            CreateTextDisplay::new(info.description),
             CreateSeparator::new(true),
-            cost,
+            CreateTextDisplay::new(cost),
             CreateActionRow::buttons(vec![back, buy]),
             CreateSeparator::new(true),
             shop_footer(perks, &wallet),
         ];
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
-        let reply = CreateReply::new().components_v2(components);
-        Ok(reply)
+        Ok(CreateReply::new().components_v2(components![container]))
     }
 
     async fn view_item(
@@ -284,20 +280,18 @@ impl View {
         }
 
         let components = components![
-            format!("### {}", info.name),
-            info.description,
+            CreateTextDisplay::new(format!("### {}", info.name)),
+            CreateTextDisplay::new(info.description),
             CreateSeparator::new(true),
-            cost,
+            CreateTextDisplay::new(cost),
             CreateActionRow::buttons(buttons),
             CreateSeparator::new(true),
             shop_footer(perks, &wallet),
         ];
 
-        let components =
-            components![CreateContainer::new(components).accent_color(data.config().embed_color)];
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
 
-        let reply = CreateReply::new().components_v2(components);
-        Ok(reply)
+        Ok(CreateReply::new().components_v2(components![container]))
     }
 
     async fn buy_effect(

@@ -25,7 +25,7 @@ pub async fn coin(
         }
     };
 
-    let components = components_array![content];
+    let components = components_array![CreateTextDisplay::new(content)];
     let components = components_array![
         CreateContainer::new(&components).accent_color(ctx.data_ref().config().embed_color),
     ];

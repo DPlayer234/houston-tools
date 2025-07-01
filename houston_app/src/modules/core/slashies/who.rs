@@ -37,26 +37,26 @@ async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>
     let user_info = who_user_info(user.user);
     let user_info = section(user_info, Some(user.user.face()));
 
-    let mut components = components![user_info];
+    let components = match user.member {
+        None => components![user_info],
+        Some(member) => {
+            let guild_id = ctx.guild_id().unwrap_or_default();
 
-    if let Some(member) = user.member {
-        let guild_id = ctx.guild_id().unwrap_or_default();
+            let avatar = member
+                .avatar
+                .as_ref()
+                .map(|hash| guild_avatar_url(user.user.id, guild_id, hash));
 
-        let avatar = member
-            .avatar
-            .as_ref()
-            .map(|hash| guild_avatar_url(user.user.id, guild_id, hash));
+            let member_info = who_member_info(user.user, member, guild_id);
+            let member_info = section(member_info, avatar);
 
-        let member_info = who_member_info(user.user, member, guild_id);
-        let member_info = section(member_info, avatar);
+            components![user_info, CreateSeparator::new(true), member_info]
+        },
+    };
 
-        components.push(CreateSeparator::new(true));
-        components.push(member_info);
-    }
-
-    let container =
-        CreateContainer::new(components).accent_color(ctx.data_ref().config().embed_color);
-    let components = components_array![container];
+    let components = components_array![
+        CreateContainer::new(components).accent_color(ctx.data_ref().config().embed_color),
+    ];
 
     ctx.send(
         create_reply(ephemeral)

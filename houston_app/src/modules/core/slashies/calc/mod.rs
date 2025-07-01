@@ -77,9 +77,8 @@ pub async fn calc(
         ),
     };
 
-    let components = components_array![content];
-    let container = CreateContainer::new(&components).accent_color(color);
-    let components = components_array![container];
+    let components = components_array![CreateTextDisplay::new(content)];
+    let components = components_array![CreateContainer::new(&components).accent_color(color)];
 
     ctx.send(
         create_reply(ephemeral)
