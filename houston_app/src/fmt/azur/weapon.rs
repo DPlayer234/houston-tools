@@ -130,7 +130,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Res
     // ammo type & mods
     write!(
         f,
-        "{indent}**{: >4}:** {:.0}/{:.0}/{:.0}",
+        "{indent}**{}:** {:.0}/{:.0}/{:.0}",
         bullet.ammo.name(),
         l * 100f64,
         m * 100f64,

@@ -2,7 +2,6 @@ use azur_lane::Faction;
 use azur_lane::equip::*;
 use utils::text::WriteStr as _;
 
-use super::acknowledge_unloaded;
 use super::search::{Filtered, Filtering, PAGE_SIZE};
 use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
@@ -77,13 +76,11 @@ impl<'v> View<'v> {
 button_value!(for<'v> View<'v>, 8);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         self.page = ToPage::get_page(ctx.interaction)?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await

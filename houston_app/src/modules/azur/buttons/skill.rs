@@ -1,13 +1,12 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
-use smallvec::{SmallVec, smallvec};
 use utils::text::truncate;
 
-use super::{AzurParseError, acknowledge_unloaded};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
@@ -63,65 +62,69 @@ impl<'v> View<'v> {
     fn edit_with_skills<'a>(
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
-        mut embed: CreateEmbed<'a>,
-    ) -> (CreateEmbed<'a>, CreateActionRow<'a>) {
-        let mut components = Vec::new();
+        components: &mut CreateComponents<'a>,
+    ) {
+        components.push(CreateSeparator::new(true));
 
-        for (t_index, skill) in (0..5u8).zip(iterator) {
-            let t_index = Some(t_index);
-            if t_index == self.skill_index {
-                embed = embed
-                    .color(skill.category.color_rgb())
-                    .fields(self.create_ex_skill_fields(skill));
-            } else {
-                embed = embed.fields(self.create_skill_field(skill));
-            }
+        for (index, skill) in (0..5u8).zip(iterator) {
+            let index = Some(index);
+            let style = if index == self.skill_index { "__" } else { "" };
+
+            let label = format!(
+                "### {style}{}{style} {}",
+                skill.category.emoji(),
+                skill.name
+            );
+
+            components.push(CreateTextDisplay::new(label));
+            components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
 
             if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
-                let button = self
-                    .button_with_skill(t_index)
-                    .label(truncate(&skill.name, 80))
-                    .style(ButtonStyle::Secondary);
+                if index == self.skill_index {
+                    self.append_barrage_info(skill, components);
+                } else {
+                    let button = self
+                        .button_with_skill(index)
+                        .label("Show Barrage")
+                        .style(ButtonStyle::Secondary);
 
-                components.push(button);
+                    components.push(CreateActionRow::buttons(vec![button]));
+                }
             }
-        }
 
-        (embed, CreateActionRow::buttons(components))
+            components.push(CreateSeparator::new(true));
+        }
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn edit_with_ship<'a>(
-        mut self,
-        azur: LoadedConfig<'a>,
-        ship: &'a ShipData,
-        base_ship: Option<&'a ShipData>,
-    ) -> EditReply<'a> {
-        let base_ship = base_ship.unwrap_or(ship);
-
+    fn edit_with_ship<'a>(mut self, azur: LoadedConfig<'a>, ship: &'a ShipData) -> EditReply<'a> {
         let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
-        let mut embed = CreateEmbed::new()
-            .color(ship.rarity.color_rgb())
-            .author(azur.wiki_urls().ship(base_ship));
 
-        let components = CreateButton::new(self.back.to_custom_id())
+        let mut components = CreateComponents::new();
+        components.push(CreateTextDisplay::new(format!(
+            "### {} [Skills]",
+            ship.name
+        )));
+
+        let nav = CreateButton::new(self.back.to_custom_id())
             .emoji(emoji::back())
             .label("Back");
-        let mut components = vec![components];
+
+        let mut nav = vec![nav];
 
         let augments = azur.game_data().augments_by_ship_id(ship.group_id);
-        for (a_index, augment) in (0..4u8).zip(augments) {
-            if a_index == 0 {
-                components.push(self.button_with_augment(None).label("Default"));
+        for (index, augment) in (0..4u8).zip(augments) {
+            if index == 0 {
+                nav.push(self.button_with_augment(None).label("Default"));
             }
 
-            let a_index = Some(a_index);
-            components.push(
-                self.button_with_augment(a_index)
+            let index = Some(index);
+            nav.push(
+                self.button_with_augment(index)
                     .label(truncate(&augment.name, 80)),
             );
 
-            if a_index == self.augment_index {
+            if index == self.augment_index {
                 // replace upgraded skills
                 for upgrade in &augment.skill_upgrades {
                     if let Some(skill) =
@@ -136,44 +139,48 @@ impl<'v> View<'v> {
                     skills.push(effect);
                 }
 
-                embed = embed.field(
-                    format!("'{}' Bonus Stats", augment.name),
-                    format!("{}", crate::fmt::azur::AugmentStats::new(augment)),
-                    false,
-                );
+                components.push(CreateSeparator::new(true));
+                components.push(CreateTextDisplay::new(format!(
+                    "**\"{}\" Bonus Stats**\n{}",
+                    augment.name,
+                    crate::fmt::azur::AugmentStats::new(augment),
+                )));
             }
         }
 
-        let (embed, row) = self.edit_with_skills(skills.into_iter(), embed);
-        EditReply::clear()
-            .embed(embed)
-            .components(rows_without_empty([
-                CreateActionRow::buttons(components),
-                row,
-            ]))
+        self.edit_with_skills(skills.into_iter(), &mut components);
+        components.push(CreateActionRow::buttons(nav));
+
+        EditReply::clear().components_v2(components![
+            CreateContainer::new(components).accent_color(ship.rarity.color_rgb())
+        ])
     }
 
     /// Modifies the create-reply with preresolved augment data.
     fn edit_with_augment(self, augment: &Augment) -> EditReply<'_> {
-        let embed = CreateEmbed::new()
-            .color(augment.rarity.color_rgb())
-            .author(CreateEmbedAuthor::new(&augment.name));
-
         let skills = augment
             .effect
             .iter()
             .chain(augment.skill_upgrades.iter().map(|s| &s.skill));
 
-        let nav_row = CreateActionRow::buttons(vec![
+        let mut components = CreateComponents::new();
+        components.push(CreateTextDisplay::new(format!(
+            "### {} [Skills]",
+            augment.name
+        )));
+
+        let nav = CreateActionRow::buttons(vec![
             CreateButton::new(self.back.to_custom_id())
                 .emoji(emoji::back())
                 .label("Back"),
         ]);
 
-        let (embed, row) = self.edit_with_skills(skills, embed);
-        EditReply::clear()
-            .embed(embed)
-            .components(rows_without_empty([nav_row, row]))
+        self.edit_with_skills(skills, &mut components);
+        components.push(nav);
+
+        EditReply::clear().components_v2(components![
+            CreateContainer::new(components).accent_color(augment.rarity.color_rgb())
+        ])
     }
 
     /// Creates a button that redirects to a skill index.
@@ -195,36 +202,21 @@ impl<'v> View<'v> {
         self.new_button(field, index, |u| u.map_or(u16::MAX, u16::from))
     }
 
-    /// Creates the embed field for a skill.
-    fn create_skill_field<'a>(&self, skill: &'a Skill) -> [EmbedFieldCreate<'a>; 1] {
-        [embed_field_create(
-            format!("{} {}", skill.category.emoji(), skill.name),
-            truncate(&skill.description, 1000),
-            false,
-        )]
-    }
-
     /// Creates the embed fields for the selected skill.
-    fn create_ex_skill_fields<'a>(&self, skill: &'a Skill) -> SmallVec<[EmbedFieldCreate<'a>; 2]> {
-        let mut fields = smallvec![embed_field_create(
-            format!("{} __{}__", skill.category.emoji(), skill.name),
-            truncate(&skill.description, 1000),
-            false,
-        )];
-
+    fn append_barrage_info<'a>(&self, skill: &'a Skill, components: &mut CreateComponents<'a>) {
         if !skill.barrages.is_empty() {
             let full = get_skills_extra_summary(skill);
-            fields.push(embed_field_create(
-                "__Barrage__".to_owned(),
-                match truncate(&full, 1024) {
-                    Cow::Owned(trunc) => {
-                        log::warn!("Barrage data too long:\n{full}");
-                        trunc
-                    },
-                    Cow::Borrowed(_) => full,
+            let description = match truncate(&full, 1024) {
+                Cow::Owned(trunc) => {
+                    log::warn!("Barrage data too long:\n{full}");
+                    trunc
                 },
-                false,
-            ));
+                Cow::Borrowed(_) => full,
+            };
+
+            components.push(CreateSeparator::new(false));
+            components.push(CreateTextDisplay::new("### __Barrage__"));
+            components.push(CreateTextDisplay::new(description));
         }
 
         for buff in &skill.new_weapons {
@@ -233,34 +225,21 @@ impl<'v> View<'v> {
                 fmt = fmt.no_fire_rate();
             }
 
-            fields.push(embed_field_create(
-                format!(
-                    "__{}__",
-                    buff.weapon.name.as_deref().unwrap_or("Special Weapon")
-                ),
-                fmt.to_string(),
-                true,
-            ))
+            let label = format!(
+                "### __{}__",
+                buff.weapon.name.as_deref().unwrap_or("Special Weapon")
+            );
+
+            components.push(CreateSeparator::new(false));
+            components.push(CreateTextDisplay::new(label));
+            components.push(CreateTextDisplay::new(fmt.to_string()));
         }
-
-        fields
     }
-}
-
-fn rows_without_empty<'a, I>(rows: I) -> CreateComponents<'a>
-where
-    I: IntoIterator<Item = CreateActionRow<'a>>,
-{
-    rows.into_iter()
-        .filter(|a| !matches!(a, CreateActionRow::Buttons(a) if a.is_empty()))
-        .collect()
 }
 
 button_value!(for<'v> View<'v>, 3);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
-
         let azur = ctx.data.config().azur()?;
         let edit = match &self.source {
             ViewSource::Ship(source) => {
@@ -268,11 +247,13 @@ impl ButtonReply for View<'_> {
                     .game_data()
                     .ship_by_id(source.ship_id)
                     .ok_or(AzurParseError::Ship)?;
+
                 let ship = source
                     .retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
                     .unwrap_or(base_ship);
-                self.edit_with_ship(azur, ship, Some(base_ship))
+
+                self.edit_with_ship(azur, ship)
             },
             ViewSource::Augment(augment_id) => {
                 let augment = azur

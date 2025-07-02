@@ -4,11 +4,13 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::WriteStr as _;
 
-use super::{AzurParseError, acknowledge_unloaded};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{
+    CreateComponents, IntoComponent as _, components, section_components,
+};
 use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
@@ -59,19 +61,19 @@ impl<'v> View<'v> {
         base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(data, azur, ship, base_ship);
-
         let mut create = CreateReply::new();
 
-        if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
+        let thumbail_key = if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
             && let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key)
         {
             let filename = format!("{}.webp", skin.image_key);
-            embed = embed.thumbnail(format!("attachment://{filename}"));
             create = create.attachment(CreateAttachment::bytes(image_data, filename));
-        }
+            Some(skin.image_key.as_str())
+        } else {
+            None
+        };
 
-        create.embed(embed).components(rows)
+        create.components_v2(self.with_ship(data, azur, ship, base_ship, thumbail_key))
     }
 
     fn edit_with_ship<'a>(
@@ -82,30 +84,24 @@ impl<'v> View<'v> {
         base_ship: Option<&'a ShipData>,
     ) -> EditReply<'a> {
         let base_ship = base_ship.unwrap_or(ship);
-        let (mut embed, rows) = self.with_ship(ctx.data, azur, ship, base_ship);
-        let mut create = EditReply::new();
+        let mut edit = EditReply::new();
 
-        // try expressions when
-        let base_skin = || {
-            let skin = base_ship.skin_by_id(ship.default_skin_id)?;
-            let image = azur.game_data().get_chibi_image(&skin.image_key)?;
-            Some((skin, image))
-        };
-
-        if let Some((skin, image_data)) = base_skin() {
-            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
-
+        let thumbail_key = if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
+            && let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key)
+        {
             if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
-                create = create.new_attachment(CreateAttachment::bytes(
+                edit = edit.new_attachment(CreateAttachment::bytes(
                     image_data,
                     format!("{}.webp", skin.image_key),
                 ));
             }
+            Some(skin.image_key.as_str())
         } else {
-            create = create.clear_attachments();
-        }
+            edit = edit.clear_attachments();
+            None
+        };
 
-        create.embed(embed).components(rows)
+        edit.components_v2(self.with_ship(ctx.data, azur, ship, base_ship, thumbail_key))
     }
 
     fn with_ship<'a>(
@@ -114,110 +110,75 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
-    ) -> (CreateEmbed<'a>, CreateComponents<'a>) {
-        let description = format!(
-            "[{}] {:★<star_pad$}\n{} {} {}",
-            ship.rarity.name(),
-            '★',
-            super::hull_emoji(ship.hull_type, data),
-            ship.faction.name(),
-            ship.hull_type.name(),
-            star_pad = usize::from(ship.stars)
-        );
+        thumbnail_key: Option<&str>,
+    ) -> CreateComponents<'a> {
+        let mut components = CreateComponents::new();
 
-        let embed = CreateEmbed::new()
-            .author(azur.wiki_urls().ship(base_ship))
-            .description(description)
-            .color(ship.rarity.color_rgb())
-            .fields(self.get_stats_field(ship))
-            .fields(self.get_equip_field(azur, ship))
-            .fields(self.get_skills_field(azur, ship));
+        components.push(self.get_header_field(data, ship, base_ship, thumbnail_key));
+        components.extend(self.get_retro_state_row(base_ship));
+        components.push(CreateSeparator::new(true));
 
-        let mut rows = CreateComponents::new();
-        self.add_upgrade_row(&mut rows);
-        self.add_retro_state_row(base_ship, &mut rows);
-        self.add_nav_row(ship, &mut rows);
+        components.push(self.get_stats_field(ship));
+        components.push(self.get_upgrade_row());
+        components.push(CreateSeparator::new(true));
 
-        (embed, rows)
+        components.push(self.get_equip_field(azur, ship));
+        components.push(CreateSeparator::new(true));
+
+        if let Some(skills_field) = self.get_skills_field(azur, ship) {
+            components.push(skills_field);
+            components.push(CreateSeparator::new(true));
+        }
+
+        components.push(self.get_nav_row(azur, base_ship));
+
+        components![CreateContainer::new(components).accent_color(ship.rarity.color_rgb())]
     }
 
-    fn add_upgrade_row(&mut self, rows: &mut CreateComponents<'_>) {
-        let mut row = vec![
-            self.button_with_level(120).label("Lv.120"),
-            self.button_with_level(125).label("Lv.125"),
-            self.button_with_affinity(ViewAffinity::Love)
-                .emoji(unicode_emoji("❤"))
-                .label("100"),
-            self.button_with_affinity(ViewAffinity::Oath)
-                .emoji(unicode_emoji("💗"))
-                .label("200"),
-        ];
+    fn get_nav_row<'a>(
+        &self,
+        azur: LoadedConfig<'a>,
+        base_ship: &'a ShipData,
+    ) -> CreateComponent<'a> {
+        let view_lines = super::lines::View::with_back(self.ship_id, self.to_nav());
+        let lines_button = CreateButton::new(view_lines.to_custom_id())
+            .label("Lines")
+            .style(ButtonStyle::Secondary);
 
-        if let Some(back) = &self.back {
-            row.insert(
-                0,
+        let wiki_url = azur.wiki_urls().ship(base_ship);
+        let wiki_button = CreateButton::new_link(wiki_url)
+            .label("Wiki")
+            .style(ButtonStyle::Secondary);
+
+        let buttons = match &self.back {
+            Some(back) => vec![
                 CreateButton::new(back.to_custom_id())
                     .emoji(emoji::back())
                     .label("Back"),
-            );
-        }
-
-        rows.push(CreateActionRow::buttons(row));
-    }
-
-    fn add_nav_row(&self, ship: &ShipData, rows: &mut CreateComponents<'_>) {
-        let mut row = Vec::new();
-
-        if !ship.skills.is_empty() {
-            use super::skill::{ShipViewSource, View};
-
-            let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
-            let view_skill = View::with_back(source, self.to_nav());
-            let button = CreateButton::new(view_skill.to_custom_id())
-                .label("Skills")
-                .style(ButtonStyle::Secondary);
-
-            row.push(button);
-        }
-
-        if !ship.shadow_equip.is_empty() || !ship.depth_charges.is_empty() {
-            let view = super::shadow_equip::View::new(self.clone());
-            let button = CreateButton::new(view.to_custom_id())
-                .label("Shadow Equip")
-                .style(ButtonStyle::Secondary);
-
-            row.push(button);
-        }
-
-        {
-            let view_lines = super::lines::View::with_back(self.ship_id, self.to_nav());
-            let button = CreateButton::new(view_lines.to_custom_id())
-                .label("Lines")
-                .style(ButtonStyle::Secondary);
-
-            row.push(button);
-        }
-
-        if !row.is_empty() {
-            rows.push(CreateActionRow::buttons(row));
-        }
-    }
-
-    fn add_retro_state_row(&mut self, base_ship: &ShipData, rows: &mut CreateComponents<'_>) {
-        let base_button = self.button_with_retrofit(None).label("Base");
-
-        match base_ship.retrofits.len() {
-            0 => {},
-            1 => rows.push(CreateActionRow::buttons(vec![
-                base_button,
-                self.button_with_retrofit(Some(0)).label("Retrofit"),
-            ])),
-            _ => rows.push(CreateActionRow::buttons(
-                iter::once(base_button)
-                    .chain(self.multi_retro_buttons(base_ship))
-                    .collect::<Vec<_>>(),
-            )),
+                lines_button,
+                wiki_button,
+            ],
+            None => vec![lines_button, wiki_button],
         };
+
+        CreateActionRow::buttons(buttons).into_component()
+    }
+
+    fn get_retro_state_row<'a>(&mut self, base_ship: &ShipData) -> Option<CreateComponent<'a>> {
+        let base_button = || self.button_with_retrofit(None).label("Base");
+
+        let buttons = match base_ship.retrofits.len() {
+            0 => return None,
+            1 => vec![
+                { base_button }(),
+                self.button_with_retrofit(Some(0)).label("Retrofit"),
+            ],
+            _ => iter::once({ base_button }())
+                .chain(self.multi_retro_buttons(base_ship))
+                .collect::<Vec<_>>(),
+        };
+
+        Some(CreateActionRow::buttons(buttons).into_component())
     }
 
     fn multi_retro_buttons<'a, 'b>(
@@ -232,27 +193,44 @@ impl<'v> View<'v> {
         })
     }
 
-    /// Gets a button that redirects to a different level.
-    fn button_with_level<'a>(&mut self, level: u8) -> CreateButton<'a> {
-        self.new_button(|s| &mut s.level, level, u8::into)
-    }
+    fn get_header_field<'a>(
+        &self,
+        data: &'a HBotData,
+        ship: &'a ShipData,
+        base_ship: &'a ShipData,
+        thumbnail_key: Option<&str>,
+    ) -> CreateComponent<'a> {
+        let content = format!(
+            "## {}\n\
+             [{}] {:★<star_pad$}\n{} {} {}",
+            base_ship.name,
+            ship.rarity.name(),
+            '★',
+            super::hull_emoji(ship.hull_type, data),
+            ship.faction.name(),
+            ship.hull_type.name(),
+            star_pad = usize::from(ship.stars)
+        );
 
-    /// Gets a button that redirects to a different affinity.
-    fn button_with_affinity<'a>(&mut self, affinity: ViewAffinity) -> CreateButton<'a> {
-        self.new_button(|s| &mut s.affinity, affinity, |u| u as u16)
-    }
+        let content = CreateTextDisplay::new(content);
 
-    /// Creates a button that redirects to a retrofit state.
-    fn button_with_retrofit<'a>(&mut self, retrofit: Option<u8>) -> CreateButton<'a> {
-        self.new_button(
-            |s| &mut s.retrofit,
-            retrofit,
-            |u| u.map_or(u16::MAX, u16::from),
-        )
+        if let Some(thumbnail_key) = thumbnail_key {
+            let url = format!("attachment://{thumbnail_key}.webp");
+            let media = CreateUnfurledMediaItem::new(url);
+            let thumbnail = CreateThumbnail::new(media);
+
+            CreateSection::new(
+                section_components![content],
+                CreateSectionAccessory::Thumbnail(thumbnail),
+            )
+            .into_component()
+        } else {
+            content.into_component()
+        }
     }
 
     /// Creates the embed field that display the stats.
-    fn get_stats_field<'a>(&self, ship: &ShipData) -> [EmbedFieldCreate<'a>; 1] {
+    fn get_stats_field<'a>(&self, ship: &ShipData) -> CreateComponent<'a> {
         let stats = &ship.stats;
         let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
@@ -281,7 +259,8 @@ impl<'v> View<'v> {
         let content = if ship.hull_type.team_type() != TeamType::Submarine {
             calc_all!(asw);
             format!(
-                "**`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                "### Stats\n\
+                 **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
                  **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
                  **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
                  **`ASW:`**`{asw: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
@@ -291,7 +270,8 @@ impl<'v> View<'v> {
         } else {
             let ShipStatBlock { oxy, amo, .. } = *stats;
             format!(
-                "**`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                "### Stats\n\
+                 **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
                  **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
                  **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
                  **`OXY:`**`{oxy: >4}` \u{2E31} **`AMO:`**`{amo: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
@@ -300,21 +280,33 @@ impl<'v> View<'v> {
             )
         };
 
-        [embed_field_create("Stats", content, false)]
+        CreateTextDisplay::new(content).into_component()
+    }
+
+    fn get_upgrade_row<'a>(&mut self) -> CreateComponent<'a> {
+        CreateActionRow::buttons(vec![
+            self.button_with_level(120).label("Lv.120"),
+            self.button_with_level(125).label("Lv.125"),
+            self.button_with_affinity(ViewAffinity::Love)
+                .emoji(unicode_emoji("❤"))
+                .label("100"),
+            self.button_with_affinity(ViewAffinity::Oath)
+                .emoji(unicode_emoji("💗"))
+                .label("200"),
+        ])
+        .into_component()
     }
 
     /// Creates the embed field that displays the weapon equipment slots.
-    fn get_equip_field<'a>(
-        &self,
-        azur: LoadedConfig<'a>,
-        ship: &ShipData,
-    ) -> [EmbedFieldCreate<'a>; 1] {
+    fn get_equip_field<'a>(&self, azur: LoadedConfig<'a>, ship: &ShipData) -> CreateComponent<'a> {
         let slots = ship
             .equip_slots
             .iter()
             .filter_map(|e| e.mount.as_ref().map(|m| (&e.allowed, m)));
 
         let mut text = String::new();
+        text.push_str("### Equipment");
+
         for (allowed, mount) in slots {
             if !text.is_empty() {
                 text.push('\n');
@@ -363,7 +355,22 @@ impl<'v> View<'v> {
             write!(text, "-# **`ASW:`** {}", equip.name);
         }
 
-        [embed_field_create("Equipment", text, false)]
+        let text = CreateTextDisplay::new(text);
+
+        if ship.shadow_equip.is_empty() && ship.depth_charges.is_empty() {
+            text.into_component()
+        } else {
+            let view = super::shadow_equip::View::new(self.clone());
+            let button = CreateButton::new(view.to_custom_id())
+                .label("Shadow Equip")
+                .style(ButtonStyle::Secondary);
+
+            CreateSection::new(
+                section_components![text],
+                CreateSectionAccessory::Button(button),
+            )
+            .into_component()
+        }
     }
 
     /// Creates the embed field that display the skill summary.
@@ -371,12 +378,15 @@ impl<'v> View<'v> {
         &self,
         azur: LoadedConfig<'a>,
         ship: &ShipData,
-    ) -> Option<EmbedFieldCreate<'a>> {
+    ) -> Option<CreateComponent<'a>> {
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
         (!ship.skills.is_empty()).then(|| {
+            // CMBK: do we need this at all?
             let mut text = String::new();
+            text.push_str("### Skills");
+
             for s in &ship.skills {
                 if !text.is_empty() {
                     text.push('\n');
@@ -394,16 +404,47 @@ impl<'v> View<'v> {
                 write!(text, "-# UA: **{}**", augment.name);
             }
 
-            embed_field_create("Skills", text, false)
+            let button = {
+                use super::skill::{ShipViewSource, View};
+
+                let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
+                let view_skill = View::with_back(source, self.to_nav());
+                CreateButton::new(view_skill.to_custom_id())
+                    .label("Info")
+                    .style(ButtonStyle::Secondary)
+            };
+
+            CreateSection::new(
+                section_components![CreateTextDisplay::new(text)],
+                CreateSectionAccessory::Button(button),
+            )
+            .into_component()
         })
+    }
+
+    /// Gets a button that redirects to a different level.
+    fn button_with_level<'a>(&mut self, level: u8) -> CreateButton<'a> {
+        self.new_button(|s| &mut s.level, level, u8::into)
+    }
+
+    /// Gets a button that redirects to a different affinity.
+    fn button_with_affinity<'a>(&mut self, affinity: ViewAffinity) -> CreateButton<'a> {
+        self.new_button(|s| &mut s.affinity, affinity, |u| u as u16)
+    }
+
+    /// Creates a button that redirects to a retrofit state.
+    fn button_with_retrofit<'a>(&mut self, retrofit: Option<u8>) -> CreateButton<'a> {
+        self.new_button(
+            |s| &mut s.retrofit,
+            retrofit,
+            |u| u.map_or(u16::MAX, u16::from),
+        )
     }
 }
 
 button_value!(for<'v> View<'v>, 1);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
-
         let azur = ctx.data.config().azur()?;
         let ship = azur
             .game_data()

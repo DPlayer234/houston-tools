@@ -1,10 +1,9 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
-use utils::text::WriteStr as _;
 
-use super::acknowledge_unloaded;
 use super::search::{Filtered, Filtering, PAGE_SIZE};
 use crate::buttons::prelude::*;
+use crate::helper::discord::components::{CreateComponents, components, section_components};
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
@@ -34,30 +33,31 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
-        let mut desc = String::new();
-        let mut options = Vec::new();
+        let mut components = CreateComponents::new();
 
-        for augment in iter.by_ref().take(PAGE_SIZE) {
-            writeln!(desc, "- **{}** [{}]", augment.name, augment.rarity.name());
+        components.push(CreateSection::new(
+            section_components![CreateTextDisplay::new("### Augment Modules")],
+            CreateSectionAccessory::Button(
+                CreateButton::new_link(&azur.wiki_urls().augment_list).label("Wiki"),
+            ),
+        ));
 
+        components.push(CreateSeparator::new(true));
+
+        for augment in super::page_iter!(iter, self.page) {
             let view = super::augment::View::new(augment.augment_id).back(self.to_nav());
-            options.push(CreateSelectMenuOption::new(
-                &augment.name,
-                view.to_custom_id(),
-            ));
+            let button = CreateButton::new(view.to_custom_id())
+                .label(&augment.name)
+                .style(ButtonStyle::Secondary);
+
+            components.push(CreateActionRow::buttons(vec![button]));
         }
 
-        let rows = super::pagination!(self, options, iter, "View augment module...");
+        super::page_nav!(components, self, iter);
 
-        let wiki_url = &*azur.wiki_urls().augment_list;
-        let author = CreateEmbedAuthor::new("Augment Modules").url(wiki_url);
-
-        let embed = CreateEmbed::new()
-            .author(author)
-            .description(desc)
-            .color(data.config().embed_color);
-
-        Ok(CreateReply::new().embed(embed).components(rows))
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
@@ -70,13 +70,11 @@ impl<'v> View<'v> {
 button_value!(for<'v> View<'v>, 9);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         self.page = ToPage::get_page(ctx.interaction)?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await

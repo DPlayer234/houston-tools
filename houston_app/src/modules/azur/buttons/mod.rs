@@ -9,8 +9,9 @@
 use azur_lane::ship::HullType;
 
 use crate::buttons::prelude::*;
-use crate::buttons::{AnyContext, AnyInteraction};
 
+// TODO: upgrade the menus `equip`, `juustagram_chat`, `special_secretary` and
+// those menus' search menus
 pub mod augment;
 pub mod equip;
 pub mod juustagram_chat;
@@ -40,13 +41,18 @@ enum AzurParseError {
 }
 
 fn get_ship_preview_name<'a>(ctx: &ButtonContext<'a>) -> Option<&'a str> {
-    let embed = ctx.interaction.message.embeds.first()?;
-    get_thumbnail_filename(embed)
+    if let Some(Component::Container(container)) = ctx.interaction.message.components.first()
+        && let Some(Component::Section(section)) = container.components.first()
+        && let Component::Thumbnail(thumbnail) = section.accessory.as_ref()
+    {
+        get_thumbnail_filename(&thumbnail.media.url)
+    } else {
+        None
+    }
 }
 
-fn get_thumbnail_filename(embed: &Embed) -> Option<&str> {
-    let thumb = embed.thumbnail.as_ref()?;
-    let (_, name) = thumb.url.rsplit_once('/')?;
+fn get_thumbnail_filename(url: &str) -> Option<&str> {
+    let (_, name) = url.rsplit_once('/')?;
     Some(name.split_once('.').map_or(name, |a| a.0))
 }
 
@@ -76,17 +82,6 @@ pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
     }
 }
 
-async fn acknowledge_unloaded<I>(ctx: &AnyContext<'_, I>) -> Result
-where
-    I: AnyInteraction,
-{
-    let azur = ctx.data.config().azur_raw()?;
-    if azur.needs_load() {
-        ctx.acknowledge().await?;
-    }
-    Ok(())
-}
-
 macro_rules! pagination {
     ($obj:expr, $options:expr, $iter:expr, $label:expr) => {{
         if $options.is_empty() {
@@ -103,7 +98,30 @@ macro_rules! pagination {
     }};
 }
 
-pub(crate) use pagination;
+macro_rules! page_iter {
+    ($iter:expr, $page:expr) => {{
+        let mut iter = $iter.by_ref().take(PAGE_SIZE).peekable();
+        if iter.peek().is_none() {
+            return $crate::modules::azur::buttons::pagination_impl::no_results($page);
+        }
+        iter
+    }};
+}
+
+macro_rules! page_nav {
+    ($components:expr, $obj:expr, $remainder:expr) => {
+        if let Some(nav) =
+            $crate::modules::azur::buttons::pagination_impl::nav_row(&mut $obj, $remainder, |s| {
+                &mut s.page
+            })
+        {
+            $components.push(::serenity::builder::CreateSeparator::new(true));
+            $components.push(nav);
+        }
+    };
+}
+
+pub(crate) use {page_iter, page_nav, pagination};
 
 mod pagination_impl {
     use super::search::PAGE_SIZE;
@@ -121,6 +139,19 @@ mod pagination_impl {
         } else {
             Err(HArgError::new("This page has no data.").into())
         }
+    }
+
+    pub fn nav_row<'a, T, I, F>(obj: &mut T, remainder: I, page: F) -> Option<CreateActionRow<'a>>
+    where
+        T: ButtonValue,
+        I: Iterator,
+        F: Fn(&mut T) -> &mut u16,
+    {
+        #[expect(clippy::cast_possible_truncation)]
+        let page_count = 1 + *page(obj) + remainder.count().div_ceil(PAGE_SIZE) as u16;
+        ToPage::build_row(obj, page)
+            .exact_page_count(page_count)
+            .end()
     }
 
     pub fn rows_setup<'a, T, I, F>(
@@ -159,7 +190,7 @@ mod search {
 
     use crate::modules::azur::data::{ByLookupIter, ByPrefixIter};
 
-    pub const PAGE_SIZE: usize = 15;
+    pub const PAGE_SIZE: usize = 10;
 
     pub struct Filtered<'a, T, F> {
         inner: Inner<'a, T>,

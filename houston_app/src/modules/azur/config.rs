@@ -4,7 +4,6 @@ use std::sync::{Arc, OnceLock};
 
 use anyhow::Context as _;
 use azur_lane::ship::ShipData;
-use serenity::builder::CreateEmbedAuthor;
 use serenity::small_fixed_array::FixedString;
 use utils::join;
 
@@ -45,14 +44,6 @@ impl Config {
     /// Whether the game data has been loaded before.
     pub fn loaded(&self) -> bool {
         matches!(self.game_data.get(), Some(Some(_)))
-    }
-
-    /// Whether the game data still needs to be loaded.
-    ///
-    /// This returns `true` when either the game data hasn't been loaded yet or
-    /// a previous attempt failed.
-    pub(super) fn needs_load(&self) -> bool {
-        self.game_data.get().is_none()
     }
 
     /// Gets or loads the game data.
@@ -139,10 +130,12 @@ impl Default for WikiUrls {
 }
 
 impl WikiUrls {
-    pub fn ship<'s>(&self, base_ship: &'s ShipData) -> CreateEmbedAuthor<'s> {
-        let mut wiki_url = (*self.ship_base).to_owned();
-        urlencoding::Encoded::new(base_ship.name.as_str()).append_to(&mut wiki_url);
-        CreateEmbedAuthor::new(&base_ship.name).url(wiki_url)
+    pub fn ship(&self, base_ship: &ShipData) -> String {
+        format!(
+            "{}{}",
+            self.ship_base,
+            urlencoding::Encoded::new(base_ship.name.as_str())
+        )
     }
 }
 

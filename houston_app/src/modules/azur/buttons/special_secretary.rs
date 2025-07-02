@@ -1,7 +1,7 @@
 use azur_lane::secretary::*;
 use utils::text::WriteStr as _;
 
-use super::{AzurParseError, acknowledge_unloaded};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::helper::discord::components::CreateComponents;
@@ -211,8 +211,6 @@ impl ViewPart {
 button_value!(for<'v> View<'v>, 21);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
-
         let azur = ctx.data.config().azur()?;
         let ship = azur
             .game_data()

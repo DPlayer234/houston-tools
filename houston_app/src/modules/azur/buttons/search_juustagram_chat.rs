@@ -1,7 +1,6 @@
 use azur_lane::juustagram::*;
 use utils::text::{WriteStr as _, truncate};
 
-use super::acknowledge_unloaded;
 use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
@@ -71,13 +70,11 @@ impl View {
 button_value!(View, 17);
 impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
         self.page = ToPage::get_page(ctx.interaction)?;
         let create = self.create(ctx.data)?;
         ctx.edit(create.into()).await

@@ -70,6 +70,12 @@ macro_rules! define_component_builder {
             }
         }
 
+        impl<'a, A: $Trait<'a>> Extend<A> for $Ident<'a> {
+            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
+                self.0.extend(iter.into_iter().map(A::$convert))
+            }
+        }
+
         impl<'a, A: $Trait<'a>> FromIterator<A> for $Ident<'a> {
             fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
                 Self(iter.into_iter().map(A::$convert).collect())

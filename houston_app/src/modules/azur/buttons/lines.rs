@@ -3,11 +3,14 @@ use std::fmt;
 use azur_lane::ship::*;
 use utils::text::WriteStr as _;
 
-use super::{AzurParseError, acknowledge_unloaded};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components::{CreateComponents, create_string_select_menu_row};
+use crate::helper::discord::components::{
+    CreateComponents, IntoComponent as _, components, create_string_select_menu_row,
+    section_components,
+};
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
@@ -51,21 +54,21 @@ impl<'v> View<'v> {
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> EditReply<'a> {
-        let (mut embed, components) = self.with_ship(azur, ship, skin);
         let mut create = EditReply::new();
 
-        if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
-            embed = embed.thumbnail(format!("attachment://{}.webp", skin.image_key));
+        let thumbnail_key =
+            if let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key) {
+                if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
+                    let filename = format!("{}.webp", skin.image_key);
+                    create = create.new_attachment(CreateAttachment::bytes(image_data, filename));
+                }
+                Some(skin.image_key.as_str())
+            } else {
+                create = create.clear_attachments();
+                None
+            };
 
-            if Some(skin.image_key.as_str()) != super::get_ship_preview_name(ctx) {
-                let filename = format!("{}.webp", skin.image_key);
-                create = create.new_attachment(CreateAttachment::bytes(image_data, filename));
-            }
-        } else {
-            create = create.clear_attachments();
-        }
-
-        create.embed(embed).components(components)
+        create.components(self.with_ship(azur, ship, skin, thumbnail_key))
     }
 
     fn with_ship<'a>(
@@ -73,7 +76,8 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
-    ) -> (CreateEmbed<'a>, CreateComponents<'a>) {
+        thumbnail_key: Option<&str>,
+    ) -> CreateComponents<'a> {
         let words = match &skin.words_extra {
             Some(words) if self.extra => words,
             _ => {
@@ -83,26 +87,10 @@ impl<'v> View<'v> {
         };
 
         self.try_redirect_to_non_empty_part(words);
-        let embed = CreateEmbed::new()
-            .color(ship.rarity.color_rgb())
-            .author(azur.wiki_urls().ship(ship))
-            .description(self.part.get_description(azur.game_data(), words));
 
         let mut components = CreateComponents::new();
 
-        let top_row = CreateButton::new(self.back.to_custom_id())
-            .emoji(emoji::back())
-            .label("Back");
-        let mut top_row = vec![top_row];
-
-        if skin.words_extra.is_some() {
-            top_row.push(self.button_with_extra(false).label("Base"));
-            top_row.push(self.button_with_extra(true).label("EX"));
-        }
-
-        if !top_row.is_empty() {
-            components.push(CreateActionRow::buttons(top_row));
-        }
+        components.push(self.get_main_field(azur, skin, words, thumbnail_key));
 
         components.push(CreateActionRow::buttons(vec![
             self.button_with_part(ViewPart::Info, words, "1", "< 1 >"),
@@ -111,6 +99,8 @@ impl<'v> View<'v> {
             self.button_with_part(ViewPart::Affinity, words, "4", "< 4 >"),
             self.button_with_part(ViewPart::Combat, words, "5", "< 5 >"),
         ]));
+
+        components.push(CreateSeparator::new(true));
 
         if ship.skins.len() > 1 {
             let options: Vec<_> = (0..25u8)
@@ -125,7 +115,20 @@ impl<'v> View<'v> {
             ));
         }
 
-        (embed, components)
+        let nav_row = CreateButton::new(self.back.to_custom_id())
+            .emoji(emoji::back())
+            .label("Back");
+
+        let mut nav_row = vec![nav_row];
+
+        if skin.words_extra.is_some() {
+            nav_row.push(self.button_with_extra(false).label("Base"));
+            nav_row.push(self.button_with_extra(true).label("EX"));
+        }
+
+        components.push(CreateActionRow::buttons(nav_row));
+
+        components![CreateContainer::new(components).accent_color(ship.rarity.color_rgb())]
     }
 
     /// Creates a button that redirects to a different Base/EX state.
@@ -170,6 +173,36 @@ impl<'v> View<'v> {
             && let Some(part) = first_non_empty_part(words)
         {
             self.part = part;
+        }
+    }
+
+    fn get_main_field<'a>(
+        &self,
+        azur: LoadedConfig<'a>,
+        skin: &'a ShipSkin,
+        words: &ShipSkinWords,
+        thumbnail_key: Option<&str>,
+    ) -> CreateComponent<'a> {
+        let label = if self.extra { "EX Lines" } else { "Lines" };
+
+        let mut content = format!("### {} [{label}]\n", skin.name);
+        self.part
+            .append_description(&mut content, azur.game_data(), words);
+
+        let content = CreateTextDisplay::new(content);
+
+        if let Some(thumbnail_key) = thumbnail_key {
+            let url = format!("attachment://{thumbnail_key}.webp");
+            let media = CreateUnfurledMediaItem::new(url);
+            let thumbnail = CreateThumbnail::new(media);
+
+            CreateSection::new(
+                section_components![content],
+                CreateSectionAccessory::Thumbnail(thumbnail),
+            )
+            .into_component()
+        } else {
+            content.into_component()
         }
     }
 }
@@ -245,10 +278,10 @@ macro_rules! impl_view_part_fn {
 
 impl ViewPart {
     /// Creates the embed description for the current state.
-    fn get_description(self, game_data: &GameData, words: &ShipSkinWords) -> String {
+    fn append_description(self, result: &mut String, game_data: &GameData, words: &ShipSkinWords) {
         use crate::fmt::discord::escape_markdown;
 
-        let mut result = String::new();
+        let len = result.len();
 
         // avoid duplicating the entire basic text code a million times
         fn basic(result: &mut String, label: &str, text: &str) {
@@ -259,7 +292,7 @@ impl ViewPart {
         macro_rules! add {
             ($label:literal, $text:expr) => {
                 if let Some(text) = $text {
-                    basic(&mut result, $label, text);
+                    basic(result, $label, text);
                 }
             };
             (main $line:expr) => {
@@ -276,11 +309,9 @@ impl ViewPart {
 
         impl_view_part_fn!(self, words, add);
 
-        if result.is_empty() {
+        if len == result.len() {
             result.push_str("<nothing>");
         }
-
-        result
     }
 
     /// Determines whether this part shows any lines.
@@ -306,8 +337,6 @@ impl ViewPart {
 button_value!(for<'v> View<'v>, 4);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
-
         let azur = ctx.data.config().azur()?;
 
         let ship = azur

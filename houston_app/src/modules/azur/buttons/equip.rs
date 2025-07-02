@@ -1,7 +1,7 @@
 use azur_lane::equip::*;
 use utils::text::truncate;
 
-use super::{AzurParseError, acknowledge_unloaded};
+use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
@@ -84,8 +84,6 @@ impl<'v> View<'v> {
 button_value!(for<'v> View<'v>, 7);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        acknowledge_unloaded(&ctx).await?;
-
         let azur = ctx.data.config().azur()?;
         let equip = azur
             .game_data()

@@ -53,6 +53,12 @@ impl<'a> EditReply<'a> {
         self
     }
 
+    /// Set components for this message.
+    pub fn components_v2(self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
+        // CMBK: actually set the flag
+        self.components(components)
+    }
+
     /// Add a new attachment.
     pub fn new_attachment(self, attachment: CreateAttachment<'a>) -> Self {
         self.attachment(Attachment::New(attachment))
