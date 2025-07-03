@@ -158,6 +158,21 @@ macro_rules! section_components {
     };
 }
 
+pub async fn temp_defer_as(
+    ctx: houston_cmd::Context<'_>,
+    ephemeral: bool,
+) -> serenity::Result<houston_cmd::ReplyHandle<'_>> {
+    // CMBK: interaction edits can't currently set flags in serenity, so to "defer"
+    // and still allow components v2, we need to set the flag in the initial
+    // message. but setting the flag with a defer doesn't work. discord moment. come
+    // back when it works via edit.
+    let reply = CreateReply::new()
+        .ephemeral(ephemeral)
+        .components_v2(components![CreateTextDisplay::new("Please wait...")]);
+
+    ctx.send(reply).await
+}
+
 pub(crate) use {components, components_array, section_components};
 
 mod impls {

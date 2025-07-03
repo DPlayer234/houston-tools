@@ -3,7 +3,7 @@ use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::helper::discord::id_as_u64;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
@@ -86,21 +86,26 @@ impl View {
             self.page + 1
         };
 
+        let label = format!("### {} Leaderboards", board.emoji());
         let description = description.or_default("<None>");
 
-        let embed = CreateEmbed::new()
-            .title(format!("{} Leaderboards", board.emoji()))
-            .color(data.config().embed_color)
-            .description(description);
+        let mut components = CreateComponents::new();
 
-        let components = CreateComponents::from_iter(
-            ToPage::build_row(&mut self, |s| &mut s.page)
-                .auto_page_count(page_count, has_more, MAX_PAGE)
-                .end(),
-        );
+        components.push(CreateTextDisplay::new(label));
+        components.push(CreateSeparator::new(true));
+        components.push(CreateTextDisplay::new(description));
 
-        let reply = CreateReply::new().embed(embed).components(components);
-        Ok(reply)
+        let pagination = ToPage::build_row(&mut self, |s| &mut s.page)
+            .auto_page_count(page_count, has_more, MAX_PAGE);
+
+        if let Some(nav) = pagination.end() {
+            components.push(CreateSeparator::new(true));
+            components.push(nav);
+        }
+
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 }
 

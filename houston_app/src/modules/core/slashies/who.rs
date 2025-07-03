@@ -107,7 +107,7 @@ fn who_user_info(user: &User) -> String {
         writeln!(f, "**Avatar:** [Click]({avatar_url})");
     }
 
-    // Bots don't get banners.
+    // Bots don't get banners in interactions.
 
     if let Some(public_flags) = user.public_flags.filter(|p| !p.is_empty()) {
         write_public_flags(&mut f, public_flags);

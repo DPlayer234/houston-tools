@@ -5,7 +5,7 @@ use utils::text::WriteStr as _;
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
 use crate::fmt::discord::MessageLink;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::helper::discord::{id_as_u64, option_id_as_u64};
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
@@ -56,10 +56,6 @@ impl View {
         let mut description = String::new();
         let mut index = 0u64;
 
-        if let Some(by_user) = self.by_user {
-            writeln!(description, "-# By: {}", by_user.mention());
-        }
-
         while let Some(item) = cursor.try_next().await? {
             if index >= u64::from(PAGE_SIZE) {
                 break;
@@ -101,27 +97,31 @@ impl View {
             self.page + 1
         };
 
-        if self.by_user.is_some() && index == 0 {
-            debug_assert!(!description.is_empty(), "by-user case always has content");
-            writeln!(description, "<None>");
-        }
-
+        let label = format!("### {} Top Posts", board.emoji());
         let description = description.or_default("<None>");
 
-        let embed = CreateEmbed::new()
-            .title(format!("{} Top Posts", board.emoji()))
-            .color(data.config().embed_color)
-            .description(description);
+        let mut components = CreateComponents::new();
 
-        let components = CreateComponents::from_iter(
-            ToPage::build_row(&mut self, |s| &mut s.page)
-                .auto_page_count(page_count, has_more, MAX_PAGE)
-                .end(),
-        );
+        components.push(CreateTextDisplay::new(label));
 
-        let reply = CreateReply::new().embed(embed).components(components);
+        if let Some(by_user) = self.by_user {
+            components.push(CreateTextDisplay::new(format!("By: {}", by_user.mention())));
+        }
 
-        Ok(reply)
+        components.push(CreateSeparator::new(true));
+        components.push(CreateTextDisplay::new(description));
+
+        let pagination = ToPage::build_row(&mut self, |s| &mut s.page)
+            .auto_page_count(page_count, has_more, MAX_PAGE);
+
+        if let Some(nav) = pagination.end() {
+            components.push(CreateSeparator::new(true));
+            components.push(nav);
+        }
+
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 
     fn message_filter(&self) -> Result<Document> {

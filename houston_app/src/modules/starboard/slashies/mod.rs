@@ -1,5 +1,6 @@
 use super::BoardId;
 use crate::helper::contains_ignore_ascii_case;
+use crate::helper::discord::components::temp_defer_as;
 use crate::slashies::prelude::*;
 
 mod overview;
@@ -22,8 +23,9 @@ pub mod starboard {
         let (guild, board) = find_board(ctx, board)?;
         let view = View::new(guild, board);
 
-        ctx.defer_as(ephemeral).await?;
-        ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
+        let msg = temp_defer_as(ctx, ephemeral.into_ephemeral()).await?;
+        msg.edit(view.create_reply(ctx.data_ref()).await?.into())
+            .await?;
 
         Ok(())
     }
@@ -46,8 +48,9 @@ pub mod starboard {
         let (guild, board) = find_board(ctx, board)?;
         let view = View::new(guild, board, by_user.map(|u| u.id));
 
-        ctx.defer_as(ephemeral).await?;
-        ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
+        let msg = temp_defer_as(ctx, ephemeral.into_ephemeral()).await?;
+        msg.edit(view.create_reply(ctx.data_ref()).await?.into())
+            .await?;
 
         Ok(())
     }
