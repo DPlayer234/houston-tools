@@ -5,7 +5,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components::components;
+use crate::helper::discord::components::{CreateComponents, components};
 
 /// Views an augment.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -32,52 +32,55 @@ impl<'v> View<'v> {
 
     /// Modifies the create-reply with a preresolved equipment.
     pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
-        let description = format!(
-            "**{}**\n{}",
+        let mut components = CreateComponents::new();
+        components.push(CreateTextDisplay::new(format!("## {}", equip.name)));
+        components.push(CreateSeparator::new(true));
+
+        components.push(CreateTextDisplay::new(format!(
+            "### {}\n{}",
             equip.kind.name(),
             crate::fmt::azur::EquipStats::new(equip)
-        );
+        )));
 
-        let embed = CreateEmbed::new()
-            .color(equip.rarity.color_rgb())
-            .author(CreateEmbedAuthor::new(&equip.name))
-            .description(description)
-            .fields(equip.weapons.iter().map(|weapon| {
-                (
-                    weapon.kind.name(),
-                    crate::fmt::azur::Details::new(weapon).no_kind().to_string(),
-                    true,
-                )
-            }))
-            .fields(equip.skills.iter().map(|skill| {
-                (
-                    format!("{} {}", skill.category.emoji(), skill.name),
-                    truncate(&skill.description, 1000),
-                    false,
-                )
-            }))
-            .fields(self.get_disallowed_field(equip));
+        for (index, weapon) in equip.weapons.iter().enumerate() {
+            components.push(CreateSeparator::new(index == 0));
+            components.push(CreateTextDisplay::new(format!(
+                "### {}\n{}",
+                weapon.kind.name(),
+                crate::fmt::azur::Details::new(weapon).no_kind(),
+            )));
+        }
 
-        let components = match &self.back {
-            Some(back) => {
-                let button = CreateButton::new(back.to_custom_id())
-                    .emoji(emoji::back())
-                    .label("Back");
-                components![CreateActionRow::buttons(vec![button,])]
-            },
-            None => components![],
-        };
+        for (index, skill) in equip.skills.iter().enumerate() {
+            components.push(CreateSeparator::new(index == 0));
+            components.push(CreateTextDisplay::new(format!(
+                "### {} {}",
+                skill.category.emoji(),
+                skill.name
+            )));
+            components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
+        }
 
-        CreateReply::new().embed(embed).components(components)
-    }
+        if !equip.hull_disallowed.is_empty() {
+            components.push(CreateSeparator::new(true));
+            components.push(CreateTextDisplay::new(format!(
+                "**Cannot be equipped by:**\n> {}",
+                Join::COMMA.display_as(&equip.hull_disallowed, |h| h.designation()),
+            )));
+        }
 
-    fn get_disallowed_field<'a>(&self, equip: &Equip) -> Option<EmbedFieldCreate<'a>> {
-        (!equip.hull_disallowed.is_empty()).then(|| {
-            let fmt = Join::COMMA.display_as(&equip.hull_disallowed, |h| h.designation());
-            let text = format!("> {fmt}");
+        if let Some(back) = &self.back {
+            let button = CreateButton::new(back.to_custom_id())
+                .emoji(emoji::back())
+                .label("Back");
 
-            embed_field_create("Cannot be equipped by:", text, false)
-        })
+            components.push(CreateSeparator::new(true));
+            components.push(CreateActionRow::buttons(vec![button]));
+        }
+
+        CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(equip.rarity.color_rgb())
+        ])
     }
 }
 

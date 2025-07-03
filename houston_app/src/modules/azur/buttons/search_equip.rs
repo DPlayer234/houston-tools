@@ -1,9 +1,10 @@
 use azur_lane::Faction;
 use azur_lane::equip::*;
-use utils::text::WriteStr as _;
+use utils::text::truncate;
 
 use super::search::{Filtered, Filtering, PAGE_SIZE};
 use crate::buttons::prelude::*;
+use crate::helper::discord::components::{CreateComponents, components, section_components};
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
@@ -33,37 +34,40 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
-        let mut desc = String::new();
-        let mut options = Vec::new();
+        let page_iter = super::page_iter!(iter, self.page);
+        let mut components = CreateComponents::new();
 
-        for equip in iter.by_ref().take(PAGE_SIZE) {
-            writeln!(
-                desc,
-                "- **{}** [{} {} {}]",
+        components.push(CreateSection::new(
+            section_components![CreateTextDisplay::new("### Equipments")],
+            CreateSectionAccessory::Button(
+                CreateButton::new_link(&azur.wiki_urls().equipment_list).label("Wiki"),
+            ),
+        ));
+
+        components.push(CreateSeparator::new(true));
+
+        for equip in page_iter {
+            let label = format!(
+                "{} - {} {} {}",
                 equip.name,
                 equip.rarity.name(),
                 equip.faction.prefix().unwrap_or("Col."),
                 equip.kind.name(),
             );
 
-            let view_equip = super::equip::View::new(equip.equip_id).back(self.to_nav());
-            options.push(CreateSelectMenuOption::new(
-                &equip.name,
-                view_equip.to_custom_id(),
-            ));
+            let view = super::equip::View::new(equip.equip_id).back(self.to_nav());
+            let button = CreateButton::new(view.to_custom_id())
+                .label(truncate(label, 80))
+                .style(ButtonStyle::Secondary);
+
+            components.push(CreateActionRow::buttons(vec![button]));
         }
 
-        let rows = super::pagination!(self, options, iter, "View equipment...");
+        super::page_nav!(components, self, iter);
 
-        let wiki_url = &*azur.wiki_urls().equipment_list;
-        let author = CreateEmbedAuthor::new("Equipments").url(wiki_url);
-
-        let embed = CreateEmbed::new()
-            .author(author)
-            .description(desc)
-            .color(data.config().embed_color);
-
-        Ok(CreateReply::new().embed(embed).components(rows))
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {

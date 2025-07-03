@@ -33,6 +33,7 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
+        let page_iter = super::page_iter!(iter, self.page);
         let mut components = CreateComponents::new();
 
         components.push(CreateSection::new(
@@ -44,7 +45,7 @@ impl<'v> View<'v> {
 
         components.push(CreateSeparator::new(true));
 
-        for augment in super::page_iter!(iter, self.page) {
+        for augment in page_iter {
             let view = super::augment::View::new(augment.augment_id).back(self.to_nav());
             let button = CreateButton::new(view.to_custom_id())
                 .label(&augment.name)

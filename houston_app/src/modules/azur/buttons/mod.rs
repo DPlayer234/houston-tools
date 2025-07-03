@@ -10,8 +10,6 @@ use azur_lane::ship::HullType;
 
 use crate::buttons::prelude::*;
 
-// TODO: upgrade the menus `equip`, `juustagram_chat`, `special_secretary` and
-// those menus' search menus
 pub mod augment;
 pub mod equip;
 pub mod juustagram_chat;
@@ -82,22 +80,6 @@ pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
     }
 }
 
-macro_rules! pagination {
-    ($obj:expr, $options:expr, $iter:expr, $label:expr) => {{
-        if $options.is_empty() {
-            return $crate::modules::azur::buttons::pagination_impl::no_results($obj.page);
-        }
-
-        $crate::modules::azur::buttons::pagination_impl::rows_setup(
-            &mut $obj,
-            $options.into(),
-            $iter,
-            $label.into(),
-            |s| &mut s.page,
-        )
-    }};
-}
-
 macro_rules! page_iter {
     ($iter:expr, $page:expr) => {{
         let mut iter = $iter.by_ref().take(PAGE_SIZE).peekable();
@@ -121,12 +103,11 @@ macro_rules! page_nav {
     };
 }
 
-pub(crate) use {page_iter, page_nav, pagination};
+pub(crate) use {page_iter, page_nav};
 
 mod pagination_impl {
     use super::search::PAGE_SIZE;
     use crate::buttons::prelude::*;
-    use crate::helper::discord::components::{CreateComponents, create_string_select_menu_row};
     use crate::modules::core::buttons::ToPage;
 
     pub fn no_results<'new>(page: u16) -> Result<CreateReply<'new>> {
@@ -152,36 +133,6 @@ mod pagination_impl {
         ToPage::build_row(obj, page)
             .exact_page_count(page_count)
             .end()
-    }
-
-    pub fn rows_setup<'a, T, I, F>(
-        obj: &mut T,
-        options: Cow<'a, [CreateSelectMenuOption<'a>]>,
-        iter: I,
-        label: Cow<'a, str>,
-        page: F,
-    ) -> CreateComponents<'a>
-    where
-        T: ButtonValue,
-        I: Iterator,
-        F: Fn(&mut T) -> &mut u16,
-    {
-        let mut rows = CreateComponents::new();
-
-        #[expect(clippy::cast_possible_truncation)]
-        let page_count = 1 + *page(obj) + iter.count().div_ceil(PAGE_SIZE) as u16;
-        let pagination = ToPage::build_row(obj, page).exact_page_count(page_count);
-
-        if let Some(pagination) = pagination.end() {
-            rows.push(pagination);
-        }
-
-        rows.push(create_string_select_menu_row(
-            obj.to_custom_id(),
-            options,
-            label,
-        ));
-        rows
     }
 }
 

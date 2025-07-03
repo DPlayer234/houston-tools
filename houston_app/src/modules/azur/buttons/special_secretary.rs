@@ -4,7 +4,7 @@ use utils::text::WriteStr as _;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{CreateComponents, components};
 
 /// Views ship lines.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -45,24 +45,9 @@ impl<'v> View<'v> {
         data: &'a HBotData,
         secretary: &'a SpecialSecretary,
     ) -> CreateReply<'a> {
-        let embed = CreateEmbed::new()
-            .color(data.config().embed_color)
-            .author(CreateEmbedAuthor::new(&secretary.name))
-            .description(self.part.get_description(secretary));
-
         let mut components = CreateComponents::new();
 
-        let mut top_row = Vec::new();
-        if let Some(back) = &self.back {
-            let button = CreateButton::new(back.to_custom_id())
-                .emoji(emoji::back())
-                .label("Back");
-            top_row.push(button);
-        }
-
-        if !top_row.is_empty() {
-            components.push(CreateActionRow::buttons(top_row));
-        }
+        components.push(self.get_main_field(secretary));
 
         components.push(CreateActionRow::buttons(vec![
             self.button_with_part(ViewPart::Main1, secretary, "1", "< 1 >"),
@@ -72,7 +57,18 @@ impl<'v> View<'v> {
             self.button_with_part(ViewPart::Chime2, secretary, "5", "< 5 >"),
         ]));
 
-        CreateReply::new().embed(embed).components(components)
+        if let Some(back) = &self.back {
+            let button = CreateButton::new(back.to_custom_id())
+                .emoji(emoji::back())
+                .label("Back");
+
+            components.push(CreateSeparator::new(true));
+            components.push(CreateActionRow::buttons(vec![button]));
+        }
+
+        CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ])
     }
 
     /// Creates a button that redirects to a different viewed part.
@@ -94,6 +90,13 @@ impl<'v> View<'v> {
         } else {
             button
         }
+    }
+
+    fn get_main_field<'a>(&self, secretary: &SpecialSecretary) -> CreateTextDisplay<'a> {
+        let mut content = format!("### {}\n", secretary.name);
+        self.part.append_description(&mut content, secretary);
+
+        CreateTextDisplay::new(content)
     }
 }
 
@@ -147,10 +150,10 @@ macro_rules! impl_view_part_fn {
 
 impl ViewPart {
     /// Creates the embed description for the current state.
-    fn get_description(self, words: &SpecialSecretary) -> String {
+    fn append_description(self, result: &mut String, words: &SpecialSecretary) {
         use crate::fmt::discord::escape_markdown;
 
-        let mut result = String::new();
+        let len = result.len();
 
         // avoid duplicating the entire basic text code a million times
         fn basic(result: &mut String, label: &str, text: &str) {
@@ -166,7 +169,7 @@ impl ViewPart {
         macro_rules! add {
             ($label:literal, $text:expr) => {
                 if let Some(text) = $text {
-                    basic(&mut result, $label, text);
+                    basic(result, $label, text);
                 }
             };
             (main $line:expr) => {
@@ -175,17 +178,15 @@ impl ViewPart {
                 writeln!(result, "- **Main Screen {index}:** {text}");
             };
             (chime $index:expr, $opt:expr) => {
-                chime(&mut result, $index, $opt);
+                chime(result, $index, $opt);
             };
         }
 
         impl_view_part_fn!(self, words, add);
 
-        if result.is_empty() {
+        if len == result.len() {
             result.push_str("<nothing>");
         }
-
-        result
     }
 
     /// Determines whether this part shows any lines.

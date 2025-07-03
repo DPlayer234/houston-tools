@@ -12,13 +12,4 @@ pub(crate) use crate::config;
 pub use crate::data::*;
 pub use crate::helper::bson::ModelCollection as _;
 
-pub type EmbedFieldCreate<'a> = (Cow<'a, str>, Cow<'a, str>, bool);
 pub type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
-
-pub fn embed_field_create<'a>(
-    name: impl Into<Cow<'a, str>>,
-    value: impl Into<Cow<'a, str>>,
-    inline: bool,
-) -> EmbedFieldCreate<'a> {
-    (name.into(), value.into(), inline)
-}

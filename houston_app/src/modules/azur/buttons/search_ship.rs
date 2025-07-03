@@ -34,6 +34,7 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
+        let page_iter = super::page_iter!(iter, self.page);
         let mut components = CreateComponents::new();
 
         components.push(CreateSection::new(
@@ -45,7 +46,7 @@ impl<'v> View<'v> {
 
         components.push(CreateSeparator::new(true));
 
-        for ship in super::page_iter!(iter, self.page) {
+        for ship in page_iter {
             let emoji = super::hull_emoji(ship.hull_type, data);
 
             let view = super::ship::View::new(ship.group_id).back(self.to_nav());

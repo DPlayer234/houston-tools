@@ -6,25 +6,23 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
-use crate::helper::discord::components::CreateComponents;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::{GameData, LoadedConfig};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct View<'v> {
     chat_id: u32,
-    flags: ArrayVec<u8, 20>,
+    #[serde(borrow)]
+    flags: &'v [u8],
     #[serde(borrow)]
     back: Option<Nav<'v>>,
 }
 
 impl<'v> View<'v> {
     pub fn new(chat_id: u32) -> Self {
-        let mut flags = ArrayVec::new();
-        flags.push(0u8);
-
         Self {
             chat_id,
-            flags,
+            flags: &[0],
             back: None,
         }
     }
@@ -35,38 +33,12 @@ impl<'v> View<'v> {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn create_with_chat<'a>(
+    pub fn create_with_chat<'a>(
         mut self,
         data: &'a HBotData,
         azur: LoadedConfig<'a>,
         chat: &'a Chat,
-    ) -> CreateReply<'a> {
-        let mut content = String::new();
-        let mut components = CreateComponents::new();
-
-        let mut nav_row = Vec::new();
-        if let Some(back) = &self.back {
-            nav_row.push(
-                CreateButton::new(back.to_custom_id())
-                    .emoji(emoji::back())
-                    .label("Back"),
-            );
-        }
-
-        if self.flags.len() > 1 {
-            let mut new_flags = self.flags.clone();
-            _ = new_flags.pop();
-
-            nav_row.push(
-                self.new_button(|s| &mut s.flags, new_flags, |_| u16::MAX)
-                    .label("Undo"),
-            );
-        }
-
-        if !nav_row.is_empty() {
-            components.push(CreateActionRow::buttons(nav_row));
-        }
-
+    ) -> Result<CreateReply<'a>> {
         fn get_sender_name(azur: &GameData, sender_id: u32) -> &str {
             if sender_id == 0 {
                 return "<You>";
@@ -74,6 +46,9 @@ impl<'v> View<'v> {
 
             azur.ship_by_id(sender_id).map_or("<unknown>", |s| &s.name)
         }
+
+        let mut content = String::new();
+        let mut selection = None;
 
         for entry in &chat.entries {
             // if the chat entry does not have the right flag, we skip it
@@ -102,29 +77,66 @@ impl<'v> View<'v> {
             if let Some(options) = &entry.options
                 && options.iter().all(|o| !self.flags.contains(&o.flag))
             {
-                for option in options {
-                    let mut new_flags = self.flags.clone();
-                    _ = new_flags.try_push(option.flag);
-
-                    let button = self
-                        .new_button(|s| &mut s.flags, new_flags, |_| option.flag.into())
-                        .label(truncate(&option.value, 80))
-                        .style(ButtonStyle::Secondary);
-
-                    components.push(CreateActionRow::buttons(vec![button]));
-                }
-
+                selection = Some(options);
                 break;
             }
         }
 
-        let embed = CreateEmbed::new()
-            .title(&chat.name)
-            // this may be janky, possibly rework the limit
-            .description(truncate(content, 4000))
-            .color(data.config().embed_color);
+        let mut components = CreateComponents::new();
+        components.push(CreateTextDisplay::new(format!("### {}", chat.name)));
+        components.push(CreateSeparator::new(true));
 
-        CreateReply::new().embed(embed).components(components)
+        // this may be janky, possibly rework the limit
+        components.push(CreateTextDisplay::new(truncate(content, 3800)));
+
+        if let Some(options) = selection {
+            components.push(CreateSeparator::new(true));
+
+            for option in options {
+                let mut flags = <ArrayVec<u8, 64>>::new();
+                flags.try_extend_from_slice(self.flags)?;
+                flags.try_push(option.flag)?;
+                let flags = flags.as_slice();
+
+                let new_view = View {
+                    flags,
+                    back: self.back.clone(),
+                    ..self
+                };
+
+                let button = CreateButton::new(new_view.to_custom_id())
+                    .label(truncate(&option.value, 80))
+                    .style(ButtonStyle::Secondary);
+
+                components.push(CreateActionRow::buttons(vec![button]));
+            }
+        }
+
+        let mut nav_row = Vec::new();
+        if let Some(back) = &self.back {
+            nav_row.push(
+                CreateButton::new(back.to_custom_id())
+                    .emoji(emoji::back())
+                    .label("Back"),
+            );
+        }
+
+        if let Some((_, new_flags)) = self.flags.split_last() {
+            let button = self
+                .new_button(|s| &mut s.flags, new_flags, |_| u16::MAX)
+                .label("Undo");
+
+            nav_row.push(button);
+        }
+
+        if !nav_row.is_empty() {
+            components.push(CreateSeparator::new(true));
+            components.push(CreateActionRow::buttons(nav_row));
+        }
+
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 }
 
@@ -137,7 +149,7 @@ impl ButtonReply for View<'_> {
             .juustagram_chat_by_id(self.chat_id)
             .ok_or(AzurParseError::JuustagramChat)?;
 
-        let create = self.create_with_chat(ctx.data, azur, chat);
+        let create = self.create_with_chat(ctx.data, azur, chat)?;
         ctx.edit(create.into()).await
     }
 }

@@ -1,8 +1,8 @@
 use azur_lane::secretary::*;
-use utils::text::{WriteStr as _, truncate};
 
 use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
 
@@ -28,29 +28,26 @@ impl<'v> View<'v> {
         data: &'a HBotData,
         mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
-        let mut desc = String::new();
-        let mut options = Vec::new();
+        let page_iter = super::page_iter!(iter, self.page);
+        let mut components = CreateComponents::new();
 
-        for secretary in iter.by_ref().take(PAGE_SIZE) {
-            writeln!(desc, "- **{}**", secretary.name);
+        components.push(CreateTextDisplay::new("### Special Secretaries"));
+        components.push(CreateSeparator::new(true));
 
+        for secretary in page_iter {
             let view_chat = super::special_secretary::View::new(secretary.id).back(self.to_nav());
-            options.push(CreateSelectMenuOption::new(
-                truncate(&secretary.name, 100),
-                view_chat.to_custom_id(),
-            ));
+            let button = CreateButton::new(view_chat.to_custom_id())
+                .label(&secretary.name)
+                .style(ButtonStyle::Secondary);
+
+            components.push(CreateActionRow::buttons(vec![button]));
         }
 
-        let rows = super::pagination!(self, options, iter, "View lines...");
+        super::page_nav!(components, self, iter);
 
-        let author = CreateEmbedAuthor::new("Special Secretaries");
-
-        let embed = CreateEmbed::new()
-            .author(author)
-            .description(desc)
-            .color(data.config().embed_color);
-
-        Ok(CreateReply::new().embed(embed).components(rows))
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {

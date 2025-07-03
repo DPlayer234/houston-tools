@@ -1,8 +1,9 @@
 use azur_lane::juustagram::*;
-use utils::text::{WriteStr as _, truncate};
+use utils::text::truncate;
 
 use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
+use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
@@ -28,36 +29,31 @@ impl View {
         azur: LoadedConfig<'a>,
         mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
-        let mut desc = String::new();
-        let mut options = Vec::new();
+        let page_iter = super::page_iter!(iter, self.page);
+        let mut components = CreateComponents::new();
 
-        for chat in iter.by_ref().take(PAGE_SIZE) {
-            let chat_name: Cow<'_, str>;
-            if let Some(ship) = azur.game_data().ship_by_id(chat.group_id) {
-                writeln!(desc, "- **{}** [{}]", chat.name, ship.name);
-                chat_name = format!("{} [{}]", chat.name, ship.name).into();
-            } else {
-                writeln!(desc, "- **{}**", chat.name);
-                chat_name = chat.name.as_str().into();
-            }
+        components.push(CreateTextDisplay::new("### JUUS [Chats]"));
+        components.push(CreateSeparator::new(true));
+
+        for chat in page_iter {
+            let label = match azur.game_data().ship_by_id(chat.group_id) {
+                Some(ship) => Cow::Owned(format!("{} [{}]", chat.name, ship.name)),
+                None => Cow::Borrowed(chat.name.as_str()),
+            };
 
             let view_chat = super::juustagram_chat::View::new(chat.chat_id).back(self.to_nav());
-            options.push(
-                CreateSelectMenuOption::new(truncate(chat_name, 100), view_chat.to_custom_id())
-                    .description(truncate(&chat.unlock_desc, 100)),
-            );
+            let button = CreateButton::new(view_chat.to_custom_id())
+                .label(truncate(label, 80))
+                .style(ButtonStyle::Secondary);
+
+            components.push(CreateActionRow::buttons(vec![button]));
         }
 
-        let rows = super::pagination!(self, options, iter, "Read chat...");
+        super::page_nav!(components, self, iter);
 
-        let author = CreateEmbedAuthor::new("JUUS [Chats]");
-
-        let embed = CreateEmbed::new()
-            .author(author)
-            .description(desc)
-            .color(data.config().embed_color);
-
-        Ok(CreateReply::new().embed(embed).components(rows))
+        Ok(CreateReply::new().components_v2(components![
+            CreateContainer::new(components).accent_color(data.config().embed_color)
+        ]))
     }
 
     pub fn create(self, data: &HBotData) -> Result<CreateReply<'_>> {
