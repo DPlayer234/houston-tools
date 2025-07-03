@@ -105,6 +105,8 @@ fn ensure_compat() {
     //                              |                |   |     |            |
     //                          [------------------][--][--][-------------][--]
     const COMPAT_BUF: &[u8] = b"\xFF\xFF\xFF\xFF\x0F\x03\x20\x0Bhello world\x1F";
+    const COMPAT_BUF_STR: &str =
+        "A\u{1007ff}\u{f17ff}\u{b2803}\u{6568}\u{f746c}\u{67f20}\u{c7a6f}\u{62764}&";
 
     const COMPAT_VAL: Compat<'static> = Compat {
         a: 16,
@@ -119,5 +121,11 @@ fn ensure_compat() {
         val_custom_id, buf_custom_id,
         "expected both custom ids to be same\n\
          this test breaking implies the serialization format changed unexpectedly"
-    )
+    );
+
+    assert_eq!(
+        val_custom_id, COMPAT_BUF_STR,
+        "expected `COMPAT_BUF_STR` to match the encoded `COMPAT_BUF`\n\
+         this test breaking implies the encoding format changed unexpectedly"
+    );
 }
