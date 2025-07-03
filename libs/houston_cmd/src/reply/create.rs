@@ -123,7 +123,7 @@ impl<'a> CreateReply<'a> {
             attachments,
             components,
             allowed_mentions,
-            flags: _,
+            flags,
         } = self;
 
         let mut builder = EditInteractionResponse::new()
@@ -131,6 +131,11 @@ impl<'a> CreateReply<'a> {
             .embeds(embeds)
             .components(components)
             .clear_attachments();
+
+        // CMBK: remove when interaction edits support flags
+        if flags != MessageFlags::empty() {
+            log::warn!("`into_interaction_edit` can't have flags for now");
+        }
 
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);

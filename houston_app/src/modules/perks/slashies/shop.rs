@@ -1,4 +1,3 @@
-use crate::helper::discord::components::temp_defer_as;
 use crate::slashies::prelude::*;
 
 /// View the server shop.
@@ -8,12 +7,12 @@ pub async fn shop(ctx: Context<'_>) -> Result {
 
     let guild_id = ctx.require_guild_id()?;
 
-    let msg = temp_defer_as(ctx, true).await?;
+    ctx.defer_as(true).await?;
 
     let reply = View::new()
         .create_reply(ctx.serenity, guild_id, ctx.user().id)
         .await?;
 
-    msg.edit(reply.into()).await?;
+    ctx.send(reply).await?;
     Ok(())
 }

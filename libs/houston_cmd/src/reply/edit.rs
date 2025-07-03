@@ -15,6 +15,7 @@ pub struct EditReply<'a> {
     attachments: Option<InEditAttachments<'a>>,
     components: Option<Cow<'a, [CreateComponent<'a>]>>,
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
+    flags: Option<MessageFlags>,
 }
 
 impl<'a> EditReply<'a> {
@@ -32,6 +33,7 @@ impl<'a> EditReply<'a> {
             components: Some(Cow::Borrowed(&[])),
             attachments: Some(InEditAttachments::default()),
             allowed_mentions: None,
+            flags: None,
         }
     }
 
@@ -54,8 +56,10 @@ impl<'a> EditReply<'a> {
     }
 
     /// Set components for this message.
-    pub fn components_v2(self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
-        // CMBK: actually set the flag
+    pub fn components_v2(mut self, components: impl Into<Cow<'a, [CreateComponent<'a>]>>) -> Self {
+        self.flags
+            .get_or_insert_default()
+            .insert(MessageFlags::IS_COMPONENTS_V2);
         self.components(components)
     }
 
@@ -99,6 +103,7 @@ impl<'a> EditReply<'a> {
             attachments,
             components,
             allowed_mentions,
+            flags,
         } = self;
 
         let mut builder = EditInteractionResponse::new();
@@ -114,6 +119,11 @@ impl<'a> EditReply<'a> {
         }
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);
+        }
+
+        // CMBK: remove when interaction edits support flags
+        if flags.is_some() {
+            log::warn!("`into_interaction_edit` can't have flags for now");
         }
 
         if let Some(attachments) = attachments {
@@ -142,7 +152,7 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
             attachments,
             components,
             allowed_mentions,
-            flags: _,
+            flags,
         } = value;
 
         let attachments = attachments.into_iter().map(Attachment::New).collect();
@@ -153,6 +163,7 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
             attachments: Some(InEditAttachments { vec: attachments }),
             components: Some(components),
             allowed_mentions,
+            flags: Some(flags),
         }
     }
 }
@@ -245,11 +256,43 @@ struct EditData<'a> {
     components: Option<Cow<'a, [CreateComponent<'a>]>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    flags: Option<MessageFlags>,
 }
 
-impl EditReply<'_> {
+impl<'a> EditData<'a> {
+    fn attachments(&self) -> Vec<CreateAttachment<'a>> {
+        self.attachments
+            .as_ref()
+            .map_or_else(Vec::new, InEditAttachments::get_files)
+    }
+}
+
+// internal workarounds for things not directly supported in serenity
+impl<'a> EditReply<'a> {
+    fn into_payload(self) -> EditData<'a> {
+        let Self {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+            flags,
+        } = self;
+
+        EditData {
+            content,
+            embeds,
+            attachments,
+            components,
+            allowed_mentions,
+            flags,
+        }
+    }
+
     /// Invokes [`create_interaction_response`] with the correct information for
-    /// an edit.
+    /// an edit. This works around [`CreateInteractionResponse::UpdateMessage`]
+    /// not supporting keeping existing attachments.
     ///
     /// Hidden because I don't want this in the public API but I do need it in
     /// `houston_app`.
@@ -268,37 +311,43 @@ impl EditReply<'_> {
             data: EditData<'a>,
         }
 
-        let Self {
-            content,
-            embeds,
-            attachments,
-            components,
-            allowed_mentions,
-        } = self;
-
         let payload = Payload {
             r#type: 7, // UPDATE_MESSAGE
-            data: EditData {
-                content,
-                embeds,
-                attachments,
-                components,
-                allowed_mentions,
-            },
+            data: self.into_payload(),
         };
 
-        let files = payload
-            .data
-            .attachments
-            .as_ref()
-            .map_or_else(Vec::new, InEditAttachments::get_files);
+        let files = payload.data.attachments();
 
         http.create_interaction_response(interaction_id, interaction_token, &payload, files)
             .await
     }
 
+    /// Invokes [`edit_original_interaction_response`] with the correct
+    /// information for an edit. This works around [`EditInteractionResponse`]
+    /// not supporting message flags.
+    ///
+    /// Hidden because I don't want this in the public API but I do need it in
+    /// `houston_app`.
+    ///
+    /// [`edit_original_interaction_response`]: serenity::http::Http::edit_original_interaction_response
+    #[doc(hidden)]
+    pub async fn execute_as_original_edit(
+        self,
+        http: &serenity::http::Http,
+        interaction_token: &str,
+    ) -> serenity::Result<Message> {
+        // CMBK: remove this function and go back to `into_interaction_edit` and
+        // `edit_response` when interaction edits support flags in serenity
+        let payload = self.into_payload();
+        let files = payload.attachments();
+
+        http.edit_original_interaction_response(interaction_token, &payload, files)
+            .await
+    }
+
     /// Invokes [`edit_followup_message`] with the correct information for an
-    /// edit.
+    /// edit. This works around [`CreateInteractionResponseFollowup`] being used
+    /// for edits but not supporting keeping existing attachments.
     ///
     /// Hidden because I don't want this in the public API but I do need it in
     /// `houston_app`.
@@ -311,26 +360,8 @@ impl EditReply<'_> {
         interaction_token: &str,
         message_id: MessageId,
     ) -> serenity::Result<Message> {
-        let Self {
-            content,
-            embeds,
-            attachments,
-            components,
-            allowed_mentions,
-        } = self;
-
-        let payload = EditData {
-            content,
-            embeds,
-            attachments,
-            components,
-            allowed_mentions,
-        };
-
-        let files = payload
-            .attachments
-            .as_ref()
-            .map_or_else(Vec::new, InEditAttachments::get_files);
+        let payload = self.into_payload();
+        let files = payload.attachments();
 
         http.edit_followup_message(interaction_token, message_id, &payload, files)
             .await

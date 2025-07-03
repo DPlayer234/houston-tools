@@ -68,7 +68,7 @@ impl<'v> View<'v> {
                 None
             };
 
-        create.components(self.with_ship(azur, ship, skin, thumbnail_key))
+        create.components_v2(self.with_ship(azur, ship, skin, thumbnail_key))
     }
 
     fn with_ship<'a>(
