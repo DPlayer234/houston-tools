@@ -113,8 +113,13 @@ impl Filtering<ShipData> for (Filter<'_>, &GameData) {
             azur.augments_by_ship_id(item.group_id).next().is_some() == has_augment
         }
 
+        fn has_hull_type(ship: &ShipData, hull_type: HullType) -> bool {
+            let is_hull_type = move |r: &ShipData| r.hull_type == hull_type;
+            is_hull_type(ship) || ship.retrofits.iter().any(is_hull_type)
+        }
+
         faction.is_none_or(|f| item.faction == f)
-            && hull_type.is_none_or(|h| item.hull_type == h)
+            && hull_type.is_none_or(|h| has_hull_type(item, h))
             && rarity.is_none_or(|r| item.rarity == r)
             && has_augment.is_none_or(|h| match_has_augment(azur, item, h))
     }
