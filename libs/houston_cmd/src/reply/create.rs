@@ -130,12 +130,8 @@ impl<'a> CreateReply<'a> {
             .content(content)
             .embeds(embeds)
             .components(components)
-            .clear_attachments();
-
-        // CMBK: remove when interaction edits support flags
-        if flags != MessageFlags::empty() {
-            log::warn!("`into_interaction_edit` can't have flags for now");
-        }
+            .clear_attachments()
+            .flags(flags);
 
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);

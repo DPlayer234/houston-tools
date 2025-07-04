@@ -56,9 +56,8 @@ impl<'a> ReplyHandle<'a> {
     pub async fn edit(self, reply: EditReply<'_>) -> serenity::Result<Message> {
         match self.target {
             Target::Original => {
-                reply
-                    .execute_as_original_edit(self.http, &self.interaction.token)
-                    .await
+                let reply = reply.into_interaction_edit();
+                self.interaction.edit_response(self.http, reply).await
             },
             Target::Followup(message_id) => {
                 reply

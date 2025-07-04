@@ -120,10 +120,8 @@ impl<'a> EditReply<'a> {
         if let Some(allowed_mentions) = allowed_mentions {
             builder = builder.allowed_mentions(allowed_mentions);
         }
-
-        // CMBK: remove when interaction edits support flags
-        if flags.is_some() {
-            log::warn!("`into_interaction_edit` can't have flags for now");
+        if let Some(flags) = flags {
+            builder = builder.flags(flags);
         }
 
         if let Some(attachments) = attachments {
@@ -319,29 +317,6 @@ impl<'a> EditReply<'a> {
         let files = payload.data.attachments();
 
         http.create_interaction_response(interaction_id, interaction_token, &payload, files)
-            .await
-    }
-
-    /// Invokes [`edit_original_interaction_response`] with the correct
-    /// information for an edit. This works around [`EditInteractionResponse`]
-    /// not supporting message flags.
-    ///
-    /// Hidden because I don't want this in the public API but I do need it in
-    /// `houston_app`.
-    ///
-    /// [`edit_original_interaction_response`]: serenity::http::Http::edit_original_interaction_response
-    #[doc(hidden)]
-    pub async fn execute_as_original_edit(
-        self,
-        http: &serenity::http::Http,
-        interaction_token: &str,
-    ) -> serenity::Result<Message> {
-        // CMBK: remove this function and go back to `into_interaction_edit` and
-        // `edit_response` when interaction edits support flags in serenity
-        let payload = self.into_payload();
-        let files = payload.attachments();
-
-        http.edit_original_interaction_response(interaction_token, &payload, files)
             .await
     }
 

@@ -49,9 +49,8 @@ pub async fn send_reply<'ctx>(
             ReplyHandle::original(ctx)
         },
         DEFER => {
-            EditReply::from(reply)
-                .execute_as_original_edit(ctx.http(), &ctx.interaction.token)
-                .await?;
+            let reply = reply.into_interaction_edit();
+            ctx.interaction.edit_response(ctx.http(), reply).await?;
             ReplyHandle::original(ctx)
         },
         _ => {

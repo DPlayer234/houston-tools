@@ -88,7 +88,9 @@ impl<I: AnyInteraction> AnyContext<'_, I> {
             )
             .await?;
         } else {
-            edit.execute_as_original_edit(&self.serenity.http, self.interaction.token())
+            let reply = edit.into_interaction_edit();
+            self.interaction
+                .edit_response(&self.serenity.http, reply)
                 .await?;
         }
 
@@ -136,7 +138,6 @@ pub trait AnyInteraction {
         response: CreateInteractionResponseFollowup<'_>,
     ) -> serenity::Result<Message>;
 
-    #[expect(dead_code, reason = "to be used again when webhook edits have flags")]
     async fn edit_response(
         &self,
         http: &Http,
