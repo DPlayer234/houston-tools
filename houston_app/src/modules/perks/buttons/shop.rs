@@ -354,8 +354,9 @@ impl View {
             .await?;
 
         let owned = wallet.item(item);
+        let before = owned.saturating_sub(amount);
         let args = Args::new(ctx, guild_id, user_id);
-        item.on_buy(args, owned).await?;
+        item.on_buy(args, before, owned).await?;
 
         self.action = Action::ViewItem(item);
         self.view_item(ctx, guild_id, user_id, item).await

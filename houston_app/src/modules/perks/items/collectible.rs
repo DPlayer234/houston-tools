@@ -8,7 +8,7 @@ use crate::fmt::replace_holes;
 pub struct Collectible;
 
 impl Shape for Collectible {
-    async fn on_buy(&self, args: Args<'_>, owned: i64) -> Result {
+    async fn on_buy(&self, args: Args<'_>, from: i64, to: i64) -> Result {
         let config = args
             .ctx
             .data_ref::<HContextData>()
@@ -19,11 +19,11 @@ impl Shape for Collectible {
             .context("expected collectible config")?;
 
         if let Some(guild_config) = config.guilds.get(&args.guild_id) {
-            let start = owned - i64::from(config.price.amount) + 1;
+            let range = (from + 1)..=to;
             let roles = guild_config
                 .prize_roles
                 .iter()
-                .filter(|e| (start..=owned).contains(&i64::from(e.0)));
+                .filter(|e| range.contains(&i64::from(e.0)));
 
             for &(need, role) in roles {
                 args.ctx

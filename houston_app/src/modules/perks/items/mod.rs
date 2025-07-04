@@ -15,9 +15,8 @@ pub enum Item {
 }
 
 trait Shape {
-    async fn on_buy(&self, args: Args<'_>, owned: i64) -> Result {
-        _ = args;
-        _ = owned;
+    async fn on_buy(&self, args: Args<'_>, from: i64, to: i64) -> Result {
+        _ = (args, from, to);
         Ok(())
     }
 }
@@ -40,7 +39,7 @@ macro_rules! impl_kind_fn {
 }
 
 impl Item {
-    impl_kind_fn!(on_buy(args: Args<'_>, owned: i64) -> Result);
+    impl_kind_fn!(on_buy(args: Args<'_>, from: i64, to: i64) -> Result);
 
     pub fn all() -> &'static [Self] {
         &[Self::Cash, Self::Pushpin, Self::RoleEdit, Self::Collectible]
