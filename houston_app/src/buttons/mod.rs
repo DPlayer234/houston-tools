@@ -26,6 +26,7 @@ pub mod prelude {
 
     pub(crate) use super::button_value;
     pub use super::{ButtonContext, ButtonReply, ButtonValue, ModalContext, Nav};
+    pub use crate::helper::discord::components::*;
     pub use crate::prelude::*;
 }
 

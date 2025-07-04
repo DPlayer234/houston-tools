@@ -3,7 +3,6 @@ use mongodb::options::ReturnDocument;
 
 use crate::buttons::ButtonValue as _;
 use crate::helper::contains_ignore_ascii_case;
-use crate::helper::discord::components::components_array;
 use crate::modules::perks::DayOfYear;
 use crate::modules::perks::config::{BirthdayConfig, BirthdayRegionConfig};
 use crate::modules::perks::model::*;

@@ -3,7 +3,6 @@ use azur_lane::ship::*;
 
 use super::search::{Filtered, Filtering, PAGE_SIZE};
 use crate::buttons::prelude::*;
-use crate::helper::discord::components::{CreateComponents, components, section_components};
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 

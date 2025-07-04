@@ -2,7 +2,6 @@ use azur_lane::secretary::*;
 
 use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
-use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
 

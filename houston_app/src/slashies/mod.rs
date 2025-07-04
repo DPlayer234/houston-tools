@@ -13,6 +13,7 @@ pub mod prelude {
 
     pub use super::args::*;
     pub use super::{ContextExt as _, SlashUserExt as _, create_reply};
+    pub use crate::helper::discord::components::*;
     pub use crate::prelude::*;
 }
 

@@ -1,6 +1,5 @@
 use rand::prelude::*;
 
-use crate::helper::discord::components::components_array;
 use crate::slashies::prelude::*;
 
 /// Flips a coin.

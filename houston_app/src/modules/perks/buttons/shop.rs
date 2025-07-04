@@ -7,7 +7,6 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::fmt::time::HumanDuration;
-use crate::helper::discord::components::{CreateComponents, components, section_components};
 use crate::modules::perks::config::{Config, ItemPrice};
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;

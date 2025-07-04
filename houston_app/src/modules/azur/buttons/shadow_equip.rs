@@ -6,7 +6,6 @@ use super::AzurParseError;
 use super::ship::View as ShipView;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::helper::discord::components::{CreateComponents, components};
 
 /// View a ship's shadow equip.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

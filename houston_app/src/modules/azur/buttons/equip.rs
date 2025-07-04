@@ -5,7 +5,6 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components::{CreateComponents, components};
 
 /// Views an augment.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

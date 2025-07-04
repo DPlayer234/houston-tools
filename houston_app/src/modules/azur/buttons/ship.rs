@@ -8,9 +8,6 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::helper::discord::components::{
-    CreateComponents, IntoComponent as _, components, section_components,
-};
 use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;

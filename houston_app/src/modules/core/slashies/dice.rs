@@ -6,7 +6,6 @@ use rand::prelude::*;
 use smallvec::SmallVec;
 use utils::text::WriteStr as _;
 
-use crate::helper::discord::components::components_array;
 use crate::slashies::prelude::*;
 
 /// Rolls some dice.

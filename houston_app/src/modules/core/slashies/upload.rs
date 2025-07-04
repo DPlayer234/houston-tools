@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::helper::discord::components::components_array;
 use crate::slashies::prelude::*;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged

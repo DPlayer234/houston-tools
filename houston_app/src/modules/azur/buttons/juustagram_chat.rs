@@ -6,7 +6,6 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
-use crate::helper::discord::components::{CreateComponents, components};
 use crate::modules::azur::{GameData, LoadedConfig};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
