@@ -138,7 +138,7 @@ async fn perks_collectible_info(
     let data = ctx.data_ref();
     let perks = data.config().perks()?;
 
-    let Some(collectible) = perks.collectible.as_ref() else {
+    let Some(collectible) = &perks.collectible else {
         return Ok(None);
     };
 

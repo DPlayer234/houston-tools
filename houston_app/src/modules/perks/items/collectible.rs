@@ -1,3 +1,4 @@
+use std::ops::{Bound, RangeBounds as _};
 use std::slice;
 
 use utils::text::WriteStr as _;
@@ -16,14 +17,14 @@ impl Shape for Collectible {
             .perks()?
             .collectible
             .as_ref()
-            .context("expected collectible config")?;
+            .context("perks.collectible must be enabled")?;
 
         if let Some(guild_config) = config.guilds.get(&args.guild_id) {
-            let range = (from + 1)..=to;
+            let range = (Bound::Excluded(from), Bound::Included(to));
             let roles = guild_config
                 .prize_roles
                 .iter()
-                .filter(|e| range.contains(&i64::from(e.0)));
+                .filter(move |e| range.contains(&i64::from(e.0)));
 
             for &(need, role) in roles {
                 args.ctx
