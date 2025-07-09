@@ -369,7 +369,7 @@ define_data_enum! {
 
         Vanguard("Vanguard"),
         MainFleet("Main Fleet"),
-        Submarine("Submarine")
+        Submarine("Submarine Fleet")
     }
 }
 

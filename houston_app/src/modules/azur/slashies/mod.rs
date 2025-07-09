@@ -9,7 +9,7 @@ mod autocomplete;
 mod choices;
 mod find;
 
-use choices::{Ch, EAugmentRarity, EEquipRarity, EShipRarity};
+use choices::{Ch, EAugmentRarity, EEquipRarity, EShipRarity, HullOrTeam};
 
 /// Information about mobile game Azur Lane.
 #[chat_command(
@@ -183,8 +183,8 @@ pub mod azur {
             faction: Option<Ch<Faction>>,
             /// The hull type to select.
             #[name = "hull-type"]
-            #[autocomplete = "choices::hull_type"]
-            hull_type: Option<Ch<HullType>>,
+            #[autocomplete = "choices::hull_or_team_type"]
+            hull_type: Option<HullOrTeam>,
             /// The rarity to select.
             rarity: Option<EShipRarity>,
             /// Whether the ships have a unique augment.
@@ -200,7 +200,8 @@ pub mod azur {
             let filter = Filter {
                 name,
                 faction: faction.map(Ch::into_inner),
-                hull_type: hull_type.map(Ch::into_inner),
+                hull_type: hull_type.and_then(HullOrTeam::hull_type),
+                team_type: hull_type.and_then(HullOrTeam::team_type),
                 rarity: rarity.map(EShipRarity::convert),
                 has_augment,
             };

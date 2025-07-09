@@ -18,6 +18,7 @@ pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub faction: Option<Faction>,
     pub hull_type: Option<HullType>,
+    pub team_type: Option<TeamType>,
     pub rarity: Option<ShipRarity>,
     pub has_augment: Option<bool>,
 }
@@ -101,11 +102,12 @@ impl Filtering<ShipData> for (Filter<'_>, &GameData) {
     fn is_match(&self, item: &ShipData) -> bool {
         let (filter, azur) = *self;
         let Filter {
+            name: _,
             faction,
-            rarity,
             hull_type,
+            team_type,
+            rarity,
             has_augment,
-            ..
         } = filter;
 
         fn match_has_augment(azur: &GameData, item: &ShipData, has_augment: bool) -> bool {
@@ -117,8 +119,14 @@ impl Filtering<ShipData> for (Filter<'_>, &GameData) {
             is_hull_type(ship) || ship.retrofits.iter().any(is_hull_type)
         }
 
+        fn has_team_type(ship: &ShipData, team_type: TeamType) -> bool {
+            let is_team = move |r: &ShipData| r.hull_type.team_type() == team_type;
+            is_team(ship) || ship.retrofits.iter().any(is_team)
+        }
+
         faction.is_none_or(|f| item.faction == f)
             && hull_type.is_none_or(|h| has_hull_type(item, h))
+            && team_type.is_none_or(|t| has_team_type(item, t))
             && rarity.is_none_or(|r| item.rarity == r)
             && has_augment.is_none_or(|h| match_has_augment(azur, item, h))
     }
