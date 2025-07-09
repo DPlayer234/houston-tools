@@ -47,7 +47,7 @@ pub async fn bot_stats(ctx: Context<'_>) -> Result {
 
     if crate::modules::azur::Module.enabled(config) {
         let azur = config.azur_raw()?;
-        let load_label = if azur.loaded() { "loaded" } else { "unloaded" };
+        let load_label = azur.load_state();
         writeln!(modules, "**azur:** {load_label}");
     }
 

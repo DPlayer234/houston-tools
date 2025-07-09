@@ -41,9 +41,13 @@ impl Config {
         LoadedConfig::new(self)
     }
 
-    /// Whether the game data has been loaded before.
-    pub fn loaded(&self) -> bool {
-        matches!(self.game_data.get(), Some(Some(_)))
+    /// Gets a string describing the load state of the data.
+    pub fn load_state(&self) -> &'static str {
+        match self.game_data.get() {
+            None => "pending",
+            Some(None) => "failed",
+            Some(Some(_)) => "loaded",
+        }
     }
 
     /// Gets or loads the game data.
@@ -189,6 +193,8 @@ impl<'a> LoadedConfig<'a> {
 
     /// Gets a reference to the game data.
     pub fn game_data(self) -> &'a GameData {
+        // `Acquire` load not optimized away but may be necessary for other threads to
+        // see the correct value anyways. don't use `get_unchecked` if stabilized.
         match self.raw.game_data.get() {
             Some(Some(data)) => data,
             // SAFETY: `new` ensures that the game data is already loaded and not `None`
