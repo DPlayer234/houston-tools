@@ -1,14 +1,8 @@
 use darling::util::{Flag, PathList};
 use syn::{Generics, Ident, Path};
 
-#[derive(Debug, darling::FromMeta)]
-#[darling(allow_unknown_fields)]
-pub struct FieldMeta {
-    #[darling(multiple)]
-    pub serde: Vec<FieldSerdeMeta>,
-}
-
-#[derive(Default, Debug, darling::FromMeta)]
+#[derive(Default, Debug, darling::FromAttributes)]
+#[darling(attributes(serde))]
 #[darling(allow_unknown_fields)]
 pub struct FieldSerdeMeta {
     pub rename: Option<Ident>,
@@ -38,24 +32,6 @@ impl FieldSerdeMeta {
 
     pub fn has_skip(&self) -> bool {
         self.skip.is_present() || self.skip_serializing.is_present()
-    }
-
-    pub fn merge(many: Vec<Self>) -> Self {
-        let mut iter = many.into_iter();
-        let mut result = iter.next().unwrap_or_default();
-        for next in iter {
-            result.rename = result.rename.or(next.rename);
-            result.with = result.with.or(next.with);
-            result.serialize_with = result.serialize_with.or(next.serialize_with);
-
-            if !result.skip.is_present() {
-                result.skip = next.skip;
-            }
-            if !result.skip_serializing.is_present() {
-                result.skip_serializing = next.skip_serializing;
-            }
-        }
-        result
     }
 }
 

@@ -1,10 +1,9 @@
-use darling::ast::NestedMeta;
-use darling::{FromDeriveInput as _, FromMeta as _};
+use darling::{FromAttributes as _, FromDeriveInput as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use syn::{Data, Fields};
 
-use crate::args::{FieldArgs, FieldMeta, FieldSerdeMeta, ModelArgs, ModelMeta};
+use crate::args::{FieldArgs, FieldSerdeMeta, ModelArgs, ModelMeta};
 
 pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let model_meta = ModelMeta::from_derive_input(&input)?;
@@ -26,13 +25,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let mut parsed_fields = Vec::new();
 
     for field in &mut fields.named {
-        let args: Vec<_> = field
-            .attrs
-            .drain(..)
-            .map(|attr| NestedMeta::Meta(attr.meta))
-            .collect();
-        let args = FieldMeta::from_list(&args)?;
-        let args = FieldSerdeMeta::merge(args.serde);
+        let args = FieldSerdeMeta::from_attributes(&field.attrs)?;
 
         // exclude non-serialized fields from the output
         if args.has_skip() {
