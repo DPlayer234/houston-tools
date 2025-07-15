@@ -69,11 +69,11 @@ pub fn to_command_option_command(
         });
 
     Ok(quote::quote_spanned! {func.sig.output.span()=>
-        #crate_::model::CommandOption {
-            name: ::std::borrow::Cow::Borrowed(#name),
-            description: ::std::borrow::Cow::Borrowed(#description),
-            data: #crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData {
-                invoke: {
+        #crate_::model::CommandOption::builder()
+            .name(::std::borrow::Cow::Borrowed(#name))
+            .description(::std::borrow::Cow::Borrowed(#description))
+            .data(#crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData::builder()
+                .invoke({
                     #func
 
                     #crate_::model::Invoke::ChatInput(|ctx| ::std::boxed::Box::pin(async move {
@@ -84,12 +84,13 @@ pub fn to_command_option_command(
                             ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }
                     }))
-                },
-                parameters: ::std::borrow::Cow::Borrowed(&[
+                })
+                .parameters(::std::borrow::Cow::Borrowed(const { &[
                     #(#param_data),*
-                ]),
-            }),
-        }
+                ] }))
+                .build()
+            ))
+            .build()
     })
 }
 
@@ -163,10 +164,10 @@ fn to_command_parameter(p: &Parameter, args: &CommonArgs) -> TokenStream {
 
     let CommonArgs { crate_ } = args;
     quote::quote! {
-        #crate_::create_slash_argument!((
-            name: ::std::borrow::Cow::Borrowed(#name),
-            description: ::std::borrow::Cow::Borrowed(#description),
-            autocomplete: #autocomplete
-        ), #ty, #setter)
+        #crate_::create_slash_argument!(#ty, #setter)
+            .name(::std::borrow::Cow::Borrowed(#name))
+            .description(::std::borrow::Cow::Borrowed(#description))
+            .autocomplete(#autocomplete)
+            .build()
     }
 }

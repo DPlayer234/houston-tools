@@ -476,6 +476,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
+name = "const-builder"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a828f483404036469687a76724a7094f68577eb50333ce7e553d1bad67928a0d"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "const-random"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1116,9 +1128,10 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
+ "const-builder",
  "houston_cmd_macros",
  "log",
  "serde",

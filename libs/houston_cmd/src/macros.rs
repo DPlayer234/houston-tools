@@ -14,14 +14,11 @@ macro_rules! parse_slash_argument {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! create_slash_argument {
-    (($($body:tt)*), $ty:ty, $($setter:tt)*) => {
-        $crate::model::Parameter {
-            $($body)*,
-            required: <$ty as $crate::private::SlashArgOption<'_>>::REQUIRED,
-            choices: <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::choices,
-            #[allow(unnecessary_cast)]
-            type_setter: |c| <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::set_options(c) $($setter)*,
-        }
+    ($ty:ty, $($setter:tt)*) => {
+        $crate::model::Parameter::builder()
+            .required(<$ty as $crate::private::SlashArgOption<'_>>::REQUIRED)
+            .choices(<<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::choices)
+            .type_setter(#[allow(unnecessary_cast)] |c| <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::set_options(c) $($setter)*)
     };
 }
 

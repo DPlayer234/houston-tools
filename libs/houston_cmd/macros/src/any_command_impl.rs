@@ -54,13 +54,13 @@ pub fn to_command_shared(
         #warning
         #vis const fn #ident() -> #crate_::model::Command {
             const {
-                #crate_::model::Command {
-                    contexts: #contexts,
-                    integration_types: #integration_types,
-                    default_member_permissions: #permissions,
-                    nsfw: #nsfw,
-                    data: #command_option,
-                }
+                #crate_::model::Command::builder()
+                    .contexts(#contexts)
+                    .integration_types(#integration_types)
+                    .default_member_permissions(#permissions)
+                    .nsfw(#nsfw)
+                    .data(#command_option)
+                    .build()
             }
         }
     })

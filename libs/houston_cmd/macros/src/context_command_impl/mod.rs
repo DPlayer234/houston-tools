@@ -79,11 +79,10 @@ fn to_command_option_command(
     let arg_ty = &arg.ty;
 
     Ok(quote::quote_spanned! {func.sig.output.span()=>
-        #crate_::model::CommandOption {
-            name: ::std::borrow::Cow::Borrowed(#name),
-            description: ::std::borrow::Cow::Borrowed(""),
-            data: #crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData {
-                invoke: {
+        #crate_::model::CommandOption::builder()
+            .name(::std::borrow::Cow::Borrowed(#name))
+            .data(#crate_::model::CommandOptionData::Command(#crate_::model::SubCommandData::builder()
+                .invoke({
                     #func
 
                     #crate_::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
@@ -94,9 +93,9 @@ fn to_command_option_command(
                             ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }
                     }))
-                },
-                parameters: ::std::borrow::Cow::Borrowed(&[]),
-            }),
-        }
+                })
+                .build()
+            ))
+            .build()
     })
 }

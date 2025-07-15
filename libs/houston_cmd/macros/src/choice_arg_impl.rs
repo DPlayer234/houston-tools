@@ -54,13 +54,13 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
         #[automatically_derived]
         impl #crate_::ChoiceArg for #enum_ident {
             fn list() -> ::std::borrow::Cow<'static, [#crate_::model::Choice]> {
-                ::std::borrow::Cow::Borrowed(&[
+                ::std::borrow::Cow::Borrowed(const { &[
                     #(
-                        #crate_::model::Choice {
-                            name: ::std::borrow::Cow::Borrowed(#names)
-                        },
+                        #crate_::model::Choice::builder()
+                            .name(::std::borrow::Cow::Borrowed(#names))
+                            .build(),
                     )*
-                ])
+                ] })
             }
 
             fn from_index(index: usize) -> Option<Self> {

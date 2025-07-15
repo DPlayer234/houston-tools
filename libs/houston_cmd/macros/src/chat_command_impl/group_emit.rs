@@ -88,17 +88,18 @@ pub fn to_command_option_group(
         #(#warnings)*
         #(#other_items)*
 
-        #crate_::model::CommandOption {
-            name: ::std::borrow::Cow::Borrowed(#name),
-            description: ::std::borrow::Cow::Borrowed(#description),
-            data: #crate_::model::CommandOptionData::Group(#crate_::model::GroupData {
+        #crate_::model::CommandOption::builder()
+            .name(::std::borrow::Cow::Borrowed(#name))
+            .description(::std::borrow::Cow::Borrowed(#description))
+            .data(#crate_::model::CommandOptionData::Group(#crate_::model::GroupData::builder()
                 // this const-block is necessary to satisfy the compiler when the list
                 // involves function calls in place of a sub-command struct literal
-                sub_commands: ::std::borrow::Cow::Borrowed(const { &[
+                .sub_commands(::std::borrow::Cow::Borrowed(const { &[
                     #(#sub_commands),*
-                ] }),
-            }),
-        }
+                ] }))
+                .build()
+            ))
+            .build()
     }})
 }
 
