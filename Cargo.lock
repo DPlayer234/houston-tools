@@ -1141,7 +1141,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd_macros"
-version = "1.2.0"
+version = "2.0.0"
 dependencies = [
  "darling",
  "proc-macro2",
