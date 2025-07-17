@@ -42,19 +42,19 @@ pub type AutocompleteFn =
 #[non_exhaustive]
 pub struct Command {
     /// The interaction contexts the command is available in.
-    #[builder(default = "None")]
+    #[builder(default = None)]
     pub contexts: Option<Cow<'static, [InteractionContext]>>,
     /// The installation contexts the command is available from.
-    #[builder(default = "None")]
+    #[builder(default = None)]
     pub integration_types: Option<Cow<'static, [InstallationContext]>>,
     /// The default set of permissions required for the command.
     ///
     /// Servers can edit these permissions individually for users/roles/channels
     /// in the server integration tab.
-    #[builder(default = "None")]
+    #[builder(default = None)]
     pub default_member_permissions: Option<Permissions>,
     /// Whether the command is only available in nsfw channels.
-    #[builder(default = "false")]
+    #[builder(default = false)]
     pub nsfw: bool,
     /// The root command option.
     pub data: CommandOption,
@@ -70,7 +70,7 @@ pub struct CommandOption {
     ///
     /// Required for chat-input commands, must be empty for context menu
     /// commands.
-    #[builder(default = "Cow::Borrowed(\"\")")]
+    #[builder(default = Cow::Borrowed(""))]
     pub description: Cow<'static, str>,
     /// The data for the command or group.
     pub data: CommandOptionData,
@@ -108,7 +108,7 @@ pub struct SubCommandData {
     /// The chat-input command parameters.
     ///
     /// Must be empty for context menu commands.
-    #[builder(default = "Cow::Borrowed(&[])")]
+    #[builder(default = Cow::Borrowed(&[]))]
     pub parameters: Cow<'static, [Parameter]>,
 }
 
@@ -137,7 +137,7 @@ pub struct Parameter {
     /// The autocomplete suggestion logic for this parameter.
     ///
     /// This is [`None`] if this parameter isn't autocompletable.
-    #[builder(default = "None")]
+    #[builder(default = None)]
     pub autocomplete: Option<AutocompleteFn>,
     /// A function pointer that returns the possible choices.
     ///
@@ -152,7 +152,7 @@ pub struct Parameter {
     // this is a function pointer to allow filling this field from a trait in a const-context. while
     // a bit awkward as an api, this does also mean it's possible to lazily generate these choices
     // as needed.
-    #[builder(default = "|| Cow::Borrowed(&[])")]
+    #[builder(default = Cow::default)]
     pub choices: fn() -> Cow<'static, [Choice]>,
     /// A function pointer that sets required type information for the command
     /// option.
