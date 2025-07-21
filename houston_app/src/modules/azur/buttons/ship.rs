@@ -13,42 +13,29 @@ use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
 
 /// View general ship details.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     pub ship_id: u32,
+    #[builder(default = 120)]
     pub level: u8,
+    #[builder(default = ViewAffinity::Love)]
     pub affinity: ViewAffinity,
+    #[builder(default = None)]
     pub retrofit: Option<u8>,
     #[serde(borrow)]
+    #[builder(default = None, setter(strip_option))]
     pub back: Option<Nav<'v>>,
 }
 
 /// The affinity used to calculate stat values.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ViewAffinity {
     Neutral,
     Love,
     Oath,
 }
 
-impl<'v> View<'v> {
-    /// Creates a new instance.
-    pub fn new(ship_id: u32) -> Self {
-        Self {
-            ship_id,
-            level: 120,
-            affinity: ViewAffinity::Love,
-            retrofit: None,
-            back: None,
-        }
-    }
-
-    /// Sets the back button target.
-    pub fn back(mut self, back: Nav<'v>) -> Self {
-        self.back = Some(back);
-        self
-    }
-
+impl View<'_> {
     /// Modifies the create-reply with preresolved ship data.
     pub fn create_with_ship<'a>(
         self,
@@ -137,7 +124,11 @@ impl<'v> View<'v> {
         azur: LoadedConfig<'a>,
         base_ship: &'a ShipData,
     ) -> CreateComponent<'a> {
-        let view_lines = super::lines::View::with_back(self.ship_id, self.to_nav());
+        let view_lines = super::lines::View::builder()
+            .ship_id(self.ship_id)
+            .back(self.to_nav())
+            .build();
+
         let lines_button = CreateButton::new(view_lines.to_custom_id())
             .label("Lines")
             .style(ButtonStyle::Secondary);
@@ -402,10 +393,13 @@ impl<'v> View<'v> {
             }
 
             let button = {
-                use super::skill::{ShipViewSource, View};
+                use super::skill::View;
 
-                let source = ShipViewSource::new(self.ship_id, self.retrofit).into();
-                let view_skill = View::with_back(source, self.to_nav());
+                let view_skill = View::builder()
+                    .ship_source(self.ship_id, self.retrofit)
+                    .back(self.to_nav())
+                    .build();
+
                 CreateButton::new(view_skill.to_custom_id())
                     .label("Info")
                     .style(ButtonStyle::Secondary)

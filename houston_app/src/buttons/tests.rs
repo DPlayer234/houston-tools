@@ -45,23 +45,32 @@ to_custom_id_consistency!(
 
 to_custom_id_consistency!(
     check_azur_ship,
-    crate::modules::azur::buttons::ship::View::new(9999)
+    crate::modules::azur::buttons::ship::View::builder()
+        .ship_id(9999)
+        .build()
 );
 to_custom_id_consistency!(
     check_azur_augment,
-    crate::modules::azur::buttons::augment::View::new(9999)
+    crate::modules::azur::buttons::augment::View::builder()
+        .augment_id(9999)
+        .build()
 );
 to_custom_id_consistency!(check_azur_skill, {
     use crate::modules::azur::buttons::skill::*;
-    View::with_back(ViewSource::Augment(1), TEST_NAV)
+    View::builder().augment_source(1).back(TEST_NAV).build()
 });
 to_custom_id_consistency!(
     check_azur_lines,
-    crate::modules::azur::buttons::lines::View::with_back(9999, TEST_NAV)
+    crate::modules::azur::buttons::lines::View::builder()
+        .ship_id(9999)
+        .back(TEST_NAV)
+        .build()
 );
 to_custom_id_consistency!(
     check_azur_equip,
-    crate::modules::azur::buttons::equip::View::new(9999)
+    crate::modules::azur::buttons::equip::View::builder()
+        .equip_id(9999)
+        .build()
 );
 
 to_custom_id_consistency!(
@@ -71,7 +80,10 @@ to_custom_id_consistency!(
 
 #[test]
 fn eq_direct_to_custom_id() {
-    let view = crate::modules::azur::buttons::ship::View::new(9999);
+    let view = crate::modules::azur::buttons::ship::View::builder()
+        .ship_id(9999)
+        .build();
+
     assert_eq!(view.to_custom_id(), view.to_nav().to_custom_id());
 }
 

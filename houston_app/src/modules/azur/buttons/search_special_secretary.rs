@@ -5,14 +5,14 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::GameData;
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     page: u16,
     #[serde(borrow)]
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
 }
@@ -34,7 +34,11 @@ impl<'v> View<'v> {
         components.push(CreateSeparator::new(true));
 
         for secretary in page_iter {
-            let view_chat = super::special_secretary::View::new(secretary.id).back(self.to_nav());
+            let view_chat = super::special_secretary::View::builder()
+                .secretary_id(secretary.id)
+                .back(self.to_nav())
+                .build();
+
             let button = CreateButton::new(view_chat.to_custom_id())
                 .label(&secretary.name)
                 .style(ButtonStyle::Secondary);

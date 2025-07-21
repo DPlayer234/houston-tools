@@ -6,13 +6,13 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View {
     page: u16,
     filter: Filter,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Filter {
     pub ship: Option<u32>,
 }
@@ -40,7 +40,11 @@ impl View {
                 None => Cow::Borrowed(chat.name.as_str()),
             };
 
-            let view_chat = super::juustagram_chat::View::new(chat.chat_id).back(self.to_nav());
+            let view_chat = super::juustagram_chat::View::builder()
+                .chat_id(chat.chat_id)
+                .back(self.to_nav())
+                .build();
+
             let button = CreateButton::new(view_chat.to_custom_id())
                 .label(truncate(label, 80))
                 .style(ButtonStyle::Secondary);

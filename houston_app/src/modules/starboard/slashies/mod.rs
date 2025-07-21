@@ -20,7 +20,7 @@ pub mod starboard {
         use super::buttons::top::View;
 
         let (guild, board) = find_board(ctx, board)?;
-        let view = View::new(guild, board);
+        let view = View::builder().guild(guild).board(board).build();
 
         ctx.defer_as(ephemeral).await?;
         ctx.send(view.create_reply(ctx.data_ref()).await?).await?;
@@ -44,7 +44,11 @@ pub mod starboard {
         use super::buttons::top_posts::View;
 
         let (guild, board) = find_board(ctx, board)?;
-        let view = View::new(guild, board, by_user.map(|u| u.id));
+        let view = View::builder()
+            .guild(guild)
+            .board(board)
+            .by_user(by_user.map(|u| u.id))
+            .build();
 
         ctx.defer_as(ephemeral).await?;
         ctx.send(view.create_reply(ctx.data_ref()).await?).await?;

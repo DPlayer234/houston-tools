@@ -6,14 +6,14 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     page: u16,
     #[serde(borrow)]
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub hull_type: Option<HullType>,
@@ -45,7 +45,11 @@ impl<'v> View<'v> {
         components.push(CreateSeparator::new(true));
 
         for augment in page_iter {
-            let view = super::augment::View::new(augment.augment_id).back(self.to_nav());
+            let view = super::augment::View::builder()
+                .augment_id(augment.augment_id)
+                .back(self.to_nav())
+                .build();
+
             let button = CreateButton::new(view.to_custom_id())
                 .label(&augment.name)
                 .style(ButtonStyle::Secondary);

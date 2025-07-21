@@ -31,7 +31,10 @@ pub mod azur {
         let azur = data.config().azur()?;
         let ship = find::ship(azur.game_data(), name)?;
 
-        let view = buttons::ship::View::new(ship.group_id);
+        let view = buttons::ship::View::builder()
+            .ship_id(ship.group_id)
+            .build();
+
         ctx.send(
             view.create_with_ship(data, azur, ship, None)
                 .ephemeral(ephemeral.into_ephemeral()),
@@ -54,7 +57,10 @@ pub mod azur {
         let azur = data.config().azur()?;
         let equip = find::equip(azur.game_data(), name)?;
 
-        let view = buttons::equip::View::new(equip.equip_id);
+        let view = buttons::equip::View::builder()
+            .equip_id(equip.equip_id)
+            .build();
+
         ctx.send(
             view.create_with_equip(equip)
                 .ephemeral(ephemeral.into_ephemeral()),
@@ -77,7 +83,10 @@ pub mod azur {
         let azur = data.config().azur()?;
         let augment = find::augment(azur.game_data(), name)?;
 
-        let view = buttons::augment::View::new(augment.augment_id);
+        let view = buttons::augment::View::builder()
+            .augment_id(augment.augment_id)
+            .build();
+
         ctx.send(
             view.create_with_augment(azur, augment)
                 .ephemeral(ephemeral.into_ephemeral()),
@@ -100,7 +109,10 @@ pub mod azur {
         let azur = data.config().azur()?;
         let secretary = find::special_secretary(azur.game_data(), name)?;
 
-        let view = buttons::special_secretary::View::new(secretary.id);
+        let view = buttons::special_secretary::View::builder()
+            .secretary_id(secretary.id)
+            .build();
+
         ctx.send(
             view.create_with_sectary(data, secretary)
                 .ephemeral(ephemeral.into_ephemeral()),
@@ -124,14 +136,13 @@ pub mod azur {
         let data = ctx.data_ref();
         let azur = data.config().azur()?;
 
-        let filter = Filter {
+        let view = View::new(Filter {
             ship: match ship {
                 Some(ship) => Some(find::ship(azur.game_data(), ship)?.group_id),
                 None => None,
             },
-        };
+        });
 
-        let view = View::new(filter);
         ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
             .await?;
 
@@ -234,14 +245,13 @@ pub mod azur {
 
             let data = ctx.data_ref();
 
-            let filter = Filter {
+            let view = View::new(Filter {
                 name,
                 faction: faction.map(Ch::into_inner),
                 kind: kind.map(Ch::into_inner),
                 rarity: rarity.map(EEquipRarity::convert),
-            };
+            });
 
-            let view = View::new(filter);
             ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
                 .await?;
 
@@ -277,14 +287,13 @@ pub mod azur {
                 None => None,
             };
 
-            let filter = Filter {
+            let view = View::new(Filter {
                 name,
                 hull_type: hull_type.map(Ch::into_inner),
                 rarity: rarity.map(EAugmentRarity::convert),
                 unique_ship_id,
-            };
+            });
 
-            let view = View::new(filter);
             ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
                 .await?;
 
@@ -304,9 +313,8 @@ pub mod azur {
 
             let data = ctx.data_ref();
 
-            let filter = Filter { name };
+            let view = View::new(Filter { name });
 
-            let view = View::new(filter);
             ctx.send(view.create(data)?.ephemeral(ephemeral.into_ephemeral()))
                 .await?;
 

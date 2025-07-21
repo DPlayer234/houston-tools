@@ -7,14 +7,14 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     page: u16,
     #[serde(borrow)]
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub faction: Option<Faction>,
@@ -54,7 +54,11 @@ impl<'v> View<'v> {
                 equip.kind.name(),
             );
 
-            let view = super::equip::View::new(equip.equip_id).back(self.to_nav());
+            let view = super::equip::View::builder()
+                .equip_id(equip.equip_id)
+                .back(self.to_nav())
+                .build();
+
             let button = CreateButton::new(view.to_custom_id())
                 .label(truncate(label, 80))
                 .style(ButtonStyle::Secondary);

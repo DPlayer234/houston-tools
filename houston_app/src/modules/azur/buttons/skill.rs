@@ -9,53 +9,44 @@ use crate::config::emoji;
 use crate::modules::azur::LoadedConfig;
 
 /// View skill details of a ship or augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     pub source: ViewSource,
+    #[builder(default = None)]
     pub skill_index: Option<u8>,
     #[serde(borrow)]
     pub back: Nav<'v>,
     // this should honestly be in `ShipViewSource` but that's a pain
+    #[builder(default = None, vis = "pub(self)")]
     augment_index: Option<u8>,
 }
 
 /// Where to load the skills from.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ViewSource {
     Ship(ShipViewSource),
     Augment(u32),
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipViewSource {
     pub ship_id: u32,
     pub retrofit: Option<u8>,
 }
 
-impl ShipViewSource {
-    pub fn new(ship_id: u32, retrofit: Option<u8>) -> Self {
-        Self { ship_id, retrofit }
+impl<'v> ViewBuilder<'v, false> {
+    /// Sets the [`View::source`] field.
+    pub const fn ship_source(self, ship_id: u32, retrofit: Option<u8>) -> ViewBuilder<'v, true> {
+        self.source(ViewSource::Ship(ShipViewSource { ship_id, retrofit }))
+    }
+
+    /// Sets the [`View::source`] field.
+    pub const fn augment_source(self, augment_id: u32) -> ViewBuilder<'v, true> {
+        self.source(ViewSource::Augment(augment_id))
     }
 }
 
-impl From<ShipViewSource> for ViewSource {
-    fn from(value: ShipViewSource) -> Self {
-        Self::Ship(value)
-    }
-}
-
-impl<'v> View<'v> {
-    /// Creates a new instance including a button to go back with some custom
-    /// ID.
-    pub fn with_back(source: ViewSource, back: Nav<'v>) -> Self {
-        Self {
-            source,
-            skill_index: None,
-            back,
-            augment_index: None,
-        }
-    }
-
+impl View<'_> {
     /// Modifies the create-reply with a preresolved list of skills and a base
     /// embed.
     fn edit_with_skills<'a>(

@@ -8,23 +8,16 @@ use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 
 // View the leaderboards.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View {
     #[serde(with = "id_as_u64")]
     pub guild: GuildId,
     pub board: BoardId,
+    #[builder(default = 0)]
     pub page: u16,
 }
 
 impl View {
-    pub fn new(guild: GuildId, board: BoardId) -> Self {
-        Self {
-            guild,
-            board,
-            page: 0,
-        }
-    }
-
     pub async fn create_reply<'new>(mut self, data: &HBotData) -> Result<CreateReply<'new>> {
         const PAGE_SIZE: u32 = 15;
         const MAX_PAGE: u16 = 50;

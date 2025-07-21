@@ -6,16 +6,18 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 
 /// Views ship lines.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     pub secretary_id: u32,
+    #[builder(default = ViewPart::Main1)]
     pub part: ViewPart,
     #[serde(borrow)]
+    #[builder(default = None, setter(strip_option))]
     back: Option<Nav<'v>>,
 }
 
 /// Which part of the lines to display.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ViewPart {
     Main1,
     Main2,
@@ -24,21 +26,7 @@ pub enum ViewPart {
     Chime2,
 }
 
-impl<'v> View<'v> {
-    /// Creates a new instance.
-    pub fn new(secretary_id: u32) -> Self {
-        Self {
-            secretary_id,
-            part: ViewPart::Main1,
-            back: None,
-        }
-    }
-
-    pub fn back(mut self, back: Nav<'v>) -> Self {
-        self.back = Some(back);
-        self
-    }
-
+impl View<'_> {
     pub fn create_with_sectary<'a>(
         mut self,
         data: &'a HBotData,

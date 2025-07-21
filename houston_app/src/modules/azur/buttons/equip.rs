@@ -7,28 +7,15 @@ use crate::config::emoji;
 use crate::fmt::Join;
 
 /// Views an augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     pub equip_id: u32,
     #[serde(borrow)]
+    #[builder(default = None, setter(strip_option))]
     pub back: Option<Nav<'v>>,
 }
 
-impl<'v> View<'v> {
-    /// Creates a new instance.
-    pub fn new(equip_id: u32) -> Self {
-        Self {
-            equip_id,
-            back: None,
-        }
-    }
-
-    /// Sets the back button target.
-    pub fn back(mut self, back: Nav<'v>) -> Self {
-        self.back = Some(back);
-        self
-    }
-
+impl View<'_> {
     /// Modifies the create-reply with a preresolved equipment.
     pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
         let mut components = CreateComponents::new();

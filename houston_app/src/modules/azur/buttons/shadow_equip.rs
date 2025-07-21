@@ -8,7 +8,7 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 
 /// View a ship's shadow equip.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     #[serde(borrow)]
     pub inner: ShipView<'v>,

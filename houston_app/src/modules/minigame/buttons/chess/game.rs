@@ -13,7 +13,7 @@ pub const N: usize = N_U8 as usize;
 pub type Board = Grid<Option<Tile>>;
 
 /// A board position. May be out of range.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Pos {
     pub x: u8,
     pub y: u8,

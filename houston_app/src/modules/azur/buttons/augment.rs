@@ -8,28 +8,15 @@ use crate::fmt::Join;
 use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub augment_id: u32,
+    augment_id: u32,
     #[serde(borrow)]
-    pub back: Option<Nav<'v>>,
+    #[builder(default = None, setter(strip_option))]
+    back: Option<Nav<'v>>,
 }
 
-impl<'v> View<'v> {
-    /// Creates a new instance.
-    pub fn new(augment_id: u32) -> Self {
-        Self {
-            augment_id,
-            back: None,
-        }
-    }
-
-    /// Sets the back button target.
-    pub fn back(mut self, back: Nav<'v>) -> Self {
-        self.back = Some(back);
-        self
-    }
-
+impl View<'_> {
     /// Modifies the create-reply with a preresolved augment.
     pub fn create_with_augment<'a>(
         self,
@@ -76,8 +63,11 @@ impl<'v> View<'v> {
         }
 
         if augment.effect.is_some() || !augment.skill_upgrades.is_empty() {
-            let source = super::skill::ViewSource::Augment(augment.augment_id);
-            let view_skill = super::skill::View::with_back(source, self.to_nav());
+            let view_skill = super::skill::View::builder()
+                .augment_source(augment.augment_id)
+                .back(self.to_nav())
+                .build();
+
             nav.push(CreateButton::new(view_skill.to_custom_id()).label("Effect"));
         }
 
@@ -92,7 +82,11 @@ impl<'v> View<'v> {
             },
             AugmentUsability::UniqueShipId(ship_id) => {
                 if let Some(ship) = azur.game_data().ship_by_id(*ship_id) {
-                    let view = super::ship::View::new(ship.group_id).back(self.to_nav());
+                    let view = super::ship::View::builder()
+                        .ship_id(ship.group_id)
+                        .back(self.to_nav())
+                        .build();
+
                     let label = format!("For: {}", ship.name);
                     CreateButton::new(view.to_custom_id()).label(truncate(label, 80))
                 } else {

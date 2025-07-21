@@ -8,29 +8,18 @@ use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
 use crate::modules::azur::{GameData, LoadedConfig};
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     chat_id: u32,
     #[serde(borrow)]
+    #[builder(default = &[0])]
     flags: &'v [u8],
     #[serde(borrow)]
+    #[builder(default = None, setter(strip_option))]
     back: Option<Nav<'v>>,
 }
 
-impl<'v> View<'v> {
-    pub fn new(chat_id: u32) -> Self {
-        Self {
-            chat_id,
-            flags: &[0],
-            back: None,
-        }
-    }
-
-    pub fn back(mut self, back: Nav<'v>) -> Self {
-        self.back = Some(back);
-        self
-    }
-
+impl View<'_> {
     /// Modifies the create-reply with preresolved ship data.
     pub fn create_with_chat<'a>(
         mut self,

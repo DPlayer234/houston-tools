@@ -6,14 +6,14 @@ use crate::buttons::prelude::*;
 use crate::modules::azur::{GameData, LoadedConfig};
 use crate::modules::core::buttons::ToPage;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     page: u16,
     #[serde(borrow)]
     filter: Filter<'v>,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Filter<'v> {
     pub name: Option<&'v str>,
     pub faction: Option<Faction>,
@@ -49,7 +49,11 @@ impl<'v> View<'v> {
         for ship in page_iter {
             let emoji = super::hull_emoji(ship.hull_type, data);
 
-            let view = super::ship::View::new(ship.group_id).back(self.to_nav());
+            let view = super::ship::View::builder()
+                .ship_id(ship.group_id)
+                .back(self.to_nav())
+                .build();
+
             let button = CreateButton::new(view.to_custom_id())
                 .label(&ship.name)
                 .emoji(emoji.clone())

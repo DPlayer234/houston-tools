@@ -26,7 +26,7 @@ mod tests;
 
 use game::{Board, N, N_U8, Piece, Pos, new_board};
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct View {
     players: PlayerState,
     board: Board,

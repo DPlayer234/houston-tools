@@ -4,7 +4,7 @@ use crate::helper::discord::unicode_emoji;
 
 const N: usize = 3;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View {
     players: PlayerState,
     board: [[Option<Player>; N]; N],

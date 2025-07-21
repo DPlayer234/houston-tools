@@ -10,18 +10,21 @@ use crate::fmt::Join;
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
     pub ship_id: u32,
+    #[builder(default = 0)]
     pub skin_index: u8,
+    #[builder(default = ViewPart::Info)]
     pub part: ViewPart,
+    #[builder(default = false)]
     pub extra: bool,
     #[serde(borrow)]
     pub back: Nav<'v>,
 }
 
 /// Which part of the lines to display.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViewPart {
     Info,
     Main1,
@@ -30,19 +33,7 @@ pub enum ViewPart {
     Combat,
 }
 
-impl<'v> View<'v> {
-    /// Creates a new instance including a button to go back with some custom
-    /// ID.
-    pub fn with_back(ship_id: u32, back: Nav<'v>) -> Self {
-        Self {
-            ship_id,
-            skin_index: 0,
-            part: ViewPart::Info,
-            extra: false,
-            back,
-        }
-    }
-
+impl View<'_> {
     fn edit_with_ship<'a>(
         self,
         ctx: &ButtonContext<'a>,
