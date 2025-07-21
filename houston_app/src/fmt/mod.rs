@@ -48,9 +48,15 @@ where
         if let Some(end) = rest.find('}') {
             let (hole, rest) = rest.split_at(end + 1);
             debug_assert!(hole.len() >= 2, "must be at least 2 bytes long");
+            debug_assert!(end >= 1, "end must be >= 1");
+            debug_assert!(
+                hole.is_char_boundary(1) && hole.is_char_boundary(end),
+                "must have a char boundaries at index 1 and {end}"
+            );
 
             // SAFETY: we must have at least 2 bytes here now, `{` and `}`.
             // `end` is within the range (due to successful split), and must be >=1.
+            // `{` is a 1-byte char, so 1 must be a char boundary.
             let name = unsafe { hole.get_unchecked(1..end) };
 
             // call user append function
@@ -85,9 +91,33 @@ mod tests {
         let result = replace_holes(haystack, |out, n| match n {
             "user" => write!(out, "<@{user}>"),
             "role" => write!(out, "<@&{role}>"),
-            _ => {},
+            _ => unreachable!(),
         });
 
         assert_eq!(result, "Look, look! <@12345> reached <@&67890>!");
+    }
+
+    #[test]
+    fn replace_holes_odd() {
+        let haystack = "{start} Here is an empty hole: {} {end}";
+        let result = replace_holes(haystack, |out, n| match n {
+            "" => out.push_str("<empty>"),
+            "start" => out.push('^'),
+            "end" => out.push('$'),
+            _ => unreachable!(),
+        });
+
+        assert_eq!(result, "^ Here is an empty hole: <empty> $");
+    }
+
+    #[test]
+    fn replace_holes_all() {
+        let haystack = "{this is a singular huge hole to fill}";
+        let result = replace_holes(haystack, |out, n| match n {
+            "this is a singular huge hole to fill" => out.push_str("hello world"),
+            _ => unreachable!(),
+        });
+
+        assert_eq!(result, "hello world");
     }
 }

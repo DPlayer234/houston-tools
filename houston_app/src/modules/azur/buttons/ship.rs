@@ -300,8 +300,8 @@ impl View<'_> {
                 text.push('\n');
             }
 
-            let slots = Join::simple("/")
-                .display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
+            let slots =
+                Join::SLASH.display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
 
             write!(text, "**`{: >3.0}%`**", mount.efficiency * 100f64);
 

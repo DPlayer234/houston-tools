@@ -9,18 +9,19 @@ pub struct Join<'a> {
     once: &'a str,
 }
 
-impl Join<'static> {
-    /// Join all elements with a comma: `,`
+impl<'a> Join<'a> {
+    /// Join all elements with a comma and space: `,`
     pub const COMMA: Self = Self::simple(", ");
+
+    /// Join all elements with a slash: `/`
+    pub const SLASH: Self = Self::simple("/");
 
     /// Joins items with `and`, as if in natural speech.
     pub const AND: Self = Self::natural(", ", ", and ", " and ");
 
     /// Joins items with `or`, as if in natural speech.
     pub const OR: Self = Self::natural(", ", ", or ", " or ");
-}
 
-impl<'a> Join<'a> {
     /// Creates a joiner that joins every item with a constant string.
     pub const fn simple(join: &'a str) -> Self {
         Self::natural(join, join, join)
@@ -60,7 +61,7 @@ impl<'a> Join<'a> {
     }
 
     /// Returns a [`Display`] that formats joined items with a format function.
-    pub fn display_with<T, F>(self, items: &'a [T], fmt: F) -> JoinDisplayWith<'a, T, F>
+    pub fn display_with<T, F>(&'a self, items: &'a [T], fmt: F) -> JoinDisplayWith<'a, T, F>
     where
         F: Fn(&'a T, &mut Formatter<'_>) -> Result,
     {
@@ -73,7 +74,7 @@ impl<'a> Join<'a> {
 
     /// Returns [`Display`] value that formats joined items via a mapping
     /// function.
-    pub fn display_as<T, F, D>(self, items: &'a [T], map: F) -> JoinDisplayAs<'a, T, F>
+    pub fn display_as<T, F, D>(&'a self, items: &'a [T], map: F) -> JoinDisplayAs<'a, T, F>
     where
         F: Fn(&'a T) -> D,
         D: 'a + Display,
@@ -88,14 +89,14 @@ impl<'a> Join<'a> {
 
 /// Display item for [`Join::display_with`].
 pub struct JoinDisplayWith<'a, T, F> {
-    joiner: Join<'a>,
+    joiner: &'a Join<'a>,
     items: &'a [T],
     fmt: F,
 }
 
 /// Display item for [`Join::display_as`].
 pub struct JoinDisplayAs<'a, T, F> {
-    joiner: Join<'a>,
+    joiner: &'a Join<'a>,
     items: &'a [T],
     map: F,
 }
