@@ -3,6 +3,68 @@
 //! Broadly, this encodes bytes in chunks of 5 as 2 characters each. If 1 or 2
 //! bytes are left over, half a chunk may be present at the end. Both a start
 //! and end marker will be added, depending on the byte count.
+//!
+//! The exact format is as follows:
+//!
+//! - The prefix is added, based on the byte count modulo 5: `A` if it is 0, `B`
+//!   if is it 2 or 4, `C` if is 1 or 3.
+//! - The byte slice is chunked into 5-byte chunks. Each chunk is transformed
+//!   into a [`char`] pair as described below. The last chunk is padded with
+//!   null-bytes to become 5 bytes; if it was originally 2 or less bytes, only
+//!   the first [`char`] is added.
+//! - The suffix is added: It is always `&`.
+//!
+//! Each 5 byte group will be encoded into [`char`] pairs via the following
+//! transformation:
+//!
+//! - Let the byte pattern be: `0x12, 0x34, 0x56, 0x78, 0x90`
+//! - The nibbles are rearranged into 2 codes as: `0x63412, 0x59078`
+//! - Each code is mapped to a [`char`]. For codes between `0x0` to `0xD7FF` the
+//!   [`char`] with the code point equal to the value is used; for codes between
+//!   `0xD800` to `0xFFFFF` the [`char`] with the code point equal to the value
+//!   plus `0x800` is used instead.
+//! - This example would thefore encode to the string `\u{63C12}\u{59878}`.
+//!
+//! These rules ensure only valid unicode code points are in the output.
+//!
+//! Decoding applies these rules in reverse, with only [`char`] codes in the
+//! range `0x0` to `0xD7FF` and `0xE000` to `0x1007FF` being allowed.
+//!
+//! The prefix indicates how many bytes to remove from the end of the decoded
+//! output. If the string had an odd amount of [`char`] values, the last
+//! [`char`] is treated as if it encoded 3 bytes.
+//!
+//! - If the prefix is `A`, no bytes are trimmed. The entire string is used.
+//! - If the prefix is `B`, 1 byte are trimmed from the end.
+//! - If the prefix is `C`, 2 bytes are trimmed from the end.
+//!
+//! # Encoding Gap
+//!
+//! This definition leaves a gap in the encoding: An odd [`char`] count with
+//! payload prefix `A`. This would imply that the last chunk of the input was 3
+//! bytes long. This could only be correct if the 3rd byte of said chunk is in
+//! range `0x0` to `0xF`, which isn't deemed worth it, so that currently isn't
+//! encoded and it instead falls back to padding to a 5 byte chunk and using
+//! prefix `C`.
+//!
+//! The current decoder implemented here does not support decoding this case
+//! since it has minimal impacts on bandwidth and adds unneeded complexity to
+//! the code.
+//!
+//! # FAQ
+//!
+//! **Q: Why?**\
+//! A: Why not.
+//!
+//! **Q: What's with the weird nibble ordering?**\
+//! A: I didn't think about it while writing the code.
+//!
+//! **Q: Why does the second [`char`] of the last chunk get omitted if that
+//! chunk was 2 or less bytes, even though the remaining [`char`] is treated as
+//! if it encoded 3 bytes when read back?**\
+//! A: Initially, the code actually encoded 3 bytes, even though that could't
+//! work as it was written, so it was changed. There is also the future compat
+//! spec gap that may be implemented at a later date.
 
 use std::{fmt, io};
 
