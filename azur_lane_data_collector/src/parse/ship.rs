@@ -83,6 +83,10 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
 
     let name: String = read!(set.statistics, "name");
 
+    // CMBK: validate only 1 value. currently this simply assumes length 0 or 1 and
+    // just take the first item if non-empty
+    let specific_type: Vec<String> = read!(set.template, "specific_type");
+
     let mut ship = ShipData {
         group_id: read!(set.template, "group_type"),
         name: name.trunc_into(),
@@ -134,6 +138,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
         depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?
             .trunc_into(),
         skills: parse::skill::load_skills(lua, buff_list)?.trunc_into(),
+        ultimate_bonus: specific_type
+            .first()
+            .map(|s| convert_al::to_ultimate_bonus(s)),
         retrofits: FixedArray::new(), // Added by caller.
         skins: FixedArray::new(),     // Added by caller.
     };

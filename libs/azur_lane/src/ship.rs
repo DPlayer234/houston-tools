@@ -50,6 +50,12 @@ pub struct ShipData {
     pub depth_charges: FixedArray<Equip>,
     /// The list of skills. Excludes inactive or hidden skills.
     pub skills: FixedArray<Skill>,
+    /// The ultimate bonus this ship gets upon max limit break. Currently, this
+    /// is only set for Destroyers and Harbin.
+    ///
+    /// Also referred to as the "specific type".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ultimate_bonus: Option<UltimateBonus>,
     /// Available retrofits for this ship in their maxed-out state.
     ///
     /// As of now, only DDGs have "multiple" retrofits, with their vanguard
@@ -378,6 +384,19 @@ define_data_enum! {
         Vanguard("Vanguard"),
         MainFleet("Main Fleet"),
         Submarine("Submarine Fleet")
+    }
+}
+
+define_data_enum! {
+    /// The kind of "ultimate bonus" a ship gets upon max limit break.
+    pub enum UltimateBonus for UltimateBonusData {
+        /// The description for the type.
+        pub description: &'static str;
+
+        Unknown("Unknown `specific_type`"),
+        Auxiliary("+30% stats gained from auxiliary gear"),
+        Torpedo("Decrease torpedo spread angle"),
+        Gunner("Halve shots needed to activate All Out Assault")
     }
 }
 

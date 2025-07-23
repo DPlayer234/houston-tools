@@ -281,3 +281,13 @@ pub fn to_dive_filter(num: u32) -> BulletFlags {
         _ => BulletFlags::empty(),
     }
 }
+
+/// Converts to an ultimate bonus.
+pub fn to_ultimate_bonus(key: &str) -> UltimateBonus {
+    match key {
+        "AUX" => UltimateBonus::Auxiliary,
+        "TORP" => UltimateBonus::Torpedo,
+        "GNR" => UltimateBonus::Gunner,
+        _ => UltimateBonus::Unknown,
+    }
+}

@@ -373,23 +373,19 @@ impl View<'_> {
         (!ship.skills.is_empty()).then(|| {
             // CMBK: do we need this at all?
             let mut text = String::new();
-            text.push_str("### Skills");
+            text.push_str("### Skills\n");
 
             for s in &ship.skills {
-                if !text.is_empty() {
-                    text.push('\n');
-                }
+                writeln!(text, "{} **{}**", s.category.emoji(), s.name);
+            }
 
-                write!(text, "{} **{}**", s.category.emoji(), s.name);
+            if let Some(bonus) = ship.ultimate_bonus {
+                writeln!(text, "> {}", bonus.description());
             }
 
             let augments = azur.game_data().augments_by_ship_id(ship.group_id);
             for augment in augments {
-                if !text.is_empty() {
-                    text.push('\n');
-                }
-
-                write!(text, "-# UA: **{}**", augment.name);
+                writeln!(text, "-# UA: **{}**", augment.name);
             }
 
             let button = {
