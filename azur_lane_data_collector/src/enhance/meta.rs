@@ -13,7 +13,7 @@ pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
     ))?;
     let value: f64 = effect.get(2)?;
 
-    super::add_to_stats_base(&mut ship.stats, &attr, value);
+    super::add_to_stats_base(&mut ship.stats, &attr, value)?;
 
     Ok(())
 }
@@ -30,7 +30,7 @@ pub fn add_repair_effect(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()>
         ))?;
         let value: f64 = effect.get(2)?;
 
-        super::add_to_stats_base(&mut ship.stats, &attr, value);
+        super::add_to_stats_base(&mut ship.stats, &attr, value)?;
     }
 
     Ok(())

@@ -28,7 +28,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
         for effect in effects {
             effect.for_each(|k: String, v: f64| {
                 // Stats added by retrofits are NOT affected by affinity.
-                if !super::add_to_stats_fixed(&mut ship.stats, &k, v) {
+                if super::add_to_stats_fixed(&mut ship.stats, &k, v).is_err() {
                     match k.borrow() {
                         "skill_id" =>
                         {

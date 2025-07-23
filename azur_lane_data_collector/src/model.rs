@@ -15,6 +15,10 @@ pub struct Config {
     pub name_overrides: HashMap<u32, String>,
     /// Names for the special secretary kinds.
     pub special_secretary_kinds: Vec<String>,
+    /// Skills that provide main gun retriggers (BB mounts).
+    pub hide_buff_main_gun_retriggers: HashMap<u32, u8>,
+    /// Skills that provide fixed stats.
+    pub hide_buff_fixed_stats: HashMap<u32, Vec<(String, f64)>>,
     /// Overrides for skills based on their buff ID.
     pub predefined_skills: HashMap<u32, Skill>,
 }

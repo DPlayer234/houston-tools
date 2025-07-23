@@ -8,29 +8,43 @@ pub mod time;
 pub use join::Join;
 
 /// Extension methods for [`String`].
-pub trait StringExt {
+pub trait StringExt<'this>: Sized {
     /// Gets the written [`String`] if it isn't empty.
     ///
     /// Returns [`None`] if it is empty.
-    fn or_none(self) -> Option<String>;
+    fn or_none(self) -> Option<Self>;
 
     /// Gets the written [`String`] if it isn't empty, or returns the `default`.
     ///
     /// Returns [`Cow::Owned`] with the written value if it isn't empty,
     /// otherwise returns [`Cow::Borrowed`] with `default`.
-    fn or_default(self, default: &str) -> Cow<'_, str>;
+    fn or_default(self, default: &'this str) -> Cow<'this, str>;
 }
 
-impl StringExt for String {
+impl<'this> StringExt<'this> for String {
     fn or_none(self) -> Option<Self> {
         (!self.is_empty()).then_some(self)
     }
 
-    fn or_default(self, default: &str) -> Cow<'_, str> {
+    fn or_default(self, default: &'this str) -> Cow<'this, str> {
         if self.is_empty() {
             Cow::Borrowed(default)
         } else {
             Cow::Owned(self)
+        }
+    }
+}
+
+impl<'this> StringExt<'this> for Cow<'this, str> {
+    fn or_none(self) -> Option<Self> {
+        (!self.is_empty()).then_some(self)
+    }
+
+    fn or_default(self, default: &'this str) -> Self {
+        if self.is_empty() {
+            Self::Borrowed(default)
+        } else {
+            self
         }
     }
 }

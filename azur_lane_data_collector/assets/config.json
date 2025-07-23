@@ -14,6 +14,19 @@
         "Mild",
         "Rebellious"
     ],
+    "hide_buff_main_gun_retriggers": {
+        "1": 1,
+        "2": 2,
+        "20000": 1,
+        "20001": 2,
+        "20002": 3
+    },
+    "hide_buff_fixed_stats": {
+        "19970": [["air", 300]],
+        "19972": [["air", 400]],
+        "19974": [["air", 550]],
+        "19976": [["air", 700]]
+    },
     "predefined_skills": {
         "17030": {
             "buff_id": 17030,

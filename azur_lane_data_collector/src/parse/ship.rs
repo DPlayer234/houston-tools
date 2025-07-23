@@ -43,7 +43,12 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     let hide_buff_list: Vec<u32> = read!(set.template, "hide_buff_list");
     buff_list.retain(|i| buff_list_display.contains(i));
 
-    let retriggers = retriggers(&hide_buff_list);
+    let retriggers = hide_buff_list
+        .iter()
+        .filter_map(|id| CONFIG.hide_buff_main_gun_retriggers.get(id))
+        .copied()
+        .max()
+        .unwrap_or_default();
 
     /// Makes an equip slot. The first one specifies the template data.
     /// The second one optionally specifies which index the mount data uses.
@@ -138,6 +143,14 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
         ship.stats.cost -= 1;
     }
 
+    for buff_id in &hide_buff_list {
+        if let Some(bonuses) = CONFIG.hide_buff_fixed_stats.get(buff_id) {
+            for (stat, amount) in bonuses {
+                crate::enhance::add_to_stats_fixed(&mut ship.stats, stat, *amount)?;
+            }
+        }
+    }
+
     // Patch with the strengthen data.
     match &set.strengthen {
         Strengthen::Normal(data) => {
@@ -203,28 +216,4 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     }
 
     Ok(ship)
-}
-
-fn retriggers(hide_buff_list: &[u32]) -> u8 {
-    macro_rules! check {
-        ($skill:literal => $retriggers:literal) => {
-            if hide_buff_list.contains(&$skill) {
-                return $retriggers;
-            }
-        };
-    }
-
-    // Skill 1 is BB MGM+1 and skill 2 is BB MGM+2.
-    check!(1 => 1);
-    check!(2 => 2);
-
-    // These are hidden skills for USS Kansas specifically. Her extra mounts work
-    // differently, having +1 at lb0 and +3 at lb3. These skills also include elite
-    // targeting priority for the last salvo.
-    check!(20000 => 1);
-    check!(20001 => 2);
-    check!(20002 => 3);
-
-    // Otherwise, no retriggers
-    0
 }

@@ -50,7 +50,7 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
         ))?;
         let value: f64 = v.get(2)?;
 
-        super::add_to_stats_base(&mut ship.stats, &attr, value);
+        super::add_to_stats_base(&mut ship.stats, &attr, value)?;
 
         Ok(())
     })
