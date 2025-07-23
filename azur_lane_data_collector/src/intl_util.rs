@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::hash::Hash;
 use std::mem::take;
 
 use small_fixed_array::{FixedArray, TruncatingInto};
@@ -29,6 +31,22 @@ impl<T> FixedArrayExt<T> for FixedArray<T> {
 pub trait IterExt: Iterator + Sized {
     fn collect_fixed_array(self) -> FixedArray<Self::Item> {
         self.collect::<Vec<Self::Item>>().trunc_into()
+    }
+
+    #[expect(clippy::wrong_self_convention)]
+    fn is_unique(self) -> bool
+    where
+        Self::Item: Hash + Eq,
+    {
+        let mut set = HashSet::new();
+
+        for item in self {
+            if !set.insert(item) {
+                return false;
+            }
+        }
+
+        true
     }
 }
 

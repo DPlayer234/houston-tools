@@ -9,7 +9,7 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{DefinitionData, GameServer, juustagram};
 use clap::Parser;
-use intl_util::{FixedArrayExt as _, TryIterExt as _};
+use intl_util::{FixedArrayExt as _, IterExt as _, TryIterExt as _};
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
 
@@ -71,13 +71,29 @@ fn main() -> anyhow::Result<()> {
     };
 
     let out_data = {
+        anyhow::ensure!(
+            cli.inputs
+                .iter()
+                .filter_map(|s| guess_server(s))
+                .is_unique(),
+            "multiple `--inputs` end with the same server shorthand, but server shorthands must be unique"
+        );
+
+        let merge_inputs = anyhow::Context::context(
+            cli.inputs
+                .iter()
+                .skip(1)
+                .map(|p| guess_server(p).map(|s| (s, p.as_str())))
+                .collect::<Option<Vec<_>>>(),
+            "in the case of multiple `--inputs`, paths must end with a server shorthand, i.e. `EN` or `JP`",
+        )?;
+
         // Expect at least 1 input
         let input = &cli.inputs[0];
-        let server = guess_server(input);
+        let server = guess_server(input).unwrap_or_default();
         let mut out_data = load_definition(&cli.inputs[0], server)?;
 
-        for input in cli.inputs.iter().skip(1) {
-            let server = guess_server(input);
+        for (server, input) in merge_inputs {
             let next = load_definition(input, server)?;
             merge_out_data(&mut out_data, next);
         }
@@ -143,8 +159,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_definition(input: &str, server: Option<GameServer>) -> anyhow::Result<DefinitionData> {
-    let server = server.unwrap_or_default();
+fn load_definition(input: &str, server: GameServer) -> anyhow::Result<DefinitionData> {
     let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
