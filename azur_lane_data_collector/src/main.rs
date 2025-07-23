@@ -364,8 +364,7 @@ fn load_ships(
                     .context(format!("no mlb for ship with id {}", group.id))
             })?;
 
-        let raw_retrofits: Vec<&ShipSet<'_>> =
-            members.iter().filter(|t| t.id > raw_mlb.id).collect();
+        let raw_retrofits = members.iter().filter(|t| t.id > raw_mlb.id);
 
         let make_skin = |skin_id| -> LuaResult<SkinSet> {
             Ok(SkinSet {

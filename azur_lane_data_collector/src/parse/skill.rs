@@ -138,20 +138,17 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     macro_rules! stat_bonus {
         ($index:literal) => {{
             match statistics
-                .get(concat!("attribute_", $index))
+                .get::<Option<String>>(concat!("attribute_", $index))
                 .with_context(context!(
                     "attribute_{} for equip with id {equip_id}",
                     $index
                 ))? {
-                Some(stat_kind) => {
-                    let stat_kind: String = stat_kind;
-                    Some(EquipStatBonus {
-                        stat_kind: convert_al::to_stat_kind(&stat_kind),
-                        amount: statistics.get(concat!("value_", $index)).with_context(
-                            context!("value_{} for equip with id {equip_id}", $index),
-                        )?,
-                    })
-                },
+                Some(stat_kind) => Some(EquipStatBonus {
+                    stat_kind: convert_al::to_stat_kind(&stat_kind),
+                    amount: statistics
+                        .get(concat!("value_", $index))
+                        .with_context(context!("value_{} for equip with id {equip_id}", $index))?,
+                }),
                 None => None,
             }
         }};

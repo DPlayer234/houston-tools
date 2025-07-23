@@ -43,14 +43,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     let hide_buff_list: Vec<u32> = read!(set.template, "hide_buff_list");
     buff_list.retain(|i| buff_list_display.contains(i));
 
-    // Speaking of, skill 1 is BB MGM+1 and skill 2 is BB MGM+2, so let's just
-    // hard-code this. The actual skill data re-fires the weapon, so it would
-    // work as a multiplier.
-    let retriggers = match hide_buff_list.iter().min() {
-        Some(2) => 2,
-        Some(1) => 1,
-        _ => 0,
-    };
+    let retriggers = retriggers(&hide_buff_list);
 
     /// Makes an equip slot. The first one specifies the template data.
     /// The second one optionally specifies which index the mount data uses.
@@ -210,4 +203,28 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     }
 
     Ok(ship)
+}
+
+fn retriggers(hide_buff_list: &[u32]) -> u8 {
+    macro_rules! check {
+        ($skill:literal => $retriggers:literal) => {
+            if hide_buff_list.contains(&$skill) {
+                return $retriggers;
+            }
+        };
+    }
+
+    // Skill 1 is BB MGM+1 and skill 2 is BB MGM+2.
+    check!(1 => 1);
+    check!(2 => 2);
+
+    // These are hidden skills for USS Kansas specifically. Her extra mounts work
+    // differently, having +1 at lb0 and +3 at lb3. These skills also include elite
+    // targeting priority for the last salvo.
+    check!(20000 => 1);
+    check!(20001 => 2);
+    check!(20002 => 3);
+
+    // Otherwise, no retriggers
+    0
 }
