@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::io::Write as _;
 use std::mem::take;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::{fs, io};
 
 use azur_lane::equip::*;
 use azur_lane::secretary::*;
 use azur_lane::ship::*;
-use azur_lane::{DefinitionData, juustagram};
+use azur_lane::{DefinitionData, GameServer, juustagram};
 use clap::Parser;
 use intl_util::{FixedArrayExt as _, TryIterExt as _};
 use mlua::prelude::*;
@@ -72,9 +72,13 @@ fn main() -> anyhow::Result<()> {
 
     let out_data = {
         // Expect at least 1 input
-        let mut out_data = load_definition(&cli.inputs[0])?;
+        let input = &cli.inputs[0];
+        let server = guess_server(input);
+        let mut out_data = load_definition(&cli.inputs[0], server)?;
+
         for input in cli.inputs.iter().skip(1) {
-            let next = load_definition(input)?;
+            let server = guess_server(input);
+            let next = load_definition(input, server)?;
             merge_out_data(&mut out_data, next);
         }
 
@@ -139,15 +143,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_definition(input: &str) -> anyhow::Result<DefinitionData> {
+fn load_definition(input: &str, server: Option<GameServer>) -> anyhow::Result<DefinitionData> {
+    let server = server.unwrap_or_default();
     let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
-    let ships = load_ships(&lua, &pg)?;
+    let ships = load_ships(&lua, &pg, server)?;
     let equips = load_equips(&lua, &pg)?;
     let augments = load_augments(&lua, &pg)?;
     let juustagram_chats = load_juustagram_chats(&lua, &pg)?;
-    let special_secretaries = load_special_secretaries(&lua, &pg)?;
+    let special_secretaries = load_special_secretaries(&lua, &pg, server)?;
 
     Ok(DefinitionData {
         ships,
@@ -173,7 +178,11 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     Ok(lua)
 }
 
-fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<ShipData>> {
+fn load_ships(
+    lua: &Lua,
+    pg: &LuaTable,
+    server: GameServer,
+) -> anyhow::Result<FixedArray<ShipData>> {
     let ship_data_template: LuaTable = pg
         .get("ship_data_template")
         .context("global pg.ship_data_template")?;
@@ -396,7 +405,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<ShipData>> 
 
         mlb.skins = raw_skins
             .into_iter()
-            .map(|s| parse::skin::load_skin(&s))
+            .map(|s| parse::skin::load_skin(&s, server))
             .try_collect_fixed_array()?;
 
         action.inc_amount();
@@ -576,6 +585,7 @@ fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<
 fn load_special_secretaries(
     lua: &Lua,
     pg: &LuaTable,
+    server: GameServer,
 ) -> anyhow::Result<FixedArray<SpecialSecretary>> {
     let secretary_special_ship: LuaTable = pg
         .get("secretary_special_ship")
@@ -615,7 +625,7 @@ fn load_special_secretaries(
         .start();
 
     let make_secretary = |data| {
-        let equip = parse::secretary::load_special_secretary(lua, &data)?;
+        let equip = parse::secretary::load_special_secretary(lua, &data, server)?;
         action.inc_amount();
         Ok::<_, LuaError>(equip)
     };
@@ -646,7 +656,31 @@ fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<
 }
 
 fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
+    macro_rules! eq {
+        ($fn:ident, $Ty:ty, $key:ident) => {
+            fn $fn(a: &$Ty, b: &$Ty) -> bool {
+                a.$key == b.$key
+            }
+        };
+    }
+
+    eq!(retrofit_eq, ShipData, default_skin_id);
+    eq!(skin_eq, ShipSkin, skin_id);
+    eq!(augment_eq, Augment, augment_id);
+    eq!(equip_eq, Equip, equip_id);
+    eq!(chat_eq, juustagram::Chat, chat_id);
+    eq!(special_secretary_eq, SpecialSecretary, id);
+
     let action = log::action!("Merging data.").start();
+
+    let update_skin = move |r: &mut ShipSkin, n: ShipSkin| {
+        r.words.extend_from_array(n.words);
+        r.words_extra.extend_from_array(n.words_extra);
+    };
+
+    let update_secretary = move |r: &mut SpecialSecretary, n: SpecialSecretary| {
+        r.words.extend_from_array(n.words);
+    };
 
     for next_ship in next.ships {
         if let Some(main_ship) = main
@@ -654,37 +688,55 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
             .iter_mut()
             .find(|s| s.group_id == next_ship.group_id)
         {
-            add_missing(&mut main_ship.retrofits, next_ship.retrofits, |a, b| {
-                a.default_skin_id == b.default_skin_id
-            });
-            add_missing(&mut main_ship.skins, next_ship.skins, |a, b| {
-                a.skin_id == b.skin_id
-            });
+            add_missing(&mut main_ship.retrofits, next_ship.retrofits, retrofit_eq);
+            add_or_update(&mut main_ship.skins, next_ship.skins, skin_eq, update_skin);
         } else {
             main.ships.push(next_ship);
         }
     }
 
-    add_missing(&mut main.augments, next.augments, |a, b| {
-        a.augment_id == b.augment_id
-    });
-    add_missing(&mut main.equips, next.equips, |a, b| {
-        a.equip_id == b.equip_id
-    });
-    add_missing(&mut main.juustagram_chats, next.juustagram_chats, |a, b| {
-        a.chat_id == b.chat_id
-    });
+    add_missing(&mut main.augments, next.augments, augment_eq);
+    add_missing(&mut main.equips, next.equips, equip_eq);
+    add_missing(&mut main.juustagram_chats, next.juustagram_chats, chat_eq);
+    add_or_update(
+        &mut main.special_secretaries,
+        next.special_secretaries,
+        special_secretary_eq,
+        update_secretary,
+    );
 
     action.finish();
 }
 
 fn add_missing<T>(main: &mut FixedArray<T>, next: FixedArray<T>, matches: impl Fn(&T, &T) -> bool) {
+    add_or_update(main, next, matches, |_, _| {});
+}
+
+fn add_or_update<T>(
+    main: &mut FixedArray<T>,
+    next: FixedArray<T>,
+    matches: impl Fn(&T, &T) -> bool,
+    on_match: impl Fn(&mut T, T),
+) {
     let mut m = take(main).into_vec();
     for new in next {
-        if !m.iter().any(|old| matches(old, &new)) {
+        if let Some(old) = m.iter_mut().find(|old| matches(old, &new)) {
+            on_match(old, new);
+        } else {
             m.push(new);
         }
     }
 
     *main = m.trunc_into();
+}
+
+fn guess_server(path: &str) -> Option<GameServer> {
+    let path = Path::new(path);
+    let dir = path.components().next_back()?;
+
+    let Component::Normal(dir) = dir else {
+        return None;
+    };
+
+    dir.to_str()?.parse().ok()
 }

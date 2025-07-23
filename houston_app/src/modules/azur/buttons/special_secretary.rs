@@ -1,3 +1,4 @@
+use azur_lane::GameServer;
 use azur_lane::secretary::*;
 use utils::text::WriteStr as _;
 
@@ -14,6 +15,9 @@ pub struct View<'v> {
     #[serde(borrow)]
     #[builder(default = None, setter(strip_option))]
     back: Option<Nav<'v>>,
+    #[serde(default)]
+    #[builder(default = GameServer::Unknown)]
+    pub server: GameServer,
 }
 
 /// Which part of the lines to display.
@@ -27,22 +31,38 @@ pub enum ViewPart {
 }
 
 impl View<'_> {
-    pub fn create_with_sectary<'a>(
+    pub fn create_with_secretary<'a>(
         mut self,
         data: &'a HBotData,
         secretary: &'a SpecialSecretary,
-    ) -> CreateReply<'a> {
+    ) -> Result<CreateReply<'a>> {
+        let words = secretary
+            .words(self.server)
+            .context("secretary has no words set")?;
+
+        self.server = words.server;
         let mut components = CreateComponents::new();
 
-        components.push(self.get_main_field(secretary));
+        components.push(self.get_main_field(secretary, words));
 
         components.push(CreateActionRow::buttons(vec![
-            self.button_with_part(ViewPart::Main1, secretary, "1", "< 1 >"),
-            self.button_with_part(ViewPart::Main2, secretary, "2", "< 2 >"),
-            self.button_with_part(ViewPart::Holidays, secretary, "3", "< 3 >"),
-            self.button_with_part(ViewPart::Chime1, secretary, "4", "< 4 >"),
-            self.button_with_part(ViewPart::Chime2, secretary, "5", "< 5 >"),
+            self.button_with_part(ViewPart::Main1, words, "1", "< 1 >"),
+            self.button_with_part(ViewPart::Main2, words, "2", "< 2 >"),
+            self.button_with_part(ViewPart::Holidays, words, "3", "< 3 >"),
+            self.button_with_part(ViewPart::Chime1, words, "4", "< 4 >"),
+            self.button_with_part(ViewPart::Chime2, words, "5", "< 5 >"),
         ]));
+
+        if secretary.words.len() > 1 {
+            components.push(CreateActionRow::buttons(
+                secretary
+                    .words
+                    .iter()
+                    .take(5)
+                    .map(|w| self.button_with_server(w.server))
+                    .collect::<Vec<_>>(),
+            ));
+        }
 
         if let Some(back) = &self.back {
             let button = CreateButton::new(back.to_custom_id())
@@ -53,16 +73,16 @@ impl View<'_> {
             components.push(CreateActionRow::buttons(vec![button]));
         }
 
-        CreateReply::new().components_v2(components![
+        Ok(CreateReply::new().components_v2(components![
             CreateContainer::new(components).accent_color(data.config().embed_color)
-        ])
+        ]))
     }
 
     /// Creates a button that redirects to a different viewed part.
     fn button_with_part<'a>(
         &mut self,
         part: ViewPart,
-        secretary: &SpecialSecretary,
+        words: &SpecialSecretaryWords,
         label: &'a str,
         active_label: &'a str,
     ) -> CreateButton<'a> {
@@ -70,7 +90,8 @@ impl View<'_> {
             .new_button(|s| &mut s.part, part, |u| u as u16)
             .style(ButtonStyle::Secondary)
             .label(label);
-        if !part.has_texts(secretary) {
+
+        if !part.has_texts(words) {
             button.disabled(true)
         } else if self.part == part {
             button.label(active_label)
@@ -79,9 +100,20 @@ impl View<'_> {
         }
     }
 
-    fn get_main_field<'a>(&self, secretary: &SpecialSecretary) -> CreateTextDisplay<'a> {
+    /// Creates a button that redirects to lines for a different game server.
+    fn button_with_server<'a>(&mut self, server: GameServer) -> CreateButton<'a> {
+        self.new_button(|s| &mut s.server, server, |u| u as u16)
+            .style(ButtonStyle::Secondary)
+            .label(server.label())
+    }
+
+    fn get_main_field<'a>(
+        &self,
+        secretary: &SpecialSecretary,
+        words: &SpecialSecretaryWords,
+    ) -> CreateTextDisplay<'a> {
         let mut content = format!("### {}\n", secretary.name);
-        self.part.append_description(&mut content, secretary);
+        self.part.append_description(&mut content, words);
 
         CreateTextDisplay::new(content)
     }
@@ -137,7 +169,7 @@ macro_rules! impl_view_part_fn {
 
 impl ViewPart {
     /// Creates the embed description for the current state.
-    fn append_description(self, result: &mut String, words: &SpecialSecretary) {
+    fn append_description(self, result: &mut String, words: &SpecialSecretaryWords) {
         use crate::fmt::discord::escape_markdown;
 
         let len = result.len();
@@ -177,7 +209,7 @@ impl ViewPart {
     }
 
     /// Determines whether this part shows any lines.
-    fn has_texts(self, words: &SpecialSecretary) -> bool {
+    fn has_texts(self, words: &SpecialSecretaryWords) -> bool {
         macro_rules! check {
             ($_:literal, $text:expr) => {
                 if $text.is_some() {
@@ -205,7 +237,7 @@ impl ButtonReply for View<'_> {
             .special_secretary_by_id(self.secretary_id)
             .ok_or(AzurParseError::SpecialSecretary)?;
 
-        let create = self.create_with_sectary(ctx.data, ship);
+        let create = self.create_with_secretary(ctx.data, ship)?;
         ctx.edit(create.into()).await
     }
 }

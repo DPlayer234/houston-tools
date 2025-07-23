@@ -1,3 +1,4 @@
+use azur_lane::GameServer;
 use azur_lane::secretary::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedString, TruncatingInto as _};
@@ -6,7 +7,11 @@ use super::skin::to_main_screen;
 use crate::intl_util::IterExt as _;
 use crate::{CONFIG, context};
 
-pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSecretary> {
+pub fn load_special_secretary(
+    lua: &Lua,
+    data: &LuaTable,
+    server: GameServer,
+) -> LuaResult<SpecialSecretary> {
     let id: u32 = data.get("id")?;
 
     let kind_name = if data.get::<u32>("unlock_type")? == 4 {
@@ -48,10 +53,8 @@ pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSe
         }};
     }
 
-    Ok(SpecialSecretary {
-        id,
-        name: data.get::<String>("name")?.trunc_into(),
-        kind: kind_name.trunc_into(),
+    let words = SpecialSecretaryWords {
+        server,
         login: get!("login"),
         main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
         touch: get!("touch"),
@@ -69,6 +72,13 @@ pub fn load_special_secretary(lua: &Lua, data: &LuaTable) -> LuaResult<SpecialSe
         event_reminder: get!("huodong"),
         change_module: get!("genghuan"),
         chime: get_chimes(id, data),
+    };
+
+    Ok(SpecialSecretary {
+        id,
+        name: data.get::<String>("name")?.trunc_into(),
+        kind: kind_name.trunc_into(),
+        words: vec![words].trunc_into(),
     })
 }
 

@@ -114,7 +114,7 @@ pub mod azur {
             .build();
 
         ctx.send(
-            view.create_with_sectary(data, secretary)
+            view.create_with_secretary(data, secretary)?
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;

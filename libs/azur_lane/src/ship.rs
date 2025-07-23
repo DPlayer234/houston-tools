@@ -9,7 +9,7 @@ use small_fixed_array::{FixedArray, FixedString};
 use crate::data_def::is_default;
 use crate::equip::*;
 use crate::skill::*;
-use crate::{Faction, define_data_enum};
+use crate::{Faction, GameServer, define_data_enum};
 
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,15 +148,23 @@ pub struct ShipSkin {
     /// The skin's description.
     pub description: FixedString,
     /// The default dialogue lines.
-    pub words: ShipSkinWords,
+    ///
+    /// This has one entry per game server. Which server each entry belongs to
+    /// is indicated by [`ShipSkinWords::server`].
+    pub words: FixedArray<ShipSkinWords>,
     /// Replacement dialogue lines, usually after oath.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub words_extra: Option<Box<ShipSkinWords>>,
+    ///
+    /// This has one entry per game server. Which server each entry belongs to
+    /// is indicated by [`ShipSkinWords::server`].
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub words_extra: FixedArray<ShipSkinWords>,
 }
 
 /// The block of dialogue for a given skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkinWords {
+    /// The server with these words.
+    pub server: GameServer,
     /// The skin's description.
     ///
     /// Note that [`ShipSkin::description`] originates from the skin's template,
@@ -476,6 +484,24 @@ impl AddAssign<&Self> for ShipStat {
         self.0 += rhs.0;
         self.1 += rhs.1;
         self.2 += rhs.2;
+    }
+}
+
+impl ShipSkin {
+    pub fn words(&self, server: GameServer) -> Option<(&ShipSkinWords, Option<&ShipSkinWords>)> {
+        let main = self
+            .words
+            .iter()
+            .find(|s| s.server == server)
+            .or_else(|| self.words.first())?;
+
+        let extra = self
+            .words_extra
+            .iter()
+            .find(|s| s.server == server)
+            .or_else(|| self.words_extra.first());
+
+        Some((main, extra))
     }
 }
 

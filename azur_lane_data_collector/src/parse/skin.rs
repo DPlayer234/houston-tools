@@ -1,3 +1,4 @@
+use azur_lane::GameServer;
 use azur_lane::ship::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
@@ -6,7 +7,7 @@ use crate::intl_util::{IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al};
 
-pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
+pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
     macro_rules! get {
         ($key:literal) => {
             set.template
@@ -21,18 +22,18 @@ pub fn load_skin(set: &SkinSet) -> LuaResult<ShipSkin> {
         image_key: get!("painting"),
         name: get!("name"),
         description: get!("desc"),
-        words: load_words(set)?,
-        words_extra: None, // loaded below
+        words: vec![load_words(set, server)?].trunc_into(),
+        words_extra: FixedArray::new(), // loaded below
     };
 
     if let Some(extra) = &set.words_extra {
-        skin.words_extra = Some(Box::new(load_words_extra(set, extra, &skin.words)?));
+        skin.words_extra = vec![load_words_extra(set, extra, &skin.words[0], server)?].trunc_into();
     }
 
     Ok(skin)
 }
 
-fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
+fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
     macro_rules! get {
         ($key:literal) => {{
             let text: String = set.words.get($key).with_context(context!(
@@ -49,6 +50,7 @@ fn load_words(set: &SkinSet) -> LuaResult<ShipSkinWords> {
     }
 
     Ok(ShipSkinWords {
+        server,
         description: get!("drop_descrip"),
         introduction: get!("profile"),
         acquisition: get!("unlock"),
@@ -90,6 +92,7 @@ fn load_words_extra(
     set: &SkinSet,
     table: &LuaTable,
     base: &ShipSkinWords,
+    server: GameServer,
 ) -> LuaResult<ShipSkinWords> {
     macro_rules! get {
         ($key:literal) => {{
@@ -118,6 +121,7 @@ fn load_words_extra(
         .collect_fixed_array();
 
     Ok(ShipSkinWords {
+        server,
         description: get!("drop_descrip"),
         introduction: get!("profile"),
         acquisition: get!("unlock"),

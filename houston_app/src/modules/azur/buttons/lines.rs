@@ -1,5 +1,6 @@
 use std::fmt;
 
+use azur_lane::GameServer;
 use azur_lane::ship::*;
 use utils::text::WriteStr as _;
 
@@ -21,6 +22,9 @@ pub struct View<'v> {
     pub extra: bool,
     #[serde(borrow)]
     pub back: Nav<'v>,
+    #[serde(default)]
+    #[builder(default = GameServer::Unknown)]
+    pub server: GameServer,
 }
 
 /// Which part of the lines to display.
@@ -40,7 +44,7 @@ impl View<'_> {
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
-    ) -> EditReply<'a> {
+    ) -> Result<EditReply<'a>> {
         let mut create = EditReply::new();
 
         let thumbnail_key =
@@ -55,7 +59,7 @@ impl View<'_> {
                 None
             };
 
-        create.components_v2(self.with_ship(azur, ship, skin, thumbnail_key))
+        Ok(create.components_v2(self.with_ship(azur, ship, skin, thumbnail_key)?))
     }
 
     fn with_ship<'a>(
@@ -64,12 +68,15 @@ impl View<'_> {
         ship: &'a ShipData,
         skin: &'a ShipSkin,
         thumbnail_key: Option<&str>,
-    ) -> CreateComponents<'a> {
-        let words = match &skin.words_extra {
+    ) -> Result<CreateComponents<'a>> {
+        let (words, words_extra) = skin.words(self.server).context("skin has no words set")?;
+
+        self.server = words.server;
+        let words = match words_extra {
             Some(words) if self.extra => words,
             _ => {
                 self.extra = false;
-                &skin.words
+                words
             },
         };
 
@@ -86,6 +93,16 @@ impl View<'_> {
             self.button_with_part(ViewPart::Affinity, words, "4", "< 4 >"),
             self.button_with_part(ViewPart::Combat, words, "5", "< 5 >"),
         ]));
+
+        if skin.words.len() > 1 {
+            components.push(CreateActionRow::buttons(
+                skin.words
+                    .iter()
+                    .take(5)
+                    .map(|w| self.button_with_server(w.server))
+                    .collect::<Vec<_>>(),
+            ));
+        }
 
         components.push(CreateSeparator::new(true));
 
@@ -108,14 +125,16 @@ impl View<'_> {
 
         let mut nav_row = vec![nav_row];
 
-        if skin.words_extra.is_some() {
+        if words_extra.is_some() {
             nav_row.push(self.button_with_extra(false).label("Base"));
             nav_row.push(self.button_with_extra(true).label("EX"));
         }
 
         components.push(CreateActionRow::buttons(nav_row));
 
-        components![CreateContainer::new(components).accent_color(ship.rarity.color_rgb())]
+        Ok(components![
+            CreateContainer::new(components).accent_color(ship.rarity.color_rgb())
+        ])
     }
 
     /// Creates a button that redirects to a different Base/EX state.
@@ -142,6 +161,13 @@ impl View<'_> {
         } else {
             button
         }
+    }
+
+    /// Creates a button that redirects to lines for a different game server.
+    fn button_with_server<'a>(&mut self, server: GameServer) -> CreateButton<'a> {
+        self.new_button(|s| &mut s.server, server, |u| u as u16)
+            .style(ButtonStyle::Secondary)
+            .label(server.label())
     }
 
     /// Creates a button that redirects to a different skin's lines.
@@ -336,7 +362,7 @@ impl ButtonReply for View<'_> {
             .get(usize::from(self.skin_index))
             .ok_or(AzurParseError::Ship)?;
 
-        let edit = self.edit_with_ship(&ctx, azur, ship, skin);
+        let edit = self.edit_with_ship(&ctx, azur, ship, skin)?;
         ctx.edit(edit).await
     }
 }

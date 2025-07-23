@@ -7,6 +7,8 @@ pub trait FixedArrayExt<T> {
     ///
     /// This will effectively end up copying the entire array to new storage.
     fn push(&mut self, item: T);
+
+    fn extend_from_array(&mut self, other: Self);
 }
 
 impl<T> FixedArrayExt<T> for FixedArray<T> {
@@ -14,6 +16,12 @@ impl<T> FixedArrayExt<T> for FixedArray<T> {
         let mut vec = take(self).into_vec();
         vec.reserve_exact(1);
         vec.push(item);
+        *self = vec.trunc_into();
+    }
+
+    fn extend_from_array(&mut self, other: Self) {
+        let mut vec = take(self).into_vec();
+        vec.extend(other);
         *self = vec.trunc_into();
     }
 }

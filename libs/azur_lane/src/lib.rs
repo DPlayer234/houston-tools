@@ -2,6 +2,8 @@
 //! represented as.
 #![allow(clippy::upper_case_acronyms)]
 
+use std::str::FromStr;
+
 use data_def::define_data_enum;
 use serde::{Deserialize, Serialize};
 use small_fixed_array::FixedArray;
@@ -31,6 +33,44 @@ pub struct DefinitionData {
     /// All special secretary variants.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub special_secretaries: FixedArray<secretary::SpecialSecretary>,
+}
+
+define_data_enum! {
+    /// The supported game servers.
+    pub enum GameServer for GameLangData {
+        pub label: &'static str;
+
+        Unknown("--"),
+        EN("EN"),
+        JP("JP"),
+        CN("CN"),
+        KR("KR"),
+        TW("TW")
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("unrecognized game server label")]
+pub struct GameServerFromStrError(());
+
+impl FromStr for GameServer {
+    type Err = GameServerFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        for k in Self::ALL {
+            if s.eq_ignore_ascii_case(k.label()) {
+                return Ok(*k);
+            }
+        }
+
+        Err(GameServerFromStrError(()))
+    }
+}
+
+impl Default for GameServer {
+    fn default() -> Self {
+        Self::Unknown
+    }
 }
 
 define_data_enum! {
