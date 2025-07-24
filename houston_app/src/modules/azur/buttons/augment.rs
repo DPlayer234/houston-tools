@@ -63,8 +63,10 @@ impl View<'_> {
         }
 
         if augment.effect.is_some() || !augment.skill_upgrades.is_empty() {
-            let view_skill = super::skill::View::builder()
-                .augment_source(augment.augment_id)
+            use super::skill::{View, ViewSource};
+
+            let view_skill = View::builder()
+                .source(ViewSource::Augment(augment.augment_id))
                 .back(self.to_nav())
                 .build();
 

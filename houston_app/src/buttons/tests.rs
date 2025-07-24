@@ -57,7 +57,10 @@ to_custom_id_consistency!(
 );
 to_custom_id_consistency!(check_azur_skill, {
     use crate::modules::azur::buttons::skill::*;
-    View::builder().augment_source(1).back(TEST_NAV).build()
+    View::builder()
+        .source(ViewSource::Augment(1))
+        .back(TEST_NAV)
+        .build()
 });
 to_custom_id_consistency!(
     check_azur_lines,

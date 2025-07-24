@@ -397,10 +397,10 @@ impl View<'_> {
         }
 
         let button = {
-            use super::skill::View;
+            use super::skill::{View, ViewSource};
 
             let view_skill = View::builder()
-                .ship_source(self.ship_id, self.retrofit)
+                .source(ViewSource::ship(self.ship_id, self.retrofit))
                 .back(self.to_nav())
                 .build();
 

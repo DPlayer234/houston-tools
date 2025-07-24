@@ -11,12 +11,12 @@ use crate::modules::azur::LoadedConfig;
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub source: ViewSource,
+    source: ViewSource,
     #[builder(default = None)]
-    pub skill_index: Option<u8>,
+    skill_index: Option<u8>,
     #[serde(borrow)]
-    pub back: Nav<'v>,
-    // this should honestly be in `ShipViewSource` but that's a pain
+    back: Nav<'v>,
+    // this should honestly be in `ViewSource::Ship` but that's a pain
     #[builder(default = None, vis = "pub(self)")]
     augment_index: Option<u8>,
 }
@@ -24,25 +24,13 @@ pub struct View<'v> {
 /// Where to load the skills from.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ViewSource {
-    Ship(ShipViewSource),
+    Ship { ship_id: u32, retrofit: Option<u8> },
     Augment(u32),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipViewSource {
-    pub ship_id: u32,
-    pub retrofit: Option<u8>,
-}
-
-impl<'v> ViewBuilder<'v, false> {
-    /// Sets the [`View::source`] field.
-    pub const fn ship_source(self, ship_id: u32, retrofit: Option<u8>) -> ViewBuilder<'v, true> {
-        self.source(ViewSource::Ship(ShipViewSource { ship_id, retrofit }))
-    }
-
-    /// Sets the [`View::source`] field.
-    pub const fn augment_source(self, augment_id: u32) -> ViewBuilder<'v, true> {
-        self.source(ViewSource::Augment(augment_id))
+impl ViewSource {
+    pub const fn ship(ship_id: u32, retrofit: Option<u8>) -> Self {
+        Self::Ship { ship_id, retrofit }
     }
 }
 
@@ -231,15 +219,14 @@ button_value!(for<'v> View<'v>, 3);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
-        let edit = match &self.source {
-            ViewSource::Ship(source) => {
+        let edit = match self.source {
+            ViewSource::Ship { ship_id, retrofit } => {
                 let base_ship = azur
                     .game_data()
-                    .ship_by_id(source.ship_id)
+                    .ship_by_id(ship_id)
                     .ok_or(AzurParseError::Ship)?;
 
-                let ship = source
-                    .retrofit
+                let ship = retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
                     .unwrap_or(base_ship);
 
@@ -248,7 +235,7 @@ impl ButtonReply for View<'_> {
             ViewSource::Augment(augment_id) => {
                 let augment = azur
                     .game_data()
-                    .augment_by_id(*augment_id)
+                    .augment_by_id(augment_id)
                     .ok_or(AzurParseError::Augment)?;
                 self.edit_with_augment(augment)
             },
