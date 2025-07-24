@@ -15,16 +15,16 @@ use crate::modules::azur::config::WikiUrls;
 /// View general ship details.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub ship_id: u32,
+    ship_id: u32,
     #[builder(default = 120)]
-    pub level: u8,
+    level: u8,
     #[builder(default = ViewAffinity::Love)]
-    pub affinity: ViewAffinity,
+    affinity: ViewAffinity,
     #[builder(default = None)]
-    pub retrofit: Option<u8>,
+    retrofit: Option<u8>,
     #[serde(borrow)]
     #[builder(default = None, setter(strip_option))]
-    pub back: Option<Nav<'v>>,
+    back: Option<Nav<'v>>,
 }
 
 /// The affinity used to calculate stat values.
@@ -42,12 +42,10 @@ impl View<'_> {
         data: &'a HBotData,
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
-        base_ship: Option<&'a ShipData>,
     ) -> CreateReply<'a> {
-        let base_ship = base_ship.unwrap_or(ship);
         let mut create = CreateReply::new();
 
-        let thumbail_key = if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
+        let thumbail_key = if let Some(skin) = ship.skin_by_id(ship.default_skin_id)
             && let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key)
         {
             let filename = format!("{}.webp", skin.image_key);
@@ -57,7 +55,7 @@ impl View<'_> {
             None
         };
 
-        create.components_v2(self.with_ship(data, azur, ship, base_ship, thumbail_key))
+        create.components_v2(self.with_ship(data, azur, ship, ship, thumbail_key))
     }
 
     fn edit_with_ship<'a>(
@@ -65,9 +63,8 @@ impl View<'_> {
         ctx: &ButtonContext<'a>,
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
-        base_ship: Option<&'a ShipData>,
+        base_ship: &'a ShipData,
     ) -> EditReply<'a> {
-        let base_ship = base_ship.unwrap_or(ship);
         let mut edit = EditReply::new();
 
         let thumbail_key = if let Some(skin) = base_ship.skin_by_id(ship.default_skin_id)
@@ -464,23 +461,33 @@ impl View<'_> {
             |u| u.map_or(u16::MAX, u16::from),
         )
     }
+
+    pub fn find_ship<'a>(
+        &self,
+        azur: LoadedConfig<'a>,
+    ) -> Result<(&'a ShipData, Option<&'a ShipData>)> {
+        let ship = azur
+            .game_data()
+            .ship_by_id(self.ship_id)
+            .ok_or(AzurParseError::Ship)?;
+
+        let retrofit = self
+            .retrofit
+            .and_then(|index| ship.retrofits.get(usize::from(index)));
+
+        Ok((ship, retrofit))
+    }
 }
 
 button_value!(for<'v> View<'v>, 1);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
-        let ship = azur
-            .game_data()
-            .ship_by_id(self.ship_id)
-            .ok_or(AzurParseError::Ship)?;
 
-        let edit = match self
-            .retrofit
-            .and_then(|index| ship.retrofits.get(usize::from(index)))
-        {
-            None => self.edit_with_ship(&ctx, azur, ship, None),
-            Some(retrofit) => self.edit_with_ship(&ctx, azur, retrofit, Some(ship)),
+        let (ship, retrofit) = self.find_ship(azur)?;
+        let edit = match retrofit {
+            None => self.edit_with_ship(&ctx, azur, ship, ship),
+            Some(retrofit) => self.edit_with_ship(&ctx, azur, retrofit, ship),
         };
 
         ctx.edit(edit).await

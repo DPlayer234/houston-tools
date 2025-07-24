@@ -2,7 +2,6 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use utils::text::WriteStr as _;
 
-use super::AzurParseError;
 use super::ship::View as ShipView;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
@@ -11,7 +10,7 @@ use crate::config::emoji;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct View<'v> {
     #[serde(borrow)]
-    pub inner: ShipView<'v>,
+    inner: ShipView<'v>,
 }
 
 impl<'v> View<'v> {
@@ -80,16 +79,9 @@ button_value!(for<'v> View<'v>, 6);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let azur = ctx.data.config().azur()?;
-        let ship = azur
-            .game_data()
-            .ship_by_id(self.inner.ship_id)
-            .ok_or(AzurParseError::Ship)?;
 
-        let create = match self
-            .inner
-            .retrofit
-            .and_then(|index| ship.retrofits.get(usize::from(index)))
-        {
+        let (ship, retrofit) = self.inner.find_ship(azur)?;
+        let create = match retrofit {
             None => self.create_with_ship(ship),
             Some(retrofit) => self.create_with_ship(retrofit),
         };

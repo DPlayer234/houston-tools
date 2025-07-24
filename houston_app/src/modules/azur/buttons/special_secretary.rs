@@ -9,15 +9,15 @@ use crate::config::emoji;
 /// Views ship lines.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub secretary_id: u32,
+    secretary_id: u32,
     #[builder(default = ViewPart::Main1)]
-    pub part: ViewPart,
+    part: ViewPart,
     #[serde(borrow)]
     #[builder(default = None, setter(strip_option))]
     back: Option<Nav<'v>>,
     #[serde(default)]
     #[builder(default = GameServer::Unknown)]
-    pub server: GameServer,
+    server: GameServer,
 }
 
 /// Which part of the lines to display.

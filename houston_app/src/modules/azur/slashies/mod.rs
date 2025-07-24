@@ -36,7 +36,7 @@ pub mod azur {
             .build();
 
         ctx.send(
-            view.create_with_ship(data, azur, ship, None)
+            view.create_with_ship(data, azur, ship)
                 .ephemeral(ephemeral.into_ephemeral()),
         )
         .await?;

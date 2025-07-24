@@ -13,18 +13,18 @@ use crate::modules::azur::{GameData, LoadedConfig};
 /// Views ship lines.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub ship_id: u32,
+    ship_id: u32,
     #[builder(default = 0)]
-    pub skin_index: u8,
+    skin_index: u8,
     #[builder(default = ViewPart::Info)]
-    pub part: ViewPart,
+    part: ViewPart,
     #[builder(default = false)]
-    pub extra: bool,
+    extra: bool,
     #[serde(borrow)]
-    pub back: Nav<'v>,
+    back: Nav<'v>,
     #[serde(default)]
     #[builder(default = GameServer::Unknown)]
-    pub server: GameServer,
+    server: GameServer,
 }
 
 /// Which part of the lines to display.

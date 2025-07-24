@@ -312,7 +312,9 @@ fn get_skills_extra_summary(skill: &Skill) -> String {
 
     fn write_skill_barrage_summary(buf: &mut String, barrage: &SkillBarrage) -> bool {
         try_write_or_undo(buf, |buf| {
-            buf.push_str("__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n");
+            if buf.is_empty() {
+                buf.push_str("__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n");
+            }
             write_join_map(buf, "\n", &barrage.attacks, write_skill_attack_summary)
         })
     }

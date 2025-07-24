@@ -9,10 +9,10 @@ use crate::fmt::Join;
 /// Views an augment.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
-    pub equip_id: u32,
+    equip_id: u32,
     #[serde(borrow)]
     #[builder(default = None, setter(strip_option))]
-    pub back: Option<Nav<'v>>,
+    back: Option<Nav<'v>>,
 }
 
 impl View<'_> {
