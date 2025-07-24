@@ -108,6 +108,7 @@ define_data_enum! {
         CollabAtelierRyza("Atelier Ryza", None),
         CollabSenranKagura("Senran Kagura", None),
         CollabToLoveRu("To LOVE-Ru", None),
-        CollabBlackRockShooter("BLACK★ROCK SHOOTER", None)
+        CollabBlackRockShooter("BLACK★ROCK SHOOTER", None),
+        CollabAtelierYumia("Atelier Yumia", None)
     }
 }
