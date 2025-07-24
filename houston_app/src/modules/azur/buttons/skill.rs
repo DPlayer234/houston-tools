@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
@@ -45,38 +46,48 @@ impl View<'_> {
         components.push(CreateSeparator::new(true));
 
         for (index, skill) in (0..5u8).zip(iterator) {
-            let index = Some(index);
-            let style = if index == self.skill_index { "__" } else { "" };
-
-            let label = format!(
-                "### {style}{}{style} {}",
-                skill.category.emoji(),
-                skill.name
-            );
-
-            components.push(CreateTextDisplay::new(label));
-            components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
-
-            if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
-                if index == self.skill_index {
-                    self.append_barrage_info(skill, components);
-                } else {
-                    let button = self
-                        .button_with_skill(index)
-                        .label("Show Barrage")
-                        .style(ButtonStyle::Secondary);
-
-                    components.push(CreateActionRow::buttons(vec![button]));
-                }
-            }
-
-            components.push(CreateSeparator::new(true));
+            self.append_skill(components, index, skill);
         }
+    }
+
+    /// Appends info for a skill to the `components`.
+    fn append_skill<'a>(
+        &mut self,
+        components: &mut CreateComponents<'a>,
+        index: u8,
+        skill: &'a Skill,
+    ) {
+        let selected = self.skill_index == Some(index);
+        let style = if selected { "__" } else { "" };
+
+        let label = format!(
+            "### {style}{}{style} {}",
+            skill.category.emoji(),
+            skill.name
+        );
+
+        components.push(CreateTextDisplay::new(label));
+        components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
+
+        if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
+            if selected {
+                self.append_barrage_info(skill, components);
+            } else {
+                let button = self
+                    .button_with_skill(Some(index))
+                    .label("Show Barrage")
+                    .style(ButtonStyle::Secondary);
+
+                components.push(CreateActionRow::buttons(vec![button]));
+            }
+        }
+
+        components.push(CreateSeparator::new(true));
     }
 
     /// Modifies the create-reply with preresolved ship data.
     fn edit_with_ship<'a>(mut self, azur: LoadedConfig<'a>, ship: &'a ShipData) -> EditReply<'a> {
-        let mut skills: Vec<&Skill> = ship.skills.iter().take(4).collect();
+        let mut skills: ArrayVec<&Skill, 5> = ship.skills.iter().take(4).collect();
 
         let mut components = CreateComponents::new();
         components.push(CreateTextDisplay::new(format!(
@@ -114,7 +125,7 @@ impl View<'_> {
 
                 // append augment effect
                 if let Some(effect) = &augment.effect {
-                    skills.push(effect);
+                    _ = skills.try_push(effect);
                 }
 
                 components.push(CreateSeparator::new(true));
@@ -126,7 +137,8 @@ impl View<'_> {
             }
         }
 
-        self.edit_with_skills(skills.into_iter(), &mut components);
+        // no need for `into_iter`, also avoids moving the entire ArrayVec
+        self.edit_with_skills(skills.iter().copied(), &mut components);
         components.push(CreateActionRow::buttons(nav));
 
         EditReply::clear().components_v2(components![
