@@ -10,6 +10,9 @@ pub struct Join<'a> {
 }
 
 impl<'a> Join<'a> {
+    /// Join all elements with nothing between.
+    pub const EMPTY: Self = Self::simple("");
+
     /// Join all elements with a comma and space: `,`
     pub const COMMA: Self = Self::simple(", ");
 

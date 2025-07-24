@@ -143,6 +143,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             .map(|s| convert_al::to_ultimate_bonus(s)),
         retrofits: FixedArray::new(), // Added by caller.
         skins: FixedArray::new(),     // Added by caller.
+        fleet_tech: None,             // Added by caller.
     };
 
     if ship.hull_type.team_type() == TeamType::Submarine {

@@ -164,6 +164,25 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
     }
 }
 
+/// Converts a number to a stat kind.
+pub fn num_to_stat_kind(stat: u32) -> StatKind {
+    match stat {
+        1 => StatKind::HP,
+        2 => StatKind::FP,
+        3 => StatKind::TRP,
+        4 => StatKind::AA,
+        5 => StatKind::AVI,
+        6 => StatKind::RLD,
+        // 7 is Armor
+        8 => StatKind::ACC,
+        9 => StatKind::EVA,
+        10 => StatKind::SPD,
+        11 => StatKind::LCK,
+        12 => StatKind::ASW,
+        _ => StatKind::EVA,
+    }
+}
+
 /// Converts a weapon attack attribute number to a stat kind.
 pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
     match num {

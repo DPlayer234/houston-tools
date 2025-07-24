@@ -240,6 +240,11 @@ fn load_ships(
         .get("transform_data_template")
         .context("global pg.transform_data_template")?;
 
+    // Fleet tech:
+    let fleet_tech_ship_template: LuaTable = pg
+        .get("fleet_tech_ship_template")
+        .context("global pg.fleet_tech_ship_template")?;
+
     // Skin/word data:
     let ship_skin_template: LuaTable = pg
         .get("ship_skin_template")
@@ -329,10 +334,10 @@ fn load_ships(
             _ => Err(LuaError::external(DataError::NoStrengthen))?,
         };
 
-        let retrofit: Option<LuaTable> = ship_data_trans
+        let retrofit_data: Option<LuaTable> = ship_data_trans
             .get(strengthen_id)
             .with_context(context!("ship_data_trans with {id}"))?;
-        let retrofit = retrofit.map(|r| Retrofit {
+        let retrofit_data = retrofit_data.map(|r| Retrofit {
             data: r,
             list_lookup: &transform_data_template,
         });
@@ -342,8 +347,19 @@ fn load_ships(
             template,
             statistics,
             strengthen,
-            retrofit_data: retrofit,
+            retrofit_data,
         })
+    };
+
+    let make_fleet_tech = |id: u32| -> LuaResult<Option<FleetTechInfo>> {
+        let fleet_tech: Option<LuaTable> = fleet_tech_ship_template
+            .get(id)
+            .with_context(context!("fleet_tech_ship_template with {id}"))?;
+
+        match fleet_tech {
+            Some(f) => parse::fleet_tech::load_ship_tech(lua, id, f).map(Some),
+            None => Ok(None),
+        }
     };
 
     let mut action = log::action!("Building ship groups.")
@@ -421,6 +437,8 @@ fn load_ships(
             .into_iter()
             .map(|s| parse::skin::load_skin(&s, server))
             .try_collect_fixed_array()?;
+
+        mlb.fleet_tech = make_fleet_tech(group.id)?;
 
         action.inc_amount();
         Ok::<_, LuaError>(mlb)

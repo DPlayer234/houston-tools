@@ -114,6 +114,11 @@ impl View<'_> {
             components.push(CreateSeparator::new(true));
         }
 
+        if let Some(fleet_tech_field) = self.get_fleet_tech_field(data, base_ship) {
+            components.push(fleet_tech_field);
+            components.push(CreateSeparator::new(true));
+        }
+
         components.push(self.get_nav_row(azur, base_ship));
 
         components![CreateContainer::new(components).accent_color(ship.rarity.color_rgb())]
@@ -361,52 +366,84 @@ impl View<'_> {
         }
     }
 
-    /// Creates the embed field that display the skill summary.
+    /// Creates the embed field that displays the skill summary.
     fn get_skills_field<'a>(
         &self,
         azur: LoadedConfig<'a>,
         ship: &ShipData,
     ) -> Option<CreateComponent<'a>> {
+        if ship.skills.is_empty() {
+            return None;
+        }
+
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
-        (!ship.skills.is_empty()).then(|| {
-            // CMBK: do we need this at all?
-            let mut text = String::new();
-            text.push_str("### Skills\n");
+        // CMBK: do we need this at all?
+        let mut text = String::new();
+        text.push_str("### Skills\n");
 
-            for s in &ship.skills {
-                writeln!(text, "{} **{}**", s.category.emoji(), s.name);
-            }
+        for s in &ship.skills {
+            writeln!(text, "{} **{}**", s.category.emoji(), s.name);
+        }
 
-            if let Some(bonus) = ship.ultimate_bonus {
-                writeln!(text, "> {}", bonus.description());
-            }
+        if let Some(bonus) = ship.ultimate_bonus {
+            writeln!(text, "> {}", bonus.description());
+        }
 
-            let augments = azur.game_data().augments_by_ship_id(ship.group_id);
-            for augment in augments {
-                writeln!(text, "-# UA: **{}**", augment.name);
-            }
+        let augments = azur.game_data().augments_by_ship_id(ship.group_id);
+        for augment in augments {
+            writeln!(text, "-# UA: **{}**", augment.name);
+        }
 
-            let button = {
-                use super::skill::View;
+        let button = {
+            use super::skill::View;
 
-                let view_skill = View::builder()
-                    .ship_source(self.ship_id, self.retrofit)
-                    .back(self.to_nav())
-                    .build();
+            let view_skill = View::builder()
+                .ship_source(self.ship_id, self.retrofit)
+                .back(self.to_nav())
+                .build();
 
-                CreateButton::new(view_skill.to_custom_id())
-                    .label("Info")
-                    .style(ButtonStyle::Secondary)
-            };
+            CreateButton::new(view_skill.to_custom_id())
+                .label("Info")
+                .style(ButtonStyle::Secondary)
+        };
 
+        Some(
             CreateSection::new(
                 section_components![CreateTextDisplay::new(text)],
                 CreateSectionAccessory::Button(button),
             )
-            .into_component()
-        })
+            .into_component(),
+        )
+    }
+
+    /// Creates the embed field that displays the fleet tech info.
+    fn get_fleet_tech_field<'a>(
+        &self,
+        data: &HBotData,
+        base_ship: &ShipData,
+    ) -> Option<CreateComponent<'a>> {
+        let fleet_tech = base_ship.fleet_tech.as_ref()?;
+
+        fn stat_display(data: &HBotData, stats: &FleetTechStatBonus) -> impl fmt::Display {
+            utils::text::from_fn(|f| {
+                let hulls =
+                    Join::EMPTY.display_as(&stats.hull_types, |h| super::hull_emoji(*h, data));
+                let stat = stats.stat.name();
+                let amount = stats.amount;
+
+                write!(f, "{hulls} **`{stat}`**`+{amount}`")
+            })
+        }
+
+        let text = format!(
+            "**Tech:** {} \u{2E31} {}",
+            stat_display(data, &fleet_tech.stats_get),
+            stat_display(data, &fleet_tech.stats_level),
+        );
+
+        Some(CreateTextDisplay::new(text).into_component())
     }
 
     /// Gets a button that redirects to a different level.

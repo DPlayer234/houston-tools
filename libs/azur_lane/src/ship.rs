@@ -67,6 +67,9 @@ pub struct ShipData {
     /// This will be empty for nested retrofits. Access the base's skins.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub skins: FixedArray<ShipSkin>,
+    /// The fleet tech bonuses for this ship.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fleet_tech: Option<FleetTechInfo>,
 }
 
 /// Provides stat block information for a ship.
@@ -273,6 +276,36 @@ pub enum ShipCouple {
     Team,
     /// Unknown trigger types.
     Unknown,
+}
+
+/// Information about fleet tech bonuses for a ship.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FleetTechInfo {
+    // `class`, info can be looked up in `fleet_tech_ship_class`
+    pub class: u32,
+
+    /// The amount of PTs gained when getting the ship.
+    pub pt_get: u32,
+    /// The amount of PTs gained for reaching level 120 with the ship.
+    pub pt_level: u32,
+    /// The amount of PTs gained for fully limit breaking the ship.
+    pub pt_limit_break: u32,
+
+    /// The stat bonuses gained when getting the ship.
+    pub stats_get: FleetTechStatBonus,
+    /// The stat bonuses gained when reaching level 120 with the ship.
+    pub stats_level: FleetTechStatBonus,
+}
+
+/// A stat bonus gained via ship fleet tech.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FleetTechStatBonus {
+    /// The hull types that are affected by this bonus.
+    pub hull_types: FixedArray<HullType>,
+    /// The stat that is affected by this bonus.
+    pub stat: StatKind,
+    /// The amount of fixed stats gained by this bonus.
+    pub amount: f64,
 }
 
 define_data_enum! {
