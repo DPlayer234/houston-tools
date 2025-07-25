@@ -229,12 +229,16 @@ impl View<'_> {
                 fmt = fmt.no_fire_rate();
             }
 
-            let weapon_name = buff.weapon.name.as_deref().unwrap_or("Special Weapon");
-            let content = if buff.replace.is_none() {
-                format!("### __{weapon_name}__\n{fmt}")
+            let label = if buff.replace.is_some() {
+                "Shift"
+            } else if buff.duration.is_some() {
+                "Fire"
             } else {
-                format!("### __{weapon_name}__ (Shift)\n{fmt}")
+                "Add"
             };
+
+            let weapon_name = buff.weapon.name.as_deref().unwrap_or("Special Weapon");
+            let content = format!("### __{label}__ {weapon_name}\n{fmt}");
 
             components.push(CreateSeparator::new(false));
             components.push(CreateTextDisplay::new(content));
