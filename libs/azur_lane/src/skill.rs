@@ -66,7 +66,12 @@ pub struct BuffWeapon {
 /// The filter for the weapon(s) to replace.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BuffWeaponReplace {
+    /// Indicates that this weapon has to be a replacement, but the mode isn't
+    /// recognized.
+    Unknown,
+    /// Replaces the weapons with the specified ID.
     Id(u32),
+    /// Replaces the weapons with any of the specified labels.
     Label(FixedArray<FixedString>),
 }
 

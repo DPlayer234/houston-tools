@@ -720,20 +720,22 @@ fn search_referenced_weapons_in_effect_entry(
                     let detach_label_list: Option<Vec<String>> =
                         get_arg(&entry, "detach_labelList")?;
 
+                    let replace = match (detach_id, detach_label_list) {
+                        (Some(id), _) => BuffWeaponReplace::Id(id),
+                        (_, Some(labels)) => BuffWeaponReplace::Label(
+                            labels
+                                .into_iter()
+                                .map(String::trunc_into)
+                                .collect_fixed_array(),
+                        ),
+                        _ => BuffWeaponReplace::Unknown,
+                    };
+
                     if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
                         rwc.new_weapons.push(BuffWeapon {
                             duration: None,
                             weapon,
-                            replace: match (detach_id, detach_label_list) {
-                                (Some(id), _) => Some(BuffWeaponReplace::Id(id)),
-                                (_, Some(labels)) => Some(BuffWeaponReplace::Label(
-                                    labels
-                                        .into_iter()
-                                        .map(String::trunc_into)
-                                        .collect_fixed_array(),
-                                )),
-                                _ => None,
-                            },
+                            replace: Some(replace),
                         });
                     }
                 }
