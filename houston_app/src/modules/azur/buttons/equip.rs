@@ -1,5 +1,6 @@
 use azur_lane::equip::*;
-use utils::text::truncate;
+use azur_lane::skill::Skill;
+use utils::text::{WriteStr as _, truncate};
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
@@ -28,8 +29,11 @@ impl View<'_> {
             crate::fmt::azur::EquipStats::new(equip)
         )));
 
-        for (index, weapon) in equip.weapons.iter().enumerate() {
-            components.push(CreateSeparator::new(index == 0));
+        if !equip.weapons.is_empty() {
+            components.push(CreateSeparator::new(true));
+        }
+
+        for weapon in &equip.weapons {
             components.push(CreateTextDisplay::new(format!(
                 "### {}\n{}",
                 weapon.kind.name(),
@@ -37,14 +41,21 @@ impl View<'_> {
             )));
         }
 
-        for (index, skill) in equip.skills.iter().enumerate() {
-            components.push(CreateSeparator::new(index == 0));
-            components.push(CreateTextDisplay::new(format!(
-                "### {} {}",
-                skill.category.emoji(),
-                skill.name
-            )));
-            components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
+        match inline_skill(equip) {
+            InlineSkill::None => { /* nothing to display */ },
+            InlineSkill::Yes(skill) => {
+                components.push(CreateSeparator::new(true));
+                components.push(CreateTextDisplay::new(format!(
+                    "### {} {}",
+                    skill.category.emoji(),
+                    skill.name
+                )));
+                components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
+            },
+            InlineSkill::No(skills) => {
+                components.push(CreateSeparator::new(true));
+                components.push(self.get_skills_field(skills));
+            },
         }
 
         if !equip.hull_disallowed.is_empty() {
@@ -67,6 +78,50 @@ impl View<'_> {
         CreateReply::new().components_v2(components![
             CreateContainer::new(components).accent_color(equip.rarity.color_rgb())
         ])
+    }
+
+    fn get_skills_field<'a>(&self, skills: &[Skill]) -> CreateComponent<'a> {
+        let mut text = String::new();
+        text.push_str("### Skills\n");
+
+        for s in skills {
+            writeln!(text, "{} **{}**", s.category.emoji(), s.name);
+        }
+
+        let button = {
+            use super::skill::{View, ViewSource};
+
+            let view_skill = View::builder()
+                .source(ViewSource::Equip(self.equip_id))
+                .back(self.to_nav())
+                .build();
+
+            CreateButton::new(view_skill.to_custom_id())
+                .label("Info")
+                .style(ButtonStyle::Secondary)
+        };
+
+        CreateSection::new(
+            section_components![CreateTextDisplay::new(text)],
+            CreateSectionAccessory::Button(button),
+        )
+        .into_component()
+    }
+}
+
+enum InlineSkill<'a> {
+    None,
+    Yes(&'a Skill),
+    No(&'a [Skill]),
+}
+
+fn inline_skill(equip: &Equip) -> InlineSkill<'_> {
+    match equip.skills.as_slice() {
+        [] => InlineSkill::None,
+        [skill] if skill.barrages.is_empty() && skill.new_weapons.is_empty() => {
+            InlineSkill::Yes(skill)
+        },
+        skills => InlineSkill::No(skills),
     }
 }
 

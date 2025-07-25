@@ -27,6 +27,7 @@ pub struct View<'v> {
 pub enum ViewSource {
     Ship { ship_id: u32, retrofit: Option<u8> },
     Augment(u32),
+    Equip(u32),
 }
 
 impl ViewSource {
@@ -153,11 +154,22 @@ impl View<'_> {
             .iter()
             .chain(augment.skill_upgrades.iter().map(|s| &s.skill));
 
+        self.edit_with_equip_like(&augment.name, augment.rarity.color_rgb(), skills)
+    }
+
+    /// Modifies the create-reply with preresolved equipment data.
+    fn edit_with_equip(self, equip: &Equip) -> EditReply<'_> {
+        self.edit_with_equip_like(&equip.name, equip.rarity.color_rgb(), equip.skills.iter())
+    }
+
+    fn edit_with_equip_like<'a>(
+        self,
+        name: &str,
+        color_rgb: u32,
+        skills: impl Iterator<Item = &'a Skill>,
+    ) -> EditReply<'a> {
         let mut components = CreateComponents::new();
-        components.push(CreateTextDisplay::new(format!(
-            "### {} [Skills]",
-            augment.name
-        )));
+        components.push(CreateTextDisplay::new(format!("### {name} [Skills]")));
 
         let nav = CreateActionRow::buttons(vec![
             CreateButton::new(self.back.to_custom_id())
@@ -169,7 +181,7 @@ impl View<'_> {
         components.push(nav);
 
         EditReply::clear().components_v2(components![
-            CreateContainer::new(components).accent_color(augment.rarity.color_rgb())
+            CreateContainer::new(components).accent_color(color_rgb)
         ])
     }
 
@@ -195,18 +207,20 @@ impl View<'_> {
     /// Creates the embed fields for the selected skill.
     fn append_barrage_info<'a>(&self, skill: &'a Skill, components: &mut CreateComponents<'a>) {
         if !skill.barrages.is_empty() {
-            let full = get_skills_extra_summary(skill);
-            let description = match truncate(&full, 1024) {
+            let mut content = String::new();
+            content.push_str("### __Barrage__\n");
+
+            get_skills_extra_summary(&mut content, skill);
+            let content = match truncate(&content, 1024) {
                 Cow::Owned(trunc) => {
-                    log::warn!("Barrage data too long:\n{full}");
+                    log::warn!("Barrage data too long:\n{content}");
                     trunc
                 },
-                Cow::Borrowed(_) => full,
+                Cow::Borrowed(_) => content,
             };
 
             components.push(CreateSeparator::new(false));
-            components.push(CreateTextDisplay::new("### __Barrage__"));
-            components.push(CreateTextDisplay::new(description));
+            components.push(CreateTextDisplay::new(content));
         }
 
         for buff in &skill.new_weapons {
@@ -215,14 +229,15 @@ impl View<'_> {
                 fmt = fmt.no_fire_rate();
             }
 
-            let label = format!(
-                "### __{}__",
-                buff.weapon.name.as_deref().unwrap_or("Special Weapon")
-            );
+            let weapon_name = buff.weapon.name.as_deref().unwrap_or("Special Weapon");
+            let content = if buff.replace.is_none() {
+                format!("### __{weapon_name}__\n{fmt}")
+            } else {
+                format!("### __{weapon_name}__ (Shift)\n{fmt}")
+            };
 
             components.push(CreateSeparator::new(false));
-            components.push(CreateTextDisplay::new(label));
-            components.push(CreateTextDisplay::new(fmt.to_string()));
+            components.push(CreateTextDisplay::new(content));
         }
     }
 }
@@ -249,7 +264,16 @@ impl ButtonReply for View<'_> {
                     .game_data()
                     .augment_by_id(augment_id)
                     .ok_or(AzurParseError::Augment)?;
+
                 self.edit_with_augment(augment)
+            },
+            ViewSource::Equip(equip_id) => {
+                let equip = azur
+                    .game_data()
+                    .equip_by_id(equip_id)
+                    .ok_or(AzurParseError::Equip)?;
+
+                self.edit_with_equip(equip)
             },
         };
 
@@ -258,24 +282,18 @@ impl ButtonReply for View<'_> {
 }
 
 /// Constructs skill barrage display data.
-fn get_skills_extra_summary(skill: &Skill) -> String {
+fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
     use utils::text::{InlineStr, WriteStr as _};
 
-    let mut buf = String::new();
-    write_join_map(
-        &mut buf,
-        "\n\n",
-        &skill.barrages,
-        write_skill_barrage_summary,
-    );
+    let any = try_write_or_undo(buf, |buf| {
+        write_join_map(buf, "\n\n", &skill.barrages, write_skill_barrage_summary)
+    });
 
-    if buf.is_empty() {
+    if !any {
         // this happens if the barrage were to be entirely
         // aircraft without surface damage barrages.
         buf.push_str("<recon only>");
     }
-
-    return buf;
 
     fn write_join_map<I, F>(buf: &mut String, join: &str, iter: I, mut f: F) -> bool
     where

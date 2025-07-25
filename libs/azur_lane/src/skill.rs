@@ -49,12 +49,25 @@ pub struct SkillAttack {
 /// Represents a buff's bonus weapon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuffWeapon {
+    /// The weapon to be attached.
+    pub weapon: Weapon,
     /// How long this weapon lasts.
     ///
     /// [`None`] means it will last indefinitely.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub duration: Option<f64>,
-    /// The weapon to be attached.
-    pub weapon: Weapon,
+    /// The weapon that gets replaced.
+    ///
+    /// If [`None`], no weapons are replaced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replace: Option<BuffWeaponReplace>,
+}
+
+/// The filter for the weapon(s) to replace.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BuffWeaponReplace {
+    Id(u32),
+    Label(FixedArray<FixedString>),
 }
 
 define_data_enum! {

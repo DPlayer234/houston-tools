@@ -624,6 +624,7 @@ fn search_referenced_weapons_in_effect_entry(
         let entry_type: String = entry
             .get("type")
             .with_context(context!("skill/buff effect_list entry type: {:#?}", entry))?;
+
         match entry_type.as_str() {
             "BattleBuffCastSkill" => {
                 let skill_id: u32 = get_arg(&entry, "skill_id")?;
@@ -689,20 +690,50 @@ fn search_referenced_weapons_in_effect_entry(
             },
             "BattleBuffNewWeapon" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
-                let time: f64 = sc
-                    .skill
-                    .get("time")
-                    .with_context(context!("time of buff {}", sc.skill_id))?;
-
                 if !rwc
                     .new_weapons
                     .iter()
                     .any(|w| w.weapon.weapon_id == weapon_id)
                 {
+                    let time: f64 = sc
+                        .skill
+                        .get("time")
+                        .with_context(context!("time of buff {}", sc.skill_id))?;
+
                     if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
                         rwc.new_weapons.push(BuffWeapon {
                             duration: (time != 0.0).then_some(time),
                             weapon,
+                            replace: None,
+                        });
+                    }
+                }
+            },
+            "BattleBuffShiftWeapon" => {
+                let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
+                if !rwc
+                    .new_weapons
+                    .iter()
+                    .any(|w| w.weapon.weapon_id == weapon_id)
+                {
+                    let detach_id: Option<u32> = get_arg(&entry, "detach_id")?;
+                    let detach_label_list: Option<Vec<String>> =
+                        get_arg(&entry, "detach_labelList")?;
+
+                    if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
+                        rwc.new_weapons.push(BuffWeapon {
+                            duration: None,
+                            weapon,
+                            replace: match (detach_id, detach_label_list) {
+                                (Some(id), _) => Some(BuffWeaponReplace::Id(id)),
+                                (_, Some(labels)) => Some(BuffWeaponReplace::Label(
+                                    labels
+                                        .into_iter()
+                                        .map(String::trunc_into)
+                                        .collect_fixed_array(),
+                                )),
+                                _ => None,
+                            },
                         });
                     }
                 }
