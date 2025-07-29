@@ -6,11 +6,11 @@ use std::time::Duration;
 use bson_model::Filter;
 use chrono::{DateTime, Utc};
 use rand::prelude::*;
-use tokio::time::timeout;
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
 use crate::helper::bson::is_upsert_duplicate_key;
+use crate::helper::futures::if_too_long;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
 
@@ -117,7 +117,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     // when that doesn't work out, also fine, but usually the db isn't that slow.
     // ... except we also don't want to defer in the successful case because edits
     // can't trigger notifications. so don't defer at all if possible.
-    let (cooldown_check, defer) = if_too_long(pin!(cooldown_check), pin!(defer)).await;
+    let (cooldown_check, defer) = if_too_long(pin!(cooldown_check), TOO_LONG, pin!(defer)).await;
 
     // evaluate cooldown result
     cooldown_check?;
@@ -206,17 +206,6 @@ async fn throw_cooldown_error(ctx: Context<'_>) -> Result {
 
     let time = self_state.cooldown_ends.short_date_time();
     Err(HArgError::new(format!("Nope. You can rep again at: {time}")).into())
-}
-
-async fn if_too_long<F, I>(mut fut: F, intercept: I) -> (F::Output, Option<I::Output>)
-where
-    F: Future + Unpin,
-    I: Future + Unpin,
-{
-    match timeout(TOO_LONG, &mut fut).await {
-        Ok(f) => (f, None),
-        Err(_) => tokio::join!(fut, async { Some(intercept.await) }),
-    }
 }
 
 const EMOJIS: &[&str] = &[

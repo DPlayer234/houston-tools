@@ -5,7 +5,7 @@ use serenity::gateway::client::{Context, RawEventHandler};
 
 use super::model::*;
 use super::{Cache, CachedGuild};
-use crate::helper::noop_future;
+use crate::helper::futures::noop_future;
 use crate::prelude::*;
 
 /// [`RawEventHandler`] that updates the cache stored in the [`HContextData`].

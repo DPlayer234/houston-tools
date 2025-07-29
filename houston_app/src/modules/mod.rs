@@ -149,7 +149,7 @@ macro_rules! impl_handler {
                     $( $pat => ::std::boxed::Box::pin($block), )*
                     // users are allowed to exhaustively match
                     #[allow(unreachable_patterns)]
-                    _ => $crate::helper::noop_future(),
+                    _ => $crate::helper::futures::noop_future(),
                 }
             }
         }
