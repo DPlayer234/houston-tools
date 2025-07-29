@@ -36,7 +36,7 @@ local function lazy_load(mode, allow_name_code)
         if mode == 2 and cs[name].indexs[index] then
             local subName = cs[name].subList[cs[name].indexs[index]]
             if pg.base[subName] == nil then
-                require("sharecfg." .. cs[name].subFolderName .. "." .. subName)
+                require("sharecfg." .. cs[name].subFolderName:lower() .. "." .. subName)
             end
 
             name = subName

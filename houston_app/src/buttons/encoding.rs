@@ -51,6 +51,7 @@ pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: 
     }
 
     #[cold]
+    #[inline(never)]
     fn log_error(why: Error, key: usize) {
         log::error!("Error serializing `{key}`: {why}");
     }
