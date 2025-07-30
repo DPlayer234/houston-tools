@@ -104,31 +104,3 @@ async fn update_indices(
         Err(err) => Err(err).context("could not create indices"),
     }
 }
-
-/// Serializes a Discord ID as an [`i64`].
-pub mod id_as_i64 {
-    use serde::de::Error as _;
-    use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
-
-    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: From<u64>,
-    {
-        let int = i64::deserialize(deserializer)?.cast_unsigned();
-        if int != u64::MAX {
-            Ok(T::from(int))
-        } else {
-            Err(D::Error::custom("invalid discord id"))
-        }
-    }
-
-    pub fn serialize<S, T>(val: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Into<i64> + Copy,
-    {
-        let int: i64 = (*val).into();
-        int.serialize(serializer)
-    }
-}

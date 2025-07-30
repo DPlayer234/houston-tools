@@ -16,7 +16,7 @@ pub struct Message {
     pub max_reacts: i64,
     #[serde(default)]
     pub pinned: bool,
-    #[serde(default)]
+    #[serde(default, with = "coll_id_as_i64")]
     pub pin_messages: Vec<MessageId>,
 }
 
