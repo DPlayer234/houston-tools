@@ -75,7 +75,10 @@ async fn profile_core(
     }
 
     embed = embed.description(description);
-    let reply = CreateReply::new().embed(embed);
+
+    let reply = CreateReply::new()
+        .embed(embed)
+        .allowed_mentions(CreateAllowedMentions::new());
 
     ctx.send(reply).await?;
     Ok(())

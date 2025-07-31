@@ -79,12 +79,11 @@ pub async fn calc(
     let components = components_array![CreateTextDisplay::new(content)];
     let components = components_array![CreateContainer::new(&components).accent_color(color)];
 
-    ctx.send(
-        create_reply(ephemeral)
-            .components_v2(&components)
-            .allowed_mentions(CreateAllowedMentions::new()),
-    )
-    .await?;
+    let reply = create_reply(ephemeral)
+        .components_v2(&components)
+        .allowed_mentions(CreateAllowedMentions::new());
+
+    ctx.send(reply).await?;
     Ok(())
 }
 

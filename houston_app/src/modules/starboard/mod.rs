@@ -1,3 +1,5 @@
+use std::slice;
+
 use bson_model::{Filter, ModelDocument as _};
 use mongodb::options::ReturnDocument;
 use rand::prelude::*;
@@ -497,7 +499,15 @@ async fn pin_message_to_board(
         _ => out.push(char::REPLACEMENT_CHARACTER),
     });
 
-    let notice = CreateMessage::new().content(notice);
+    // ping just the applicable user
+    let allowed_mentions = CreateAllowedMentions::new()
+        .users(slice::from_ref(&message.author.id))
+        .empty_roles();
+
+    let notice = CreateMessage::new()
+        .content(notice)
+        .allowed_mentions(allowed_mentions);
+
     let message_link = MessageLink::from(message).guild_id(guild_id);
 
     let pin_messages;

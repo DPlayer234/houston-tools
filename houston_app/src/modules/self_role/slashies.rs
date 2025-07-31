@@ -39,7 +39,11 @@ pub async fn self_role(
         .description(description)
         .color(data.config().embed_color);
 
-    ctx.send(CreateReply::new().embed(embed)).await?;
+    let reply = CreateReply::new()
+        .embed(embed)
+        .allowed_mentions(CreateAllowedMentions::new());
+
+    ctx.send(reply).await?;
     Ok(())
 }
 

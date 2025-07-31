@@ -57,12 +57,11 @@ async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>
         CreateContainer::new(components).accent_color(ctx.data_ref().config().embed_color),
     ];
 
-    ctx.send(
-        create_reply(ephemeral)
-            .components_v2(&components)
-            .allowed_mentions(CreateAllowedMentions::new()),
-    )
-    .await?;
+    let reply = create_reply(ephemeral)
+        .components_v2(&components)
+        .allowed_mentions(CreateAllowedMentions::new());
+
+    ctx.send(reply).await?;
     Ok(())
 }
 

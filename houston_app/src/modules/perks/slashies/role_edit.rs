@@ -59,7 +59,11 @@ pub async fn role_edit(
                 .color(data.config().embed_color)
                 .description(description);
 
-            ctx.send(CreateReply::new().embed(embed)).await?;
+            let reply = CreateReply::new()
+                .embed(embed)
+                .allowed_mentions(CreateAllowedMentions::new());
+
+            ctx.send(reply).await?;
         },
         Err(_) => {
             Wallet::collection(db)

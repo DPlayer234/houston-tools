@@ -237,6 +237,10 @@ async fn unique_role(
         .color(data.config().embed_color)
         .description(description);
 
-    ctx.send(CreateReply::new().embed(embed)).await?;
+    let reply = CreateReply::new()
+        .embed(embed)
+        .allowed_mentions(CreateAllowedMentions::new());
+
+    ctx.send(reply).await?;
     Ok(())
 }

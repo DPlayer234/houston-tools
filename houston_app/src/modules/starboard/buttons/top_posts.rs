@@ -111,9 +111,11 @@ impl View {
             components.push(nav);
         }
 
-        Ok(CreateReply::new().components_v2(components![
-            CreateContainer::new(components).accent_color(data.config().embed_color)
-        ]))
+        let container = CreateContainer::new(components).accent_color(data.config().embed_color);
+
+        Ok(CreateReply::new()
+            .components_v2(components![container])
+            .allowed_mentions(CreateAllowedMentions::new()))
     }
 
     fn message_filter(&self) -> Result<Document> {
