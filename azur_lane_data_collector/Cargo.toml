@@ -30,8 +30,8 @@ features = ["std", "help", "usage", "error-context", "suggestions", "derive"]
 default-features = false
 
 [dependencies.mlua]
-version = "0.10.3"
-features = ["lua54", "vendored", "send", "serialize"]
+version = "0.11.1"
+features = ["lua54", "vendored", "error-send", "serialize"]
 
 [build-dependencies]
 utils_build = { path = "../libs/utils_build" }
