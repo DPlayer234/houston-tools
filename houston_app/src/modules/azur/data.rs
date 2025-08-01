@@ -321,7 +321,14 @@ impl GameData {
                     // data race: loaded concurrently, too slow here. drop the newly read data.
                     Entry::Occupied(entry) => entry.get().clone(),
                     // still empty: wrap the current data and return it
-                    Entry::Vacant(entry) => (*entry.insert(Some(Bytes::from(data)))).clone(),
+                    Entry::Vacant(entry) => {
+                        // convert the data `Vec<u8>` to a `Box<[u8]>` first so we can be sure it
+                        // doesn't end up caching with excess capacity. this is usually a noop since
+                        // `fs::read` should preallocate the correct size, and `Bytes` would do this
+                        // itself if the capacity is exact, but we'll just make sure with this.
+                        let data = data.into_boxed_slice();
+                        (*entry.insert(Some(Bytes::from(data)))).clone()
+                    },
                 }
             },
             Err(err) => {

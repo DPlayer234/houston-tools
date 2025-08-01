@@ -38,10 +38,14 @@ enum AzurParseError {
     JuustagramChat,
 }
 
+/// Tries to get the ship preview name from the message, assuming
+/// - the message's first component is a container
+/// - whose first component is a section
+/// - whose accessory is a thumbnail with the preview.
 fn get_ship_preview_name<'a>(ctx: &ButtonContext<'a>) -> Option<&'a str> {
     if let Some(Component::Container(container)) = ctx.interaction.message.components.first()
         && let Some(Component::Section(section)) = container.components.first()
-        && let Component::Thumbnail(thumbnail) = section.accessory.as_ref()
+        && let Component::Thumbnail(thumbnail) = &*section.accessory
     {
         get_thumbnail_filename(&thumbnail.media.url)
     } else {

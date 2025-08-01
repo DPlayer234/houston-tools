@@ -53,7 +53,7 @@ impl Config {
     /// Gets or loads the game data.
     ///
     /// Only one thread will load the game data, other threads will wait for it
-    /// to be finish loading. Future calls will return the cached data.
+    /// to finish loading. Future calls will return the cached data.
     pub fn game_data(&self) -> anyhow::Result<&GameData> {
         self.game_data
             .get_or_init(|| self.load_game_data())
@@ -150,8 +150,8 @@ impl WikiUrls {
 // Using `LoadedConfig::new` or `Config::load` ensures the data is loaded successfully.
 #[derive(Debug, Clone, Copy)]
 pub struct LoadedConfig<'a> {
-    /// The raw configuration.
-    pub raw: &'a Config,
+    /// The raw configuration. This field must not be writable for other code.
+    raw: &'a Config,
 
     // this field only serves to make it explicit that this type has safety invariants for
     // construction and to avoid constructing it outside of this module.
@@ -198,6 +198,7 @@ impl<'a> LoadedConfig<'a> {
         match self.raw.game_data.get() {
             Some(Some(data)) => data,
             // SAFETY: `new` ensures that the game data is already loaded and not `None`
+            // and `raw` field is private to this module and can't be modified by other code
             _ => unsafe { hint::unreachable_unchecked() },
         }
     }
