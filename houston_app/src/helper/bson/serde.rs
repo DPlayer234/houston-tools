@@ -1,3 +1,7 @@
+//! Helper functions for serializing values in BSON.
+//!
+//! This primarily deals with serializing [serenity]'s IDs as integers.
+
 use std::marker::PhantomData;
 
 use serde::de::{Error, Visitor};
@@ -30,8 +34,17 @@ impl<T: CastI64> Serialize for I64<T> {
     where
         S: Serializer,
     {
-        let int: i64 = self.0.into();
-        int.serialize(serializer)
+        let int = self.0.into();
+        serializer.serialize_i64(int)
+    }
+}
+
+impl<'de, T: CastI64> Deserialize<'de> for I64<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(I64Visitor(PhantomData))
     }
 }
 
@@ -65,15 +78,6 @@ impl<T: CastI64> Visitor<'_> for I64Visitor<T> {
         E: Error,
     {
         v.parse().map_err(E::custom).and_then(|v| self.visit_u64(v))
-    }
-}
-
-impl<'de, T: CastI64> Deserialize<'de> for I64<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_any(I64Visitor(PhantomData))
     }
 }
 

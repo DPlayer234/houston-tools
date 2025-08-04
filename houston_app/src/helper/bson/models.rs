@@ -1,3 +1,5 @@
+//! Traits and functions for defining or using the database model.
+
 use anyhow::Context as _;
 use bson::Document;
 use mongodb::error::{CommandError, Error, ErrorKind, WriteError, WriteFailure};
@@ -40,6 +42,10 @@ pub trait ModelCollection {
 }
 
 /// Determines whether the error code is `11000 (DuplicateKey)`.
+///
+/// This can be used to upsert a document with a filter that includes more than
+/// just unique-index fields. If this error is encountered, it means that the
+/// document already exists, but doesn't match the non-unique-index predicates.
 pub fn is_upsert_duplicate_key(err: &Error) -> bool {
     // can show up for both command and write errors, for some reason
     matches!(
@@ -49,17 +55,28 @@ pub fn is_upsert_duplicate_key(err: &Error) -> bool {
     )
 }
 
+/// Shared non-generic logic for [`ModelCollection::update_indices`].
+///
+/// This attempts to create all indices in bulk. If there is a conflict, falls
+/// back to creating the indices one-by-one, dropping and recreating any
+/// individual ones that run into a conflict. This function includes logging for
+/// this case.
+///
+/// The indices are provided as a function pointer so they can be created a
+/// second time as needed rather than having to be cloned every time.
 async fn update_indices(
     collection: Collection<Document>,
     indices_fn: fn() -> Vec<IndexModel>,
 ) -> anyhow::Result<()> {
-    // match for command error kind 86 `IndexKeySpecsConflict`
-    // in this case, we can probably just drop the index and recreate it
+    /// Whether to try to drop the index and recreate it. This just checks
+    /// whether the command error kind is `86 (IndexKeySpecsConflict)`.
     fn is_recreate(err: &Error) -> bool {
         matches!(*err.kind, ErrorKind::Command(CommandError { code: 86, .. }))
     }
 
-    async fn recreate(
+    /// Slow path for [`update_indices`]. Indices are created one-by-one and, if
+    /// a conflict arises, are dropped and then created again.
+    async fn recreate_indices(
         collection: Collection<Document>,
         indices_fn: fn() -> Vec<IndexModel>,
     ) -> anyhow::Result<()> {
@@ -100,7 +117,7 @@ async fn update_indices(
     // if we can attempt a recreate, try the indices individually
     match collection.create_indexes(indices).await {
         Ok(_) => Ok(()),
-        Err(err) if is_recreate(&err) => recreate(collection, indices_fn).await,
+        Err(err) if is_recreate(&err) => recreate_indices(collection, indices_fn).await,
         Err(err) => Err(err).context("could not create indices"),
     }
 }

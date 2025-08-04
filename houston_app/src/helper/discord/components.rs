@@ -117,7 +117,11 @@ define_component_builder!(
 /// # Examples
 ///
 /// ```
-/// _ = components![""];
+/// # use crate::helper::discord::components;
+/// let comps = components![
+///     serenity::builder::CreateTextDisplay::new("hello")
+/// ];
+/// # _ = comps;
 /// ```
 macro_rules! components {
     [$($e:expr),* $(,)?] => {
@@ -132,7 +136,11 @@ macro_rules! components {
 /// # Examples
 ///
 /// ```
-/// let _ = components_array![""];
+/// # use crate::helper::discord::components_array;
+/// let comps = components_array![
+///     serenity::builder::CreateTextDisplay::new("hello")
+/// ];
+/// # _ = comps;
 /// ```
 macro_rules! components_array {
     [$($e:expr),* $(,)?] => {
@@ -148,7 +156,11 @@ macro_rules! components_array {
 /// # Examples
 ///
 /// ```
-/// _ = section_components![""];
+/// # use crate::helper::discord::section_components;
+/// let comps = section_components![
+///     serenity::builder::CreateTextDisplay::new("hello")
+/// ];
+/// # _ = comps;
 /// ```
 macro_rules! section_components {
     [$($e:expr),* $(,)?] => {
@@ -205,4 +217,36 @@ mod impls {
     impl_into_component!(CreateContainer<'a>, Container);
 
     impl_into_section_component!(CreateTextDisplay<'a>, TextDisplay);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn components() {
+        let comps = components![CreateTextDisplay::new("hello")];
+        assert!(matches!(
+            comps.as_slice(),
+            [CreateComponent::TextDisplay(_)]
+        ));
+    }
+
+    #[test]
+    fn components_array() {
+        let comps = components_array![CreateTextDisplay::new("hello")];
+        assert!(matches!(
+            comps.as_slice(),
+            [CreateComponent::TextDisplay(_)]
+        ));
+    }
+
+    #[test]
+    fn section_components() {
+        let comps = section_components![CreateTextDisplay::new("hello")];
+        assert!(matches!(
+            comps.as_slice(),
+            [CreateSectionComponent::TextDisplay(_)]
+        ));
+    }
 }

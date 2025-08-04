@@ -57,8 +57,9 @@ pub fn noop_future() -> BoxFuture<'static, ()> {
 ///
 /// # Notes
 ///
-/// If the caller has previously polled `intercept` and it's not passed by
-/// reference, this function may cancel it.
+/// This function will simply drop `intercept` if it isn't polled. If the caller
+/// has already polled `intercept` before passing it to this function, this may
+/// lead to cancellation.
 ///
 /// The [`Unpin`] requirement for the input futures only exists to allow this
 /// function to avoid re-pinning the futures if they already were pinned. It is

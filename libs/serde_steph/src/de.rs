@@ -158,7 +158,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     /// Creates a new deserializer that reads a value from a [`io::Read`].
     ///
     /// If you're working with a byte slice, it is more efficient to use
-    /// [`from_slice`].
+    /// [`Self::from_slice`].
     ///
     /// This is gives more control than [`from_reader`], insofar that it allows
     /// manual handling of the remainder or continuing deserialization after the
