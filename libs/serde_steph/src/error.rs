@@ -22,17 +22,26 @@ pub enum Error {
     Io(#[from] io::Error),
 
     /// A struct, sequence, or map tried to serialize itself without a length.
+    ///
+    /// Calling [`collect_seq`](ser::Serializer::collect_seq) with an iterator
+    /// that doesn't provide an exact size hint will also lead to this error.
     #[error("structs, sequences, and maps must specify a length")]
     LengthRequired,
     /// A struct, sequence, or map tried to serialize itself with the wrong
     /// length.
+    ///
+    /// Calling [`collect_seq`](ser::Serializer::collect_seq) with an iterator
+    /// that provides an exact-yet-incorrect size hint will also lead to this
+    /// error.
     #[error("length for struct, sequence, or map was incorrect")]
     LengthIncorrect,
 
-    /// Tries to deserialize a [`str`] value but it contained invalid UTF-8.
-    #[error("invalid utf-8 in data for string")]
+    /// Tried to deserialize a [`str`] value but the corresponding bytes did not
+    /// contain fully valid UTF-8.
+    #[error("invalid utf-8 in bytes for string")]
     InvalidUtf8,
-    /// Tried to deserialize a [`char`] value but its code was invalid.
+    /// Tried to deserialize a [`char`] value but the character code was
+    /// invalid.
     #[error("invalid char code")]
     InvalidChar,
     /// Tried to deserialize a [`bool`] value but it wasn't 0 or 1.
@@ -41,16 +50,18 @@ pub enum Error {
     /// Tried to deserialize an [`Option`] with an invalid discriminator.
     #[error("invalid option discriminator")]
     InvalidOption,
-    /// Tried to deserialize a struct or sequence but the [`de::Deserialize`]
-    /// implementations read less elements than specified by the length prefix.
+    /// Tried to deserialize a struct or sequence but less elements were read
+    /// from the deserializer than specified by the length prefix.
     #[error("read less seq elements than specified by length prefix")]
     ShortSeqRead,
-    /// A type tried to use [`de::Deserializer::deserialize_any`].
-    #[error("types deserializing via any are unsupported")]
+    /// [`deserialize_any`](de::Deserializer::deserialize_any) or
+    /// [`deserialize_ignored_any`](de::Deserializer::deserialize_ignored_any)
+    /// were called.
+    #[error("deserializing any is unsupported")]
     AnyUnsupported,
     /// While deserializing LEB128 integer data, the data overflowed the target
     /// type.
-    #[error("LEB encoded integer overflows target type")]
+    #[error("LEB128 encoded integer overflows target type")]
     IntegerOverflow,
     /// Past the expected end of the deserialized object were trailing bytes.
     #[error("trailing bytes past the end of the deserialized value")]

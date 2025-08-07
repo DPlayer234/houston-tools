@@ -30,6 +30,12 @@ macro_rules! define_component_builder {
             fn $convert(self) -> $Wrap<'a>;
         }
 
+        impl<'a> $Trait<'a> for $Wrap<'a> {
+            fn $convert(self) -> Self {
+                self
+            }
+        }
+
         impl<'a> $Ident<'a> {
             /// Creates a new, empty collection.
             pub fn new() -> Self {
@@ -175,18 +181,6 @@ pub(crate) use {components, components_array, section_components};
 mod impls {
     use super::{IntoComponent, IntoSectionComponent};
     use crate::prelude::*;
-
-    impl<'a> IntoComponent<'a> for CreateComponent<'a> {
-        fn into_component(self) -> Self {
-            self
-        }
-    }
-
-    impl<'a> IntoSectionComponent<'a> for CreateSectionComponent<'a> {
-        fn into_section_component(self) -> Self {
-            self
-        }
-    }
 
     macro_rules! impl_into_component {
         ($Ty:ty, $var:ident) => {
