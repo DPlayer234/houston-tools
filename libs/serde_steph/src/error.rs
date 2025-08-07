@@ -23,16 +23,17 @@ pub enum Error {
 
     /// A struct, sequence, or map tried to serialize itself without a length.
     ///
-    /// Calling [`collect_seq`](ser::Serializer::collect_seq) with an iterator
-    /// that doesn't provide an exact size hint will also lead to this error.
+    /// Calling [`collect_seq`](ser::Serializer::collect_seq) or
+    /// [`collect_map`](ser::Serializer::collect_map) with an iterator that
+    /// doesn't provide an exact size hint will also lead to this error.
     #[error("structs, sequences, and maps must specify a length")]
     LengthRequired,
     /// A struct, sequence, or map tried to serialize itself with the wrong
     /// length.
     ///
-    /// Calling [`collect_seq`](ser::Serializer::collect_seq) with an iterator
-    /// that provides an exact-yet-incorrect size hint will also lead to this
-    /// error.
+    /// Calling [`collect_seq`](ser::Serializer::collect_seq) or
+    /// [`collect_map`](ser::Serializer::collect_map) with an iterator that
+    /// provides an exact-yet-incorrect size hint will also lead to this error.
     #[error("length for struct, sequence, or map was incorrect")]
     LengthIncorrect,
 
