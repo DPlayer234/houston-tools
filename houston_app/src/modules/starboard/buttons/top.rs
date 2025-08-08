@@ -3,14 +3,14 @@ use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
-use crate::helper::discord::id_as_u64;
+use crate::helper::discord::IdU64;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 
 // View the leaderboards.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View {
-    #[serde(with = "id_as_u64")]
+    #[serde(with = "As::<IdU64>")]
     pub guild: GuildId,
     pub board: BoardId,
     #[builder(default = 0)]

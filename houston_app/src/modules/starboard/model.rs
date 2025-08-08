@@ -6,17 +6,17 @@ pub struct Message {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub board: BoardId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     pub channel: GenericChannelId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     pub message: MessageId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     pub user: UserId,
     #[serde(default)]
     pub max_reacts: i64,
     #[serde(default)]
     pub pinned: bool,
-    #[serde(default, with = "coll_id_as_i64")]
+    #[serde(default, with = "As::<Vec<IdI64>>")]
     pub pin_messages: Vec<MessageId>,
 }
 
@@ -25,7 +25,7 @@ pub struct Score {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub board: BoardId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     pub user: UserId,
     #[serde(default)]
     pub score: i64,

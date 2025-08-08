@@ -66,76 +66,61 @@ impl WithPartial for Member {
     type Partial = PartialMember;
 }
 
-/// Serializes a Discord ID as an [`u64`].
-pub mod id_as_u64 {
+/// Marker type to use with [`serde_with`] in place of the ID type to
+/// serialize Discord IDs as fixed-length 64-bit values.
+pub enum IdU64 {}
+
+trait CastU64: From<u64> + Into<u64> + Copy {}
+impl<T: From<u64> + Into<u64> + Copy> CastU64 for T {}
+
+mod impl_id_u64 {
     // LEB128 isn't really efficient for Discord IDs so circumvent that by encoding
     // them as byte arrays. we also need an override anyways because serenity tries
     // to deserialize them as any and that's no good.
     use serde::de::Error;
     use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
+    use serde_with::{DeserializeAs, SerializeAs};
 
-    pub(super) fn unpack<T, E>(int: [u8; 8]) -> Result<T, E>
+    use super::{CastU64, IdU64};
+
+    impl<T: CastU64> SerializeAs<T> for IdU64 {
+        fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            pack(*source).serialize(serializer)
+        }
+    }
+
+    impl<'de, T: CastU64> DeserializeAs<'de, T> for IdU64 {
+        fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            unpack(<[u8; 8]>::deserialize(deserializer)?)
+        }
+    }
+
+    fn unpack<T, E>(int: [u8; 8]) -> Result<T, E>
     where
-        T: From<u64>,
+        T: CastU64,
         E: Error,
     {
+        // serenity's ids panic if you try to construct them from `u64::MAX`
+        // since they are backed by `NonMaxU64` inner values.
         let int = u64::from_le_bytes(int);
         if int != u64::MAX {
             Ok(T::from(int))
         } else {
-            Err(E::custom("invalid discord id"))
+            Err(E::custom("discord id cannot be u64::MAX"))
         }
     }
 
-    pub(super) fn pack<T>(val: T) -> [u8; 8]
+    fn pack<T>(val: T) -> [u8; 8]
     where
-        T: Into<u64> + Copy,
+        T: CastU64,
     {
         let int: u64 = val.into();
         int.to_le_bytes()
-    }
-
-    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: From<u64>,
-    {
-        unpack(<[u8; 8]>::deserialize(deserializer)?)
-    }
-
-    pub fn serialize<S, T>(val: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Into<u64> + Copy,
-    {
-        pack(*val).serialize(serializer)
-    }
-}
-
-/// Serializes a Discord ID as an [`u64`].
-pub mod option_id_as_u64 {
-    // LEB128 isn't really efficient for Discord IDs so circumvent that by encoding
-    // them as byte arrays. we also need an override anyways because serenity tries
-    // to deserialize them as any and that's no good.
-    use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
-
-    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: From<u64>,
-    {
-        match <Option<[u8; 8]>>::deserialize(deserializer)? {
-            Some(value) => super::id_as_u64::unpack(value).map(Some),
-            None => Ok(None),
-        }
-    }
-
-    #[expect(clippy::ref_option)]
-    pub fn serialize<S, T>(val: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Into<u64> + Copy,
-    {
-        val.map(super::id_as_u64::pack).serialize(serializer)
     }
 }

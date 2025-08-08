@@ -25,6 +25,7 @@ pub mod prelude {
     pub use bson_model::ModelDocument as _;
     pub use const_builder::ConstBuilder;
     pub use serde::{Deserialize, Serialize};
+    pub use serde_with::As;
 
     pub(crate) use super::button_value;
     pub use super::{ButtonContext, ButtonReply, ButtonValue, ModalContext, Nav};

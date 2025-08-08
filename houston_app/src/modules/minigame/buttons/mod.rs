@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::id_as_u64;
+use crate::helper::discord::IdU64;
 
 pub mod chess;
 pub mod rock_paper_scissors;
@@ -24,9 +24,9 @@ impl Player {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct PlayerState {
-    #[serde(with = "id_as_u64")]
+    #[serde(with = "As::<IdU64>")]
     p1: UserId,
-    #[serde(with = "id_as_u64")]
+    #[serde(with = "As::<IdU64>")]
     p2: UserId,
     turn: Player,
 }

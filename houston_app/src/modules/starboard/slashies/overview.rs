@@ -1,10 +1,11 @@
 use bson::doc;
 use bson_model::Sort::Desc;
 use bson_model::{Filter, ModelDocument};
+use serde_with::As;
 use utils::text::WriteStr as _;
 
 use crate::fmt::discord::MessageLink;
-use crate::helper::bson::id_as_i64;
+use crate::helper::bson::IdI64;
 use crate::modules::starboard::{BoardId, model};
 use crate::slashies::prelude::*;
 
@@ -12,7 +13,7 @@ use crate::slashies::prelude::*;
 struct TopScore {
     #[serde(rename = "_id")]
     board: BoardId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     user: UserId,
     #[serde(default)]
     score: i64,
@@ -24,11 +25,11 @@ struct TopScore {
 struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     channel: GenericChannelId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     message: MessageId,
-    #[serde(with = "id_as_i64")]
+    #[serde(with = "As::<IdI64>")]
     user: UserId,
     #[serde(default)]
     max_reacts: i64,

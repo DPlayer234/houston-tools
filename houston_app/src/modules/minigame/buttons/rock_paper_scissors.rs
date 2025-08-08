@@ -1,7 +1,7 @@
 use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
-use crate::helper::discord::{id_as_u64, unicode_emoji};
+use crate::helper::discord::{IdU64, unicode_emoji};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct View {
@@ -11,7 +11,7 @@ pub struct View {
 
 #[derive(Clone, Serialize, Deserialize)]
 struct State {
-    #[serde(with = "id_as_u64")]
+    #[serde(with = "As::<IdU64>")]
     user: UserId,
     choice: Option<Choice>,
 }
@@ -25,7 +25,7 @@ impl State {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 enum Choice {
     Rock,
     Paper,
