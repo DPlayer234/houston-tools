@@ -7,7 +7,7 @@ use crate::unity_fs::UnityFsFile;
 use crate::{FromInt as _, define_unity_class};
 
 define_unity_class! {
-    /// Data for Unity's Texture2D class.
+    /// Data for Unity's `Texture2D` class.
     pub class Texture2D = "Texture2D" {
         pub name: String = "m_Name",
         pub width: i32 = "m_Width",

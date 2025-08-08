@@ -20,3 +20,11 @@ default-features = false
 features = [
     "builder", "framework", "gateway", "model", "http", "utils"
 ]
+
+[dev-dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
+default-features = false
+features = [
+    "builder", "framework", "gateway", "model", "http", "utils", "rustls_backend"
+]

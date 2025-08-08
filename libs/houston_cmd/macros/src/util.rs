@@ -2,7 +2,7 @@ use darling::util::SpannedValue;
 use proc_macro2::{Span, TokenStream};
 use syn::fold::Fold;
 use syn::spanned::Spanned as _;
-use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaNameValue};
+use syn::{Attribute, Expr, Lit, Meta};
 
 pub fn quote_map_option<T>(value: Option<T>, f: impl FnOnce(T) -> TokenStream) -> TokenStream {
     match value {
@@ -29,24 +29,17 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<SpannedValue<String>> 
 
     let mut res = None;
     for a in attrs {
-        if let Meta::NameValue(MetaNameValue {
-            path,
-            value:
-                Expr::Lit(ExprLit {
-                    lit: Lit::Str(literal),
-                    ..
-                }),
-            ..
-        }) = &a.meta
+        if let Meta::NameValue(pair) = &a.meta
+            && let Expr::Lit(lit) = &pair.value
+            && let Lit::Str(str) = &lit.lit
+            && pair.path.is_ident(&ident)
         {
-            if path.is_ident(&ident) {
-                let desc = res.get_or_insert(SpannedValue::new(String::new(), a.span()));
-                if !desc.is_empty() {
-                    desc.push(' ');
-                }
-
-                desc.push_str(literal.value().trim());
+            let desc = res.get_or_insert(SpannedValue::new(String::new(), a.span()));
+            if !desc.is_empty() {
+                desc.push(' ');
             }
+
+            desc.push_str(str.value().trim());
         }
     }
 
