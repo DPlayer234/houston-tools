@@ -159,8 +159,8 @@ pub async fn hull_or_team_type<'a>(
 
 impl<'ctx> SlashArg<'ctx> for HullOrTeam {
     fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
-        match resolved {
-            ResolvedValue::Integer(index) => usize::try_from(*index)
+        match *resolved {
+            ResolvedValue::Integer(index) => usize::try_from(index)
                 .ok()
                 .and_then(Self::from_index)
                 .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index")),
