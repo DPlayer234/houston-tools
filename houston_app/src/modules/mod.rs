@@ -41,7 +41,7 @@ mod model_prelude {
     pub use serde_with::As;
     pub use serenity::model::id::*;
 
-    pub use crate::helper::bson::{IdI64, ModelCollection};
+    pub use crate::helper::bson::{IdBson, ModelCollection};
     pub use crate::prelude::*;
 }
 

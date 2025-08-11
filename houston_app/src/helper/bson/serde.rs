@@ -8,26 +8,27 @@ use serde::de::{Error, Visitor};
 use serde::{Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
-trait CastI64: From<u64> + Into<i64> + Copy {}
-impl<T: From<u64> + Into<i64> + Copy> CastI64 for T {}
+trait CastI64: From<u64> + Into<u64> + Copy {}
+impl<T: From<u64> + Into<u64> + Copy> CastI64 for T {}
 
-/// Serializes Discord IDs' underlying [`u64`] value as [`i64`], and reverses
+/// Marker type to use with [`serde_with`] in place of the ID type to serialize
+/// the Discord ID's underlying [`u64`] value as [`i64`], and reversing
 /// that process for deserialization.
 ///
 /// When deserializing, also accepts stringified [`u64`] values.
-pub enum IdI64 {}
+pub enum IdBson {}
 
-impl<T: CastI64> SerializeAs<T> for IdI64 {
+impl<T: CastI64> SerializeAs<T> for IdBson {
     fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let int = (*source).into();
-        serializer.serialize_i64(int)
+        let int: u64 = (*source).into();
+        serializer.serialize_i64(int.cast_signed())
     }
 }
 
-impl<'de, T: CastI64> DeserializeAs<'de, T> for IdI64 {
+impl<'de, T: CastI64> DeserializeAs<'de, T> for IdBson {
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,

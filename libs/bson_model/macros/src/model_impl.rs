@@ -232,9 +232,10 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
 
     let field_methods = fields.iter().map(|field| {
         let FieldArgs { name, ty, .. } = field;
+        let doc = format!("Sets the `{name}` field.");
 
         quote::quote! {
-            #[doc = concat!("Sets the `", stringify!(#name), "` field.")]
+            #[doc = #doc]
             #[must_use]
             pub fn #name(mut self, #name: #ty) -> Self {
                 self.#name = ::std::option::Option::Some(#name);
@@ -253,8 +254,9 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let into_document = emit_into_document(crate_, partial_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
 
+    let doc = format!("A partial [`{ty_name}`].");
     quote::quote! {
-        #[doc = concat!("A partial [`", stringify!(#ty_name), "`].")]
+        #[doc = #doc]
         #[derive(#crate_::private::serde::Serialize #(,#derive_partial)*)]
         #[serde(crate = #serde_crate)]
         #vis struct #partial_name #impl_gen #where_clause {
@@ -325,9 +327,10 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
 
     let field_methods = fields.iter().map(|field| {
         let FieldArgs { name, ty, .. } = field;
+        let doc = format!("Sets the filter condition for the `{name}` field.");
 
         quote::quote! {
-            #[doc = concat!("Sets the filter condition for the `", stringify!(#name), "` field.")]
+            #[doc = #doc]
             #[must_use]
             pub fn #name(mut self, #name: impl ::std::convert::Into<#crate_::Filter<#ty>>) -> Self {
                 self.#name = Some(::std::convert::Into::into(#name));
@@ -346,8 +349,9 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let into_document = emit_into_document(crate_, filter_name, generics);
     let serde_crate = quote::quote!(#crate_::private::serde).to_string();
 
+    let doc = format!("A filter builder for [`{ty_name}`].");
     quote::quote! {
-        #[doc = concat!("A filter builder for [`", stringify!(#ty_name), "`].")]
+        #[doc = #doc]
         #[derive(#crate_::private::serde::Serialize #(, #derive_filter)*)]
         #[serde(crate = #serde_crate)]
         #vis struct #filter_name #impl_gen #where_clause {
@@ -394,9 +398,10 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
     let field_methods = fields.iter().map(|field| {
         let FieldArgs { name, args, .. } = field;
         let rename = args.rename.as_ref().unwrap_or(name).to_string();
+        let doc = format!("Sorts the document by the `{name}` field.");
 
         quote::quote! {
-            #[doc = concat!("Sorts the document by the `", stringify!(#name), "` field.")]
+            #[doc = #doc]
             ///
             /// The order of function calls impacts the sort!
             #[must_use]
@@ -409,12 +414,21 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
 
     let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
+    let doc_header = format!("A sort builder for [`{ty_name}`].");
+    let doc_footer = format!(
+        "[`Document`]: {}::private::bson::Document",
+        crate_
+            .to_token_stream()
+            .to_string()
+            .split_whitespace()
+            .collect::<String>()
+    );
     quote::quote! {
-        #[doc = concat!("A sort builder for [`", stringify!(#ty_name), "`].")]
+        #[doc = #doc_header]
         ///
         /// This represents a thin wrapper around a [`Document`] to retain the used sort priority.
         ///
-        #[doc = concat!("[`Document`]: ", stringify!(#crate_), "::private::bson::Document")]
+        #[doc = #doc_footer]
         #vis struct #sort_name #impl_gen (
             #crate_::private::bson::Document,
             ::std::marker::PhantomData<#ty_name #ty_gen>,
@@ -482,6 +496,7 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
 fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
     let ModelArgs {
         vis,
+        ty_name,
         fields_name,
         fields,
         crate_,
@@ -492,9 +507,10 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
         let FieldArgs { name, args, .. } = field;
         let rename = args.rename.as_ref().unwrap_or(name).to_string();
         let expr_name = "$".to_owned() + &rename;
+        let doc = format!("Gets the BSON `{name}` field.");
 
         quote::quote! {
-            #[doc = concat!("Gets the BSON `", stringify!(#name), "` field.")]
+            #[doc = #doc]
             pub const fn #name(self) -> #crate_::ModelField {
                 const {
                     #crate_::ModelField::new(#expr_name)
@@ -503,7 +519,9 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
+    let doc = format!("Accessor struct for the BSON fields of [`{ty_name}`].");
     quote::quote! {
+        #[doc = #doc]
         #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::marker::Copy)]
         #vis struct #fields_name(());
 

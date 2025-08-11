@@ -4,9 +4,9 @@ use crate::modules::model_prelude::*;
 pub struct Record {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub user: UserId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
     #[serde(default)]
     pub received: i64,

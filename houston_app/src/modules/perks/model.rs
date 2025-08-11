@@ -11,9 +11,9 @@ use crate::modules::model_prelude::*;
 pub struct Wallet {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     #[serde(default)]
     pub cash: i64,
@@ -29,9 +29,9 @@ pub struct Wallet {
 pub struct ActivePerk {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
@@ -43,11 +43,11 @@ pub struct ActivePerk {
 pub struct UniqueRole {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub user: UserId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub role: RoleId,
 }
 
@@ -55,7 +55,7 @@ pub struct UniqueRole {
 pub struct Birthday {
     #[serde(rename = "_id")]
     pub id: ObjectId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub region: u16,
     pub day_of_year: DayOfYear,

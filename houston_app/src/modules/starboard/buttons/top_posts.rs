@@ -5,19 +5,19 @@ use utils::text::WriteStr as _;
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
 use crate::fmt::discord::MessageLink;
-use crate::helper::discord::IdU64;
+use crate::helper::discord::IdBytes;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
 
 // View the post leaderboards.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View {
-    #[serde(with = "As::<IdU64>")]
+    #[serde(with = "As::<IdBytes>")]
     pub guild: GuildId,
     pub board: BoardId,
     #[builder(default = 0)]
     pub page: u16,
-    #[serde(with = "As::<Option<IdU64>>")]
+    #[serde(with = "As::<Option<IdBytes>>")]
     #[builder(default = None)]
     pub by_user: Option<UserId>,
 }

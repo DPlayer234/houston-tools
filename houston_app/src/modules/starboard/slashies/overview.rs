@@ -5,7 +5,7 @@ use serde_with::As;
 use utils::text::WriteStr as _;
 
 use crate::fmt::discord::MessageLink;
-use crate::helper::bson::IdI64;
+use crate::helper::bson::IdBson;
 use crate::modules::starboard::{BoardId, model};
 use crate::slashies::prelude::*;
 
@@ -13,7 +13,7 @@ use crate::slashies::prelude::*;
 struct TopScore {
     #[serde(rename = "_id")]
     board: BoardId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     user: UserId,
     #[serde(default)]
     score: i64,
@@ -25,11 +25,11 @@ struct TopScore {
 struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     channel: GenericChannelId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     message: MessageId,
-    #[serde(with = "As::<IdI64>")]
+    #[serde(with = "As::<IdBson>")]
     user: UserId,
     #[serde(default)]
     max_reacts: i64,
