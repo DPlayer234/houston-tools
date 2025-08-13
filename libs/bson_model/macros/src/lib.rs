@@ -8,6 +8,6 @@ mod model_impl;
 pub fn derive_model_document(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
     model_impl::entry_point(input)
-        .unwrap_or_else(|e| e.into_compile_error())
+        .unwrap_or_else(|e| e.write_errors())
         .into()
 }

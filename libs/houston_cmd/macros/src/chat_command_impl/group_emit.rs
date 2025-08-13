@@ -1,6 +1,6 @@
 use std::mem::take;
 
-use darling::FromMeta as _;
+use darling::{Error, FromMeta as _};
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::ext::IdentExt as _;
@@ -9,17 +9,19 @@ use syn::{Attribute, Item, ItemMod, ItemUse, Meta, UseTree, Visibility};
 
 use super::command_emit::to_command_option_command;
 use crate::args::{CommonArgs, SubCommandArgs};
-use crate::util::{ensure_span, ensure_spanned, extract_description, warning};
+use crate::util::{extract_description, warning};
 
 pub fn to_command_option_group(
     module: &mut ItemMod,
     name: Option<String>,
     args: &CommonArgs,
-) -> syn::Result<TokenStream> {
+) -> darling::Result<TokenStream> {
     let content = match module.content.as_mut() {
         Some(content) => &mut content.1,
-        None => return Err(syn::Error::new_spanned(module, "command must have a body")),
+        None => return Err(Error::custom("command must have a body").with_span(&module)),
     };
+
+    let mut acc = Error::accumulator();
 
     let mut other_items = Vec::new();
     let mut sub_commands = Vec::new();
@@ -37,25 +39,28 @@ pub fn to_command_option_group(
 
         match item {
             Item::Fn(mut item) => {
-                if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                    let sub_args = parse_sub_command_args(&attr.meta)?;
-                    let tokens = to_command_option_command(&mut item, sub_args.name, args)?;
+                if let Some(attr) = find_sub_command_attr(&mut item.attrs)
+                    && let Some(sub_args) = acc.handle(parse_sub_command_args(&attr.meta))
+                {
+                    let tokens = to_command_option_command(&mut item, sub_args.name, args);
                     sub_commands.push(tokens);
                 } else {
                     other_items.push(Item::Fn(item))
                 }
             },
             Item::Mod(mut item) => {
-                if let Some(attr) = find_sub_command_attr(&mut item.attrs) {
-                    let sub_args = parse_sub_command_args(&attr.meta)?;
-                    let tokens = to_command_option_group(&mut item, sub_args.name, args)?;
+                if let Some(attr) = find_sub_command_attr(&mut item.attrs)
+                    && let Some(sub_args) = acc.handle(parse_sub_command_args(&attr.meta))
+                    && let Some(tokens) =
+                        acc.handle(to_command_option_group(&mut item, sub_args.name, args))
+                {
                     sub_commands.push(tokens);
                 } else {
                     other_items.push(Item::Mod(item))
                 }
             },
             Item::Use(mut item) => {
-                if let Some(paths) = use_include(&mut item)? {
+                if let Some(Some(paths)) = acc.handle(use_include(&mut item)) {
                     sub_commands.extend(paths.into_iter().map(|t| quote::quote! { #t() }));
                 } else {
                     other_items.push(Item::Use(item));
@@ -66,25 +71,38 @@ pub fn to_command_option_group(
     }
 
     if sub_commands.is_empty() {
-        return Err(syn::Error::new_spanned(
-            module,
+        let err = Error::custom(
             "command group must have at least one #[sub_command] `fn`, `mod`, or `use`",
-        ));
+        );
+        acc.push(err.with_span(&module.ident));
     }
 
     let name = name.unwrap_or_else(|| module.ident.unraw().to_string());
-    let description = extract_description(&module.attrs).ok_or_else(|| {
-        syn::Error::new_spanned(&module, "a description is required, add a doc comment")
-    })?;
+    let description = acc.handle(extract_description(&module.attrs).ok_or_else(|| {
+        Error::custom("a description is required, add a doc comment").with_span(&module.ident)
+    }));
 
-    ensure_spanned!(&module.ident, (1..=32).contains(&name.chars().count()) => "the name must be 1 to 32 characters long");
-    ensure_span!(description.span(), (1..=100).contains(&description.chars().count()) => "the description must be 1 to 100 characters long");
-    ensure_spanned!(module, (1..=25).contains(&sub_commands.len()) => "there must be 1 to 25 sub commands");
+    if !(1..=32).contains(&name.chars().count()) {
+        let err = Error::custom("the name must be 1 to 32 characters long");
+        acc.push(err.with_span(&module.ident));
+    }
+    if let Some(description) = &description
+        && !(1..=100).contains(&description.chars().count())
+    {
+        let err = Error::custom("the description must be 1 to 100 characters long");
+        acc.push(err.with_span(&description.span()));
+    }
+    if !(1..=25).contains(&sub_commands.len()) {
+        let err = Error::custom("there must be 1 to 25 sub commands");
+        acc.push(err.with_span(&module.ident));
+    }
 
     let CommonArgs { crate_ } = args;
-    let description = &*description;
+    let description = description.as_ref().map(|s| &***s).unwrap_or_default();
+    let errors = acc.finish().err().map(|e| e.write_errors());
 
     Ok(quote::quote! {{
+        #errors
         #(#warnings)*
         #(#other_items)*
 
@@ -119,22 +137,21 @@ fn parse_sub_command_args(args: &Meta) -> darling::Result<SubCommandArgs> {
     }
 }
 
-fn use_include(item: &mut ItemUse) -> syn::Result<Option<Vec<TokenStream>>> {
+fn use_include(item: &mut ItemUse) -> darling::Result<Option<Vec<TokenStream>>> {
     let Some(attr) = find_sub_command_attr(&mut item.attrs) else {
         return Ok(None);
     };
 
-    ensure_spanned!(
-        attr,
-        matches!(attr.meta, Meta::Path(_)) =>
-        "`#[sub_command] use` cannot specify additional parameters"
-    );
+    if !matches!(attr.meta, Meta::Path(_)) {
+        let err = Error::custom("`#[sub_command] use` cannot specify additional parameters");
+        return Err(err.with_span(&attr));
+    }
 
     fn resolve_tree(
         buf: &mut Vec<TokenStream>,
         prefix: Option<&dyn ToTokens>,
         tree: &UseTree,
-    ) -> syn::Result<()> {
+    ) -> darling::Result<()> {
         match tree {
             UseTree::Path(path) => {
                 let ident = &path.ident;
@@ -147,25 +164,18 @@ fn use_include(item: &mut ItemUse) -> syn::Result<Option<Vec<TokenStream>>> {
                 buf.push(quote::quote!(#prefix #ident));
                 Ok(())
             },
-            UseTree::Rename(_) => Err(syn::Error::new_spanned(
-                tree,
-                "cannot rename `#[sub_command] use`",
-            )),
-            UseTree::Glob(_) => Err(syn::Error::new_spanned(
-                tree,
-                "cannot glob-import `#[sub_command] use`",
-            )),
+            UseTree::Rename(_) => {
+                Err(Error::custom("cannot rename `#[sub_command] use`").with_span(&tree))
+            },
+            UseTree::Glob(_) => {
+                Err(Error::custom("cannot glob-import `#[sub_command] use`").with_span(&tree))
+            },
             UseTree::Group(group) => {
                 for item in &group.items {
                     resolve_tree(buf, prefix, item)?;
                 }
                 Ok(())
             },
-            #[allow(unreachable_patterns)]
-            _ => Err(syn::Error::new_spanned(
-                tree,
-                "unknown `#[sub_command] use` pattern",
-            )),
         }
     }
 

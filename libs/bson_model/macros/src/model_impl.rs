@@ -1,49 +1,38 @@
-use darling::{FromAttributes as _, FromDeriveInput as _};
+use darling::{Error, FromAttributes as _, FromDeriveInput as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use syn::{Data, Fields};
 
 use crate::args::{FieldArgs, FieldSerdeMeta, ModelArgs, ModelMeta};
 
-pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
+pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
     let model_meta = ModelMeta::from_derive_input(&input)?;
 
     let Data::Struct(data) = input.data else {
-        return Err(syn::Error::new_spanned(
-            input,
-            "ModelDocument must be applied to a struct with named fields",
-        ));
+        let err = Error::custom("ModelDocument must be applied to a struct with named fields");
+        return Err(err.with_span(&input));
     };
 
     let Fields::Named(mut fields) = data.fields else {
-        return Err(syn::Error::new_spanned(
-            data.fields,
-            "ModelDocument must be applied to a struct with named fields",
-        ));
+        let err = Error::custom("ModelDocument must be applied to a struct with named fields");
+        return Err(err.with_span(&data.fields));
     };
 
+    let mut acc = Error::accumulator();
     let mut parsed_fields = Vec::new();
 
     for field in &mut fields.named {
-        let args = FieldSerdeMeta::from_attributes(&field.attrs)?;
-
         // exclude non-serialized fields from the output
-        if args.has_skip() {
-            continue;
+        if let Some(args) = acc.handle(FieldSerdeMeta::from_attributes(&field.attrs))
+            && !args.has_skip()
+        {
+            let ident = field.ident.as_ref().expect("must be named fields here");
+            parsed_fields.push(FieldArgs {
+                name: ident,
+                ty: &field.ty,
+                args,
+            });
         }
-
-        let Some(ident) = field.ident.as_ref() else {
-            return Err(syn::Error::new_spanned(
-                field,
-                "all fields must have a name",
-            ));
-        };
-
-        parsed_fields.push(FieldArgs {
-            name: ident,
-            ty: &field.ty,
-            args,
-        });
     }
 
     let default_derive = [
@@ -74,19 +63,18 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             .map_or(&default_derive, Vec::as_slice),
     };
 
-    let internals = emit_internals(&args);
-    let update = emit_partial(&args);
-    let filter = emit_filter(&args);
-    let sort = emit_sort(&args);
-    let fields = emit_fields(&args);
+    let mut output = TokenStream::new();
+    output.extend(emit_internals(&args));
+    output.extend(emit_partial(&args));
+    output.extend(emit_filter(&args));
+    output.extend(emit_sort(&args));
+    output.extend(emit_fields(&args));
 
-    Ok(quote::quote! {
-        #internals
-        #update
-        #filter
-        #sort
-        #fields
-    })
+    if let Err(err) = acc.finish() {
+        output.extend(err.write_errors());
+    }
+
+    Ok(output)
 }
 
 fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {

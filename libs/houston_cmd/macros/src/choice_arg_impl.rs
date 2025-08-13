@@ -1,34 +1,35 @@
 use darling::ast::NestedMeta;
-use darling::{FromDeriveInput as _, FromMeta as _};
+use darling::{Error, FromDeriveInput as _, FromMeta as _};
 use proc_macro2::TokenStream;
 use syn::ext::IdentExt as _;
 use syn::{Data, Fields};
 
 use crate::args::CommonDeriveArgs;
-use crate::util::ensure_spanned;
 
 #[derive(Debug, darling::FromMeta)]
 struct VariantArgs {
     name: Option<String>,
 }
 
-pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
+pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
     let args = CommonDeriveArgs::from_derive_input(&input)?;
     let crate_ = args.crate_;
 
     let Data::Enum(data) = input.data else {
-        return Err(syn::Error::new_spanned(input, "choice args must be enums"));
+        let err = Error::custom("choice args must be enums");
+        return Err(err.with_span(&input));
     };
+
+    let mut acc = Error::accumulator();
 
     let mut names = Vec::new();
     let mut idents = Vec::new();
 
     for variant in data.variants {
         if !matches!(variant.fields, Fields::Unit) {
-            return Err(syn::Error::new_spanned(
-                variant,
-                "choice arg variants cannot have fields",
-            ));
+            let err = Error::custom("choice arg variants cannot have fields");
+            acc.push(err.with_span(&variant));
+            continue;
         }
 
         let attrs: Vec<_> = variant
@@ -36,20 +37,26 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             .into_iter()
             .map(|attr| NestedMeta::Meta(attr.meta))
             .collect();
-        let attrs = VariantArgs::from_list(&attrs)?;
 
-        let name = attrs
-            .name
-            .unwrap_or_else(|| variant.ident.unraw().to_string());
-        ensure_spanned!(variant.ident, (1..=100).contains(&name.chars().count()) => "the name must be 1 to 100 characters long");
+        if let Some(attrs) = acc.handle(VariantArgs::from_list(&attrs)) {
+            let name = attrs
+                .name
+                .unwrap_or_else(|| variant.ident.unraw().to_string());
 
-        names.push(name);
-        idents.push(variant.ident);
+            if !(1..=100).contains(&name.chars().count()) {
+                let err = Error::custom("the name must be 1 to 100 characters long");
+                acc.push(err.with_span(&variant.ident));
+            }
+
+            names.push(name);
+            idents.push(variant.ident);
+        }
     }
 
     let enum_ident = &input.ident;
     let indices = 0..idents.len();
 
+    let errors = acc.finish().err().map(|e| e.write_errors());
     Ok(quote::quote! {
         #[automatically_derived]
         impl #crate_::ChoiceArg for #enum_ident {
@@ -72,5 +79,7 @@ pub fn entry_point(input: syn::DeriveInput) -> syn::Result<TokenStream> {
                 }
             }
         }
+
+        #errors
     })
 }

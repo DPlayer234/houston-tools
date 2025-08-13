@@ -14,7 +14,7 @@ mod util;
 #[proc_macro_attribute]
 pub fn chat_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
     chat_command_impl::entry_point(args.into(), item.into())
-        .unwrap_or_else(|e| e.into_compile_error())
+        .unwrap_or_else(|e| e.write_errors())
         .into()
 }
 
@@ -25,7 +25,7 @@ pub fn chat_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStrea
 #[proc_macro_attribute]
 pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
     context_command_impl::entry_point(args.into(), item.into())
-        .unwrap_or_else(|e| e.into_compile_error())
+        .unwrap_or_else(|e| e.write_errors())
         .into()
 }
 
@@ -37,7 +37,7 @@ pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenSt
 #[proc_macro_attribute]
 pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
     chat_command_impl::sub_entry_point(args.into(), item.into())
-        .unwrap_or_else(|e| e.into_compile_error())
+        .unwrap_or_else(|e| e.write_errors())
         .into()
 }
 
@@ -46,6 +46,6 @@ pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream
 pub fn derive_choice_arg(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
     choice_arg_impl::entry_point(input)
-        .unwrap_or_else(|e| e.into_compile_error())
+        .unwrap_or_else(|e| e.write_errors())
         .into()
 }

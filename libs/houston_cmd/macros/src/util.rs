@@ -82,21 +82,3 @@ impl Fold for ReplaceLifetimes {
             .unwrap_or_else(|| syn::Lifetime::new("'_", Span::call_site()))
     }
 }
-
-macro_rules! ensure_span {
-    ($span:expr, $cond:expr => $($t:tt)*) => {
-        if !$cond {
-            return Err(syn::Error::new($span, format_args!($($t)*)))
-        }
-    };
-}
-
-macro_rules! ensure_spanned {
-    ($span:expr, $cond:expr => $($t:tt)*) => {
-        if !$cond {
-            return Err(syn::Error::new_spanned($span, format_args!($($t)*)))
-        }
-    };
-}
-
-pub(crate) use {ensure_span, ensure_spanned};

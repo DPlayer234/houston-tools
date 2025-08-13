@@ -9,7 +9,7 @@ pub fn to_command_shared(
     ident: &Ident,
     command_option: TokenStream,
     args: AnyCommandArgs,
-) -> syn::Result<TokenStream> {
+) -> TokenStream {
     let CommonArgs { crate_ } = &args.common;
 
     let warning = (args.contexts.is_none() || args.integration_types.is_none()).then(|| {
@@ -50,7 +50,7 @@ pub fn to_command_shared(
 
     let nsfw = args.nsfw;
 
-    Ok(quote::quote! {
+    quote::quote! {
         #warning
         #vis const fn #ident() -> #crate_::model::Command {
             const {
@@ -63,7 +63,7 @@ pub fn to_command_shared(
                     .build()
             }
         }
-    })
+    }
 }
 
 pub fn to_command_option_shared(
@@ -71,14 +71,14 @@ pub fn to_command_option_shared(
     ident: &Ident,
     command_option: TokenStream,
     args: &CommonArgs,
-) -> syn::Result<TokenStream> {
+) -> TokenStream {
     let CommonArgs { crate_ } = args;
 
-    Ok(quote::quote! {
+    quote::quote! {
         #vis const fn #ident() -> #crate_::model::CommandOption {
             const {
                 #command_option
             }
         }
-    })
+    }
 }
