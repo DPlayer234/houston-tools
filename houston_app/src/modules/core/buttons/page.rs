@@ -99,29 +99,32 @@ where
             MaxPage::Minimum(_) => true,
         };
 
-        (page > 0 || has_more).then(move || {
-            CreateActionRow::buttons(vec![
-                if page > 0 {
-                    self.obj.new_button(&self.page_field, page - 1, |_| 1)
-                } else {
-                    CreateButton::new("#no-back").disabled(true)
-                }
-                .emoji(emoji::left()),
-                CreateButton::new(ToPage::new(self.obj.to_nav()).to_custom_id()).label(match self
-                    .max_page
-                {
-                    MaxPage::NoMore => format!("{0} / {0}", page + 1),
-                    MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
-                    MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
-                }),
-                if has_more {
-                    self.obj.new_button(&self.page_field, page + 1, |_| 2)
-                } else {
-                    CreateButton::new("#no-forward").disabled(true)
-                }
-                .emoji(emoji::right()),
-            ])
-        })
+        if page > 0 || has_more {
+            let left = if page > 0 {
+                self.obj.new_button(&self.page_field, page - 1, |_| 1)
+            } else {
+                CreateButton::new("#no-back").disabled(true)
+            }
+            .emoji(emoji::left());
+
+            let right = if has_more {
+                self.obj.new_button(&self.page_field, page + 1, |_| 2)
+            } else {
+                CreateButton::new("#no-forward").disabled(true)
+            }
+            .emoji(emoji::right());
+
+            let to_page_id = ToPage::new(self.obj.to_nav()).to_custom_id();
+            let to_page = CreateButton::new(to_page_id).label(match self.max_page {
+                MaxPage::NoMore => format!("{0} / {0}", page + 1),
+                MaxPage::Exact(max) => format!("{} / {}", page + 1, max),
+                MaxPage::Minimum(min) => format!("{} / {}+", page + 1, min),
+            });
+
+            Some(CreateActionRow::buttons(vec![left, to_page, right]))
+        } else {
+            None
+        }
     }
 }
 
