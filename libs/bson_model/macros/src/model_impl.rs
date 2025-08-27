@@ -92,7 +92,6 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
     } = args;
 
     let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
-    let turbo_fish = ty_gen.as_turbofish();
 
     let field_methods = fields.iter()
         .filter(|field| field.args.has_with())
@@ -127,18 +126,19 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                 {
                     struct With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
 
-                    impl #impl_gen #crate_::private::SerdeWith<#ty> for With #ty_gen #where_clause {
-                        fn serialize<S>(&self, value: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                    impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for With #ty_gen #where_clause {
+                        fn serialize_as<S>(source: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                         where
                             S: #crate_::private::serde::Serializer,
                         {
-                            #source_with(value, serializer)
+                            #source_with(source, serializer)
                         }
                     }
 
-                    let with = With #turbo_fish (::std::marker::PhantomData);
                     match field {
-                        ::std::option::Option::Some(value) => #crate_::private::serialize_filter_with(value, serializer, with),
+                        ::std::option::Option::Some(value) => #crate_::private::serde_with::As::<
+                            #crate_::Filter<With #ty_gen>
+                        >::serialize(value, serializer),
                         ::std::option::Option::None => serializer.serialize_none(),
                     }
                 }

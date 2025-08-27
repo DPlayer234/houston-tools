@@ -5,8 +5,8 @@ use std::ops::Not;
 use bson::doc;
 use bson::oid::ObjectId;
 use bson_model::{Filter, ModelDocument, Sort};
-use bson_model_macros as _;
 use serde::{Deserialize, Serialize, Serializer};
+use {bson_model_macros as _, serde_with as _};
 
 fn serialize_inverse<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
 where

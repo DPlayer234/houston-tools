@@ -1,12 +1,13 @@
 [package]
 name = "bson_model"
-version = "0.1.2"
+version = "0.2.0"
 edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
 bson = "2.15.0"
 serde = { version = "1.0.219", features = ["derive"] }
+serde_with = { version = "3.14.0", default-features = false }
 
 bson_model_macros = { path = "./macros" }
 

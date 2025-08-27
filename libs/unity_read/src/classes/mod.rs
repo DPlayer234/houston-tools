@@ -49,7 +49,7 @@ pub trait UnityClass: Sized {
         if let Some((root, tree)) = obj.ser_type.type_tree.split_first() {
             Self::parse_tree(cursor, obj.is_big_endian(), root, tree)
         } else {
-            Err(Error::InvalidData("type tree is unexpectedly empty"))?
+            Err(Error::InvalidData("type tree is unexpectedly empty"))
         }
     }
 

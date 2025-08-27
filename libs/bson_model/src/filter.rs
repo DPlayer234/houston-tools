@@ -1,4 +1,6 @@
 use serde::Serialize;
+use serde_with::ser::SerializeAsWrap;
+use serde_with::{As, Same, SerializeAs};
 
 /// Represents a MongoDB filter condition for a field.
 #[derive(Debug, Clone, PartialEq)]
@@ -79,6 +81,50 @@ impl<T: Serialize> Serialize for Filter<T> {
     where
         S: serde::Serializer,
     {
-        crate::private::serialize_filter_with(self, serializer, ())
+        As::<Filter<Same>>::serialize(self, serializer)
+    }
+}
+
+impl<T, U> SerializeAs<Filter<T>> for Filter<U>
+where
+    U: SerializeAs<T>,
+{
+    fn serialize_as<S>(source: &Filter<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[inline]
+        fn ser_var<S, T, U>(
+            index: u32,
+            name: &'static str,
+            value: &T,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+            T: ?Sized,
+            U: ?Sized + SerializeAs<T>,
+        {
+            serializer.serialize_newtype_variant(
+                "Filter",
+                index,
+                name,
+                &SerializeAsWrap::<T, U>::new(value),
+            )
+        }
+
+        match source {
+            Filter::Eq(value) => SerializeAsWrap::<T, U>::new(value).serialize(serializer),
+            Filter::Ne(value) => ser_var::<S, T, U>(0, "$ne", value, serializer),
+            Filter::Gt(value) => ser_var::<S, T, U>(1, "$gt", value, serializer),
+            Filter::Gte(value) => ser_var::<S, T, U>(2, "$gte", value, serializer),
+            Filter::Lt(value) => ser_var::<S, T, U>(3, "$lt", value, serializer),
+            Filter::Lte(value) => ser_var::<S, T, U>(4, "$lte", value, serializer),
+            Filter::In(values) => ser_var::<S, [T], [U]>(5, "$in", values, serializer),
+            Filter::NotIn(values) => ser_var::<S, [T], [U]>(6, "$nin", values, serializer),
+            Filter::Exists(exists) => {
+                serializer.serialize_newtype_variant("Filter", 7, "$exists", exists)
+            },
+        }
     }
 }

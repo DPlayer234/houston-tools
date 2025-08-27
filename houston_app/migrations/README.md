@@ -46,7 +46,7 @@ To later restore the backup, use the `mongorestore` utility:
 mongorestore --uri="$MONGODB_URI" --archive="$FILENAME"
 ```
 
-Note that you cannot specify the database name here. The restored database name will match the original database name. If you intent to restore the database with a different name, use the [`--nsFrom` and `--nsTo`](https://www.mongodb.com/docs/database-tools/mongorestore/#std-option-mongorestore.--nsFrom) parameters.
+Note that you cannot specify the database name here. The restored database name will match the original database name. If you intend to restore the database with a different name, use the [`--nsFrom` and `--nsTo`](https://www.mongodb.com/docs/database-tools/mongorestore/#std-option-mongorestore.--nsFrom) parameters.
 
 For example, to back up your local `test` database to a file named `my-db-backup` and restore it later:
 
