@@ -54,7 +54,21 @@ macro_rules! join {
 ///
 /// This exists solely as support for [`to_titlecase`].
 #[doc(hidden)]
-pub unsafe trait MutStrLike {
+pub trait MutStrLike {
+    /// Returns a mutable slice to the bytes for this `str`-like.
+    ///
+    /// The returned slice is not necessarily valid UTF-8 when returned (f.e.
+    /// because this function was called on `Vec<u8>`), but if it is, it must be
+    /// valid UTF-8 after the caller's work is done.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure returned slice stays valid UTF-8 after they are
+    /// done modifying it. It is allowed to be in an inconsistent state
+    /// during modification.
+    ///
+    /// If the returned slice wasn't UTF-8 initially, this safety required is
+    /// voided.
     #[must_use]
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8];
 }
@@ -62,31 +76,31 @@ pub unsafe trait MutStrLike {
 // Ideally there'd be blanket implementations for DerefMut<Target = str> and
 // DerefMut<Target = [u8]> but that's not currently allowed.
 
-unsafe impl MutStrLike for String {
+impl MutStrLike for String {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         unsafe { self.as_mut_str().as_bytes_mut() }
     }
 }
 
-unsafe impl MutStrLike for str {
+impl MutStrLike for str {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         unsafe { self.as_bytes_mut() }
     }
 }
 
-unsafe impl MutStrLike for [u8] {
+impl MutStrLike for [u8] {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         self
     }
 }
 
-unsafe impl MutStrLike for Vec<u8> {
+impl MutStrLike for Vec<u8> {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         self.as_mut_slice()
     }
 }
 
-unsafe impl<const N: usize> MutStrLike for InlineStr<N> {
+impl<const N: usize> MutStrLike for InlineStr<N> {
     unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
         unsafe { self.as_bytes_mut() }
     }

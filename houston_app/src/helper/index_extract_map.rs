@@ -75,7 +75,7 @@ struct Key<K: ?Sized>(K);
 impl<K: ?Sized> Key<K> {
     /// Turns a reference to `K` into one to [`Key<K>`].
     fn from_ref(v: &K) -> &Self {
-        // SAFETY: `Key<V>` is a transparent wrapper around `V`
+        // SAFETY: `Key<K>` is a transparent wrapper around `K`
         unsafe { mem::transmute::<&K, &Self>(v) }
     }
 }

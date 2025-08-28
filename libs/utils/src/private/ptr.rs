@@ -16,6 +16,7 @@ pub struct RawRef<'a, T: ?Sized> {
     _lifetime: PhantomData<&'a T>,
 }
 
+// SAFETY: treat `RawRef` as if it was a regular reference for send/sync
 unsafe impl<'a, T: ?Sized> Send for RawRef<'a, T> where &'a T: Send {}
 unsafe impl<'a, T: ?Sized> Sync for RawRef<'a, T> where &'a T: Sync {}
 

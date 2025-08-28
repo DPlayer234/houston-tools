@@ -441,7 +441,7 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
             res[2] = b'D';
         }
 
-        // SAFETY: Always ASCII here.
+        // SAFETY: only stored ASCII values in the array above
         unsafe { InlineStr::from_utf8_unchecked(res) }
     }
 }

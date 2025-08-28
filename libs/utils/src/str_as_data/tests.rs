@@ -82,10 +82,10 @@ fn round_trip_b20bit_all_chars() {
     }
 
     // yes, this code quite literally constructs a string with _every valid unicode
-    // character_ this exists as a sanity check for the behavior of
-    // `char_to_code` and `code_to_char`, in particular in relation to the unsafe
-    // code used. if the round trip succeeds, it must mean that there is a 1:1
-    // relationship so we can't hit invalid cases there. and other tests already
+    // character_ this exists as a sanity check for the behavior of `char_to_code`
+    // and `code_to_char`, in particular in relation to the unsafe code used. if
+    // the round trip succeeds, it must mean that there is a 1:1 relationship so
+    // we can't hit invalid cases there. and other tests already
     // check for out-of-range characters
     let encoded: String = once('A').chain(test_range()).chain(once('&')).collect();
     let decoded = b20bit::from_str(&encoded).expect("decoding must work");

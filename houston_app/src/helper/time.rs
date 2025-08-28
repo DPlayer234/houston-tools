@@ -12,6 +12,7 @@ struct DateTimeCell {
     value: UnsafeCell<DateTime<Utc>>,
 }
 
+// SAFETY: consumers must uphold aliasing requirements for the inner value.
 unsafe impl Sync for DateTimeCell {}
 
 /// Stores a timestamp on when the application was started.

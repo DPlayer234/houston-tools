@@ -39,7 +39,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     pub const fn from_utf8(bytes: [u8; LEN]) -> Result<Self, Utf8Error> {
         match str::from_utf8(&bytes) {
             // SAFETY: `from_utf8` returns Ok only on valid UTF-8
-            Ok(..) => Ok(unsafe { Self::from_utf8_unchecked(bytes) }),
+            Ok(_) => Ok(unsafe { Self::from_utf8_unchecked(bytes) }),
             Err(err) => Err(err),
         }
     }
@@ -54,7 +54,8 @@ impl<const LEN: usize> InlineStr<LEN> {
     /// All bytes passed in must be valid UTF-8.
     #[must_use]
     pub const unsafe fn from_utf8_unchecked(bytes: [u8; LEN]) -> Self {
-        // Caller has to ensure the bytes are valid UTF-8
+        // caller has to ensure the bytes are valid UTF-8. other unsafe code relies on
+        // the bytes stored within to be valid UTF-8.
         Self(bytes)
     }
 
