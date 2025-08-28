@@ -24,10 +24,10 @@ pub fn to_command_option_command(
 ) -> TokenStream {
     let mut acc = Error::accumulator();
 
-    if func.sig.asyncness.is_none() {
-        let err = Error::custom("command function must be async");
-        acc.push(err.with_span(&func.sig));
-    }
+    let maybe_await = func
+        .sig
+        .asyncness
+        .map(|a| quote::quote_spanned! {a.span()=> .await});
 
     let parameters = extract_parameters(func, &mut acc);
 
@@ -91,7 +91,7 @@ pub fn to_command_option_command(
                     #crate_::model::Invoke::ChatInput(|ctx| ::std::boxed::Box::pin(async move {
                         #( #param_quotes )*
 
-                        match #func_ident (ctx, #(#param_idents),*).await {
+                        match #func_ident (ctx, #(#param_idents),*) #maybe_await {
                             ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
                             ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }

@@ -72,3 +72,12 @@ impl<'ctx, T: SlashArg<'ctx>> SlashArgOption<'ctx> for Option<T> {
         }
     }
 }
+
+/// Used as a placeholder in macro code the context kind is unspecified.
+#[diagnostic::on_unimplemented(
+    message = "there is no automatic inference for the context command kind",
+    label = "specify `user` or `message` in the `context_command` attribute based on this value"
+)]
+pub trait UndefinedContextArg<'ctx>: Sized {
+    fn extract(ctx: &Context<'ctx>) -> Result<Self, Error<'ctx>>;
+}

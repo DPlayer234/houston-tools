@@ -89,6 +89,9 @@ where
 ///
 /// By default, this is implemented for [`&User`](User) and `(&User,
 /// Option<&PartialMember>)`.
+#[diagnostic::on_unimplemented(
+    message = "this parameter type isn't supported for `user` context commands"
+)]
 pub trait UserContextArg<'ctx>: Sized {
     fn extract(
         ctx: &Context<'ctx>,
@@ -101,6 +104,9 @@ pub trait UserContextArg<'ctx>: Sized {
 /// [`#[context_command(message)]`](crate::context_command) parameter.
 ///
 /// By default, this is implemented for [`&Message`](Message).
+#[diagnostic::on_unimplemented(
+    message = "this parameter type isn't supported for `message` context commands"
+)]
 pub trait MessageContextArg<'ctx>: Sized {
     fn extract(ctx: &Context<'ctx>, message: &'ctx Message) -> Result<Self, Error<'ctx>>;
 }

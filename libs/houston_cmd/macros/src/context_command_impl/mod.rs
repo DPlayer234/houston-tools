@@ -9,6 +9,7 @@ use crate::any_command_impl::to_command_shared;
 use crate::args::{CommonArgs, ContextCommandArgs};
 
 enum ContextKind {
+    Undefined,
     User,
     Message,
 }
@@ -22,18 +23,13 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> darling::Result<Toke
 
     let mut acc = Error::accumulator();
 
-    if func.sig.asyncness.is_none() {
-        let err = Error::custom("command function must be async");
-        acc.push(err.with_span(&func.sig));
-    }
-
     let kind = match (args.user, args.message) {
         (true, false) => ContextKind::User,
         (false, true) => ContextKind::Message,
         _ => {
             let err = Error::custom("must specify `user` or `message`");
             acc.push(err.with_span(&args_span));
-            ContextKind::User
+            ContextKind::Undefined
         },
     };
 
@@ -54,19 +50,29 @@ fn to_command_option_command(
     mut acc: darling::error::Accumulator,
 ) -> TokenStream {
     let (kind_variant, kind_trait, kind_args) = match kind {
+        ContextKind::Undefined => (
+            quote::format_ident!("ChatInput"),
+            quote::quote! { private::UndefinedContextArg },
+            quote::quote! {},
+        ),
         ContextKind::User => (
             quote::format_ident!("User"),
-            quote::format_ident!("UserContextArg"),
+            quote::quote! { UserContextArg },
             quote::quote! { user, member },
         ),
         ContextKind::Message => (
             quote::format_ident!("Message"),
-            quote::format_ident!("MessageContextArg"),
+            quote::quote! { MessageContextArg },
             quote::quote! { message },
         ),
     };
 
     let func_ident = &func.sig.ident;
+
+    let maybe_await = func
+        .sig
+        .asyncness
+        .map(|a| quote::quote_spanned! {a.span()=> .await});
 
     let inputs: Vec<_> = func.sig.inputs.iter().collect();
     let arg_ty = match inputs.as_slice() {
@@ -99,7 +105,7 @@ fn to_command_option_command(
                     #crate_::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
                         let arg = <#arg_ty as #crate_:: #kind_trait <'_>>::extract(&ctx, #kind_args)?;
 
-                        match #func_ident (ctx, arg).await {
+                        match #func_ident (ctx, arg) #maybe_await {
                             ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
                             ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
                         }
