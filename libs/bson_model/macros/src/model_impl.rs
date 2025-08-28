@@ -1,28 +1,26 @@
 use darling::{Error, FromAttributes as _, FromDeriveInput as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
-use syn::{Data, Fields};
+use syn::{Data, Fields, FieldsNamed};
 
 use crate::args::{FieldArgs, FieldSerdeMeta, ModelArgs, ModelMeta};
 
 pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
-    let model_meta = ModelMeta::from_derive_input(&input)?;
-
-    let Data::Struct(data) = input.data else {
-        let err = Error::custom("ModelDocument must be applied to a struct with named fields");
-        return Err(err.with_span(&input));
-    };
-
-    let Fields::Named(mut fields) = data.fields else {
-        let err = Error::custom("ModelDocument must be applied to a struct with named fields");
-        return Err(err.with_span(&data.fields));
-    };
-
     let mut acc = Error::accumulator();
+
+    let model_meta = acc
+        .handle(ModelMeta::from_derive_input(&input))
+        .unwrap_or_default();
+
+    let Some(fields) = acc.handle(find_named_fields(&input.data)) else {
+        return finish_as_error(acc);
+    };
+
     let mut parsed_fields = Vec::new();
 
-    for field in &mut fields.named {
+    for pair in fields.named.pairs() {
         // exclude non-serialized fields from the output
+        let field = pair.into_value();
         if let Some(args) = acc.handle(FieldSerdeMeta::from_attributes(&field.attrs))
             && !args.has_skip()
         {
@@ -124,9 +122,9 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                 where
                     S: #crate_::private::serde::ser::Serializer,
                 {
-                    struct With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+                    struct __With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
 
-                    impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for With #ty_gen #where_clause {
+                    impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for __With #ty_gen #where_clause {
                         fn serialize_as<S>(source: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
                         where
                             S: #crate_::private::serde::Serializer,
@@ -137,7 +135,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
 
                     match field {
                         ::std::option::Option::Some(value) => #crate_::private::serde_with::As::<
-                            #crate_::Filter<With #ty_gen>
+                            #crate_::Filter<__With #ty_gen>
                         >::serialize(value, serializer),
                         ::std::option::Option::None => serializer.serialize_none(),
                     }
@@ -494,7 +492,7 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
     let field_methods = fields.iter().map(|field| {
         let FieldArgs { name, args, .. } = field;
         let rename = args.rename.as_ref().unwrap_or(name).to_string();
-        let expr_name = "$".to_owned() + &rename;
+        let expr_name = "$".to_owned() + rename.strip_prefix("r#").unwrap_or(&rename);
         let doc = format!("Gets the BSON `{name}` field.");
 
         quote::quote! {
@@ -559,4 +557,21 @@ fn emit_into_document(
             }
         }
     }
+}
+
+fn find_named_fields(data: &Data) -> darling::Result<&FieldsNamed> {
+    if let Data::Struct(data) = data
+        && let Fields::Named(raw_fields) = &data.fields
+    {
+        return Ok(raw_fields);
+    }
+
+    // just keep the call site span (i.e. the derive itself)
+    Err(Error::custom(
+        "`ModelDocument` can only be derived on struct with named fields",
+    ))
+}
+
+pub fn finish_as_error<T>(acc: darling::error::Accumulator) -> darling::Result<T> {
+    Err(Error::multiple(acc.into_inner()))
 }

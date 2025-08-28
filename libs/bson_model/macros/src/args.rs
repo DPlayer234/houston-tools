@@ -16,7 +16,7 @@ pub struct FieldSerdeMeta {
     pub skip_serializing: Flag,
 }
 
-#[derive(Debug, darling::FromDeriveInput)]
+#[derive(Default, Debug, darling::FromDeriveInput)]
 #[darling(attributes(model))]
 pub struct ModelMeta {
     #[darling(rename = "crate")]
