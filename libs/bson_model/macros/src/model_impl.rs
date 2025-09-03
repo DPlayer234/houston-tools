@@ -61,8 +61,7 @@ pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
             .map_or(&default_derive, Vec::as_slice),
     };
 
-    let mut output = TokenStream::new();
-    output.extend(emit_internals(&args));
+    let mut output = emit_internals(&args);
     output.extend(emit_partial(&args));
     output.extend(emit_filter(&args));
     output.extend(emit_sort(&args));

@@ -25,15 +25,15 @@ pub fn noop_future() -> BoxFuture<'static, ()> {
 /// # Examples
 ///
 /// It is generally required and otherwise recommended that the caller passes
-/// the input futures by reference, for example by using the
+/// the input futures pre-pinned, for example by using the
 /// [`pin`](std::pin::pin) macro:
 ///
 /// ```
 /// use std::time::Duration;
 /// use std::pin::pin;
 /// # use crate::helper::futures::if_too_long;
-/// # async fn run() {}
-/// # async fn intercept() {}
+/// # async fn run() -> u32 { 12345 }
+/// # async fn intercept() -> ! { panic!() }
 ///
 /// // create both futures
 /// let run = run();
@@ -52,7 +52,7 @@ pub fn noop_future() -> BoxFuture<'static, ()> {
 ///     println!("run intercepted: {i:?}");
 /// }
 ///
-/// # assert_eq!((run_result, intercept_result), ((), None));
+/// # assert_eq!((run_result, intercept_result), (12345, None));
 /// ```
 ///
 /// # Notes
@@ -76,6 +76,6 @@ where
 {
     match timeout(after, &mut fut).await {
         Ok(f) => (f, None),
-        Err(_) => tokio::join!(fut, async { Some(intercept.await) }),
+        Err(_) => tokio::join!(&mut fut, async { Some(intercept.await) }),
     }
 }
