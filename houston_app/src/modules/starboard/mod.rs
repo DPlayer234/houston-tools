@@ -610,7 +610,7 @@ async fn pin_message_to_board(
 fn board_message_filter(
     board: &config::StarboardEntry,
     message: &Message,
-) -> bson::ser::Result<bson::Document> {
+) -> bson::error::Result<bson::Document> {
     model::Message::filter()
         .board(board.id)
         .message(message.id)

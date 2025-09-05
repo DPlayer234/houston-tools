@@ -10,7 +10,7 @@ pub struct Record {
     pub guild: GuildId,
     #[serde(default)]
     pub received: i64,
-    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    #[serde(with = "As::<FromChrono04DateTime>")]
     pub cooldown_ends: DateTime<Utc>,
 }
 

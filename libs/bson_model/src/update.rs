@@ -90,13 +90,13 @@ impl<T: Serialize> Update<T> {
     ///
     /// Returns [`Err`] if the update could not be serialized as a [`Document`].
     /// This could imply that `Self` is not compatible with BSON serialization.
-    pub fn into_document(self) -> bson::ser::Result<Document> {
-        bson::to_document(&self)
+    pub fn into_document(self) -> bson::error::Result<Document> {
+        bson::serialize_to_document(&self)
     }
 }
 
 impl<T: Serialize> TryFrom<Update<T>> for Document {
-    type Error = bson::ser::Error;
+    type Error = bson::error::Error;
 
     fn try_from(value: Update<T>) -> Result<Self, Self::Error> {
         value.into_document()

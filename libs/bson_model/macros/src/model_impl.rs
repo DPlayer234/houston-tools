@@ -542,14 +542,14 @@ fn emit_into_document(
             ///
             /// Returns `Err` if the update could not be serialized as a `Document`.
             /// This could imply that `Self` is not compatible with BSON serialization.
-            pub fn into_document(self) -> #crate_::private::bson::ser::Result<#crate_::private::bson::Document> {
-                #crate_::private::bson::to_document(&self)
+            pub fn into_document(self) -> #crate_::private::bson::error::Result<#crate_::private::bson::Document> {
+                #crate_::private::bson::serialize_to_document(&self)
             }
         }
 
         #[automatically_derived]
         impl #impl_gen TryFrom<#ty_name #ty_gen> for #crate_::private::bson::Document #where_clause {
-            type Error = #crate_::private::bson::ser::Error;
+            type Error = #crate_::private::bson::error::Error;
 
             fn try_from(value: #ty_name #ty_gen) -> Result<Self, Self::Error> {
                 value.into_document()

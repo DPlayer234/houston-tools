@@ -32,7 +32,7 @@ use crate::update::Update;
 /// let update = User::update()
 ///     .set(|u| u.age(21))
 ///     .into_document()?;
-/// # Ok::<_, bson::ser::Error>(())
+/// # Ok::<_, bson::error::Error>(())
 /// ```
 ///
 /// The emitted types implement [`Default`] and [`serde::Serialize`] no matter
@@ -150,7 +150,7 @@ pub trait ModelDocument {
 ///         }
 ///     },
 /// ];
-/// # Ok::<_, bson::ser::Error>(())
+/// # Ok::<_, bson::error::Error>(())
 /// ```
 #[derive(Clone, Copy)]
 #[must_use]

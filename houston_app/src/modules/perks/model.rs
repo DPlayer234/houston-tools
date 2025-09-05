@@ -34,7 +34,7 @@ pub struct ActivePerk {
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
-    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    #[serde(with = "As::<FromChrono04DateTime>")]
     pub until: DateTime<Utc>,
     pub state: Option<Bson>,
 }
