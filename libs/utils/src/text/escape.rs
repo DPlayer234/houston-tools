@@ -61,11 +61,11 @@ where
     fn write_to(&self, mut f: impl fmt::Write) -> fmt::Result {
         let to_escape = Cell::new(None);
         let escape_as = |c: char| match (self.escape_as)(c) {
-            None => false,
-            i => {
+            i @ Some(_) => {
                 to_escape.set(i);
                 true
             },
+            None => false,
         };
 
         for part in self.source.split(escape_as) {
@@ -117,6 +117,15 @@ mod tests {
 
     fn escape_as(c: char) -> Option<[char; 2]> {
         matches!(c, '*' | '_').then_some(['\\', c])
+    }
+
+    #[test]
+    fn to_string() {
+        let source = "**hello world!** it is a _great_ day.";
+        let escaped = escape_by_char(source, escape_as);
+
+        let output = escaped.to_string();
+        assert_eq!(output, EXPECTED);
     }
 
     #[test]

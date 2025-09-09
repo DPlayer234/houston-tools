@@ -529,7 +529,7 @@ impl ShipStat {
     }
 }
 
-utils::impl_op_via_assign!(copy ShipStat, [AddAssign]::add_assign, [Add]::add);
+utils::impl_op_via_assign!(ShipStat, [AddAssign]::add_assign, [Add]::add);
 
 impl AddAssign<&Self> for ShipStat {
     fn add_assign(&mut self, rhs: &Self) {

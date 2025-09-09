@@ -116,12 +116,16 @@ impl<'a, S: AsRef<str> + ?Sized> Truncate for &'a S {
     type Output = Cow<'a, str>;
 
     fn truncate(this: Self, len: usize) -> Self::Output {
-        let this = this.as_ref();
-        if let Some(end_at) = find_truncate_at(this, len) {
-            Cow::Owned(to_truncated_at(this, end_at))
-        } else {
-            Cow::Borrowed(this)
+        // non-generic shared code
+        fn inner(this: &str, len: usize) -> Cow<'_, str> {
+            if let Some(end_at) = find_truncate_at(this, len) {
+                Cow::Owned(to_truncated_at(this, end_at))
+            } else {
+                Cow::Borrowed(this)
+            }
         }
+
+        inner(this.as_ref(), len)
     }
 }
 

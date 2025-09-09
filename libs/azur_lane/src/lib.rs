@@ -37,7 +37,7 @@ pub struct DefinitionData {
 
 define_data_enum! {
     /// The supported game servers.
-    pub enum GameServer for GameLangData {
+    pub enum GameServer for GameServerData {
         pub label: &'static str;
 
         Unknown("--"),

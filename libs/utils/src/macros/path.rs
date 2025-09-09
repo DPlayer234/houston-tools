@@ -26,7 +26,7 @@
 /// assert_eq!(
 ///     &path,
 ///     Path::new(r#"C:\Windows\System32\notepad.exe"#)
-/// )
+/// );
 /// ```
 ///
 /// [`PathBuf`]: std::path::PathBuf
@@ -40,4 +40,22 @@ macro_rules! join_path {
         $( path.set_extension($ext); )?
         path
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use crate::join_path;
+
+    #[test]
+    fn join_os_path() {
+        if cfg!(windows) {
+            let path = join_path!("C:\\", "Windows", "System32", "notepad"; "exe");
+            assert_eq!(&path, Path::new(r#"C:\Windows\System32\notepad.exe"#));
+        } else {
+            let path = join_path!("/home", "root", "notes"; "txt");
+            assert_eq!(&path, Path::new(r#"/home/root/notes.txt"#));
+        }
+    }
 }
