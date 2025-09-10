@@ -2,6 +2,8 @@ use serde::Serialize;
 use serde_with::ser::SerializeAsWrap;
 use serde_with::{As, Same, SerializeAs};
 
+use crate::multi::Multi;
+
 /// Represents a MongoDB filter condition for a field.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Filter<T> {
@@ -21,9 +23,9 @@ pub enum Filter<T> {
     /// `$lte`
     Lte(T),
     /// `$in`
-    In(Vec<T>),
+    In(Multi<T>),
     /// `$nin`
-    NotIn(Vec<T>),
+    NotIn(Multi<T>),
     /// `$exists`
     Exists(bool),
 }

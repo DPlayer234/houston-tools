@@ -1,6 +1,10 @@
 use darling::util::{Flag, PathList};
 use syn::{Generics, Ident, Path};
 
+fn true_fn() -> bool {
+    true
+}
+
 #[derive(Default, Debug, darling::FromAttributes)]
 #[darling(attributes(serde))]
 #[darling(allow_unknown_fields)]
@@ -16,6 +20,15 @@ pub struct FieldSerdeMeta {
     pub skip_serializing: Flag,
 }
 
+#[derive(Default, Debug, darling::FromAttributes)]
+#[darling(attributes(model))]
+pub struct FieldMeta {
+    #[darling(default = true_fn)]
+    pub filter: bool,
+    #[darling(default = true_fn)]
+    pub partial: bool,
+}
+
 #[derive(Default, Debug, darling::FromDeriveInput)]
 #[darling(attributes(model))]
 pub struct ModelMeta {
@@ -23,6 +36,7 @@ pub struct ModelMeta {
     pub crate_: Option<Path>,
     pub derive_partial: Option<PathList>,
     pub derive_filter: Option<PathList>,
+    pub fields_only: Flag,
 }
 
 impl FieldSerdeMeta {
@@ -38,7 +52,8 @@ impl FieldSerdeMeta {
 pub struct FieldArgs<'a> {
     pub name: &'a syn::Ident,
     pub ty: &'a syn::Type,
-    pub args: FieldSerdeMeta,
+    pub args: FieldMeta,
+    pub serde: FieldSerdeMeta,
 }
 
 pub struct ModelArgs<'a> {

@@ -312,6 +312,7 @@ dependencies = [
  "bson_model_macros",
  "serde",
  "serde_with",
+ "small-fixed-array",
 ]
 
 [[package]]

@@ -10,6 +10,7 @@ use crate::modules::starboard::{BoardId, model};
 use crate::slashies::prelude::*;
 
 #[derive(Debug, serde::Deserialize, ModelDocument)]
+#[model(fields_only)]
 struct TopScore {
     #[serde(rename = "_id")]
     board: BoardId,
@@ -22,6 +23,7 @@ struct TopScore {
 }
 
 #[derive(Debug, serde::Deserialize, ModelDocument)]
+#[model(fields_only)]
 struct TopMessage {
     #[serde(rename = "_id")]
     board: BoardId,

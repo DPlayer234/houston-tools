@@ -11,6 +11,7 @@ pub use bson_model_macros::ModelDocument;
 
 mod filter;
 mod model;
+mod multi;
 #[doc(hidden)]
 pub mod private;
 mod sort;
@@ -18,5 +19,6 @@ mod update;
 
 pub use filter::Filter;
 pub use model::{ModelDocument, ModelField};
+pub use multi::Multi;
 pub use sort::Sort;
 pub use update::Update;

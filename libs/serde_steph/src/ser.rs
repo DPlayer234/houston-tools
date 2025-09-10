@@ -71,7 +71,11 @@ impl<W: io::Write> Serializer<W> {
     }
 
     fn write_byte(&mut self, v: u8) -> Result<()> {
-        Ok(self.writer.write_all(&[v])?)
+        self.write_bytes(&[v])
+    }
+
+    fn write_bytes(&mut self, v: &[u8]) -> Result<()> {
+        Ok(self.writer.write_all(v)?)
     }
 
     fn write_leb128(&mut self, v: impl leb128::Leb128) -> Result<()> {
@@ -142,11 +146,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
     }
 
     fn serialize_f32(self, v: f32) -> Result<()> {
-        Ok(self.writer.write_all(&v.to_le_bytes())?)
+        self.write_bytes(&v.to_le_bytes())
     }
 
     fn serialize_f64(self, v: f64) -> Result<()> {
-        Ok(self.writer.write_all(&v.to_le_bytes())?)
+        self.write_bytes(&v.to_le_bytes())
     }
 
     fn serialize_char(self, v: char) -> Result<()> {
@@ -159,7 +163,7 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
 
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
         self.write_leb128(v.len())?;
-        Ok(self.writer.write_all(v)?)
+        self.write_bytes(v)
     }
 
     fn serialize_none(self) -> Result<()> {

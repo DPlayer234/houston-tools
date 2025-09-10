@@ -3,6 +3,7 @@ use crate::modules::model_prelude::*;
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Record {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,

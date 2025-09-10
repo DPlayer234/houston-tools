@@ -10,6 +10,7 @@ use crate::modules::model_prelude::*;
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ModelDocument)]
 pub struct Wallet {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
@@ -28,6 +29,7 @@ pub struct Wallet {
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct ActivePerk {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
@@ -36,24 +38,28 @@ pub struct ActivePerk {
     pub effect: Effect,
     #[serde(with = "As::<FromChrono04DateTime>")]
     pub until: DateTime<Utc>,
+    #[model(filter = false)]
     pub state: Option<Bson>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct UniqueRole {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     #[serde(with = "As::<IdBson>")]
     pub guild: GuildId,
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     #[serde(with = "As::<IdBson>")]
+    #[model(filter = false)]
     pub role: RoleId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Birthday {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,

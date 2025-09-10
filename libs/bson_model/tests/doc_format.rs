@@ -6,7 +6,7 @@ use bson::doc;
 use bson::oid::ObjectId;
 use bson_model::{Filter, ModelDocument, Sort};
 use serde::{Deserialize, Serialize, Serializer};
-use {bson_model_macros as _, serde_with as _};
+use {bson_model_macros as _, serde_with as _, small_fixed_array as _};
 
 fn serialize_inverse<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
 where

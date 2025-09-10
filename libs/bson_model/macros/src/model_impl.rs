@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
 use syn::{Data, Fields, FieldsNamed};
 
-use crate::args::{FieldArgs, FieldSerdeMeta, ModelArgs, ModelMeta};
+use crate::args::{FieldArgs, FieldMeta, FieldSerdeMeta, ModelArgs, ModelMeta};
 
 pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
     let mut acc = Error::accumulator();
@@ -21,15 +21,24 @@ pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
     for pair in fields.named.pairs() {
         // exclude non-serialized fields from the output
         let field = pair.into_value();
-        if let Some(args) = acc.handle(FieldSerdeMeta::from_attributes(&field.attrs))
-            && !args.has_skip()
+        if let Some(args) = acc.handle(FieldMeta::from_attributes(&field.attrs))
+            && let Some(serde) = acc.handle(FieldSerdeMeta::from_attributes(&field.attrs))
+            && !serde.has_skip()
         {
             let ident = field.ident.as_ref().expect("must be named fields here");
             parsed_fields.push(FieldArgs {
                 name: ident,
                 ty: &field.ty,
                 args,
+                serde,
             });
+        }
+    }
+
+    if model_meta.fields_only.is_present() {
+        for field in &mut parsed_fields {
+            field.args.filter = false;
+            field.args.partial = false;
         }
     }
 
@@ -91,12 +100,12 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
     let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
 
     let field_methods = fields.iter()
-        .filter(|field| field.args.has_with())
+        .filter(|field| field.serde.has_with())
         .map(|field| {
-            let FieldArgs { name, ty, args } = field;
-            let FieldSerdeMeta { with, serialize_with, .. } = args;
+            let FieldArgs { name, ty, serde, args } = field;
+            let FieldSerdeMeta { with, serialize_with, .. } = serde;
 
-            let update_with_name = format_ident!("partial_{}", name);
+            let partial_with_name = format_ident!("partial_{}", name);
             let filter_with_name = format_ident!("filter_{}", name);
             let source_with = with
                 .as_ref()
@@ -106,40 +115,50 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                     quote::quote! { #w }
                 });
 
-            quote::quote! {
-                fn #update_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-                where
-                    S: #crate_::private::serde::ser::Serializer,
-                {
-                    match field {
-                        ::std::option::Option::Some(value) => #source_with(value, serializer),
-                        ::std::option::Option::None => serializer.serialize_none(),
-                    }
-                }
+            let mut part = TokenStream::new();
 
-                fn #filter_with_name<S>(field: &::std::option::Option<#crate_::Filter<#ty>>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-                where
-                    S: #crate_::private::serde::ser::Serializer,
-                {
-                    struct __With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
-
-                    impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for __With #ty_gen #where_clause {
-                        fn serialize_as<S>(source: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-                        where
-                            S: #crate_::private::serde::Serializer,
-                        {
-                            #source_with(source, serializer)
+            if args.partial {
+                part.extend(quote::quote! {
+                    fn #partial_with_name<S>(field: &::std::option::Option<#ty>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                    where
+                        S: #crate_::private::serde::ser::Serializer,
+                    {
+                        match field {
+                            ::std::option::Option::Some(value) => #source_with(value, serializer),
+                            ::std::option::Option::None => serializer.serialize_none(),
                         }
                     }
-
-                    match field {
-                        ::std::option::Option::Some(value) => #crate_::private::serde_with::As::<
-                            #crate_::Filter<__With #ty_gen>
-                        >::serialize(value, serializer),
-                        ::std::option::Option::None => serializer.serialize_none(),
-                    }
-                }
+                });
             }
+
+            if args.filter {
+                part.extend(quote::quote! {
+                    fn #filter_with_name<S>(field: &::std::option::Option<#crate_::Filter<#ty>>, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                    where
+                        S: #crate_::private::serde::ser::Serializer,
+                    {
+                        struct __With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+
+                        impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for __With #ty_gen #where_clause {
+                            fn serialize_as<S>(source: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+                            where
+                                S: #crate_::private::serde::Serializer,
+                            {
+                                #source_with(source, serializer)
+                            }
+                        }
+
+                        match field {
+                            ::std::option::Option::Some(value) => #crate_::private::serde_with::As::<
+                                #crate_::Filter<__With #ty_gen>
+                            >::serialize(value, serializer),
+                            ::std::option::Option::None => serializer.serialize_none(),
+                        }
+                    }
+                });
+            }
+
+            part
         });
 
     quote::quote! {
@@ -195,9 +214,14 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
     let turbo_fish = ty_gen.as_turbofish().into_token_stream().to_string();
 
-    let field_decls = fields.iter().map(|field| {
-        let FieldArgs { name, ty, args } = field;
-        let with = if args.has_with() {
+    let fields = fields.iter().filter(|f| f.args.partial);
+
+    let field_decls = fields.clone().map(|field| {
+        let FieldArgs {
+            name, ty, serde, ..
+        } = field;
+
+        let with = if serde.has_with() {
             let ident = format_ident!("partial_{}", name);
             Some(format!("{internals_name}{turbo_fish}::{ident}"))
         } else {
@@ -205,7 +229,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         }
         .into_iter();
 
-        let rename = args.rename.as_ref().map(ToString::to_string).into_iter();
+        let rename = serde.rename.as_ref().map(ToString::to_string).into_iter();
 
         quote::quote! {
             #(#[serde(serialize_with = #with)])*
@@ -215,7 +239,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let field_methods = fields.iter().map(|field| {
+    let field_methods = fields.clone().map(|field| {
         let FieldArgs { name, ty, .. } = field;
         let doc = format!("Sets the `{name}` field.");
 
@@ -229,7 +253,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let field_defaults = fields.iter().map(|field| {
+    let field_defaults = fields.map(|field| {
         let FieldArgs { name, .. } = field;
         quote::quote! {
             #name: None,
@@ -290,9 +314,13 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let (impl_gen, ty_gen, where_clause) = generics.split_for_impl();
     let turbo_fish = ty_gen.as_turbofish().into_token_stream().to_string();
 
-    let field_decls = fields.iter().map(|field| {
-        let FieldArgs { name, ty, args } = field;
-        let with = if args.has_with() {
+    let fields = fields.iter().filter(|f| f.args.filter);
+
+    let field_decls = fields.clone().map(|field| {
+        let FieldArgs {
+            name, ty, serde, ..
+        } = field;
+        let with = if serde.has_with() {
             let ident = format_ident!("filter_{}", name);
             Some(format!("{internals_name}{turbo_fish}::{ident}"))
         } else {
@@ -300,7 +328,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         }
         .into_iter();
 
-        let rename = args.rename.as_ref().map(ToString::to_string).into_iter();
+        let rename = serde.rename.as_ref().map(ToString::to_string).into_iter();
 
         quote::quote! {
             #(#[serde(serialize_with = #with)])*
@@ -310,7 +338,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let field_methods = fields.iter().map(|field| {
+    let field_methods = fields.clone().map(|field| {
         let FieldArgs { name, ty, .. } = field;
         let doc = format!("Sets the filter condition for the `{name}` field.");
 
@@ -324,7 +352,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
         }
     });
 
-    let field_defaults = fields.iter().map(|field| {
+    let field_defaults = fields.map(|field| {
         let FieldArgs { name, .. } = field;
         quote::quote! {
             #name: None,
@@ -380,9 +408,11 @@ fn emit_sort(args: &ModelArgs<'_>) -> TokenStream {
         ..
     } = args;
 
-    let field_methods = fields.iter().map(|field| {
-        let FieldArgs { name, args, .. } = field;
-        let rename = args.rename.as_ref().unwrap_or(name).to_string();
+    let fields = fields.iter().filter(|f| f.args.filter);
+
+    let field_methods = fields.map(|field| {
+        let FieldArgs { name, serde, .. } = field;
+        let rename = serde.rename.as_ref().unwrap_or(name).to_string();
         let doc = format!("Sorts the document by the `{name}` field.");
 
         quote::quote! {
@@ -489,8 +519,8 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
     } = args;
 
     let field_methods = fields.iter().map(|field| {
-        let FieldArgs { name, args, .. } = field;
-        let rename = args.rename.as_ref().unwrap_or(name).to_string();
+        let FieldArgs { name, serde, .. } = field;
+        let rename = serde.rename.as_ref().unwrap_or(name).to_string();
         let expr_name = "$".to_owned() + rename.strip_prefix("r#").unwrap_or(&rename);
         let doc = format!("Gets the BSON `{name}` field.");
 

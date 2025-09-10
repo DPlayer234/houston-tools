@@ -4,6 +4,7 @@ use crate::modules::model_prelude::*;
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Message {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     pub board: BoardId,
     #[serde(with = "As::<IdBson>")]
@@ -17,12 +18,14 @@ pub struct Message {
     #[serde(default)]
     pub pinned: bool,
     #[serde(default, with = "As::<Vec<IdBson>>")]
+    #[model(filter = false)]
     pub pin_messages: Vec<MessageId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
 pub struct Score {
     #[serde(rename = "_id")]
+    #[model(filter = false, partial = false)]
     pub id: ObjectId,
     pub board: BoardId,
     #[serde(with = "As::<IdBson>")]
