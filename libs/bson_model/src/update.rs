@@ -12,18 +12,25 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[non_exhaustive]
 pub struct Update<T> {
+    /// Fields to set/add, corresponding to `$set`.
     #[serde(rename = "$set")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub set: Option<T>,
+    /// Fields to set on insertion only, corresponding to `$setOnInsert`.
     #[serde(rename = "$setOnInsert")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub set_on_insert: Option<T>,
+    /// Fields to increment, corresponding to `$inc`.
     #[serde(rename = "$inc")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inc: Option<T>,
+    /// Fields to set to the max between the provided value here and the old
+    /// value, corresponding to `$max`.
     #[serde(rename = "$max")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<T>,
+    /// Fields to set to the min between the provided value here and the old
+    /// value, corresponding to `$min`.
     #[serde(rename = "$min")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<T>,

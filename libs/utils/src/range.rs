@@ -30,13 +30,21 @@ pub enum OutOfRange<T: RangeNum> {
     /// The low value was above the high value.
     /// This variant stores the provided low and high values.
     #[error("low ({low}) is greater than high ({high})")]
-    LowAboveHigh { low: T, high: T },
+    LowAboveHigh {
+        /// The provided low value.
+        low: T,
+        /// The provided high value.
+        high: T,
+    },
 
     /// Parsing failed.
     #[error("expected range within limits [{min}..{max}]; {source}")]
     Parse {
+        /// The minimum allowed value for the range.
         min: T,
+        /// The maximum allowed value for the range.
         max: T,
+        /// The original error when parsing a part as `T`.
         #[source]
         source: T::FromStrError,
     },

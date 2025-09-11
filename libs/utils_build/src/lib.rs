@@ -1,3 +1,5 @@
+//! Shared utilities for build scripts.
+
 use std::env;
 use std::process::Command;
 

@@ -1,9 +1,12 @@
+//! Iterator convenience utilities.
+
 mod const_iter;
 mod vec_chunks;
 
 pub use const_iter::ConstIter;
 pub use vec_chunks::VecChunks;
 
+/// Extension trait for all [`Iterator`] types.
 pub trait IteratorExt: Iterator {
     /// Adapts this iterator to yield items in chunks as [`Vec<T>`].
     ///

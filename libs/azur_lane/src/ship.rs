@@ -282,6 +282,7 @@ pub enum ShipCouple {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FleetTechInfo {
     // `class`, info can be looked up in `fleet_tech_ship_class`
+    /// The ship's class that it is shown in.
     pub class: u32,
 
     /// The amount of PTs gained when getting the ship.

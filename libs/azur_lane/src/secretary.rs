@@ -1,3 +1,5 @@
+//! Data model for special secretaries (i.e. TB).
+
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
@@ -7,6 +9,7 @@ use crate::ship::ShipMainScreenLine;
 /// Data for a special secretary (i.e. TB).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecialSecretary {
+    /// The ID of this secretary.
     pub id: u32,
     /// The name of this secretary.
     pub name: FixedString,

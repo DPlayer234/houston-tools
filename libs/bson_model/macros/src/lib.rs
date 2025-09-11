@@ -1,10 +1,13 @@
+//! Proc macros for the `bson_model` crate.
+
 use proc_macro::TokenStream as StdTokenStream;
 use syn::DeriveInput;
 
 mod args;
 mod model_impl;
 
-#[proc_macro_derive(ModelDocument, attributes(serde, model, derive))]
+/// Derives the `ModelDocument` trait based on the structure.
+#[proc_macro_derive(ModelDocument, attributes(serde, model))]
 pub fn derive_model_document(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
     model_impl::entry_point(input)

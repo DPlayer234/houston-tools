@@ -49,6 +49,7 @@ define_data_enum! {
     }
 }
 
+/// Error when converting a string to a [`GameServer`].
 #[derive(Debug, thiserror::Error)]
 #[error("unrecognized game server label")]
 pub struct GameServerFromStrError(());

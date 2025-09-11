@@ -25,10 +25,14 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    /// The length is invalid for the contained metadata.
     #[error("length invalid for metadata")]
     LenMismatch,
+    /// The prefix or suffix data was invalid for the used data format.
     #[error("prefix or suffix invalid for data format")]
     PrefixSuffix,
-    #[error("content char code out of range for format")]
+    /// The content contained a character code that was out of the valid range
+    /// of values for the used format.
+    #[error("content char code out of range for data format")]
     ContentFormat,
 }

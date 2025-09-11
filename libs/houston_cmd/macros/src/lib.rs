@@ -1,3 +1,5 @@
+//! Proc macros for the `houston_cmd` crate.
+
 use proc_macro::TokenStream as StdTokenStream;
 use syn::DeriveInput;
 

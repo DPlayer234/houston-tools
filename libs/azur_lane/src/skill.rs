@@ -110,8 +110,11 @@ define_data_enum! {
 /// Represents basic information about a buff, to be extended later if needed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuffInfo {
+    /// The ID of the inflicted buff.
     pub buff_id: u32,
+    /// The chance to inflict it. Expected to be in range `[0.0 .. 1.0]`.
     pub probability: f64,
+    /// The buff level.
     #[serde(default, skip_serializing_if = "crate::data_def::is_default")]
     pub level: u32,
 }

@@ -35,7 +35,7 @@
 //! [`char`] is treated as if it encoded 3 bytes.
 //!
 //! - If the prefix is `A`, no bytes are trimmed. The entire string is used.
-//! - If the prefix is `B`, 1 byte are trimmed from the end.
+//! - If the prefix is `B`, 1 byte is trimmed from the end.
 //! - If the prefix is `C`, 2 bytes are trimmed from the end.
 //!
 //! # Encoding Gap
@@ -62,7 +62,7 @@
 //! **Q: Why does the second [`char`] of the last chunk get omitted if that
 //! chunk was 2 or less bytes, even though the remaining [`char`] is treated as
 //! if it encoded 3 bytes when read back?**\
-//! A: Initially, the code actually encoded 3 bytes, even though that could't
+//! A: Initially, the code actually encoded 3 bytes, even though that couldn't
 //! work as it was written, so it was changed. There is also the future compat
 //! spec gap that may be implemented at a later date.
 
