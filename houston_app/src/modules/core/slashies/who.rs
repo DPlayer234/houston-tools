@@ -1,5 +1,5 @@
 use bitflags::Flags;
-use utils::text::WriteStr as _;
+use utils::text::{DisplayExt as _, WriteStr as _};
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
@@ -90,13 +90,16 @@ fn who_user_info(user: &User) -> String {
     };
 
     let mut f = format!(
-        "### **{}** [{}]\n\
+        "### **{}** [{label}]\n\
          **Display Name:** {}\n\
          **Snowflake:** `{}`\n\
          **Created At:** {}\n",
         get_unique_username(user),
-        label,
-        escape_markdown(user.global_name.as_deref().unwrap_or("`<unset>`")),
+        user.global_name
+            .as_deref()
+            .map(escape_markdown)
+            .ok_or("`<unset>`")
+            .display(),
         user.id,
         user.id.created_at().short_date_time(),
     );
