@@ -360,7 +360,8 @@ define_data_enum! {
         ACC("ACC"),
         ASW("ASW"),
         SPD("SPD"),
-        LCK("LCK")
+        LCK("LCK"),
+        OXY("OXY")
     }
 }
 
@@ -468,6 +469,7 @@ impl ShipStatBlock {
             StatKind::ASW => self.asw.calc(level, affinity),
             StatKind::SPD => self.spd,
             StatKind::LCK => self.lck,
+            StatKind::OXY => f64::from(self.oxy),
         }
     }
 }

@@ -161,6 +161,7 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
         "speed" => StatKind::SPD,
         "luck" => StatKind::LCK,
         "antisub" => StatKind::ASW,
+        "oxy_max" => StatKind::OXY,
         _ => StatKind::EVA,
     }
 }
