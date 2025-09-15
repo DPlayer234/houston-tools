@@ -354,84 +354,100 @@ impl GameData {
     }
 }
 
+macro_rules! common_iter {
+    ($Ty:ident, $mapper:expr) => {
+        impl<'a, T> Iterator for $Ty<'a, T> {
+            type Item = &'a T;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.inner.next().map($mapper(self.items))
+            }
+
+            fn nth(&mut self, n: usize) -> Option<Self::Item> {
+                self.inner.nth(n).map($mapper(self.items))
+            }
+
+            fn last(mut self) -> Option<Self::Item> {
+                self.next_back()
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                self.inner.size_hint()
+            }
+
+            fn count(self) -> usize {
+                self.inner.count()
+            }
+
+            fn fold<B, F>(self, init: B, f: F) -> B
+            where
+                F: FnMut(B, Self::Item) -> B,
+            {
+                self.inner.map($mapper(self.items)).fold(init, f)
+            }
+        }
+
+        impl<T> DoubleEndedIterator for $Ty<'_, T> {
+            fn next_back(&mut self) -> Option<Self::Item> {
+                self.inner.next_back().map($mapper(self.items))
+            }
+
+            fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+                self.inner.nth_back(n).map($mapper(self.items))
+            }
+
+            fn rfold<B, F>(self, init: B, f: F) -> B
+            where
+                F: FnMut(B, Self::Item) -> B,
+            {
+                self.inner.map($mapper(self.items)).rfold(init, f)
+            }
+        }
+
+        impl<T> ExactSizeIterator for $Ty<'_, T> {
+            fn len(&self) -> usize {
+                self.inner.len()
+            }
+        }
+    };
+}
+
 pub struct ByPrefixIter<'a, T> {
-    matches: MatchIter<'a, ()>,
+    inner: MatchIter<'a, ()>,
     items: &'a [T],
 }
 
 impl<'a, T> ByPrefixIter<'a, T> {
     fn new(search: &'a Search<()>, items: &'a [T], prefix: &str) -> Self {
-        Self {
-            matches: search.search(prefix),
-            items,
-        }
-    }
-
-    fn mapper(&self) -> impl Fn(Match<'a, ()>) -> &'a T {
-        // the used indices should always be in range
-        |i| &self.items[i.index]
+        let inner = search.search(prefix);
+        Self { inner, items }
     }
 }
 
-impl<'a, T> Iterator for ByPrefixIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.matches.next().map(self.mapper())
-    }
-
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.matches.nth(n).map(self.mapper())
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.matches.size_hint()
-    }
+fn prefix_mapper<'a, T>(items: &'a [T]) -> impl Fn(Match<'a, ()>) -> &'a T {
+    // the used indices should always be in range
+    |i| &items[i.index]
 }
 
-impl<T> ExactSizeIterator for ByPrefixIter<'_, T> {
-    fn len(&self) -> usize {
-        self.matches.len()
-    }
-}
+common_iter!(ByPrefixIter, prefix_mapper);
 
 pub struct ByLookupIter<'a, T> {
-    indices: slice::Iter<'a, usize>,
+    inner: slice::Iter<'a, usize>,
     items: &'a [T],
 }
 
 impl<'a, T> ByLookupIter<'a, T> {
     pub fn new(lookup: Option<&'a IndexVec>, items: &'a [T]) -> Self {
-        let indices = lookup
+        let inner = lookup
             .map_or_else(<&[usize]>::default, IndexVec::as_slice)
             .iter();
-        Self { indices, items }
-    }
-
-    fn mapper(&self) -> impl Fn(&usize) -> &'a T {
-        // the used indices should always be in range
-        |i| &self.items[*i]
+        Self { inner, items }
     }
 }
 
-impl<'a, T> Iterator for ByLookupIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next().map(self.mapper())
-    }
-
-    fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.indices.nth(n).map(self.mapper())
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.indices.size_hint()
-    }
+fn lookup_mapper<'a, T>(items: &'a [T]) -> impl Fn(&usize) -> &'a T {
+    // the used indices should always be in range
+    |i| &items[*i]
 }
 
-impl<T> ExactSizeIterator for ByLookupIter<'_, T> {
-    fn len(&self) -> usize {
-        self.indices.len()
-    }
-}
+common_iter!(ByLookupIter, lookup_mapper);

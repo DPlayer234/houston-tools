@@ -459,16 +459,16 @@ impl<T> Default for MatchIter<'_, T> {
     }
 }
 
-// to avoid repeating the same safety comment for every use of `state.mapper`:
-// SAFETY: `mapper` is safe to call with a value coming from the inner iterator
 impl<'st, T> Iterator for MatchIter<'st, T> {
     type Item = Match<'st, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
         self.inner.next().map(unsafe { self.state.mapper() })
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
         self.inner.nth(n).map(unsafe { self.state.mapper() })
     }
 
@@ -480,19 +480,46 @@ impl<'st, T> Iterator for MatchIter<'st, T> {
         self.inner.size_hint()
     }
 
+    fn count(self) -> usize {
+        self.inner.count()
+    }
+
+    fn fold<B, F>(self, init: B, f: F) -> B
+    where
+        F: FnMut(B, Self::Item) -> B,
+    {
+        // intermediate map should optimize better
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
+        self.inner.map(unsafe { self.state.mapper() }).fold(init, f)
+    }
+
     fn collect<B: FromIterator<Self::Item>>(self) -> B {
-        // this should optimize a bit better than a direct collect()
+        // intermediate map should optimize better
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
         self.inner.map(unsafe { self.state.mapper() }).collect()
     }
 }
 
 impl<T> DoubleEndedIterator for MatchIter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
         self.inner.next_back().map(unsafe { self.state.mapper() })
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
         self.inner.nth_back(n).map(unsafe { self.state.mapper() })
+    }
+
+    fn rfold<B, F>(self, init: B, f: F) -> B
+    where
+        F: FnMut(B, Self::Item) -> B,
+    {
+        // intermediate map should optimize better
+        // SAFETY: `mapper` is safe to call with a value coming from the inner iterator
+        self.inner
+            .map(unsafe { self.state.mapper() })
+            .rfold(init, f)
     }
 }
 

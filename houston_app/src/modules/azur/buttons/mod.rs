@@ -200,9 +200,9 @@ mod search {
     impl<'a, T> Inner<'a, T> {
         fn next(&mut self) -> Option<&'a T> {
             match self {
-                Self::Slice(i) => i.next(),
-                Self::ByPrefix(i) => i.next(),
-                Self::ByLookup(i) => i.next(),
+                Self::Slice(it) => it.next(),
+                Self::ByPrefix(it) => it.next(),
+                Self::ByLookup(it) => it.next(),
             }
         }
     }
@@ -219,6 +219,26 @@ mod search {
                 if self.filter.is_match(item) {
                     return Some(item);
                 }
+            }
+        }
+
+        fn fold<B, L>(self, init: B, mut f: L) -> B
+        where
+            L: FnMut(B, Self::Item) -> B,
+        {
+            let filter = &self.filter;
+            let fold_inner = move |acc, item| {
+                if filter.is_match(item) {
+                    f(acc, item)
+                } else {
+                    acc
+                }
+            };
+
+            match self.inner {
+                Inner::Slice(it) => it.fold(init, fold_inner),
+                Inner::ByPrefix(it) => it.fold(init, fold_inner),
+                Inner::ByLookup(it) => it.fold(init, fold_inner),
             }
         }
     }

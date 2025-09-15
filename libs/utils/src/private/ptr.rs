@@ -37,6 +37,7 @@ impl<'a, T: ?Sized> RawRef<'a, T> {
     ///
     /// See documentation for [`NonNull::as_ref`].
     pub unsafe fn as_ref(self) -> &'a T {
+        // SAFETY: same preconditions as caller
         unsafe { self.ptr.as_ref() }
     }
 }
@@ -53,6 +54,7 @@ impl<T: Sized> RawRef<'_, T> {
     ///
     /// Retains the lifetime.
     pub unsafe fn add(self, offset: usize) -> Self {
+        // SAFETY: same preconditions as caller
         Self::from(unsafe { self.ptr.add(offset) })
     }
 }
