@@ -1,8 +1,9 @@
 use args::SlashMember;
-use houston_cmd::Context;
+use houston_cmd::{BoxFuture, Context};
 
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::{DisplayCommand, interaction_location};
+use crate::helper::futures::noop_future;
 use crate::prelude::*;
 
 pub mod args;
@@ -18,32 +19,36 @@ pub mod prelude {
 }
 
 /// Pre-command execution hook.
-pub async fn pre_command(ctx: Context<'_>) {
+pub fn pre_command(ctx: Context<'_>) -> BoxFuture<'_, ()> {
     log::info!(
         "{}, {}: {}",
         interaction_location(ctx.guild_id(), ctx.interaction.channel.as_ref()),
         ctx.user().name,
         DisplayCommand::new(&ctx.interaction.data, ctx.options()),
     );
+
+    noop_future()
 }
 
 /// Command execution error handler.
-#[cold]
-pub async fn error_handler(error: houston_cmd::Error<'_>) {
-    match error {
-        houston_cmd::Error::Command { error, ctx } => command_error(ctx, error).await,
+pub fn error_handler(error: houston_cmd::Error<'_>) -> BoxFuture<'_, ()> {
+    return match error {
+        houston_cmd::Error::Command { error, ctx } => command_error(ctx, error),
         houston_cmd::Error::ArgInvalid { message, ctx } => {
             let msg = format!("Argument invalid: {message}");
-            context_error(ctx, msg.into()).await
+            Box::pin(context_error(ctx, msg.into()))
         },
         houston_cmd::Error::ArgParse { error, input, ctx } => {
             let msg = format!("Argument invalid: {error}\nCaused by input: '{input}'");
-            context_error(ctx, msg.into()).await
+            Box::pin(context_error(ctx, msg.into()))
         },
-        _ => log::error!("Oh noes, we got an error: {error:?}"),
-    }
+        _ => {
+            log::error!("Oh noes, we got an error: {error:?}");
+            noop_future()
+        },
+    };
 
-    async fn command_error(ctx: Context<'_>, err: anyhow::Error) {
+    fn command_error(ctx: Context<'_>, err: anyhow::Error) -> BoxFuture<'_, ()> {
         let message = match err.downcast::<HArgError>() {
             Ok(err) => err.msg,
             Err(err) => {
@@ -58,7 +63,7 @@ pub async fn error_handler(error: houston_cmd::Error<'_>) {
             },
         };
 
-        context_error(ctx, message).await
+        Box::pin(context_error(ctx, message))
     }
 
     async fn context_error(ctx: Context<'_>, feedback: Cow<'_, str>) {

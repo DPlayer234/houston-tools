@@ -99,6 +99,7 @@ impl Framework {
         self
     }
 
+    #[cold]
     async fn handle_error(&self, why: Error<'_>) {
         match self.on_error {
             Some(on_error) => on_error(why).await,
@@ -106,6 +107,7 @@ impl Framework {
         }
     }
 
+    #[cold]
     async fn register_commands(&self, ctx: &SerenityContext) {
         // if this was already false, either `auto_register` was not used or we are
         // already registering commands

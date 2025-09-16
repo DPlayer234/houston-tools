@@ -9,8 +9,7 @@ mod modules;
 mod prelude;
 mod slashies;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     use std::panic;
 
     use houston_cmd::Framework;
@@ -22,14 +21,20 @@ async fn main() -> anyhow::Result<()> {
     use crate::data::cache::CacheUpdateHandler;
     use crate::prelude::*;
 
-    // run the program and clean up
-    let res = run().await;
-    if let Err(why) = &res {
-        log::error!("Exiting due to error: {why:?}");
-    }
+    return inner();
 
-    log::logger().flush();
-    return res;
+    // short async fn to reduce `tokio::main` scope
+    #[tokio::main]
+    async fn inner() -> anyhow::Result<()> {
+        // run the program and clean up
+        let res = run().await;
+        if let Err(why) = &res {
+            log::error!("Exiting due to error: {why:?}");
+        }
+
+        log::logger().flush();
+        res
+    }
 
     // actual main logic
     async fn run() -> Result {
@@ -57,8 +62,8 @@ async fn main() -> anyhow::Result<()> {
 
         let framework = Framework::new()
             .commands(init.commands)
-            .pre_command(|ctx| Box::pin(slashies::pre_command(ctx)))
-            .on_error(|err| Box::pin(slashies::error_handler(err)))
+            .pre_command(slashies::pre_command)
+            .on_error(slashies::error_handler)
             .auto_register();
 
         // note: if any module ever needs access to `Http` at this point, manually
