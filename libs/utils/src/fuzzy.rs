@@ -46,10 +46,10 @@
 
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::mem::take;
 use std::ptr;
 use std::vec::IntoIter as VecIntoIter;
 
-use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
 use crate::private::ptr::RawRef;
@@ -198,20 +198,23 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     /// Check [`Match::score`] for more details.
     pub fn search<'st>(&'st self, value: &str) -> MatchIter<'st, T> {
         let norm = norm_str(value);
-        let mut results = MatchIter::default();
+        let norm = norm.as_slice();
 
         if norm.len() >= MIN {
-            let upper = MAX.min(norm.len());
+            // reused buffer for all searches.
+            // on success, will also be used in the return value.
+            let mut buf = Vec::new();
 
+            let upper = MAX.min(norm.len());
             for size in (MIN..=upper).rev() {
-                results = self.find_with_segment_size(&norm, size);
-                if !results.is_empty() {
-                    break;
+                // `find_with_segment_size` will ensure `buf` is empty when it returns
+                if let Some(matches) = self.find_with_segment_size(norm, size, &mut buf) {
+                    return matches;
                 }
             }
         }
 
-        results
+        MatchIter::default()
     }
 
     /// Shrinks the internal capacity as much as possible.
@@ -236,11 +239,13 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         }
     }
 
-    fn find_with_segment_size<'st>(&'st self, norm: &[u16], size: usize) -> MatchIter<'st, T> {
-        const MAX_MATCHES: usize = 32;
-
-        let mut results = <ArrayVec<MatchInfoLen, MAX_MATCHES>>::new();
-
+    fn find_with_segment_size<'st>(
+        &'st self,
+        norm: &[u16],
+        size: usize,
+        // assumed to be empty, and will be empty on return
+        results: &mut Vec<MatchInfoLen>,
+    ) -> Option<MatchIter<'st, T>> {
         let segments = iter_segments(norm, size);
         let total = segments.len();
 
@@ -252,21 +257,18 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
             for &index in match_entry {
                 debug_assert!(
                     to_usize(index) < self.values.len(),
-                    "Search safety invariant not met"
+                    "search safety invariant not met"
                 );
 
                 // find & modify, or insert
                 match results.iter_mut().find(|m| m.index == index) {
                     Some(res) => res.count += 1,
-                    // discard results past the max capacity
-                    None => {
-                        _ = results.try_push(MatchInfoLen {
-                            count: 1,
-                            index,
-                            // SAFETY: entry index must be valid into `self.values`
-                            len: unsafe { self.values.get_unchecked(to_usize(index)).len },
-                        })
-                    },
+                    None => results.push(MatchInfoLen {
+                        count: 1,
+                        index,
+                        // SAFETY: entry index must be valid into `self.values`
+                        len: unsafe { self.values.get_unchecked(to_usize(index)).len },
+                    }),
                 }
             }
         }
@@ -274,21 +276,25 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let total = total as f64;
         let match_count = total * self.min_match_score;
 
+        // remove insufficiently accurate matches
         results.retain(|r| f64::from(r.count) >= match_count);
+        if !results.is_empty() {
+            // sort by count desc
+            // then by len asc
+            // then by index asc
+            results.sort_unstable_by_key(|r| (Reverse(r.count), r.len, r.index));
 
-        // sort by count desc
-        // then by len asc
-        // then by index asc
-        results.sort_unstable_by_key(|r| (Reverse(r.count), r.len, r.index));
+            // copy as MatchInfo; TrustedLen should avoid redundant allocations
+            // original code here already allocated, and it's fine perf-wise
+            // don't use `into_iter`, that's not TrustedLen!
+            let results = take(results).into_iter().map(MatchInfoLen::info).collect();
 
-        // copy as MatchInfo; TrustedLen should avoid redundant allocations
-        // original code here already allocated, and it's fine perf-wise
-        // don't use `into_iter`, that's not TrustedLen!
-        let results = results.iter().map(|m| m.info()).collect();
-
-        // SAFETY: every index in `results` is a valid index into `values`
-        // as guaranteed by the type invariants; indices come from `match_map`.
-        unsafe { MatchIter::new(total, results, &self.values) }
+            // SAFETY: every index in `results` is a valid index into `values`
+            // as guaranteed by the type invariants; indices come from `match_map`.
+            Some(unsafe { MatchIter::new(total, results, &self.values) })
+        } else {
+            None
+        }
     }
 }
 
@@ -400,10 +406,6 @@ impl<'st, T> MatchIter<'st, T> {
                 search_values: RawRef::from(search_values).cast_element(),
             },
         }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.inner.len() == 0
     }
 }
 
@@ -552,7 +554,7 @@ unsafe fn new_segment<const N: usize>(pts: &[u16]) -> Segment<N> {
 fn iter_segments<const N: usize>(
     slice: &[u16],
     size: usize,
-) -> impl ExactSizeIterator<Item = Segment<N>> {
+) -> impl ExactSizeIterator<Item = Segment<N>> + Clone {
     assert!(
         (1..=N).contains(&size),
         "size must be within 1..={N}, but is {size}"
@@ -570,15 +572,14 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
     for c in str.chars() {
         if c.is_alphanumeric() {
-            let lowercase = c
-                .to_lowercase()
-                .filter(|c| c.is_alphanumeric())
-                .map(|c| c as u16);
+            // only 1 unicode character turns into more than 1 char when lowercased, and
+            // conveniently the extra code isn't alphanumeric so we can skip it anyways
+            let lowercase = c.to_lowercase().next().unwrap_or_default() as u16;
 
-            out.extend(lowercase);
+            out.push(lowercase);
             whitespace = false;
         } else if !whitespace {
-            out.push(1);
+            out.push(1u16);
             whitespace = true;
         }
     }
@@ -622,7 +623,7 @@ mod tests {
     #[test]
     fn search_order() {
         let search = {
-            let mut search = TSearch::new().with_min_match_score(f64::EPSILON);
+            let mut search = TSearch::new().with_min_match_score(0.0);
             search.insert("Houston II", 4);
             search.insert("Ho", 1u8);
             search.insert("Houston", 3);

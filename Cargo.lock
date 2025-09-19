@@ -3489,7 +3489,6 @@ name = "utils"
 version = "8.2.0"
 dependencies = [
  "anstyle-query",
- "arrayvec",
  "criterion",
  "smallvec",
  "thiserror 2.0.16",

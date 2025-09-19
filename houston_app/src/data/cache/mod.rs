@@ -126,13 +126,14 @@ impl Cache {
     }
 
     fn guild_channel_(&self, guild_id: GuildId, channel_id: GenericChannelId) -> Option<Ccot> {
-        let g = self.guilds.get(&guild_id)?;
+        let guild = self.guilds.get(&guild_id)?;
 
-        if let Some(channel) = g.channels.get(&channel_id.expect_channel()) {
+        if let Some(channel) = guild.channels.get(&channel_id.expect_channel()) {
             return Some(Ccot::Channel(channel.clone()));
         }
 
-        g.threads
+        guild
+            .threads
             .get(&channel_id.expect_thread())
             .map(|t| Ccot::Thread(t.clone()))
     }
@@ -246,10 +247,10 @@ impl CachedGuild {
 
     /// Remove all threads associated with a given channel.
     fn remove_associated_threads(&mut self, parent_id: ChannelId) {
-        let thread_ids = self.threads_in.remove(&parent_id).unwrap_or_default();
-
-        for thread_id in thread_ids {
-            self.threads.remove(&thread_id);
+        if let Some(thread_ids) = self.threads_in.remove(&parent_id) {
+            for thread_id in thread_ids {
+                self.threads.remove(&thread_id);
+            }
         }
     }
 }
