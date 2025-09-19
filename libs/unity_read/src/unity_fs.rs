@@ -1,8 +1,5 @@
 //! Main access into Unity FS archives.
 
-// binrw emits code that doesn't get used and we hit this. ugh.
-#![allow(dead_code)]
-
 use std::borrow::Cow;
 use std::cell::Cell;
 use std::fmt;
@@ -58,37 +55,22 @@ pub enum UnityFsData<'a> {
 #[derive(Clone, Debug)]
 struct UnityFsHeader {
     version: u32,
-    unity_version: NullString,
-    unity_revision: NullString,
-    size: i64,
+    #[br(temp)]
+    _unity_version: NullString,
+    #[br(temp)]
+    _unity_revision: NullString,
+    #[br(temp)]
+    _size: i64,
     compressed_blocks_info_size: u32,
     uncompressed_blocks_info_size: u32,
-    flags: ArchiveFlags,
-}
-
-#[bitfield]
-#[binread]
-#[derive(Debug, Clone)]
-#[br(map = |x: u32| Self::from_bytes(x.to_le_bytes()))]
-struct ArchiveFlags {
-    #[bits = 6]
-    compression: Compression,
-    #[allow(dead_code)]
-    block_directory_merged: bool,
-    blocks_info_at_end: bool,
-    #[allow(dead_code)]
-    old_web_plugin_compatible: bool,
-    blocks_info_need_start_pad: bool,
-    #[allow(dead_code)]
-    #[doc(hidden)]
-    pad: B22,
+    flags: bitfields::ArchiveFlags,
 }
 
 #[binread]
 #[br(big)]
 #[derive(Debug)]
 struct BlocksInfo {
-    data_hash: [u8; 16],
+    _data_hash: [u8; 16],
     #[br(temp)]
     blocks_count: u32,
     #[br(count = blocks_count)]
@@ -105,22 +87,7 @@ struct BlocksInfo {
 struct Block {
     uncompressed_size: u32,
     compressed_size: u32,
-    flags: BlockFlags,
-}
-
-#[bitfield]
-#[binread]
-#[derive(Clone, Copy, Debug)]
-#[br(map = |x: u16| Self::from_bytes(x.to_le_bytes()))]
-struct BlockFlags {
-    #[bits = 6]
-    compression: Compression,
-    #[allow(dead_code)]
-    streamed: bool,
-    #[skip]
-    #[allow(dead_code)]
-    #[doc(hidden)]
-    pad: B9,
+    flags: bitfields::BlockFlags,
 }
 
 #[binread]
@@ -129,7 +96,8 @@ struct BlockFlags {
 struct Node {
     offset: u64,
     size: u64,
-    flags: u32,
+    #[br(temp)]
+    _flags: u32,
     path: NullString,
 
     /// Stores the uncompressed bytes for this node.
@@ -138,6 +106,44 @@ struct Node {
     // is stabilized which is probably in approximately Never™️.
     #[br(ignore)]
     uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
+}
+
+// not quite sure what's going but the `bitfield` macro leads to some weird
+// linting, so let's suppress it for now.
+#[expect(dead_code, reason = "buggy lint?")]
+#[expect(unused_parens, reason = "buggy lint?")]
+mod bitfields {
+    use super::*;
+
+    #[bitfield]
+    #[binread]
+    #[derive(Debug, Clone)]
+    #[br(map = |x: u32| Self::from_bytes(x.to_le_bytes()))]
+    pub struct ArchiveFlags {
+        #[bits = 6]
+        pub compression: Compression,
+        #[skip]
+        block_directory_merged: bool,
+        pub blocks_info_at_end: bool,
+        #[skip]
+        old_web_plugin_compatible: bool,
+        pub blocks_info_need_start_pad: bool,
+        #[skip]
+        pad: B22,
+    }
+
+    #[bitfield]
+    #[binread]
+    #[derive(Clone, Copy, Debug)]
+    #[br(map = |x: u16| Self::from_bytes(x.to_le_bytes()))]
+    pub struct BlockFlags {
+        #[bits = 6]
+        pub compression: Compression,
+        #[skip]
+        streamed: bool,
+        #[skip]
+        pad: B9,
+    }
 }
 
 #[repr(u8)]
@@ -316,10 +322,10 @@ impl<'a> UnityFsNode<'a> {
     /// Returns [`Err`] if an I/O error occurs or the data cannot be
     /// decompressed or is compressed in an unsupported format.
     pub fn read_raw(&self) -> crate::Result<&'a [u8]> {
-        Ok(self
-            .node
+        self.node
             .uncompressed_cache
-            .get_or_try_init(|| self.decompress())?)
+            .get_or_try_init(|| self.decompress())
+            .map(Vec::as_slice)
     }
 
     /// Reads the data for this node.
@@ -412,7 +418,7 @@ impl<'a> BufGuard<'a> {
 
     /// Gets the buffer.
     fn buf(&mut self) -> &mut dyn SeekRead {
-        // avoid returning `&mut &mut dyn SeekRead` and generating another vtable
+        // avoid returning `&mut &mut dyn SeekRead` and generating another vtable.
         // that would be valid (since `R: SeekRead` implies `&mut R: SeekRead`), but it
         // just adds unnecessary indirection and extra code.
         match &mut self.buf {

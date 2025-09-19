@@ -34,7 +34,7 @@ pub fn extract_description(attrs: &[Attribute]) -> Option<SpannedValue<String>> 
             && let Lit::Str(str) = &lit.lit
             && pair.path.is_ident(&ident)
         {
-            let desc = res.get_or_insert(SpannedValue::new(String::new(), a.span()));
+            let desc = res.get_or_insert_with(|| SpannedValue::new(String::new(), a.span()));
             if !desc.is_empty() {
                 desc.push(' ');
             }
