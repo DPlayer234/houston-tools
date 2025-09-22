@@ -72,7 +72,7 @@ pub async fn overview(
             },
             doc! {
                 "$group": {
-                    // board is the group key/_id field
+                    // `TopMessage::board` is the group key/_id field
                     TopMessage::fields().board(): model::Message::fields().board(),
                     TopMessage::fields().channel(): { "$first": model::Message::fields().channel() },
                     TopMessage::fields().message(): { "$first": model::Message::fields().message() },

@@ -1,10 +1,10 @@
 use azur_lane::GameServer;
 use azur_lane::secretary::*;
 use mlua::prelude::*;
-use small_fixed_array::{FixedString, TruncatingInto as _};
+use small_fixed_array::FixedString;
 
 use super::skin::to_main_screen;
-use crate::intl_util::IterExt as _;
+use crate::intl_util::{IntoFixed as _, IterExt as _};
 use crate::{CONFIG, context};
 
 pub fn load_special_secretary(
@@ -76,9 +76,9 @@ pub fn load_special_secretary(
 
     Ok(SpecialSecretary {
         id,
-        name: data.get::<String>("name")?.trunc_into(),
-        kind: kind_name.trunc_into(),
-        words: vec![words].trunc_into(),
+        name: data.get::<String>("name")?.into_fixed(),
+        kind: kind_name.into_fixed(),
+        words: vec![words].into_fixed(),
     })
 }
 
@@ -89,7 +89,7 @@ fn get_chimes(id: u32, data: &LuaTable) -> Option<Box<[FixedString; 24]>> {
                 .with_context(context!("secretary word {} for secretary {}", $key, id))
                 .ok()
                 .filter(|s| !s.is_empty())?
-                .trunc_into()
+                .into_fixed()
         }};
     }
 

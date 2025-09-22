@@ -9,9 +9,8 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use azur_lane::{DefinitionData, GameServer, juustagram};
 use clap::Parser;
-use intl_util::{FixedArrayExt as _, IterExt as _, TryIterExt as _};
 use mlua::prelude::*;
-use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
+use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
 mod convert_al;
 mod enhance;
@@ -21,7 +20,8 @@ mod macros;
 mod model;
 mod parse;
 
-use model::*;
+use crate::intl_util::{FixedArrayExt as _, IntoFixed as _, IterExt as _, TryIterExt as _};
+use crate::model::*;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -611,7 +611,7 @@ fn load_juustagram_chats(lua: &Lua, pg: &LuaTable) -> anyhow::Result<FixedArray<
     })?;
 
     action.finish();
-    Ok(chats.trunc_into())
+    Ok(chats.into_fixed())
 }
 
 fn load_special_secretaries(
@@ -759,7 +759,7 @@ fn add_or_update<T>(
         }
     }
 
-    *main = m.trunc_into();
+    *main = m.into_fixed();
 }
 
 fn guess_server(path: &str) -> Option<GameServer> {

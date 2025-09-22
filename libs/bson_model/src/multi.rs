@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use serde::Serialize;
 use serde_with::SerializeAs;
 use serde_with::ser::SerializeAsWrap;
-use small_fixed_array::FixedArray;
+use small_fixed_array::{FixedArray, ValidLength as _};
 
 /// A semi-opaque wrapper around a boxed slice.
 ///
@@ -14,8 +14,7 @@ pub struct Multi<T>(FixedArray<T>);
 impl<T> Multi<T> {
     /// Returns the number of elements in the slice.
     pub fn len(&self) -> usize {
-        // the len ty is always <= usize
-        self.0.len() as usize
+        self.0.len().to_usize()
     }
 
     /// Returns `true` if the slice has a length of 0.
@@ -40,7 +39,14 @@ impl<T> DerefMut for Multi<T> {
 
 impl<A> FromIterator<A> for Multi<A> {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
-        Self(FixedArray::from_vec_trunc(iter.into_iter().collect()))
+        let boxed = iter.into_iter().collect::<Box<[A]>>();
+        match FixedArray::try_from(boxed) {
+            Ok(fixed) => Self(fixed),
+            #[cfg(target_pointer_width = "16")]
+            Err(_) => panic!("Multi len should not overflow u16"),
+            #[cfg(not(target_pointer_width = "16"))]
+            Err(_) => panic!("Multi len should not overflow u32"),
+        }
     }
 }
 

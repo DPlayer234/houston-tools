@@ -1,8 +1,7 @@
 use azur_lane::equip::*;
 use mlua::prelude::*;
-use small_fixed_array::TruncatingInto as _;
 
-use crate::intl_util::{IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al, parse};
 
@@ -81,7 +80,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
 
     Ok(Augment {
         augment_id: set.id,
-        name: name.trunc_into(),
+        name: name.into_fixed(),
         rarity: convert_al::to_augment_rarity(read!("rarity")),
         stat_bonuses: vec![
             AugmentStatBonus {
@@ -95,7 +94,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
                 random: read!("value_2_random"),
             },
         ]
-        .trunc_into(),
+        .into_fixed(),
         usability,
         effect,
         skill_upgrades,

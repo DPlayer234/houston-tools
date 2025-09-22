@@ -2,7 +2,34 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::mem::take;
 
-use small_fixed_array::{FixedArray, TruncatingInto};
+use small_fixed_array::{FixedArray, FixedString, ValidLength};
+
+pub trait IntoFixed<LenT> {
+    type Fixed;
+
+    fn into_fixed(self) -> Self::Fixed;
+}
+
+impl<LenT: ValidLength> IntoFixed<LenT> for String {
+    type Fixed = FixedString<LenT>;
+
+    fn into_fixed(self) -> Self::Fixed {
+        self.into_boxed_str()
+            .try_into()
+            .expect("string len must fit into fixed string")
+    }
+}
+
+impl<T, LenT: ValidLength> IntoFixed<LenT> for Vec<T> {
+    type Fixed = FixedArray<T, LenT>;
+
+    fn into_fixed(self) -> Self::Fixed {
+        match self.into_boxed_slice().try_into() {
+            Ok(fixed) => fixed,
+            Err(_) => panic!("slice len must fit into fixed array"),
+        }
+    }
+}
 
 pub trait FixedArrayExt<T> {
     /// Absolutely "efficient" way to add an item.
@@ -18,19 +45,19 @@ impl<T> FixedArrayExt<T> for FixedArray<T> {
         let mut vec = take(self).into_vec();
         vec.reserve_exact(1);
         vec.push(item);
-        *self = vec.trunc_into();
+        *self = vec.into_fixed();
     }
 
     fn extend_from_array(&mut self, other: Self) {
         let mut vec = take(self).into_vec();
         vec.extend(other);
-        *self = vec.trunc_into();
+        *self = vec.into_fixed();
     }
 }
 
 pub trait IterExt: Iterator + Sized {
     fn collect_fixed_array(self) -> FixedArray<Self::Item> {
-        self.collect::<Vec<Self::Item>>().trunc_into()
+        self.collect::<Vec<Self::Item>>().into_fixed()
     }
 
     #[expect(clippy::wrong_self_convention)]
@@ -56,7 +83,7 @@ pub trait TryIterExt<T, E>: Iterator<Item = Result<T, E>> + Sized {
     }
 
     fn try_collect_fixed_array(self) -> Result<FixedArray<T>, E> {
-        self.try_collect::<Vec<_>>().map(TruncatingInto::trunc_into)
+        self.try_collect().map(Vec::into_fixed)
     }
 }
 

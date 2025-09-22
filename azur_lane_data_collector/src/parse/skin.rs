@@ -1,9 +1,9 @@
 use azur_lane::GameServer;
 use azur_lane::ship::*;
 use mlua::prelude::*;
-use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _, ValidLength as _};
+use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
-use crate::intl_util::{IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al};
 
@@ -13,7 +13,7 @@ pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
             set.template
                 .get::<String>($key)
                 .with_context(context!("skin template {} for skin {}", $key, set.skin_id))?
-                .trunc_into()
+                .into_fixed()
         };
     }
 
@@ -22,12 +22,12 @@ pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
         image_key: get!("painting"),
         name: get!("name"),
         description: get!("desc"),
-        words: vec![load_words(set, server)?].trunc_into(),
+        words: vec![load_words(set, server)?].into_fixed(),
         words_extra: FixedArray::new(), // loaded below
     };
 
     if let Some(extra) = &set.words_extra {
-        skin.words_extra = vec![load_words_extra(set, extra, &skin.words[0], server)?].trunc_into();
+        skin.words_extra = vec![load_words_extra(set, extra, &skin.words[0], server)?].into_fixed();
     }
 
     Ok(skin)
@@ -179,14 +179,14 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
         line: table
             .get::<String>(3)
             .with_context(context!("couple_encourage 3 for skin {}", set.skin_id))?
-            .trunc_into(),
+            .into_fixed(),
         condition: match mode {
             // note:
             // - Warspite, Admiral Hipper, Zeppy, and Peter Strasser define lines without a filter
             //   type, clearly intended to be ShipGroup. these lines do not work, but we include
             //   them as intended anyways
             // - Hatsuharu and Richelieu have lines defined with the wrong filter type
-            None | Some(0) => ShipCouple::ShipGroup(filter.trunc_into()),
+            None | Some(0) => ShipCouple::ShipGroup(filter.into_fixed()),
             Some(1) => ShipCouple::HullType(map(filter, convert_al::to_hull_type)),
             Some(2) => ShipCouple::Rarity(map(filter, convert_al::to_rarity)),
             Some(3) => ShipCouple::Faction(map(filter, convert_al::to_faction)),

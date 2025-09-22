@@ -1,8 +1,8 @@
 use azur_lane::ship::*;
 use mlua::prelude::*;
-use small_fixed_array::{FixedArray, TruncatingInto as _};
+use small_fixed_array::FixedArray;
 
-use crate::intl_util::{IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al, enhance, parse};
 
@@ -89,7 +89,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
 
     let mut ship = ShipData {
         group_id: read!(set.template, "group_type"),
-        name: name.trunc_into(),
+        name: name.into_fixed(),
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),
         faction: convert_al::to_faction(read!(set.statistics, "nationality")),
         hull_type: convert_al::to_hull_type(read!(set.statistics, "type")),
@@ -120,7 +120,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             make_equip_slot!("equip_4"),
             make_equip_slot!("equip_5"),
         ]
-        .trunc_into(),
+        .into_fixed(),
         shadow_equip: parse::skill::load_wequips(lua, read!(set.statistics, "fix_equip_list"))?
             .into_iter()
             .enumerate()
@@ -136,8 +136,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             })
             .try_collect_fixed_array()?,
         depth_charges: parse::skill::load_equips(lua, read!(set.statistics, "depth_charge_list"))?
-            .trunc_into(),
-        skills: parse::skill::load_skills(lua, buff_list)?.trunc_into(),
+            .into_fixed(),
+        skills: parse::skill::load_skills(lua, buff_list)?.into_fixed(),
         ultimate_bonus: specific_type
             .first()
             .map(|s| convert_al::to_ultimate_bonus(s)),
@@ -219,7 +219,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
             // and at least Fusou META doesn't even have the right data here. Just use the
             // display list. The skill list will have been mostly empty, so we
             // don't repeat a lot of work here.
-            ship.skills = parse::skill::load_skills(lua, buff_list_display)?.trunc_into();
+            ship.skills = parse::skill::load_skills(lua, buff_list_display)?.into_fixed();
         },
     }
 

@@ -4,9 +4,9 @@ use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
 use mlua::prelude::*;
-use small_fixed_array::{FixedArray, FixedString, TruncatingInto as _};
+use small_fixed_array::{FixedArray, FixedString};
 
-use crate::intl_util::{IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::{CONFIG, context, convert_al};
 
 /// Loads a skill from the Lua state.
@@ -40,8 +40,8 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
 
     if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
         let mut skill = skill.clone();
-        skill.name = name.trunc_into();
-        skill.description = desc.trunc_into();
+        skill.name = name.into_fixed();
+        skill.description = desc.into_fixed();
 
         return Ok(skill);
     }
@@ -66,10 +66,10 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     Ok(Skill {
         buff_id: skill_id,
         category,
-        name: name.trunc_into(),
-        description: desc.trunc_into(),
-        barrages: context.barrages.trunc_into(),
-        new_weapons: context.new_weapons.trunc_into(),
+        name: name.into_fixed(),
+        description: desc.into_fixed(),
+        barrages: context.barrages.into_fixed(),
+        new_weapons: context.new_weapons.into_fixed(),
     })
 }
 
@@ -169,8 +169,8 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
 
     Ok(Equip {
         equip_id,
-        name: name.trunc_into(),
-        description: description.trunc_into(),
+        name: name.into_fixed(),
+        description: description.into_fixed(),
         rarity: convert_al::to_equip_rarity(
             statistics
                 .get("rarity")
@@ -186,9 +186,9 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
                 .get("nationality")
                 .with_context(context!("nationality for equip with id {equip_id}"))?,
         ),
-        hull_disallowed: hull_disallowed.trunc_into(),
-        weapons: weapons.trunc_into(),
-        skills: skills.trunc_into(),
+        hull_disallowed: hull_disallowed.into_fixed(),
+        weapons: weapons.into_fixed(),
+        skills: skills.into_fixed(),
         stat_bonuses: [stat_bonus!(1), stat_bonus!(2), stat_bonus!(3)]
             .into_iter()
             .flatten()
@@ -230,7 +230,7 @@ pub fn load_wequips(lua: &Lua, equip_ids: Vec<u32>) -> LuaResult<Vec<WEquipLoad>
                         .name
                         .clone()
                         .unwrap_or_else(|| FixedString::from_static_trunc("<only weapon>")),
-                    weapons: vec![weapon].trunc_into(),
+                    weapons: vec![weapon].into_fixed(),
                 })
             } else {
                 Err(LuaError::external("neither weapon nor equip exists"))
@@ -340,7 +340,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
 
     Ok(Some(Weapon {
         weapon_id,
-        name: weapon_name.map(|s| s.trunc_into()),
+        name: weapon_name.map(String::into_fixed),
         reload_time: reload_max * RLD_MULT_AT_100,
         fixed_delay,
         kind,
@@ -395,7 +395,7 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
         range: weapon_data.get("range")?,
         firing_angle: weapon_data.get("angle")?,
         salvo_time,
-        bullets: bullets.trunc_into(),
+        bullets: bullets.into_fixed(),
     })
 }
 
@@ -563,7 +563,7 @@ fn get_sub_barrage(
             velocity: bullet.get("velocity")?,
             modifiers: ArmorModifiers::from(armor_mods),
             flags,
-            attach_buff: attach_buff.trunc_into(),
+            attach_buff: attach_buff.into_fixed(),
             extra,
         });
     }
@@ -725,7 +725,7 @@ fn search_referenced_weapons_in_effect_entry(
                         (_, Some(labels)) => BuffWeaponReplace::Label(
                             labels
                                 .into_iter()
-                                .map(String::trunc_into)
+                                .map(String::into_fixed)
                                 .collect_fixed_array(),
                         ),
                         _ => BuffWeaponReplace::Unknown,
@@ -755,7 +755,7 @@ fn search_referenced_weapons_in_effect_entry(
         merge_attacks(&mut attacks);
         rwc.barrages.push(SkillBarrage {
             skill_id: sc.skill_id,
-            attacks: attacks.trunc_into(),
+            attacks: attacks.into_fixed(),
         });
     }
 
