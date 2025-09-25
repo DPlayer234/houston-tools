@@ -51,12 +51,10 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut ShipData, retrofit: &Retrofit<'_>) -
 }
 
 fn add_equip_efficiency(ship: &mut ShipData, index: usize, amount: f64) -> LuaResult<()> {
-    if let Some(slot) = ship
-        .equip_slots
-        .get_mut(index)
-        .and_then(|s| s.mount.as_mut())
+    if let Some(slot) = ship.equip_slots.get_mut(index)
+        && let Some(mount) = &mut slot.mount
     {
-        slot.efficiency += amount;
+        mount.efficiency += amount;
     }
 
     Ok(())

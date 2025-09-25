@@ -79,12 +79,10 @@ fn replace_equip_slot_part(
     let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
 
     for (index, &new) in effect_base.iter().enumerate() {
-        if let Some(slot) = ship
-            .equip_slots
-            .get_mut(index)
-            .and_then(|s| s.mount.as_mut())
+        if let Some(slot) = ship.equip_slots.get_mut(index)
+            && let Some(mount) = &mut slot.mount
         {
-            let part = select(slot);
+            let part = select(mount);
             if *part < new {
                 *part = new;
             }
@@ -99,12 +97,10 @@ fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> 
     let index: usize = effect.get(1)?;
     let amount: f64 = effect.get(2)?;
 
-    if let Some(slot) = ship
-        .equip_slots
-        .get_mut(index - 1)
-        .and_then(|s| s.mount.as_mut())
+    if let Some(slot) = ship.equip_slots.get_mut(index - 1)
+        && let Some(mount) = &mut slot.mount
     {
-        slot.efficiency += amount;
+        mount.efficiency += amount;
     }
 
     Ok(())

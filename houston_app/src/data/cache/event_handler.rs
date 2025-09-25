@@ -10,7 +10,9 @@ use crate::prelude::*;
 
 /// [`RawEventHandler`] that updates the cache stored in the [`HContextData`].
 ///
-/// Requires the [`GatewayIntents::GUILDS`] intent.
+/// Requires the [`GatewayIntents::GUILDS`] intent for channels and threads. If
+/// not set, the channel/thread accessors may provide stale data or make network
+/// requests.
 //
 // CMBK: edge-case "loses access to channels with threads"
 // the threads in question will stay in the cache, not sure how to solve that
@@ -155,6 +157,8 @@ impl Cache {
         }
     }
 
+    // this event is received even without the required intents when the current
+    // user is added to or removed from a thread.
     fn update_thread_members_update(&self, value: &ThreadMembersUpdateEvent) {
         let Some(user_id) = self.current_user_id() else {
             log::warn!("Current User is unset.");

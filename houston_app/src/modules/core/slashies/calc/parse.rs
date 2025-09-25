@@ -265,7 +265,7 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
         },
     };
 
-    if let Some(op) = tokens.peek().and_then(|t| PostUnaryOp::from_token(t)) {
+    if let Some(op) = tokens.peek().and_then(PostUnaryOp::from_token) {
         tokens.next();
         return Ok(op.apply(expr));
     }

@@ -124,14 +124,7 @@ define_op_kind! {
         },
         Min "min" => Ok(fold_values(values, f64::min)),
         Max "max" => Ok(fold_values(values, f64::max)),
-        Atan2 "atan2" => {
-            let &[a, b] = read_args(values, fn_name)?;
-            Ok(if a == 0.0 && b == 0.0 {
-                f64::NAN
-            } else {
-                a.atan2(b)
-            })
-        },
+        Atan2 "atan2" => atan2_checked(fn_name, values),
     }
 }
 
@@ -147,4 +140,13 @@ fn read_args<'v, 'n, const N: usize>(
 
 fn fold_values(values: &[f64], f: impl FnMut(f64, f64) -> f64) -> f64 {
     values.iter().copied().reduce(f).unwrap_or(0.0)
+}
+
+fn atan2_checked<'a>(fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
+    let &[a, b] = read_args(values, fn_name)?;
+    Ok(if a == 0.0 && b == 0.0 {
+        f64::NAN
+    } else {
+        a.atan2(b)
+    })
 }
