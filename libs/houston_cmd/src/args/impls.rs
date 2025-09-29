@@ -27,7 +27,7 @@ macro_rules! impl_user_context {
             fn extract(
                 $ctx: &crate::Context<$l>,
                 $user: &$l User,
-                $member: Option<&$l serenity::model::prelude::PartialMember>,
+                $member: Option<&$l PartialMember>,
             ) -> Result<Self, crate::Error<$l>> {
                 Ok($out)
             }

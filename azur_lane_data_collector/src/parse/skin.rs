@@ -77,6 +77,8 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
         crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
+        gift_prefer: get!("gift_prefer"),
+        gift_dislike: get!("gift_dislike"),
         couple_encourage: set
             .words
             .get::<Vec<LuaTable>>("couple_encourage")
@@ -148,6 +150,8 @@ fn load_words_extra(
         crush: get!("feeling4"),
         love: get!("feeling5"),
         oath: get!("propose"),
+        gift_prefer: get!("gift_prefer"),
+        gift_dislike: get!("gift_dislike"),
         couple_encourage: FixedArray::empty(),
     })
 }

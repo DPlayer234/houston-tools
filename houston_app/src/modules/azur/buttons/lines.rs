@@ -263,6 +263,8 @@ macro_rules! impl_view_part_fn {
                 $add!("Mail Reminder", &$words.mail_reminder);
                 $add!("Return to Port", &$words.return_to_port);
                 $add!("Commission Complete", &$words.commission_complete);
+                $add!("Liked Gift", &$words.gift_prefer);
+                $add!("Disliked Gift", &$words.gift_dislike);
             }
             ViewPart::Affinity => {
                 $add!("Details", &$words.details);

@@ -232,6 +232,10 @@ pub struct ShipSkinWords {
     pub love: Option<FixedString>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oath: Option<FixedString>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gift_prefer: Option<FixedString>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gift_dislike: Option<FixedString>,
     /// Voices lines that may be played when sortieing other specific ships.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub couple_encourage: FixedArray<ShipCoupleEncourage>,
