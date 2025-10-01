@@ -1,7 +1,7 @@
 //! Provides utility types for handling compatability.
 
-use serde::de::Error as _;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_core::de::Error as _;
+use serde_core::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A marker type to reliably reject older or newer versions of the structure on
 /// deserialization.

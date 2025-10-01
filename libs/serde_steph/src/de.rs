@@ -2,7 +2,7 @@
 
 use std::io;
 
-use serde::de::{self, Deserializer as _};
+use serde_core::de::{self, Deserializer as _};
 
 use crate::error::{Error, Result};
 use crate::leb128;

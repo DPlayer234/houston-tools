@@ -2,7 +2,7 @@
 
 use std::io;
 
-use serde::ser;
+use serde_core::ser;
 
 use crate::error::{Error, Result};
 use crate::leb128;

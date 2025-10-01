@@ -11,7 +11,7 @@ proc-macro = true
 workspace = true
 
 [dependencies]
-darling = "0.20.11"
+darling = "0.21.3"
 proc-macro2 = "1.0.94"
 quote = "1.0.40"
 syn = "2.0.100"

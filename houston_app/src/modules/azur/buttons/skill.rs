@@ -18,7 +18,7 @@ pub struct View<'v> {
     #[serde(borrow)]
     back: Nav<'v>,
     // this should honestly be in `ViewSource::Ship` but that's a pain
-    #[builder(default = None, vis = "pub(self)")]
+    #[builder(default = None, vis = "pub(self)", rename = _augment_index)]
     augment_index: Option<u8>,
 }
 

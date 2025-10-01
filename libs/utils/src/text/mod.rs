@@ -65,9 +65,9 @@ pub trait MutStrLike {
     ///
     /// # Safety
     ///
-    /// The caller must ensure returned slice stays valid UTF-8 after they are
-    /// done modifying it. It is allowed to be in an inconsistent state
-    /// during modification.
+    /// The caller must ensure that the returned slice stays valid UTF-8 after
+    /// they are done modifying it. It is allowed to be in an inconsistent
+    /// state during modification.
     ///
     /// If the returned slice wasn't UTF-8 initially, this safety required is
     /// voided.

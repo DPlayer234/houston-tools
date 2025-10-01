@@ -5,7 +5,7 @@
 
 use std::{fmt, io};
 
-use serde::{de, ser};
+use serde_core::{de, ser};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
