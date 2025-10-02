@@ -149,7 +149,7 @@ where
 macro_rules! impl_uleb {
     ($($Ty:ty)*) => { $(
         impl Uleb128Encode for $Ty {
-            type Buf = [u8; (Self::BITS as usize + 7) / 7];
+            type Buf = [u8; (Self::BITS as usize + STEP_SHIFT) / STEP_SHIFT];
             const BITS: usize = Self::BITS as usize;
 
             #[expect(clippy::cast_possible_truncation)]
@@ -161,16 +161,23 @@ macro_rules! impl_uleb {
 }
 
 // the signed conversion is implemented in terms of a transformation into the
-// unsigned type. the long and short is that we move the sign bit to the start
-// and encode the remainder as if it was positive. this can be undone with the
-// inverse set of operations.
-macro_rules! impl_uleb_signed {
+// unsigned type. signed LEB128 integers encode the sign as the first bit,
+// followed by the absolute value. we can do this conversion on the primitive
+// integer level, at which point we can reuse the encoding and decoding logic
+// for unsigned integers.
+macro_rules! impl_signed_leb {
     ($($Ty:ty as $Unsigned:ty),* $(,)?) => { $(
         impl Leb128 for $Ty {
             type Unsigned = $Unsigned;
 
             fn into_unsigned(self) -> Self::Unsigned {
+                // shifting the value left puts the bits into the right
+                // position for the LEB encoding.
                 let mut x = self.cast_unsigned() << 1;
+
+                // if the value was negative, take the bitwise not. this both
+                // makes sure that the correct absolute value is stored and
+                // sets the LEB sign at bit 0.
                 if self < 0 {
                     x = !x;
                 }
@@ -178,7 +185,12 @@ macro_rules! impl_uleb_signed {
             }
 
             fn from_unsigned(value: Self::Unsigned) -> Self {
+                // undo the shift and put the bits back into the right
+                // position.
                 let mut x = value >> 1;
+
+                // if the LEB sign bit was set, the number was negative.
+                // if so, take the bitwise not to undo that step also.
                 if value & 1 != 0 {
                     x = !x;
                 }
@@ -189,7 +201,7 @@ macro_rules! impl_uleb_signed {
 }
 
 impl_uleb!(u16 u32 u64 u128 usize);
-impl_uleb_signed!(
+impl_signed_leb!(
     i16 as u16,
     i32 as u32,
     i64 as u64,
