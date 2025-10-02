@@ -416,13 +416,14 @@ fn load_ships(
         }
 
         if let Some(retrofit_data) = &raw_mlb.retrofit_data {
-            for retrofit_set in raw_retrofits {
-                let mut retrofit = parse::ship::load_ship_data(lua, retrofit_set)?;
-                enhance::retrofit::apply_retrofit(lua, &mut retrofit, retrofit_data)?;
-
-                fix_up_retrofitted_data(&mut retrofit, retrofit_set)?;
-                mlb.retrofits.push(retrofit);
-            }
+            mlb.retrofits = raw_retrofits
+                .map(|retrofit_set| {
+                    let mut retrofit = parse::ship::load_ship_data(lua, retrofit_set)?;
+                    enhance::retrofit::apply_retrofit(lua, &mut retrofit, retrofit_data)?;
+                    fix_up_retrofitted_data(&mut retrofit, retrofit_set)?;
+                    Ok::<_, LuaError>(retrofit)
+                })
+                .try_collect_fixed_array()?;
 
             if mlb.retrofits.is_empty() {
                 let mut retrofit = mlb.clone();
@@ -696,6 +697,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
         };
     }
 
+    eq!(ship_eq, ShipData, group_id);
     eq!(retrofit_eq, ShipData, default_skin_id);
     eq!(skin_eq, ShipSkin, skin_id);
     eq!(augment_eq, Augment, augment_id);
@@ -710,23 +712,16 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
         r.words_extra.extend_from_array(n.words_extra);
     };
 
+    let update_ship = move |r: &mut ShipData, n: ShipData| {
+        add_missing(&mut r.retrofits, n.retrofits, retrofit_eq);
+        add_or_update(&mut r.skins, n.skins, skin_eq, update_skin);
+    };
+
     let update_secretary = move |r: &mut SpecialSecretary, n: SpecialSecretary| {
         r.words.extend_from_array(n.words);
     };
 
-    for next_ship in next.ships {
-        if let Some(main_ship) = main
-            .ships
-            .iter_mut()
-            .find(|s| s.group_id == next_ship.group_id)
-        {
-            add_missing(&mut main_ship.retrofits, next_ship.retrofits, retrofit_eq);
-            add_or_update(&mut main_ship.skins, next_ship.skins, skin_eq, update_skin);
-        } else {
-            main.ships.push(next_ship);
-        }
-    }
-
+    add_or_update(&mut main.ships, next.ships, ship_eq, update_ship);
     add_missing(&mut main.augments, next.augments, augment_eq);
     add_missing(&mut main.equips, next.equips, equip_eq);
     add_missing(&mut main.juustagram_chats, next.juustagram_chats, chat_eq);

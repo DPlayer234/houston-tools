@@ -50,7 +50,8 @@ impl<T> FixedArrayExt<T> for FixedArray<T> {
 
     fn extend_from_array(&mut self, other: Self) {
         let mut vec = take(self).into_vec();
-        vec.extend(other);
+        // `<Vec<T>>::extend(Vec<T>)` uses specialization
+        vec.extend(other.into_vec());
         *self = vec.into_fixed();
     }
 }
@@ -77,15 +78,21 @@ pub trait IterExt: Iterator + Sized {
     }
 }
 
-pub trait TryIterExt<T, E>: Iterator<Item = Result<T, E>> + Sized {
-    fn try_collect<C: FromIterator<T>>(self) -> Result<C, E> {
+pub trait TryIterExt: Iterator<Item = Result<Self::Ok, Self::Err>> + Sized {
+    type Ok;
+    type Err;
+
+    fn try_collect<C: FromIterator<Self::Ok>>(self) -> Result<C, Self::Err> {
         self.collect()
     }
 
-    fn try_collect_fixed_array(self) -> Result<FixedArray<T>, E> {
+    fn try_collect_fixed_array(self) -> Result<FixedArray<Self::Ok>, Self::Err> {
         self.try_collect().map(Vec::into_fixed)
     }
 }
 
 impl<I: Iterator> IterExt for I {}
-impl<I: Iterator<Item = Result<T, E>>, T, E> TryIterExt<T, E> for I {}
+impl<I: Iterator<Item = Result<T, E>>, T, E> TryIterExt for I {
+    type Ok = T;
+    type Err = E;
+}
