@@ -22,7 +22,7 @@ pub use crate::read::{IoRead, Read, SliceRead};
 /// due to the [`Deserialize`] implementation for `T` attempting unsupported
 /// operations or the data being invalid for `T`.
 ///
-/// [`Deserialize`]: serde::Deserialize
+/// [`Deserialize`]: serde_core::Deserialize
 pub fn from_slice<'de, T>(buf: &'de [u8]) -> Result<T>
 where
     T: de::Deserialize<'de>,
@@ -46,7 +46,7 @@ where
 /// value. It may also fail due to the [`Deserialize`] implementation for `T`
 /// attempting unsupported operations or the data being invalid for `T`.
 ///
-/// [`Deserialize`]: serde::Deserialize
+/// [`Deserialize`]: serde_core::Deserialize
 pub fn from_reader<T, R>(reader: R) -> Result<T>
 where
     T: de::DeserializeOwned,
@@ -63,7 +63,7 @@ where
 /// next object, discarded to use the reader otherwise, or you may call
 /// [`Deserializer::end`] to explicitly expect the end of the data.
 ///
-/// [`Deserializer`]: serde::de::Deserializer
+/// [`Deserializer`]: serde_core::de::Deserializer
 #[derive(Debug)]
 pub struct Deserializer<R> {
     reader: R,
@@ -130,7 +130,7 @@ impl<'de> Deserializer<SliceRead<'de>> {
     ///
     /// ```
     /// # use serde_steph::{Deserializer, Error};
-    /// # use serde::de::Deserialize;
+    /// # use serde_core::de::Deserialize;
     /// # fn example() -> Result<Vec<u32>, Error> {
     /// # let buf = [1u8, 2, 3, 4, 5];
     /// // buf is some input slice
@@ -173,7 +173,7 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     ///
     /// ```
     /// # use serde_steph::{Deserializer, Error};
-    /// # use serde::de::Deserialize;
+    /// # use serde_core::de::Deserialize;
     /// # fn example() -> Vec<u32> {
     /// # let buf = [1u8, 2, 3, 4, 5];
     /// # let mut reader = buf.as_slice();

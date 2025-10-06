@@ -1,3 +1,8 @@
+//! The data model representing the actual command structure.
+//!
+//! This is trimmed down to what Discord can actually represent and what is
+//! actually needed here, with [`Command`] as the top-level node.
+
 use std::borrow::Cow;
 
 use const_builder::ConstBuilder;

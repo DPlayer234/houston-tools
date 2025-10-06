@@ -59,8 +59,8 @@
 //! - [`Deserialize`] implementations must read structs, tuples, sequences, and
 //!   maps to completion.
 //!
-//! [`Serialize`]: serde::Serialize
-//! [`Deserialize`]: serde::Deserialize
+//! [`Serialize`]: serde_core::Serialize
+//! [`Deserialize`]: serde_core::Deserialize
 //!
 //! ## Future Proofing
 //!

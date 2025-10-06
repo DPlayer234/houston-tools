@@ -13,8 +13,10 @@ use crate::leb128;
 ///
 /// # Errors
 ///
-/// Returns [`Err`] when the [`serde::Serialize`] implementation of `T` returns
-/// [`Err`] or attempts an operation that is not supported by STEPH.
+/// Returns [`Err`] when the [`Serialize`] implementation of `T` returns [`Err`]
+/// or attempts an operation that is not supported by STEPH.
+///
+/// [`Serialize`]: serde_core::Serialize
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ?Sized + ser::Serialize,
@@ -31,9 +33,10 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`Err`] when an I/O occurs, or the [`serde::Serialize`]
-/// implementation of `T` returns [`Err`] or attempts an operation that is not
-/// supported by STEPH.
+/// Returns [`Err`] when an I/O occurs, or the [`Serialize`] implementation of
+/// `T` returns [`Err`] or attempts an operation that is not supported by STEPH.
+///
+/// [`Serialize`]: serde_core::Serialize
 pub fn to_writer<T, W>(writer: W, value: &T) -> Result<()>
 where
     T: ?Sized + ser::Serialize,
@@ -45,7 +48,7 @@ where
 /// A [`Serializer`] for this crate's binary format. The trait is only
 /// implemented by `&mut`.
 ///
-/// [`Serializer`]: serde::ser::Serializer
+/// [`Serializer`]: serde_core::ser::Serializer
 #[derive(Debug)]
 pub struct Serializer<W> {
     writer: W,
