@@ -58,13 +58,11 @@ impl FromStr for GameServer {
     type Err = GameServerFromStrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        for k in Self::ALL {
-            if s.eq_ignore_ascii_case(k.label()) {
-                return Ok(*k);
-            }
-        }
-
-        Err(GameServerFromStrError(()))
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|k| s.eq_ignore_ascii_case(k.label()))
+            .ok_or(GameServerFromStrError(()))
     }
 }
 
@@ -110,6 +108,7 @@ define_data_enum! {
         CollabSenranKagura("Senran Kagura", None),
         CollabToLoveRu("To LOVE-Ru", None),
         CollabBlackRockShooter("BLACK★ROCK SHOOTER", None),
-        CollabAtelierYumia("Atelier Yumia", None)
+        CollabAtelierYumia("Atelier Yumia", None),
+        CollabDanmachi("Danmachi", None),
     }
 }

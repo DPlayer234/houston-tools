@@ -3,7 +3,7 @@ macro_rules! define_data_enum {
         $(#[$container_attr:meta])*
         $v:vis enum $Enum:ident for $vd:vis $Data:ident {
             $($(#[$data_field_attr:meta])* $data_field_vis:vis $data_field:ident : $DataFieldTy:ty),* ;
-            $($(#[$variant_attr:meta])* $variant:ident $arg:tt),*
+            $($(#[$variant_attr:meta])* $variant:ident $arg:tt),* $(,)?
         }
     } => {
         $(#[$container_attr])*
