@@ -94,6 +94,14 @@ pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     unsafe { slice::from_raw_parts(ptr.start.cast(), byte_len.cast_unsigned()) }
 }
 
+/// Asserts that `T` is zero bytes in size or fails to compile.
+pub const fn assert_zst<T>(value: T) -> T {
+    const {
+        assert!(size_of::<T>() == 0, "expected value to be zero-sized");
+    }
+    value
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

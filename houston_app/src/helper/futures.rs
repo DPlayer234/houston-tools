@@ -2,10 +2,11 @@ use std::time::Duration;
 
 use serenity::futures::future::{BoxFuture, always_ready};
 use tokio::time::timeout;
+use utils::mem::assert_zst;
 
 /// Returns a ZST boxed future that does nothing.
-pub fn noop_future() -> BoxFuture<'static, ()> {
-    Box::pin(always_ready(|| {}))
+pub fn noop_future<'a>() -> BoxFuture<'a, ()> {
+    Box::pin(assert_zst(always_ready(|| {})))
 }
 
 /// Runs `fut` to completion. If it takes longer than `after` to complete,
