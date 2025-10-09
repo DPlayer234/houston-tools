@@ -279,6 +279,7 @@ pub enum ShipCouple {
     /// Triggered based on team type. Unused?
     Team,
     /// Unknown trigger types.
+    #[serde(other)]
     Unknown,
 }
 
@@ -379,7 +380,6 @@ define_data_enum! {
         /// Which team type this hull type gets sortied in.
         pub team_type: TeamType;
 
-        Unknown("??", "Unknown", TeamType::Vanguard),
         Destroyer("DD", "Destroyer", TeamType::Vanguard),
         LightCruiser("CL", "Light Cruiser", TeamType::Vanguard),
         HeavyCruiser("CA", "Heavy Cruiser", TeamType::Vanguard),
@@ -398,7 +398,9 @@ define_data_enum! {
         MissileDestroyerM("DDGm", "Missile Destroyer M", TeamType::MainFleet),
         FrigateS("IXs", "Sailing Frigate S", TeamType::Submarine),
         FrigateV("IXv", "Sailing Frigate V", TeamType::Vanguard),
-        FrigateM("IXm", "Sailing Frigate M", TeamType::MainFleet)
+        FrigateM("IXm", "Sailing Frigate M", TeamType::MainFleet),
+        #[serde(other)]
+        Unknown("??", "Unknown", TeamType::Vanguard),
     }
 }
 
@@ -432,10 +434,11 @@ define_data_enum! {
         /// The description for the type.
         pub description: &'static str;
 
-        Unknown("Unknown `specific_type`"),
         Auxiliary("+30% stats gained from auxiliary gear"),
         Torpedo("Decrease torpedo spread angle"),
-        Gunner("Halve shots needed to activate All Out Assault")
+        Gunner("Halve shots needed to activate All Out Assault"),
+        #[serde(other)]
+        Unknown("Unknown `specific_type`"),
     }
 }
 

@@ -1,4 +1,16 @@
 macro_rules! define_data_enum {
+    // exclude `Unknown` from the `ALL` constant
+    (@all_item [$($all:tt)*] Unknown $($rest:tt)*) => {
+        $crate::define_data_enum!(@all_item [$($all)*] $($rest)*)
+    };
+    (@all_item [$($all:tt)*] $variant:ident $($rest:tt)*) => {
+        $crate::define_data_enum!(@all_item [$($all)* Self::$variant,] $($rest)*)
+    };
+    (@all_item [$($all:tt)*]) => {
+        &[$($all)*]
+    };
+
+    // actual entry point
     {
         $(#[$container_attr:meta])*
         $v:vis enum $Enum:ident for $vd:vis $Data:ident {
@@ -26,9 +38,7 @@ macro_rules! define_data_enum {
         }
 
         impl $Enum {
-            pub const ALL: &[$Enum] = &[
-                $(Self::$variant),*
-            ];
+            pub const ALL: &[$Enum] = $crate::define_data_enum!(@all_item [] $($variant)*);
 
             /// Gets the entire associated data structure.
             #[must_use]

@@ -40,12 +40,13 @@ define_data_enum! {
     pub enum GameServer for GameServerData {
         pub label: &'static str;
 
-        Unknown("--"),
         EN("EN"),
         JP("JP"),
         CN("CN"),
         KR("KR"),
-        TW("TW")
+        TW("TW"),
+        #[serde(other)]
+        Unknown("--"),
     }
 }
 
@@ -80,7 +81,6 @@ define_data_enum! {
         /// The prefix usually used by ships of the faction.
         pub prefix: Option<&'static str>;
 
-        Unknown("Unknown", None),
         Universal("Universal", Some("UNIV")),
         EagleUnion("Eagle Union", Some("USS")),
         RoyalNavy("Royal Navy", Some("HMS")),
@@ -110,5 +110,7 @@ define_data_enum! {
         CollabBlackRockShooter("BLACK★ROCK SHOOTER", None),
         CollabAtelierYumia("Atelier Yumia", None),
         CollabDanmachi("Danmachi", None),
+        #[serde(other)]
+        Unknown("Unknown", None),
     }
 }

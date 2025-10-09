@@ -15,13 +15,13 @@ impl<T> Ch<T> {
 }
 
 macro_rules! make_autocomplete_choice {
-    ($fn_name:ident, $Type:ty, $start_at:expr) => {
+    ($fn_name:ident, $Type:ty) => {
         pub async fn $fn_name<'a>(
             _ctx: Context<'a>,
             partial: &'a str,
         ) -> CreateAutocompleteResponse<'a> {
-            let choices: Vec<_> = ($start_at..)
-                .zip(&<$Type>::ALL[$start_at..])
+            let choices: Vec<_> = (0u64..)
+                .zip(<$Type>::ALL)
                 .filter(|(_, t)| contains_ignore_ascii_case(t.name(), partial))
                 .take(25)
                 .map(|(i, t)| AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i)))
@@ -73,10 +73,9 @@ macro_rules! make_choice {
     };
 }
 
-// skip `Unknown` for `Faction` and `HullType`
-make_autocomplete_choice!(faction, Faction, 1);
-make_autocomplete_choice!(hull_type, HullType, 1);
-make_autocomplete_choice!(equip_kind, EquipKind, 0);
+make_autocomplete_choice!(faction, Faction);
+make_autocomplete_choice!(hull_type, HullType);
+make_autocomplete_choice!(equip_kind, EquipKind);
 
 make_choice!(EShipRarity for ShipRarity {
     N, R, E, SR, UR,
@@ -139,9 +138,8 @@ pub async fn hull_or_team_type<'a>(
     _ctx: Context<'a>,
     partial: &'a str,
 ) -> CreateAutocompleteResponse<'a> {
-    // skip the `Unknown` value
-    let hull = HullType::ALL[1..].iter().map(|&h| HullOrTeam::Hull(h));
-    let hull = (1u64..).map(|n| n << 1).zip(hull);
+    let hull = HullType::ALL.iter().map(|&h| HullOrTeam::Hull(h));
+    let hull = (0u64..).map(|n| n << 1).zip(hull);
 
     let team = TeamType::ALL.iter().map(|&t| HullOrTeam::Team(t));
     let team = (0u64..).map(|n| (n << 1) | 1).zip(team);

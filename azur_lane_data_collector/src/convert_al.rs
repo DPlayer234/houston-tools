@@ -291,7 +291,7 @@ pub fn to_ammo_kind(num: u32) -> AmmoKind {
         7 => AmmoKind::SAP,
         8 => AmmoKind::Unknown8,
         9 => AmmoKind::Unknown9,
-        _ => AmmoKind::Normal,
+        _ => AmmoKind::Unknown,
     }
 }
 

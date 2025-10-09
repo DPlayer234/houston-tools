@@ -156,7 +156,7 @@ fn deserialize_table<T>(table: Table) -> Result<T>
 where
     T: DeserializeOwned,
 {
-    T::deserialize(Value::Table(table)).context("cannot deserialize config")
+    T::deserialize(table).context("cannot deserialize config")
 }
 
 fn merge_tables(target: &mut Table, consume: Table) {

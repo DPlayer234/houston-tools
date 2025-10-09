@@ -526,6 +526,7 @@ impl fmt::Display for Slot<'_> {
 /// Converts the equip slot to a masked link to the appropriate wiki page.
 fn equip_slot_display(w: &WikiUrls, kind: EquipKind) -> Slot<'_> {
     match kind {
+        EquipKind::Unknown => Slot::new("Unknown", &w.equipment_list),
         EquipKind::DestroyerGun => Slot::new("DD Gun", &w.dd_gun_list),
         EquipKind::LightCruiserGun => Slot::new("CL Gun", &w.cl_gun_list),
         EquipKind::HeavyCruiserGun => Slot::new("CA Gun", &w.ca_gun_list),

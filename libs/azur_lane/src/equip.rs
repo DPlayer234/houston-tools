@@ -299,7 +299,9 @@ define_data_enum! {
         Helicopter("Helicopter"),
         Missile("Missile"),
         Cargo("Cargo"),
-        Auxiliary("Auxiliary")
+        Auxiliary("Auxiliary"),
+        #[serde(other)]
+        Unknown("Unknown"),
     }
 }
 
@@ -324,7 +326,9 @@ define_data_enum! {
         SpaceLaser("Space Laser"),
         Scale("Scale"),
         TriggerBomb("Trigger Bomb"),
-        AAMissile("AA Missile")
+        AAMissile("AA Missile"),
+        #[serde(other)]
+        Unknown("Unknown"),
     }
 }
 
@@ -344,7 +348,9 @@ define_data_enum! {
         Bomb("Bomb", "Bomb"),
         SAP("SAP", "SAP"),
         Unknown8("8", "?"),
-        Unknown9("9", "?")
+        Unknown9("9", "?"),
+        #[serde(other)]
+        Unknown("?", "?"),
     }
 }
 
@@ -388,7 +394,8 @@ define_data_enum! {
         ManualMissile("Missile (Manual)"),
         AutoMissile("Missile (Auto)"),
         Meteor("Meteor"),
-        Unknown("Unknown")
+        #[serde(other)]
+        Unknown("Unknown"),
     }
 }
 
@@ -412,7 +419,7 @@ define_data_enum! {
         /// 5* SR (Super Rare)
         SR(5, "SR", 0xEDDD76),
         /// 6* UR (Ultra Rare)
-        UR(6, "UR", 0xFF8D8D)
+        UR(6, "UR", 0xFF8D8D),
     }
 }
 
@@ -430,7 +437,7 @@ define_data_enum! {
         /// 3* E (Elite)
         E(3, "E", 0xC4ADFF),
         /// 4* SR (Super Rare)
-        SR(4, "SR", 0xEDDD76)
+        SR(4, "SR", 0xEDDD76),
     }
 }
 
