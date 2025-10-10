@@ -1,6 +1,6 @@
 use super::prelude::*;
 use crate::config::HBotConfig;
-use crate::fmt::discord::MessageLink;
+use crate::fmt::discord::MessageLinkExt as _;
 use crate::helper::discord::is_user_message;
 use crate::helper::is_unique_set;
 
@@ -54,10 +54,9 @@ super::impl_handler!(Module, |_, ctx| match _ {
 });
 
 pub async fn message(ctx: &Context, new_message: &Message) {
-    let message_link = MessageLink::from(new_message);
-
     if let Err(why) = message_inner(ctx, new_message).await {
-        log::error!("Message handling failed for {message_link:#}: {why:?}");
+        let message_key = new_message.link().key();
+        log::error!("Message handling failed for {message_key}: {why:?}");
     }
 }
 

@@ -4,7 +4,6 @@ use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
-use crate::fmt::discord::MessageLink;
 use crate::helper::discord::IdBytes;
 use crate::modules::core::buttons::ToPage;
 use crate::modules::starboard::{BoardId, get_board, model};
@@ -56,7 +55,7 @@ impl View {
             index += 1;
 
             let rank = offset + index;
-            let link = MessageLink::new(self.guild, item.channel, item.message);
+            let link = item.message.link(item.channel, Some(self.guild));
             let max_reacts = item.max_reacts;
             let emoji = board.emoji();
 

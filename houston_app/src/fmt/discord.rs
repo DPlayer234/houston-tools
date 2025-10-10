@@ -108,60 +108,56 @@ impl Display for TimeMention {
     }
 }
 
-/// Formattable message link.
-///
-/// The alternate format only prints the tail of the link.
-#[derive(Debug, Clone, Copy)]
-#[must_use]
-pub struct MessageLink {
-    guild_id: Option<GuildId>,
-    channel_id: GenericChannelId,
-    message_id: MessageId,
+pub trait MessageLinkExt {
+    /// Sets the guild ID for the link.
+    ///
+    /// This is useful when the message might not have had the guild ID set.
+    fn guild_id(self, guild_id: impl Into<Option<GuildId>>) -> Self;
+
+    /// Converts the link to a key. This will only print the tail of the link.
+    fn key(self) -> MessageKey;
 }
 
-impl MessageLink {
-    /// Creates a new link from the components.
-    pub fn new(
-        guild_id: impl Into<Option<GuildId>>,
-        channel_id: GenericChannelId,
-        message_id: MessageId,
-    ) -> Self {
-        Self {
-            guild_id: guild_id.into(),
-            channel_id,
-            message_id,
-        }
-    }
-
-    /// Sets the guild ID.
-    pub fn guild_id(mut self, guild_id: impl Into<Option<GuildId>>) -> Self {
+impl MessageLinkExt for MessageLink {
+    fn guild_id(mut self, guild_id: impl Into<Option<GuildId>>) -> Self {
         self.guild_id = guild_id.into();
         self
     }
-}
 
-impl From<&Message> for MessageLink {
-    /// Creates a message link to the given message.
-    ///
-    /// This might be lacking the guild ID, so use [`Self::guild_id`] if you
-    /// have that at hand.
-    fn from(value: &Message) -> Self {
-        Self::new(value.guild_id, value.channel_id, value.id)
+    fn key(self) -> MessageKey {
+        self.into()
     }
 }
 
-impl Display for MessageLink {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        if !f.alternate() {
-            f.write_str("https://discord.com/channels/")?;
-        }
+/// Formattable message key.
+///
+/// This is the tail section of the link.
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[must_use]
+pub struct MessageKey {
+    link: MessageLink,
+}
 
-        match self.guild_id {
+impl From<MessageLink> for MessageKey {
+    fn from(value: MessageLink) -> Self {
+        Self { link: value }
+    }
+}
+
+impl From<MessageKey> for MessageLink {
+    fn from(value: MessageKey) -> Self {
+        value.link
+    }
+}
+
+impl Display for MessageKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.link.guild_id {
             Some(guild_id) => write!(f, "{guild_id}/")?,
             None => f.write_str("@me/")?,
         }
 
-        write!(f, "{}/{}", self.channel_id, self.message_id)
+        write!(f, "{}/{}", self.link.channel_id, self.link.message_id)
     }
 }
 

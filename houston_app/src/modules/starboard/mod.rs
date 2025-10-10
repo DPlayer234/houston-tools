@@ -7,7 +7,7 @@ use serenity::small_fixed_array::FixedString;
 use utils::text::WriteStr as _;
 
 use super::prelude::*;
-use crate::fmt::discord::MessageLink;
+use crate::fmt::discord::MessageLinkExt as _;
 use crate::fmt::replace_holes;
 use crate::helper::discord::emoji_equivalent;
 use crate::helper::is_unique_set;
@@ -118,11 +118,13 @@ fn get_board(
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let message_link =
-        MessageLink::new(reaction.guild_id, reaction.channel_id, reaction.message_id);
-
     if let Err(why) = reaction_add_inner(ctx, reaction).await {
-        log::error!("Reaction handling failed for {message_link:#}: {why:?}");
+        let message_key = reaction
+            .message_id
+            .link(reaction.channel_id, reaction.guild_id)
+            .key();
+
+        log::error!("Reaction handling failed for {message_key}: {why:?}");
     }
 }
 
@@ -136,10 +138,9 @@ pub async fn message_delete(
         return;
     };
 
-    let message_link = MessageLink::new(guild_id, channel_id, message_id);
-
     if let Err(why) = message_delete_inner(ctx, guild_id, channel_id, message_id).await {
-        log::error!("Message delete handling failed for {message_link:#}: {why:?}");
+        let message_key = message_id.link(channel_id, Some(guild_id)).key();
+        log::error!("Message delete handling failed for {message_key}: {why:?}");
     }
 }
 
@@ -243,9 +244,9 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
             return Ok(());
         }
 
-        let message_link = MessageLink::from(&message).guild_id(guild_id);
+        let message_key = message.link().guild_id(guild_id).key();
         log::debug!(
-            "Trying update {message_link:#} in `{}` with {} total reacts.",
+            "Trying update {message_key} in `{}` with {} total reacts.",
             board.name,
             now_reacts
         );
@@ -274,7 +275,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
         score_increase = now_reacts.saturating_sub(old_reacts).max(0);
 
         log::debug!(
-            "Score for {message_link:#} in `{}` increased by {}.",
+            "Score for {message_key} in `{}` increased by {}.",
             board.name,
             score_increase
         );
@@ -392,9 +393,9 @@ async fn message_delete_inner(
             continue;
         };
 
-        let message_link = MessageLink::new(guild_id, channel_id, message_id);
+        let message_key = message_id.link(channel_id, Some(guild_id)).key();
         log::debug!(
-            "Trying delete of {message_link:#} by {} in `{}` with {} reacts.",
+            "Trying delete of {message_key} by {} in `{}` with {} reacts.",
             item.user,
             board.name,
             item.max_reacts
@@ -415,10 +416,7 @@ async fn message_delete_inner(
             .await
             .context("failed to delete message entry")?;
 
-        log::info!(
-            "Deleted message {message_link:#} score in `{}`.",
-            board.name
-        );
+        log::info!("Deleted message {message_key} score in `{}`.", board.name);
 
         // delete the associated pins
         for pin_id in item.pin_messages {
@@ -429,8 +427,8 @@ async fn message_delete_inner(
 
             if let Err(why) = res {
                 log::warn!(
-                    "Failed to delete message {:#} in `{}`: {why:?}",
-                    MessageLink::new(guild_id, board.channel, pin_id),
+                    "Failed to delete message {} in `{}`: {why:?}",
+                    pin_id.link(board.channel, Some(guild_id)).key(),
                     board.name
                 );
             }
@@ -508,7 +506,7 @@ async fn pin_message_to_board(
         .content(notice)
         .allowed_mentions(allowed_mentions);
 
-    let message_link = MessageLink::from(message).guild_id(guild_id);
+    let message_key = message.link().guild_id(guild_id).key();
 
     let pin_messages;
     if matches!(pin_kind, PinKind::Forward) {
@@ -532,7 +530,7 @@ async fn pin_message_to_board(
             // actually forwarded!
             pin_messages = vec![notice, forward];
             log::info!(
-                "Pinned message {message_link:#} to `{}`. (Forward)",
+                "Pinned message {message_key} to `{}`. (Forward)",
                 board.name
             );
         } else {
@@ -541,7 +539,7 @@ async fn pin_message_to_board(
             // rather than manually covering those cases, handle a forward failure
             let data = ctx.data_ref::<HContextData>();
 
-            let forward = pin_kind.link_content(message_link);
+            let forward = pin_kind.link_content(message_key.into());
             let forward = CreateEmbed::new()
                 .description(forward)
                 .color(data.config().embed_color)
@@ -556,7 +554,7 @@ async fn pin_message_to_board(
 
             pin_messages = vec![notice];
             log::info!(
-                "Pinned message {message_link:#} to `{}`. (Fallback)",
+                "Pinned message {message_key} to `{}`. (Fallback)",
                 board.name
             );
         }
@@ -564,7 +562,7 @@ async fn pin_message_to_board(
         // nsfw-to-sfw
         let data = ctx.data_ref::<HContextData>();
 
-        let forward = pin_kind.link_content(message_link);
+        let forward = pin_kind.link_content(message_key.into());
         let forward = CreateEmbed::new()
             .description(forward)
             .color(data.config().embed_color)
@@ -580,10 +578,7 @@ async fn pin_message_to_board(
             .id;
 
         pin_messages = vec![notice];
-        log::info!(
-            "Pinned message {message_link:#} to `{}`. (Link)",
-            board.name
-        );
+        log::info!("Pinned message {message_key} to `{}`. (Link)", board.name);
     }
 
     // release the semaphore here so the db operation won't delay it

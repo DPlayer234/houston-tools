@@ -7,7 +7,7 @@ mod args;
 mod model_impl;
 
 /// Derives the `ModelDocument` trait based on the structure.
-#[proc_macro_derive(ModelDocument, attributes(serde, model))]
+#[proc_macro_derive(ModelDocument, attributes(model))]
 pub fn derive_model_document(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
     model_impl::entry_point(input)

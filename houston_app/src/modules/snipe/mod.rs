@@ -1,5 +1,5 @@
 use super::prelude::*;
-use crate::fmt::discord::MessageLink;
+use crate::fmt::discord::MessageLinkExt as _;
 use crate::helper::discord::is_user_message;
 
 pub mod config;
@@ -61,10 +61,9 @@ async fn message(ctx: &Context, new_message: &Message, is_edit: bool) {
         return;
     };
 
-    let message_link = MessageLink::from(new_message);
-
     if let Err(why) = message_inner(ctx, new_message, guild_id, is_edit) {
-        log::error!("Message handling failed for {message_link:#}: {why:?}");
+        let message_key = new_message.link().key();
+        log::error!("Message handling failed for {message_key}: {why:?}");
     }
 }
 
@@ -115,10 +114,9 @@ async fn message_delete(
         return;
     };
 
-    let message_link = MessageLink::new(guild_id, channel_id, message_id);
-
     if let Err(why) = message_delete_inner(ctx, guild_id, message_id) {
-        log::error!("Message delete handling failed for {message_link:#}: {why:?}");
+        let message_key = message_id.link(channel_id, Some(guild_id)).key();
+        log::error!("Message delete handling failed for {message_key}: {why:?}");
     }
 }
 

@@ -4,7 +4,6 @@ use bson_model::{Filter, ModelDocument};
 use serde_with::As;
 use utils::text::WriteStr as _;
 
-use crate::fmt::discord::MessageLink;
 use crate::helper::bson::IdBson;
 use crate::modules::starboard::{BoardId, model};
 use crate::slashies::prelude::*;
@@ -126,7 +125,7 @@ pub async fn overview(
             Some(top_post) => writeln!(
                 value,
                 "{} by {}: {} {}",
-                MessageLink::new(guild, top_post.channel, top_post.message),
+                top_post.message.link(top_post.channel, Some(guild)),
                 top_post.user.mention(),
                 top_post.max_reacts,
                 board.emoji(),
