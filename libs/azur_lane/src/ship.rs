@@ -14,6 +14,9 @@ use crate::{Faction, GameServer, define_data_enum};
 /// Provides data for a singular ship or a retrofit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipData {
+    /// The ship ID for either the max limit break version or the retrofit,
+    /// depending on which you're checking.
+    pub id: u32,
     /// The group ID. This is the same for the base and its retrofits.
     pub group_id: u32,
     /// The ship's display name.

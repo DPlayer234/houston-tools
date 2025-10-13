@@ -88,6 +88,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     let specific_type: Vec<String> = read!(set.template, "specific_type");
 
     let mut ship = ShipData {
+        id: set.id,
         group_id: read!(set.template, "group_type"),
         name: name.into_fixed(),
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),

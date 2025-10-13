@@ -192,13 +192,15 @@ impl View<'_> {
     ) -> CreateComponent<'a> {
         let content = format!(
             "## {}\n\
-             [{}] {:★<star_pad$}\n{} {} {}",
+             [{}] {:★<star_pad$}\n{} {} {}\n\
+             -# **ID:** `{}`",
             base_ship.name,
             ship.rarity.name(),
-            '★',
+            "",
             super::hull_emoji(ship.hull_type, data),
             ship.faction.name(),
             ship.hull_type.name(),
+            ship.id,
             star_pad = usize::from(ship.stars)
         );
 
