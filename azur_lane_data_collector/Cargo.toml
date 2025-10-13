@@ -18,7 +18,7 @@ humantime = "2.3.0"
 image = { version = "0.25.6", default-features = false, features = ["webp"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-small-fixed-array = { version = "0.4.8", features = ["serde"] }
+small-fixed-array = { version = "0.4.10", features = ["serde"] }
 
 azur_lane = { path = "../libs/azur_lane" }
 unity_read = { path = "../libs/unity_read" }

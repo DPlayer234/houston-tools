@@ -225,6 +225,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         flag!(USE_EXTERNAL_STICKERS),
         flag!(MENTION_EVERYONE, "Mention @\u{200D}everyone"),
         flag!(MANAGE_MESSAGES),
+        flag!(PIN_MESSAGES),
         flag!(MANAGE_THREADS),
         flag!(READ_MESSAGE_HISTORY),
         flag!(SEND_TTS_MESSAGES),

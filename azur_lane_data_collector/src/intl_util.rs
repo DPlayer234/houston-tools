@@ -14,8 +14,7 @@ impl<LenT: ValidLength> IntoFixed<LenT> for String {
     type Fixed = FixedString<LenT>;
 
     fn into_fixed(self) -> Self::Fixed {
-        self.into_boxed_str()
-            .try_into()
+        self.try_into()
             .expect("string len must fit into fixed string")
     }
 }
@@ -24,7 +23,7 @@ impl<T, LenT: ValidLength> IntoFixed<LenT> for Vec<T> {
     type Fixed = FixedArray<T, LenT>;
 
     fn into_fixed(self) -> Self::Fixed {
-        match self.into_boxed_slice().try_into() {
+        match self.try_into() {
             Ok(fixed) => fixed,
             Err(_) => panic!("slice len must fit into fixed array"),
         }

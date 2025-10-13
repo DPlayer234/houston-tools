@@ -101,10 +101,28 @@ impl<'de, R: Read<'de>> Deserializer<R> {
         }
     }
 
-    /// Deserializes a single object, followed by a call to [`Self::end`].
+    /// Deserializes a value, then asserts that the underlying reader is
+    /// exhausted.
     ///
-    /// This is a shared function used to implement [`from_slice`] and
-    /// [`from_reader`].
+    /// This assumes that the deserializer state will only yield one more
+    /// object. If it provides trailing bytes, this function returns
+    /// [`Error::TrailingBytes`].
+    ///
+    /// All this function does is call [`T::deserialize`][`Deserialize`]
+    /// followed by [`Self::end`] in a more convenient form.
+    ///
+    /// This function is equivalent to [`from_reader`]/[`from_slice`] if it was
+    /// called with the current state of the underlying reader/slice.
+    ///
+    /// # Errors
+    ///
+    /// This function may fail and return [`Err`] when an I/O error occurs, the
+    /// read bytes are invalid for the STEPH format or trailing bytes are
+    /// found after the value. It may also fail due to the [`Deserialize`]
+    /// implementation for `T` attempting unsupported operations or the data
+    /// being invalid for `T`.
+    ///
+    /// [`Deserialize`]: serde_core::Deserialize
     pub(crate) fn read_to_end<T: de::Deserialize<'de>>(&mut self) -> Result<T> {
         let value = T::deserialize(&mut *self)?;
         self.end()?;

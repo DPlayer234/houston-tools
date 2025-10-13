@@ -13,8 +13,7 @@ fn eof() -> Error {
 
 /// Specialized reader trait for use with [`Deserializer`](super::Deserializer).
 ///
-/// By default, this is implemented for [`SliceRead`], [`IoRead`] and mutable
-/// references to [`Read`] implementations.
+/// By default, this is implemented for [`SliceRead`] and [`IoRead`].
 ///
 /// This trait also allows access to borrowed data if supported at runtime.
 /// `'de` represents that borrowed lifetime and is otherwise unused.
@@ -187,7 +186,10 @@ impl<R: io::Read> Read<'_> for IoRead<R> {
         // don't allocate too much or incorrect data could lead to a DoS
         let capacity = len.min(0x1000);
         let mut buf = Vec::with_capacity(capacity);
-        let limit = u64::try_from(len).map_err(|_| eof())?;
+
+        // this conversion failure is exposed as an overflow because `len` originates
+        // from reading a `usize` that would've been a `u64`.
+        let limit = u64::try_from(len).map_err(|_| Error::IntegerOverflow)?;
         self.inner.by_ref().take(limit).read_to_end(&mut buf)?;
 
         if buf.len() == len {
