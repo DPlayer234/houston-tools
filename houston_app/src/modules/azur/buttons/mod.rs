@@ -197,16 +197,6 @@ mod search {
         ByLookup(ByLookupIter<'a, T>),
     }
 
-    impl<'a, T> Inner<'a, T> {
-        fn next(&mut self) -> Option<&'a T> {
-            match self {
-                Self::Slice(it) => it.next(),
-                Self::ByPrefix(it) => it.next(),
-                Self::ByLookup(it) => it.next(),
-            }
-        }
-    }
-
     impl<'a, T: 'a, F> Iterator for Filtered<'a, T, F>
     where
         F: Filtering<T>,
@@ -214,12 +204,22 @@ mod search {
         type Item = &'a T;
 
         fn next(&mut self) -> Option<Self::Item> {
-            loop {
-                let item = self.inner.next()?;
-                if self.filter.is_match(item) {
-                    return Some(item);
-                }
+            macro_rules! next {
+                ($iter:expr) => {
+                    while let Some(item) = $iter.next() {
+                        if self.filter.is_match(item) {
+                            return Some(item);
+                        }
+                    }
+                };
             }
+
+            match &mut self.inner {
+                Inner::Slice(it) => next!(it),
+                Inner::ByPrefix(it) => next!(it),
+                Inner::ByLookup(it) => next!(it),
+            }
+            None
         }
 
         fn fold<B, L>(self, init: B, mut f: L) -> B
