@@ -122,7 +122,7 @@ impl super::Module for Module {
         Ok(())
     }
 
-    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+    fn event_handler(self) -> Option<Box<dyn PushEventHandler>> {
         Some(Box::new(self))
     }
 }

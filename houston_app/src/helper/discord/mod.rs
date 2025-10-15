@@ -3,6 +3,7 @@ use serenity::small_fixed_array::FixedString;
 use crate::prelude::*;
 
 pub mod components;
+pub mod events;
 
 /// Creates a unicode [`ReactionType`] from a string with just the corresponding
 /// unicode code symbol without allocating any memory.

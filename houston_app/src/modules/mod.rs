@@ -4,6 +4,7 @@ use houston_cmd::model::Command;
 use serenity::prelude::*;
 
 use crate::buttons::ButtonAction;
+use crate::helper::discord::events::PushEventHandler;
 use crate::prelude::*;
 
 pub mod azur;
@@ -24,6 +25,7 @@ mod prelude {
     pub use super::Module as _;
     pub use crate::buttons::{ButtonAction, ButtonValue as _};
     pub use crate::config::HBotConfig;
+    pub use crate::helper::discord::events::PushEventHandler;
     pub use crate::prelude::*;
 }
 
@@ -121,7 +123,7 @@ pub trait Module: Sized {
     }
 
     /// Gets the event handler for this module.
-    fn event_handler(self) -> Option<Box<dyn EventHandler>> {
+    fn event_handler(self) -> Option<Box<dyn PushEventHandler>> {
         None
     }
 }
@@ -132,13 +134,13 @@ macro_rules! impl_handler {
     // the weird `match _ {}` part is intended so that the syntax is something
     // that rustfmt can format. in a sense, it's just a nicety.
     ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
-        // use expanded `async_trait` to avoid alloc for unused branches
-        impl ::serenity::gateway::client::EventHandler for $Type {
-            fn dispatch<'s, 'c, 'e, 'a>(
+        impl $crate::helper::discord::events::PushEventHandler for $Type {
+            fn push_dispatch<'s, 'c, 'e, 'a>(
                 &'s self,
                 $ctx: &'c ::serenity::gateway::client::Context,
                 event: &'e ::serenity::gateway::client::FullEvent,
-            ) -> ::serenity::futures::future::BoxFuture<'a, ()>
+                fut: &mut $crate::helper::futures::BoxedJoinFut<'a>,
+            )
             where
                 's: 'a,
                 'c: 'a,
@@ -147,10 +149,10 @@ macro_rules! impl_handler {
                 #[allow(clippy::let_underscore_untyped)]
                 let $this = self;
                 match event {
-                    $( $pat => ::std::boxed::Box::pin($block), )*
+                    $( $pat => fut.push($block), )*
                     // users are allowed to exhaustively match
                     #[allow(unreachable_patterns)]
-                    _ => $crate::helper::futures::noop_future(),
+                    _ => {},
                 }
             }
         }

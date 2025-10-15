@@ -1,9 +1,9 @@
 use std::sync::OnceLock;
 
-use serenity::gateway::client::EventHandler;
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
+use crate::helper::discord::events::PushEventHandler;
 use crate::modules::{Module as _, for_each_module};
 use crate::prelude::*;
 
@@ -174,7 +174,7 @@ pub struct HInit {
     /// Commands to register.
     pub commands: Vec<houston_cmd::model::Command>,
     /// Event handlers to register.
-    pub event_handlers: Vec<Box<dyn EventHandler>>,
+    pub event_handlers: Vec<Box<dyn PushEventHandler>>,
 }
 
 impl Default for HInit {

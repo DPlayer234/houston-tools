@@ -19,6 +19,7 @@ fn main() -> anyhow::Result<()> {
     use crate::build::{GIT_HASH, VERSION};
     use crate::config::HConfig;
     use crate::data::cache::CacheUpdateHandler;
+    use crate::helper::discord::events::HEventHandler;
     use crate::prelude::*;
 
     return inner();
@@ -56,9 +57,7 @@ fn main() -> anyhow::Result<()> {
         let bot_data = Arc::new(HBotData::new(config.bot));
         let init = bot_data.init()?;
 
-        let event_handler = HEventHandler {
-            handlers: init.event_handlers.into_boxed_slice(),
-        };
+        let event_handler = HEventHandler::new(init.event_handlers.into_boxed_slice());
 
         let framework = Framework::new()
             .commands(init.commands)
@@ -118,23 +117,6 @@ fn main() -> anyhow::Result<()> {
         _ = writeln!(stdout(), "thread '{name}' {info}");
         log::error!("thread '{name}' {info}\n{backtrace}");
         log::logger().flush();
-    }
-
-    /// Type to handle various Discord events.
-    struct HEventHandler {
-        handlers: Box<[Box<dyn EventHandler>]>,
-    }
-
-    #[serenity::async_trait]
-    impl EventHandler for HEventHandler {
-        async fn dispatch(&self, ctx: &Context, event: &FullEvent) {
-            use serenity::futures::future::join_all;
-
-            // this isn't _super_ optimal since it will allocate a boxed slice of futures,
-            // but it's probably a minor thing in the grand scheme. it should also be able
-            // to figure out the correct size immediately, so no _redundant_ allocs.
-            join_all(self.handlers.iter().map(|h| h.dispatch(ctx, event))).await;
-        }
     }
 
     fn profile() -> Result<Cow<'static, str>> {
