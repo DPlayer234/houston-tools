@@ -19,9 +19,7 @@ pub trait PushEventHandler: Send + Sync + 'static {
     ) where
         's: 'a,
         'c: 'a,
-        'e: 'a,
-    {
-    }
+        'e: 'a;
 }
 
 /// An [`EventHandler`] that combines several [`PushEventHandler`]s.
