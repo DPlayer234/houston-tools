@@ -17,6 +17,7 @@ impl<'a> BoxedJoinFut<'a> {
     }
 
     /// Pushes another future to the end of the set.
+    #[inline]
     pub fn push<F>(&mut self, fut: F)
     where
         F: Future<Output = ()> + Send + 'a,
@@ -34,5 +35,75 @@ impl<'a> BoxedJoinFut<'a> {
             // if this is first future, we just box and store it
             self.acc = Some(Box::pin(fut));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::pin::Pin;
+    use std::sync::Mutex;
+    use std::task::{Context, Poll, Waker};
+
+    use super::BoxedJoinFut;
+
+    struct YieldOnce(bool);
+    impl Future for YieldOnce {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if self.0 {
+                self.0 = false;
+                Poll::Pending
+            } else {
+                Poll::Ready(())
+            }
+        }
+    }
+
+    #[test]
+    fn single() {
+        let state = Mutex::new(0);
+        let one = async {
+            *state.lock().expect("unpoisoned") = 1;
+            YieldOnce(true).await;
+        };
+
+        let mut f = BoxedJoinFut::default();
+        f.push(one);
+        let mut f = f.end();
+
+        let mut cx = Context::from_waker(Waker::noop());
+        assert_eq!(f.as_mut().poll(&mut cx), Poll::Pending);
+        assert_eq!(*state.lock().expect("unpoisoned"), 1);
+        assert_eq!(f.as_mut().poll(&mut cx), Poll::Ready(()));
+        assert_eq!(*state.lock().expect("unpoisoned"), 1);
+    }
+
+    #[test]
+    fn multi() {
+        let state = Mutex::new(0);
+        let one = async {
+            *state.lock().expect("unpoisoned") |= 0x1;
+        };
+        let two = async {
+            *state.lock().expect("unpoisoned") |= 0x2;
+            YieldOnce(true).await;
+            *state.lock().expect("unpoisoned") |= 0x8;
+        };
+        let three = async {
+            *state.lock().expect("unpoisoned") |= 0x4;
+        };
+
+        let mut f = BoxedJoinFut::default();
+        f.push(one);
+        f.push(two);
+        f.push(three);
+        let mut f = f.end();
+
+        let mut cx = Context::from_waker(Waker::noop());
+        assert_eq!(f.as_mut().poll(&mut cx), Poll::Pending);
+        assert_eq!(*state.lock().expect("unpoisoned"), 0x7);
+        assert_eq!(f.as_mut().poll(&mut cx), Poll::Ready(()));
+        assert_eq!(*state.lock().expect("unpoisoned"), 0xF);
     }
 }

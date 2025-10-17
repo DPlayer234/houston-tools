@@ -82,6 +82,7 @@ impl Texture2DData<'_> {
     /// format.
     pub fn decode(&self) -> crate::Result<RgbaImage> {
         use TextureFormat::*;
+        use texture2ddecoder::*;
 
         let width = u32::from_int(self.texture.width)?;
         let height = u32::from_int(self.texture.height)?;
@@ -93,39 +94,29 @@ impl Texture2DData<'_> {
                 RgbaImage::from_raw(width, height, self.data.to_vec())
                     .ok_or(Error::InvalidData("image data size incorrect"))
             },
-            ETC2_RGBA8 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_etc2_rgba8(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_4x4 | ASTC_RGBA_4x4 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_4_4(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_5x5 | ASTC_RGBA_5x5 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_5_5(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_6x6 | ASTC_RGBA_6x6 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_6_6(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_8x8 | ASTC_RGBA_8x8 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_8_8(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_10x10 | ASTC_RGBA_10x10 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_10_10(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
-            ASTC_RGB_12x12 | ASTC_RGBA_12x12 => args.decode_with(|args, buf| {
-                texture2ddecoder::decode_astc_12_12(self.data, args.width, args.height, buf)
-                    .map_err(Error::InvalidData)
-            }),
+            ETC2_RGBA8 => self.decode_with(args, decode_etc2_rgba8),
+            ASTC_RGB_4x4 | ASTC_RGBA_4x4 => self.decode_with(args, decode_astc_4_4),
+            ASTC_RGB_5x5 | ASTC_RGBA_5x5 => self.decode_with(args, decode_astc_5_5),
+            ASTC_RGB_6x6 | ASTC_RGBA_6x6 => self.decode_with(args, decode_astc_6_6),
+            ASTC_RGB_8x8 | ASTC_RGBA_8x8 => self.decode_with(args, decode_astc_8_8),
+            ASTC_RGB_10x10 | ASTC_RGBA_10x10 => self.decode_with(args, decode_astc_10_10),
+            ASTC_RGB_12x12 | ASTC_RGBA_12x12 => self.decode_with(args, decode_astc_12_12),
             _ => Err(Error::Unsupported(format!(
                 "texture format not implemented: {:?}",
                 self.texture.format()
             )))?,
         }
+    }
+
+    #[expect(clippy::type_complexity)]
+    fn decode_with(
+        &self,
+        args: Args,
+        decoder: fn(&[u8], usize, usize, &mut [u32]) -> Result<(), &'static str>,
+    ) -> crate::Result<RgbaImage> {
+        args.decode_with(|args, buf| {
+            decoder(self.data, args.width, args.height, buf).map_err(Error::InvalidData)
+        })
     }
 }
 

@@ -13,9 +13,9 @@ pub trait PushEventHandler: Send + Sync + 'static {
     /// [`BoxedJoinFut`] parameter.
     fn push_dispatch<'s, 'c, 'e, 'a>(
         &'s self,
-        _ctx: &'c Context,
-        _event: &'e FullEvent,
-        _fut: &mut BoxedJoinFut<'a>,
+        ctx: &'c Context,
+        event: &'e FullEvent,
+        fut: &mut BoxedJoinFut<'a>,
     ) where
         's: 'a,
         'c: 'a,

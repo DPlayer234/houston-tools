@@ -74,3 +74,38 @@ where
         Err(_) => tokio::join!(&mut fut, (&mut intercept).map(Some)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::pin::pin;
+    use std::time::Duration;
+
+    use tokio::time::sleep;
+
+    use super::if_too_long;
+
+    const TEST_DUR: Duration = Duration::from_millis(100);
+
+    #[tokio::main(flavor = "current_thread")]
+    #[test]
+    async fn short() {
+        let fut = pin!(async { 42 });
+        let intercept = pin!(async { 69 });
+
+        let out = if_too_long(fut, TEST_DUR, intercept).await;
+        assert_eq!(out, (42, None));
+    }
+
+    #[tokio::main(flavor = "current_thread")]
+    #[test]
+    async fn long() {
+        let fut = pin!(async {
+            sleep(TEST_DUR).await;
+            42
+        });
+        let intercept = pin!(async { 69 });
+
+        let out = if_too_long(fut, Duration::ZERO, intercept).await;
+        assert_eq!(out, (42, Some(69)));
+    }
+}
