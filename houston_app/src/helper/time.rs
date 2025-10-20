@@ -1,9 +1,7 @@
 //! Convenience module for dealing with times and timestamps.
 
 use std::cell::UnsafeCell;
-use std::sync::LazyLock;
 
-use arrayvec::ArrayVec;
 use chrono::format::Item;
 use chrono::prelude::*;
 
@@ -56,16 +54,16 @@ pub fn get_startup_time() -> DateTime<Utc> {
 pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
     use chrono::format::{Parsed, parse_and_remainder};
 
-    let formats = &*FORMATS;
+    let formats = &FORMATS;
 
-    fn parse_section<'s, const N: usize>(
+    fn parse_section<'s>(
         parsed: &mut Parsed,
-        parts: &[ArrayVec<Item<'static>, N>],
+        parts: &[&[Item<'_>]],
         s: &'s str,
     ) -> Option<&'s str> {
         let backup = parsed.clone();
 
-        for f in parts {
+        for &f in parts {
             if let Ok(s) = parse_and_remainder(parsed, s, f.iter()) {
                 return Some(s);
             }
@@ -79,8 +77,8 @@ pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOf
     let mut parsed = Parsed::new();
 
     // parse the date & time and consume the input
-    let s = parse_section(&mut parsed, &formats.date, s)?;
-    let s = parse_section(&mut parsed, &formats.time, s)?;
+    let s = parse_section(&mut parsed, formats.date, s)?;
+    let s = parse_section(&mut parsed, formats.time, s)?;
 
     // if the input already entirely consumed, it has no time zone
     // assume the time zone passed to this function is to be used
@@ -97,49 +95,93 @@ pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOf
     }
 
     // nothing expected after time zone so it must be fully consumed
-    if parse_section(&mut parsed, &formats.tz, s) == Some("") {
+    let s = parse_section(&mut parsed, formats.tz, s)?;
+    if s.is_empty() {
         return parsed.to_datetime().ok();
     }
 
     None
 }
 
-// honestly i wanted to const-construct these instead of invoking parsing logic
-// but some of the item variants cannot be publicly constructed
 struct Formats {
-    pub date: [ArrayVec<Item<'static>, 8>; 4],
-    pub time: [ArrayVec<Item<'static>, 8>; 2],
-    pub tz: [ArrayVec<Item<'static>, 3>; 1],
+    pub date: &'static [&'static [Item<'static>]],
+    pub time: &'static [&'static [Item<'static>]],
+    pub tz: &'static [&'static [Item<'static>]],
 }
 
-static FORMATS: LazyLock<Formats> = LazyLock::new(|| {
-    use chrono::format::StrftimeItems;
+const FORMATS: Formats = {
+    use chrono::format::Item::{Fixed, Literal};
+    use chrono::format::{Fixed as F, Numeric as N, Pad};
 
-    // like `StrftimeItems::parse` but collects into `ArrayVec` and panics on error
-    fn create<const N: usize>(s: &'static str) -> ArrayVec<Item<'static>, N> {
-        StrftimeItems::new(s)
-            .inspect(|i| assert_ne!(*i, Item::Error, "date time format is invalid"))
-            .collect()
+    const fn space() -> Item<'static> {
+        Item::Space(" ")
     }
 
-    // if this is changed, make sure to ensure `Formats` is updated to still have
-    // enough space for all format items. run the tests to be sure also
+    const fn num_pz(n: N) -> Item<'static> {
+        Item::Numeric(n, Pad::Zero)
+    }
+
+    const fn simple_date(a: N, b: N, c: N, sep: &str) -> [Item<'_>; 7] {
+        [
+            space(),
+            num_pz(a),
+            Literal(sep),
+            num_pz(b),
+            Literal(sep),
+            num_pz(c),
+            space(),
+        ]
+    }
+
     Formats {
-        date: [
-            create(" %Y-%m-%d "),
-            create(" %m/%d/%Y "),
-            create(" %d.%m.%Y "),
-            create(" %B %d, %Y "),
+        date: &[
+            // %Y-%m-%d
+            &simple_date(N::Year, N::Month, N::Day, "-"),
+            // %m/%d/%Y
+            &simple_date(N::Month, N::Day, N::Year, "/"),
+            // %d.%m.%Y
+            &simple_date(N::Day, N::Month, N::Year, "."),
+            // %B %d, %Y
+            &[
+                space(),
+                Fixed(F::LongMonthName),
+                space(),
+                num_pz(N::Day),
+                Literal(","),
+                space(),
+                num_pz(N::Year),
+                space(),
+            ],
         ],
-        time: [
-            // 12-hour format must come first so the 24-hour format doesn't succeed on parts of it
-            // and then causes parsing failures later when the AM/PM is encountered
-            create(" %I:%M %p "),
-            create(" %H:%M "),
+        // 12-hour format must come first so the 24-hour format doesn't succeed on parts of it
+        // and then causes parsing failures later when the AM/PM is encountered
+        time: &[
+            // %I:%M %p
+            &[
+                space(),
+                num_pz(N::Hour12),
+                Literal(":"),
+                num_pz(N::Minute),
+                space(),
+                Fixed(F::UpperAmPm),
+                space(),
+            ],
+            // %H:%M
+            &[
+                space(),
+                num_pz(N::Hour),
+                Literal(":"),
+                num_pz(N::Minute),
+                space(),
+            ],
         ],
-        tz: [create(" %#z ")],
+        tz: &[
+            // emulates "%#z" by trying multiple formats
+            &[space(), Fixed(F::TimezoneOffsetZ), space()],
+            &[space(), Fixed(F::TimezoneOffsetTripleColon), space()],
+        ],
     }
-});
+};
 
 pub mod serde_time_delta {
     use std::fmt;
