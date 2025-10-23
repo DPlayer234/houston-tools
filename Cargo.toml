@@ -6,6 +6,8 @@ members = [
     "libs/azur_lane",
     "libs/bson_model",
     "libs/bson_model/macros",
+    "libs/fluent_comp",
+    "libs/fluent_comp/macros",
     "libs/houston_cmd",
     "libs/houston_cmd/macros",
     "libs/serde_steph",

@@ -5,7 +5,7 @@ use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
 use crate::helper::discord::IdBytes;
 use crate::modules::core::buttons::ToPage;
-use crate::modules::starboard::{BoardId, get_board, model};
+use crate::modules::starboard::{BoardId, Resources, get_board, model};
 
 // View the leaderboards.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -24,6 +24,7 @@ impl View {
 
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
+        let res = Resources::request_locale();
 
         let filter = model::Score::filter().board(self.board).into_document()?;
 
@@ -49,19 +50,23 @@ impl View {
             }
 
             index += 1;
+
             writeln!(
                 description,
-                "{}. {}: {} {} from {} post(s)",
-                offset + index,
-                item.user.mention(),
-                item.score,
-                board.emoji(),
-                item.post_count,
+                "{}",
+                res.top()
+                    .entry()
+                    .rank(&(offset + index))
+                    .user(&item.user.mention())
+                    .score(&item.score)
+                    .emoji(&board.emoji())
+                    .post_count(&item.post_count)
+                    .build()
             );
         }
 
         if self.page > 0 && description.is_empty() {
-            return Err(HArgError::new("No data for this page.").into());
+            return Err(HArgError::new(res.no_page_found().build()).into());
         }
 
         let has_more = index >= u64::from(PAGE_SIZE);
@@ -78,8 +83,8 @@ impl View {
             self.page + 1
         };
 
-        let label = format!("### {} Leaderboards", board.emoji());
-        let description = description.or_default("<None>");
+        let label = format!("### {}", res.top().header().emoji(&board.emoji()).build());
+        let description = description.or_default(res.no_page_content().build());
 
         let mut components = CreateComponents::new();
 

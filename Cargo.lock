@@ -894,6 +894,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "fluent-syntax"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54f0d287c53ffd184d04d8677f590f4ac5379785529e5e08b1c8083acdd5c198"
+dependencies = [
+ "memchr",
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "fluent_comp"
+version = "0.1.0"
+dependencies = [
+ "const-builder",
+ "fluent_comp_macros",
+]
+
+[[package]]
+name = "fluent_comp_macros"
+version = "0.1.0"
+dependencies = [
+ "darling 0.21.3",
+ "fluent-syntax",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1163,6 +1192,7 @@ dependencies = [
  "const-builder",
  "dashmap",
  "extract_map",
+ "fluent_comp",
  "houston_cmd",
  "indexmap 2.11.4",
  "log",

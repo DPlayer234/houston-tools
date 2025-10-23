@@ -25,6 +25,7 @@ mod prelude {
     pub use super::Module as _;
     pub use crate::buttons::{ButtonAction, ButtonValue as _};
     pub use crate::config::HBotConfig;
+    pub(crate) use crate::fmt::l10n::include_resources;
     pub use crate::helper::discord::events::PushEventHandler;
     pub use crate::prelude::*;
 }

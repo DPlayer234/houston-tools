@@ -19,6 +19,8 @@ mod slashies;
 
 pub use config::{BoardId, Config};
 
+include_resources!(Resources: en = "l10n/starboard.ftl");
+
 pub struct Module;
 
 impl super::Module for Module {

@@ -6,7 +6,7 @@ use crate::buttons::prelude::*;
 use crate::fmt::StringExt as _;
 use crate::helper::discord::IdBytes;
 use crate::modules::core::buttons::ToPage;
-use crate::modules::starboard::{BoardId, get_board, model};
+use crate::modules::starboard::{BoardId, Resources, get_board, model};
 
 // View the post leaderboards.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -28,6 +28,7 @@ impl View {
 
         let db = data.database()?;
         let board = get_board(data.config(), self.guild, self.board)?;
+        let res = Resources::request_locale();
 
         let filter = self.message_filter()?;
 
@@ -60,18 +61,35 @@ impl View {
             let emoji = board.emoji();
 
             if self.by_user.is_some() {
-                writeln!(description, "{rank}. {link}: {max_reacts} {emoji}");
+                writeln!(
+                    description,
+                    "{}",
+                    res.top_posts()
+                        .entry()
+                        .rank(&rank)
+                        .link(&link)
+                        .max_reacts(&max_reacts)
+                        .emoji(&emoji)
+                        .build()
+                );
             } else {
                 writeln!(
                     description,
-                    "{rank}. {link} by {}: {max_reacts} {emoji}",
-                    item.user.mention(),
+                    "{}",
+                    res.top_posts()
+                        .entry_by_user()
+                        .rank(&rank)
+                        .link(&link)
+                        .user(&item.user.mention())
+                        .max_reacts(&max_reacts)
+                        .emoji(&emoji)
+                        .build()
                 );
             }
         }
 
         if self.page > 0 && description.is_empty() {
-            return Err(HArgError::new("No data for this page.").into());
+            return Err(HArgError::new(res.no_page_found().build()).into());
         }
 
         let has_more = index >= u64::from(PAGE_SIZE);
@@ -88,15 +106,24 @@ impl View {
             self.page + 1
         };
 
-        let label = format!("### {} Top Posts", board.emoji());
-        let description = description.or_default("<None>");
+        let label = format!(
+            "### {}",
+            res.top_posts().header().emoji(&board.emoji()).build()
+        );
+        let description = description.or_default(res.no_page_content().build());
 
         let mut components = CreateComponents::new();
 
         components.push(CreateTextDisplay::new(label));
 
         if let Some(by_user) = self.by_user {
-            components.push(CreateTextDisplay::new(format!("By: {}", by_user.mention())));
+            components.push(CreateTextDisplay::new(
+                res.top_posts()
+                    .by_user_header()
+                    .user(&by_user.mention())
+                    .build()
+                    .to_string(),
+            ));
         }
 
         components.push(CreateSeparator::new(true));

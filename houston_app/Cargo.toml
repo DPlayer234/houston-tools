@@ -41,6 +41,7 @@ urlencoding = "2.1.3"
 
 azur_lane = { path = "../libs/azur_lane" }
 bson_model = { path = "../libs/bson_model" }
+fluent_comp = { path = "../libs/fluent_comp" }
 houston_cmd = { path = "../libs/houston_cmd" }
 serde_steph = { path = "../libs/serde_steph" }
 utils = { path = "../libs/utils" }

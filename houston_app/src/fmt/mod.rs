@@ -3,6 +3,7 @@ use std::borrow::Cow;
 pub mod azur;
 pub mod discord;
 pub mod join;
+pub mod l10n;
 pub mod time;
 
 pub use join::Join;
@@ -18,7 +19,7 @@ pub trait StringExt<'this>: Sized {
     ///
     /// Returns [`Cow::Owned`] with the written value if it isn't empty,
     /// otherwise returns [`Cow::Borrowed`] with `default`.
-    fn or_default(self, default: &'this str) -> Cow<'this, str>;
+    fn or_default(self, default: impl Into<Cow<'this, str>>) -> Cow<'this, str>;
 }
 
 impl<'this> StringExt<'this> for String {
@@ -26,9 +27,9 @@ impl<'this> StringExt<'this> for String {
         (!self.is_empty()).then_some(self)
     }
 
-    fn or_default(self, default: &'this str) -> Cow<'this, str> {
+    fn or_default(self, default: impl Into<Cow<'this, str>>) -> Cow<'this, str> {
         if self.is_empty() {
-            Cow::Borrowed(default)
+            default.into()
         } else {
             Cow::Owned(self)
         }
@@ -40,9 +41,9 @@ impl<'this> StringExt<'this> for Cow<'this, str> {
         (!self.is_empty()).then_some(self)
     }
 
-    fn or_default(self, default: &'this str) -> Self {
+    fn or_default(self, default: impl Into<Self>) -> Self {
         if self.is_empty() {
-            Self::Borrowed(default)
+            default.into()
         } else {
             self
         }
