@@ -53,14 +53,13 @@ impl View {
 
             writeln!(
                 description,
-                "{}",
-                res.top()
-                    .entry()
-                    .rank(&(offset + index))
-                    .user(&item.user.mention())
-                    .score(&item.score)
-                    .emoji(&board.emoji())
-                    .post_count(&item.post_count)
+                "{}. {}",
+                offset + index,
+                res.user_score()
+                    .user(item.user.mention())
+                    .score(item.score)
+                    .emoji(board.emoji())
+                    .post_count(item.post_count)
                     .build()
             );
         }
@@ -83,8 +82,8 @@ impl View {
             self.page + 1
         };
 
-        let label = format!("### {}", res.top().header().emoji(&board.emoji()).build());
-        let description = description.or_default(res.no_page_content().build());
+        let label = format!("### {}", res.top().header().emoji(board.emoji()).build());
+        let description = description.or_default(res.no_content().build());
 
         let mut components = CreateComponents::new();
 

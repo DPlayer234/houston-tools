@@ -11,3 +11,7 @@ pub fn get_manifest_dir() -> OsString {
 pub fn to_ident(s: &str) -> Ident {
     format_ident!("{}", &s.replace('-', "_"))
 }
+
+pub fn to_term_ident(s: &str) -> Ident {
+    format_ident!("____term_{}", &s.replace('-', "_"))
+}

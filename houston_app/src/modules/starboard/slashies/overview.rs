@@ -5,7 +5,7 @@ use serde_with::As;
 use utils::text::WriteStr as _;
 
 use crate::helper::bson::IdBson;
-use crate::modules::starboard::{BoardId, model};
+use crate::modules::starboard::{BoardId, Resources, model};
 use crate::slashies::prelude::*;
 
 #[derive(Debug, serde::Deserialize, ModelDocument)]
@@ -46,13 +46,13 @@ pub async fn overview(
     let guild = ctx.require_guild_id()?;
     let data = ctx.data_ref();
     let db = data.database()?;
+    let res = Resources::request_locale();
+
     let guild_config = data
         .config()
         .starboard
         .get(&guild)
-        .ok_or(HArgError::new_const(
-            "Starboard is not enabled for this server.",
-        ))?;
+        .ok_or_else(|| HArgError::new(res.error_not_enabled().build()))?;
 
     ctx.defer_as(ephemeral).await?;
 
@@ -114,36 +114,40 @@ pub async fn overview(
         .await?;
 
     let mut embed = CreateEmbed::new()
-        .title("Starboard Overview")
+        .title(res.overview().header().build())
         .color(data.config().embed_color);
 
     for board in guild_config.boards.values() {
         let mut value = String::with_capacity(256);
 
-        value.push_str("- **Top Post:** ");
+        write!(value, "- **{}:** ", res.overview().top_post().build());
         match top_posts.iter().find(|t| t.board == board.id) {
             Some(top_post) => writeln!(
                 value,
-                "{} by {}: {} {}",
-                top_post.message.link(top_post.channel, Some(guild)),
-                top_post.user.mention(),
-                top_post.max_reacts,
-                board.emoji(),
+                "{}",
+                res.post_by_user()
+                    .link(top_post.message.link(top_post.channel, Some(guild)))
+                    .user(top_post.user.mention())
+                    .max_reacts(top_post.max_reacts)
+                    .emoji(board.emoji())
+                    .build(),
             ),
-            None => value.push_str("<None>\n"),
+            None => writeln!(value, "{}", res.no_content().build()),
         }
 
-        value.push_str("- **Top Poster:** ");
+        write!(value, "- **{}:** ", res.overview().top_poster().build());
         match top_users.iter().find(|t| t.board == board.id) {
             Some(top_user) => write!(
                 value,
-                "{}: {} {} from {} post(s)",
-                top_user.user.mention(),
-                top_user.score,
-                board.emoji(),
-                top_user.post_count,
+                "{}",
+                res.user_score()
+                    .user(top_user.user.mention())
+                    .score(top_user.score)
+                    .emoji(board.emoji())
+                    .post_count(top_user.post_count)
+                    .build()
             ),
-            None => value.push_str("<None>"),
+            None => write!(value, "{}", res.no_content().build()),
         }
 
         embed = embed.field(format!("{} {}", board.emoji(), board.name), value, false);

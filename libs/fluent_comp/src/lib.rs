@@ -73,6 +73,12 @@ mod impl_fluent_value {
     impl_fluent_num_signed!(i8 i16 i32 i64 i128 isize);
     impl_fluent_num_unsigned!(u8 u16 u32 u64 u128 usize);
 
+    impl<T: FluentInt> FluentInt for &T {
+        fn to_switch_value(&self) -> i8 {
+            (**self).to_switch_value()
+        }
+    }
+
     impl<T: AsRef<str> + Display> FluentStr for T {
         fn to_switch_value(&self) -> &str {
             self.as_ref()

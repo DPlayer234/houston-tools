@@ -63,26 +63,22 @@ impl View {
             if self.by_user.is_some() {
                 writeln!(
                     description,
-                    "{}",
-                    res.top_posts()
-                        .entry()
-                        .rank(&rank)
-                        .link(&link)
-                        .max_reacts(&max_reacts)
-                        .emoji(&emoji)
+                    "{rank}. {}",
+                    res.post()
+                        .link(link)
+                        .max_reacts(max_reacts)
+                        .emoji(emoji)
                         .build()
                 );
             } else {
                 writeln!(
                     description,
-                    "{}",
-                    res.top_posts()
-                        .entry_by_user()
-                        .rank(&rank)
-                        .link(&link)
-                        .user(&item.user.mention())
-                        .max_reacts(&max_reacts)
-                        .emoji(&emoji)
+                    "{rank}. {}",
+                    res.post_by_user()
+                        .link(link)
+                        .user(item.user.mention())
+                        .max_reacts(max_reacts)
+                        .emoji(emoji)
                         .build()
                 );
             }
@@ -108,9 +104,9 @@ impl View {
 
         let label = format!(
             "### {}",
-            res.top_posts().header().emoji(&board.emoji()).build()
+            res.top_posts().header().emoji(board.emoji()).build()
         );
-        let description = description.or_default(res.no_page_content().build());
+        let description = description.or_default(res.no_content().build());
 
         let mut components = CreateComponents::new();
 

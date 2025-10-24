@@ -1,11 +1,15 @@
+use std::iter;
+
 use fluent_syntax::ast::{
     Comment, Expression, InlineExpression, Pattern, PatternElement, Variant, VariantKey,
 };
 use proc_macro2::TokenStream;
+use quote::format_ident;
+use syn::Ident;
 
 use super::state::{MessageSet, State, Variables};
-use crate::bundle_impl::state::{TermSet, get_attribute};
-use crate::util::to_ident;
+use crate::bundle_impl::state::{TermSet, VariableKind, get_attribute};
+use crate::util::{to_ident, to_term_ident};
 
 pub fn emit_header(state: &State<'_>) -> TokenStream {
     let State { args, bundle_ident } = state;
@@ -32,19 +36,17 @@ pub fn emit_message(state: &State<'_>, sets: &[MessageSet<'_>]) -> TokenStream {
     let (main, other) = sets.split_first().expect("should be at least one");
 
     let message_ident = to_ident(main.message.id.name);
-    let attributes = main
-        .message
-        .attributes
-        .iter()
-        .map(|a| emit_message_attribute(state, a.id.name, sets));
-
     let comment = emit_comment(main.message.comment.as_ref(), main.message.value.as_ref());
 
     if let Some(pattern) = &main.message.value {
         let variables = Variables::collect(pattern);
+        let (var_names, gen_names, var_tys) = split_variables(&variables);
 
-        let var_names = variables.vars.iter().map(|s| to_ident(s.name));
-        let var_tys = variables.vars.iter().map(|s| &s.kind);
+        let attributes = main
+            .message
+            .attributes
+            .iter()
+            .map(|a| emit_message_attribute(state, a.id.name, sets, var_tys.len()));
 
         let mut fmt = TokenStream::new();
         let mut to_cow = TokenStream::new();
@@ -74,33 +76,31 @@ pub fn emit_message(state: &State<'_>, sets: &[MessageSet<'_>]) -> TokenStream {
             const _: () = {
                 impl #bundle_ident {
                     #comment
-                    pub fn #message_ident<'n>(self) -> ____MessageBuilder<'n, true> {
+                    pub fn #message_ident<#(#gen_names: #var_tys),*>(self) -> ____MessageBuilder<#(#gen_names,)* true> {
                         ____Message::builder().____locale(self.____locale)
                     }
                 }
 
                 #[derive(::fluent_comp::private::ConstBuilder)]
-                pub struct ____Message<'a> {
+                pub struct ____Message<#(#gen_names: #var_tys),*> {
                     #[builder(vis = "pub(self)")]
                     ____locale: #locales,
-                    #(#var_names: &'a dyn #var_tys,)*
-                    #[builder(vis = "pub(self)", default = ::core::marker::PhantomData)]
-                    ____marker: ::core::marker::PhantomData<&'a ()>,
+                    #(#var_names: #gen_names,)*
                 }
 
-                impl ____Message<'_> {
+                impl<#(#gen_names: #var_tys),*> ____Message<#(#gen_names,)*> {
                     pub fn to_cow(&self) -> ::std::borrow::Cow<'static, ::core::primitive::str> {
                         match self.____locale { #to_cow }
                     }
                 }
 
-                impl<'a, 'b> ::core::convert::From<____Message<'a>> for ::std::borrow::Cow<'b, ::core::primitive::str> {
-                    fn from(value: ____Message<'a>) -> Self {
+                impl<'a, #(#gen_names: #var_tys),*> ::core::convert::From<____Message<#(#gen_names,)*>> for ::std::borrow::Cow<'a, ::core::primitive::str> {
+                    fn from(value: ____Message<#(#gen_names,)*>) -> Self {
                         value.to_cow()
                     }
                 }
 
-                impl ::core::fmt::Display for ____Message<'_> {
+                impl<#(#gen_names: #var_tys),*> ::core::fmt::Display for ____Message<#(#gen_names,)*> {
                     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                         match self.____locale { #fmt }
                         ::core::fmt::Result::Ok(())
@@ -111,21 +111,25 @@ pub fn emit_message(state: &State<'_>, sets: &[MessageSet<'_>]) -> TokenStream {
             };
         }
     } else {
+        let attributes = main
+            .message
+            .attributes
+            .iter()
+            .map(|a| emit_message_attribute(state, a.id.name, sets, 0));
+
         quote::quote! {
             const _: () = {
                 impl #bundle_ident {
                     #comment
-                    pub fn #message_ident<'n>(self) -> ____MessageBuilder<'n, true> {
+                    pub fn #message_ident(self) -> ____MessageBuilder<true> {
                         ____Message::builder().____locale(self.____locale)
                     }
                 }
 
                 #[derive(::fluent_comp::private::ConstBuilder)]
-                pub struct ____Message<'a> {
+                pub struct ____Message {
                     #[builder(vis = "pub(self)")]
                     ____locale: #locales,
-                    #[builder(vis = "pub(self)", default = ::core::marker::PhantomData)]
-                    ____marker: ::core::marker::PhantomData<&'a ()>,
                 }
 
                 #(#attributes)*
@@ -134,7 +138,12 @@ pub fn emit_message(state: &State<'_>, sets: &[MessageSet<'_>]) -> TokenStream {
     }
 }
 
-fn emit_message_attribute(state: &State<'_>, id: &str, sets: &[MessageSet<'_>]) -> TokenStream {
+fn emit_message_attribute(
+    state: &State<'_>,
+    id: &str,
+    sets: &[MessageSet<'_>],
+    parent_gen_count: usize,
+) -> TokenStream {
     let State { args, .. } = state;
     let locales = &args.locales;
 
@@ -144,8 +153,10 @@ fn emit_message_attribute(state: &State<'_>, id: &str, sets: &[MessageSet<'_>]) 
     let attr_ident = to_ident(id);
     let variables = Variables::collect(&main_attr.value);
 
-    let var_names = variables.vars.iter().map(|s| to_ident(s.name));
-    let var_tys = variables.vars.iter().map(|s| &s.kind);
+    let (var_names, gen_names, var_tys) = split_variables(&variables);
+
+    let unset = quote::quote! { ::fluent_comp::private::Unset };
+    let unsets = iter::repeat_n(&unset, parent_gen_count);
 
     let mut fmt = TokenStream::new();
     let mut to_cow = TokenStream::new();
@@ -176,36 +187,34 @@ fn emit_message_attribute(state: &State<'_>, id: &str, sets: &[MessageSet<'_>]) 
 
     quote::quote! {
         const _: () = {
-            impl ____MessageBuilder<'_, true> {
+            impl ____MessageBuilder<#(#unsets,)* true> {
                 #comment
-                pub fn #attr_ident<'n>(&self) -> ____AttributeBuilder<'n, true> {
+                pub fn #attr_ident<#(#gen_names: #var_tys),*>(&self) -> ____AttributeBuilder<#(#gen_names,)* true> {
                     let ____locale = unsafe { ::core::ptr::read(&raw const (*self.inner.inner.as_ptr()).____locale) };
                     ____Attribute::builder().____locale(____locale)
                 }
             }
 
             #[derive(::fluent_comp::private::ConstBuilder)]
-            pub struct ____Attribute<'a> {
+            pub struct ____Attribute<#(#gen_names: #var_tys),*> {
                 #[builder(vis = "pub(self)")]
                 ____locale: #locales,
-                #(#var_names: &'a dyn #var_tys,)*
-                #[builder(vis = "pub(self)", default = ::core::marker::PhantomData)]
-                ____marker: ::core::marker::PhantomData<&'a ()>,
+                #(#var_names: #gen_names,)*
             }
 
-            impl ____Attribute<'_> {
+            impl<#(#gen_names: #var_tys),*> ____Attribute<#(#gen_names),*> {
                 pub fn to_cow(&self) -> ::std::borrow::Cow<'static, ::core::primitive::str> {
                     match self.____locale { #to_cow }
                 }
             }
 
-            impl<'a, 'b> ::core::convert::From<____Attribute<'a>> for ::std::borrow::Cow<'b, ::core::primitive::str> {
-                fn from(value: ____Attribute<'a>) -> Self {
+            impl<'a, #(#gen_names: #var_tys),*> ::core::convert::From<____Attribute<#(#gen_names),*>> for ::std::borrow::Cow<'a, ::core::primitive::str> {
+                fn from(value: ____Attribute<#(#gen_names),*>) -> Self {
                     value.to_cow()
                 }
             }
 
-            impl ::core::fmt::Display for ____Attribute<'_> {
+            impl<#(#gen_names: #var_tys),*> ::core::fmt::Display for ____Attribute<#(#gen_names),*> {
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                     match self.____locale { #fmt }
                     ::core::fmt::Result::Ok(())
@@ -221,11 +230,9 @@ pub fn emit_term(state: &State<'_>, sets: &[TermSet<'_>]) -> TokenStream {
 
     let (main, other) = sets.split_first().expect("should be at least one");
 
-    let message_ident = to_ident(main.term.id.name);
+    let term_ident = to_term_ident(main.term.id.name);
     let variables = Variables::collect(&main.term.value);
-
-    let var_names = variables.vars.iter().map(|s| to_ident(s.name));
-    let var_tys = variables.vars.iter().map(|s| &s.kind);
+    let (var_names, _gen_names, var_tys) = split_variables(&variables);
 
     let mut fmt = TokenStream::new();
     let mut to_cow = TokenStream::new();
@@ -260,7 +267,8 @@ pub fn emit_term(state: &State<'_>, sets: &[TermSet<'_>]) -> TokenStream {
         const _: () = {
             impl #bundle_ident {
                 #comment
-                fn #message_ident<'n>(self) -> ____TermBuilder<'n, true> {
+                #[doc(hidden)]
+                fn #term_ident<'n>(self) -> ____TermBuilder<'n, true> {
                     ____Term::builder().____locale(self.____locale)
                 }
             }
@@ -326,7 +334,7 @@ fn emit_term_attribute(state: &State<'_>, id: &str, sets: &[TermSet<'_>]) -> Tok
 
     quote::quote! {
         impl ____TermBuilder<'_, true> {
-            pub fn #attr_ident<'n>(&self) -> &'static str {
+            pub fn #attr_ident(&self) -> &'static str {
                 let ____locale = unsafe { ::core::ptr::read(&raw const (*self.inner.inner.as_ptr()).____locale) };
                 match ____locale { #fmt }
             }
@@ -413,7 +421,7 @@ fn emit_pattern_fmt(state: &State<'_>, pattern: &Pattern<&str>) -> TokenStream {
                     });
                 }
 
-                let id = to_ident(id.name);
+                let id = to_term_ident(id.name);
                 let args = arguments
                     .as_ref()
                     .map(|a| a.named.iter())
@@ -479,7 +487,7 @@ fn emit_pattern_fmt(state: &State<'_>, pattern: &Pattern<&str>) -> TokenStream {
                 arguments: None,
             } => {
                 let State { bundle_ident, .. } = state;
-                let id = to_ident(id.name);
+                let id = to_term_ident(id.name);
                 let attr = to_ident(attr.name);
 
                 quote::quote! {
@@ -520,6 +528,19 @@ fn emit_pattern_fmt(state: &State<'_>, pattern: &Pattern<&str>) -> TokenStream {
     let mut output = TokenStream::new();
     inner_pattern(state, pattern, &mut output);
     output
+}
+
+fn split_variables(v: &Variables<'_>) -> (Vec<Ident>, Vec<Ident>, Vec<VariableKind>) {
+    let var_names = v.vars.iter().map(|s| to_ident(s.name));
+
+    let gen_names = v
+        .vars
+        .iter()
+        .map(|s| format_ident!("T_{}", s.name.replace('-', "_")));
+
+    let var_tys = v.vars.iter().map(|s| s.kind);
+
+    (var_names.collect(), gen_names.collect(), var_tys.collect())
 }
 
 fn pattern_as_str<'t>(pattern: &Pattern<&'t str>) -> Option<&'t str> {

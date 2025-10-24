@@ -1,5 +1,6 @@
 use super::BoardId;
 use crate::helper::contains_ignore_ascii_case;
+use crate::modules::starboard::Resources;
 use crate::slashies::prelude::*;
 
 mod overview;
@@ -61,7 +62,7 @@ pub mod starboard {
 }
 
 fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
-    let guild_id = ctx.guild_id().context("command only available in guilds")?;
+    let guild_id = ctx.require_guild_id()?;
 
     let board = BoardId::new(board.cast_signed());
     _ = ctx
@@ -69,12 +70,10 @@ fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
         .config()
         .starboard
         .get(&guild_id)
-        .ok_or(HArgError::new_const(
-            "Starboard is not enabled for this server.",
-        ))?
+        .ok_or_else(|| HArgError::new(Resources::request_locale().error_not_enabled().build()))?
         .boards
         .get(&board)
-        .ok_or(HArgError::new_const("Unknown Starboard."))?;
+        .ok_or_else(|| HArgError::new(Resources::request_locale().error_unknown().build()))?;
 
     Ok((guild_id, board))
 }

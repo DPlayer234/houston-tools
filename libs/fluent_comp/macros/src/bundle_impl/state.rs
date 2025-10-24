@@ -17,6 +17,7 @@ pub struct Variables<'t> {
     pub vars: Vec<Variable<'t>>,
 }
 
+#[derive(Clone, Copy)]
 pub enum VariableKind {
     Display,
     Int,
