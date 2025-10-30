@@ -1,6 +1,7 @@
+use houston_utils::discord::fmt::MessageLinkExt as _;
+use houston_utils::discord::is_user_message;
+
 use super::prelude::*;
-use crate::fmt::discord::MessageLinkExt as _;
-use crate::helper::discord::is_user_message;
 
 pub mod config;
 mod slashies;

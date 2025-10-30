@@ -170,7 +170,7 @@ macro_rules! impl_view_part_fn {
 impl ViewPart {
     /// Creates the embed description for the current state.
     fn append_description(self, result: &mut String, words: &SpecialSecretaryWords) {
-        use crate::fmt::discord::escape_markdown;
+        use houston_utils::discord::fmt::escape_markdown;
 
         let len = result.len();
 

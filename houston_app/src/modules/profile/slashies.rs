@@ -1,7 +1,7 @@
 use bson_model::Filter;
+use houston_utils::StringExt as _;
 use utils::text::WriteStr as _;
 
-use crate::fmt::StringExt as _;
 use crate::modules::Module as _;
 use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;

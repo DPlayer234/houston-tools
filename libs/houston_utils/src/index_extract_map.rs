@@ -97,6 +97,11 @@ impl<K, V, S> IndexExtractMap<K, V, S> {
         self.inner.len()
     }
 
+    /// Gets whether the map is empty.
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     /// Returns an iterator to the values of the map, in their order.
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.inner.iter().map(Value::get_ref)

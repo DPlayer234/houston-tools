@@ -2,11 +2,10 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+use houston_utils::discord::emoji_equivalent;
 use serenity::model::channel::ReactionType;
 use serenity::model::id::ParseIdError;
 use serenity::small_fixed_array::FixedString;
-
-use crate::helper::discord::emoji_equivalent;
 
 /// Config-compatible Discord emoji with [`Hash`] and [`Eq`] based on just ID
 /// for custom emojis and character for unicode ones.
@@ -99,7 +98,7 @@ macro_rules! declare_emojis {
             /// Returns this unicode emoji:
             #[doc = $lit]
             pub fn $emoji() -> ReactionType {
-                $crate::helper::discord::unicode_emoji($lit)
+                ::houston_utils::discord::unicode_emoji($lit)
             }
         )*
     };

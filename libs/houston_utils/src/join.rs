@@ -36,6 +36,10 @@ impl<'a> Join<'a> {
     }
 
     /// Writes joined items to a writer with a format function.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if writing fails.
     pub fn write_with<W, T, F>(&self, writer: &mut W, items: &'a [T], mut fmt: F) -> Result
     where
         W: Write,

@@ -3,10 +3,10 @@ use std::slice;
 use anyhow::Context as _;
 use bson_model::{Filter, ModelDocument as _};
 use chrono::prelude::*;
+use houston_utils::replace_holes;
 use utils::text::WriteStr as _;
 
 use super::*;
-use crate::fmt::replace_holes;
 use crate::modules::perks::DayOfYear;
 use crate::modules::perks::config::BirthdayGuildConfig;
 use crate::modules::perks::model::{self, *};

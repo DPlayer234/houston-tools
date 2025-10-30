@@ -1,10 +1,10 @@
 use std::ops::{Bound, RangeBounds as _};
 use std::slice;
 
+use houston_utils::replace_holes;
 use utils::text::WriteStr as _;
 
 use super::*;
-use crate::fmt::replace_holes;
 
 pub struct Collectible;
 

@@ -1164,6 +1164,7 @@ dependencies = [
  "dashmap",
  "extract_map",
  "houston_cmd",
+ "houston_utils",
  "indexmap 2.11.4",
  "log",
  "log4rs",
@@ -1180,7 +1181,6 @@ dependencies = [
  "to-arraystring",
  "tokio",
  "toml 0.9.8",
- "url",
  "urlencoding",
  "utils",
  "utils_build",
@@ -1207,6 +1207,36 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "houston_utils"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+ "bson",
+ "chrono",
+ "extract_map",
+ "houston_cmd",
+ "houston_utils_discord_components",
+ "indexmap 2.11.4",
+ "log",
+ "log4rs",
+ "mongodb",
+ "serde",
+ "serde_with",
+ "serenity",
+ "tokio",
+ "url",
+ "utils",
+]
+
+[[package]]
+name = "houston_utils_discord_components"
+version = "0.0.0"
+dependencies = [
+ "serenity",
 ]
 
 [[package]]

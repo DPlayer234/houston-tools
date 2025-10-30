@@ -2,12 +2,12 @@ use std::fmt;
 
 use azur_lane::GameServer;
 use azur_lane::ship::*;
+use houston_utils::Join;
 use utils::text::WriteStr as _;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::fmt::Join;
 use crate::modules::azur::{GameData, LoadedConfig};
 
 /// Views ship lines.
@@ -294,7 +294,7 @@ macro_rules! impl_view_part_fn {
 impl ViewPart {
     /// Creates the embed description for the current state.
     fn append_description(self, result: &mut String, game_data: &GameData, words: &ShipSkinWords) {
-        use crate::fmt::discord::escape_markdown;
+        use houston_utils::discord::fmt::escape_markdown;
 
         let len = result.len();
 

@@ -1,7 +1,8 @@
 use std::fmt;
 
+use houston_utils::discord::IdBytes;
+
 use crate::buttons::prelude::*;
-use crate::helper::discord::IdBytes;
 
 pub mod chess;
 pub mod rock_paper_scissors;

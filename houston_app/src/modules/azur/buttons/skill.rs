@@ -133,7 +133,7 @@ impl View<'_> {
                 components.push(CreateTextDisplay::new(format!(
                     "**\"{}\" Bonus Stats**\n{}",
                     augment.name,
-                    crate::fmt::azur::AugmentStats::new(augment),
+                    crate::modules::azur::fmt::AugmentStats::new(augment),
                 )));
             }
         }
@@ -224,7 +224,7 @@ impl View<'_> {
         }
 
         for buff in &skill.new_weapons {
-            let mut fmt = crate::fmt::azur::Details::new(&buff.weapon);
+            let mut fmt = crate::modules::azur::fmt::Details::new(&buff.weapon);
             if buff.duration.is_some() {
                 fmt = fmt.no_fire_rate();
             }

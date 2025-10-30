@@ -26,7 +26,11 @@ impl<'v> View<'v> {
 
             let mut value = String::new();
             for weapon in weapons {
-                write!(value, "{}\n\n", crate::fmt::azur::Details::new(weapon));
+                write!(
+                    value,
+                    "{}\n\n",
+                    crate::modules::azur::fmt::Details::new(weapon)
+                );
             }
 
             Some(value)

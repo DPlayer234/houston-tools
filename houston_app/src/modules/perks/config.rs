@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
+use houston_utils::time::TimeDeltaStr;
 use indexmap::IndexMap;
+use serde_with::As;
 use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
 use tokio::sync::RwLock;
 
 use super::Item;
-use crate::helper::time::serde_time_delta;
 use crate::prelude::*;
 
 macro_rules! fsd {
@@ -32,7 +33,7 @@ fn default_check_interval() -> TimeDelta {
 pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: FixedString<u8>,
-    #[serde(with = "serde_time_delta", default = "default_check_interval")]
+    #[serde(with = "As::<TimeDeltaStr>", default = "default_check_interval")]
     pub check_interval: TimeDelta,
     pub rainbow: Option<RainbowConfig>,
     pub pushpin: Option<PushpinConfig>,
@@ -47,7 +48,7 @@ pub struct Config {
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct EffectPrice {
     pub cost: u32,
-    #[serde(with = "serde_time_delta")]
+    #[serde(with = "As::<TimeDeltaStr>")]
     pub duration: TimeDelta,
 }
 
@@ -136,7 +137,7 @@ fn default_birthday_duration() -> TimeDelta {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
-    #[serde(with = "serde_time_delta", default = "default_birthday_duration")]
+    #[serde(with = "As::<TimeDeltaStr>", default = "default_birthday_duration")]
     pub duration: TimeDelta,
     pub regions: FixedArray<BirthdayRegionConfig>,
     #[serde(default, flatten)]
@@ -146,7 +147,7 @@ pub struct BirthdayConfig {
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayRegionConfig {
     pub name: FixedString<u8>,
-    #[serde(with = "serde_time_delta", default)]
+    #[serde(with = "As::<TimeDeltaStr>", default)]
     pub time_offset: TimeDelta,
 
     #[serde(skip)]

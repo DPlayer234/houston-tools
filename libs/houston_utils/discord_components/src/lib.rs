@@ -1,6 +1,11 @@
+use std::borrow::Cow;
 use std::ops::{Deref, DerefMut};
 
-use crate::prelude::*;
+use serenity::builder::*;
+
+mod impls;
+#[cfg(test)]
+mod tests;
 
 pub fn create_string_select_menu_row<'a>(
     custom_id: impl Into<Cow<'a, str>>,
@@ -129,10 +134,11 @@ define_component_builder!(
 /// ];
 /// # _ = comps;
 /// ```
+#[macro_export]
 macro_rules! components {
     [$($e:expr),* $(,)?] => {
-        $crate::helper::discord::components::CreateComponents::from(::std::vec![
-            $($crate::helper::discord::components::IntoComponent::into_component($e)),*
+        $crate::CreateComponents::from(::std::vec![
+            $($crate::IntoComponent::into_component($e)),*
         ])
     };
 }
@@ -148,10 +154,11 @@ macro_rules! components {
 /// ];
 /// # _ = comps;
 /// ```
+#[macro_export]
 macro_rules! components_array {
     [$($e:expr),* $(,)?] => {
         [
-            $($crate::helper::discord::components::IntoComponent::into_component($e)),*
+            $($crate::IntoComponent::into_component($e)),*
         ]
     };
 }
@@ -168,79 +175,11 @@ macro_rules! components_array {
 /// ];
 /// # _ = comps;
 /// ```
+#[macro_export]
 macro_rules! section_components {
     [$($e:expr),* $(,)?] => {
-        $crate::helper::discord::components::CreateSectionComponents::from(::std::vec![
-            $($crate::helper::discord::components::IntoSectionComponent::into_section_component($e)),*
+        $crate::CreateSectionComponents::from(::std::vec![
+            $($crate::IntoSectionComponent::into_section_component($e)),*
         ])
     };
-}
-
-pub(crate) use {components, components_array, section_components};
-
-mod impls {
-    use super::{IntoComponent, IntoSectionComponent};
-    use crate::prelude::*;
-
-    macro_rules! impl_into_component {
-        ($Ty:ty, $var:ident) => {
-            impl<'a> IntoComponent<'a> for $Ty {
-                fn into_component(self) -> CreateComponent<'a> {
-                    CreateComponent::$var(self)
-                }
-            }
-        };
-    }
-
-    macro_rules! impl_into_section_component {
-        ($Ty:ty, $var:ident) => {
-            impl<'a> IntoSectionComponent<'a> for $Ty {
-                fn into_section_component(self) -> CreateSectionComponent<'a> {
-                    CreateSectionComponent::$var(self)
-                }
-            }
-        };
-    }
-
-    impl_into_component!(CreateActionRow<'a>, ActionRow);
-    impl_into_component!(CreateSection<'a>, Section);
-    impl_into_component!(CreateTextDisplay<'a>, TextDisplay);
-    impl_into_component!(CreateMediaGallery<'a>, MediaGallery);
-    impl_into_component!(CreateFile<'a>, File);
-    impl_into_component!(CreateSeparator, Separator);
-    impl_into_component!(CreateContainer<'a>, Container);
-
-    impl_into_section_component!(CreateTextDisplay<'a>, TextDisplay);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn components() {
-        let comps = components![CreateTextDisplay::new("hello")];
-        assert!(matches!(
-            comps.as_slice(),
-            [CreateComponent::TextDisplay(_)]
-        ));
-    }
-
-    #[test]
-    fn components_array() {
-        let comps = components_array![CreateTextDisplay::new("hello")];
-        assert!(matches!(
-            comps.as_slice(),
-            [CreateComponent::TextDisplay(_)]
-        ));
-    }
-
-    #[test]
-    fn section_components() {
-        let comps = section_components![CreateTextDisplay::new("hello")];
-        assert!(matches!(
-            comps.as_slice(),
-            [CreateSectionComponent::TextDisplay(_)]
-        ));
-    }
 }

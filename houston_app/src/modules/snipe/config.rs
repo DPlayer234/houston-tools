@@ -3,9 +3,10 @@ use std::num::NonZero;
 use std::sync::Mutex;
 
 use chrono::TimeDelta;
+use houston_utils::time::TimeDeltaStr;
+use serde_with::As;
 
 use super::state::GuildState;
-use crate::helper::time::serde_time_delta;
 use crate::prelude::*;
 
 fn default_max_age() -> TimeDelta {
@@ -20,7 +21,7 @@ pub type Config = HashMap<GuildId, GuildConfig>;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct GuildConfig {
-    #[serde(with = "serde_time_delta", default = "default_max_age")]
+    #[serde(with = "As::<TimeDeltaStr>", default = "default_max_age")]
     pub max_age: TimeDelta,
     #[serde(default = "default_max_cache_size")]
     pub max_cache_size: NonZero<usize>,

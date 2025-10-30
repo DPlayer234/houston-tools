@@ -1,6 +1,6 @@
 use houston_cmd::{Context, Error, SlashArg, UserContextArg};
+use houston_utils::discord::{Partial, guild_avatar_url};
 
-use crate::helper::discord::{Partial, guild_avatar_url};
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]

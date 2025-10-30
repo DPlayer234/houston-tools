@@ -5,6 +5,11 @@ use std::cell::UnsafeCell;
 use chrono::format::Item;
 use chrono::prelude::*;
 
+pub mod fmt;
+mod serde;
+
+pub use serde::TimeDeltaStr;
+
 // basically SyncUnsafeCell<DateTime<Utc>>
 struct DateTimeCell {
     value: UnsafeCell<DateTime<Utc>>,
@@ -183,78 +188,11 @@ const FORMATS: Formats = {
     }
 };
 
-pub mod serde_time_delta {
-    use std::fmt;
-
-    use chrono::TimeDelta;
-    use serde::Deserializer;
-    use serde::de::Error;
-
-    struct Visitor;
-
-    pub(super) fn parse_str(v: &str) -> Option<TimeDelta> {
-        let v = v.trim();
-        let (v, neg) = match v.strip_prefix('-') {
-            Some(v) => (v, true),
-            None => (v, false),
-        };
-
-        if v.contains('-') {
-            return None;
-        }
-
-        let (h, v) = v.split_once(':')?;
-        let (m, s) = v.split_once(':')?;
-
-        let (d, h) = match h.split_once('.') {
-            Some((d, h)) => (d.parse().ok()?, h),
-            None => (0i64, h),
-        };
-
-        let h = h.parse().ok()?;
-        let m = m.parse().ok()?;
-        let s = s.parse().ok()?;
-
-        if !(0..60).contains(&m) || !(0..60).contains(&s) {
-            return None;
-        }
-
-        let delta = TimeDelta::try_days(d)?
-            .checked_add(&TimeDelta::try_hours(h)?)?
-            .checked_add(&TimeDelta::try_minutes(m)?)?
-            .checked_add(&TimeDelta::try_seconds(s)?)?;
-
-        Some(if neg { -delta } else { delta })
-    }
-
-    impl serde::de::Visitor<'_> for Visitor {
-        type Value = TimeDelta;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("duration string in hh:mm:ss format")
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            parse_str(v).ok_or_else(|| E::custom("expected duration in hh:mm:ss format"))
-        }
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<TimeDelta, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(Visitor)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, TimeDelta, Utc};
+    use chrono::{DateTime, Utc};
 
-    use super::{parse_date_time, serde_time_delta};
+    use super::parse_date_time;
 
     #[test]
     fn parse_date_time1() {
@@ -339,22 +277,5 @@ mod tests {
     fn fail_parse_date_time_invalid_time_zone() {
         let input = "2024-02-12 11:51 CET";
         assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
-    }
-
-    #[test]
-    fn parse_serde_time_delta_hms() {
-        let input = "12:34:56";
-        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
-        assert_eq!(parsed, TimeDelta::seconds(((12 * 60 + 34) * 60) + 56));
-    }
-
-    #[test]
-    fn parse_serde_time_delta_dhms() {
-        let input = "8.12:34:56";
-        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
-        assert_eq!(
-            parsed,
-            TimeDelta::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)
-        );
     }
 }

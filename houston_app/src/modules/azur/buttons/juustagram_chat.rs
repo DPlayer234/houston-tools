@@ -1,11 +1,11 @@
 use arrayvec::ArrayVec;
 use azur_lane::juustagram::*;
+use houston_utils::discord::fmt::escape_markdown;
 use utils::text::{WriteStr as _, truncate};
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::fmt::discord::escape_markdown;
 use crate::modules::azur::{GameData, LoadedConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]

@@ -1,9 +1,9 @@
 use bitflags::Flags;
+use houston_utils::discord::fmt::{TimeMentionable as _, escape_markdown, get_unique_username};
+use houston_utils::discord::guild_avatar_url;
 use utils::text::{DisplayExt as _, WriteStr as _};
 use utils::titlecase;
 
-use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
-use crate::helper::discord::guild_avatar_url;
 use crate::slashies::prelude::*;
 
 /// Returns basic information about the provided user.

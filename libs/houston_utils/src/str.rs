@@ -1,12 +1,5 @@
 use std::borrow::Cow;
 
-pub mod azur;
-pub mod discord;
-pub mod join;
-pub mod time;
-
-pub use join::Join;
-
 /// Extension methods for [`String`].
 pub trait StringExt<'this>: Sized {
     /// Gets the written [`String`] if it isn't empty.
@@ -47,6 +40,30 @@ impl<'this> StringExt<'this> for Cow<'this, str> {
             self
         }
     }
+}
+
+/// Checks whether the `haystack` contains the `needle` with ASCII
+/// case-insensitive comparison.
+pub fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+
+    let mut haystack = haystack.as_bytes();
+    let needle = needle.as_bytes();
+    let len = needle.len();
+
+    while haystack.len() >= len {
+        // check if the new haystack part starts with the needle
+        if haystack[..len].eq_ignore_ascii_case(needle) {
+            return true;
+        }
+
+        // advance the starting position
+        haystack = &haystack[1..];
+    }
+
+    false
 }
 
 pub fn replace_holes<F>(mut haystack: &str, mut f: F) -> String

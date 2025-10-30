@@ -1,27 +1,19 @@
 [package]
-name = "houston_cmd"
-version = "2.0.0"
-edition.workspace = true
-rust-version.workspace = true
+name = "houston_utils_discord_components"
+version = "0.0.0"
+edition = "2024"
 
 [lints]
 workspace = true
 
 [dependencies]
-anyhow = "1.0.97"
-const-builder = "0.1.4"
-log = "0.4.27"
-serde = "1.0.219"
-thiserror = "2.0.12"
-
-houston_cmd_macros = { path = "./macros" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
 default-features = false
 features = [
-    "builder", "framework", "gateway", "model", "http", "utils"
+    "builder", "chrono", "framework", "gateway", "model", "http", "utils"
 ]
 
 [dev-dependencies.serenity]

@@ -1,7 +1,7 @@
 use serenity::futures::future::BoxFuture;
 use serenity::gateway::client::{Context, EventHandler, FullEvent};
 
-use crate::helper::futures::BoxedJoinFut;
+use crate::futures::BoxedJoinFut;
 
 /// Similar to [`EventHandler`], but pushes its future to [`BoxedJoinFut`]
 /// instead of returning it. May do nothing if it does not want to handle the

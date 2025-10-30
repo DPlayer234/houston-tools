@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use houston_cmd::model::Command;
+use houston_utils::discord::events::PushEventHandler;
 use serenity::prelude::*;
 
 use crate::buttons::ButtonAction;
-use crate::helper::discord::events::PushEventHandler;
 use crate::prelude::*;
 
 pub mod azur;
@@ -20,12 +20,12 @@ pub mod starboard;
 
 mod prelude {
     pub use houston_cmd::model::Command;
+    pub use houston_utils::discord::events::PushEventHandler;
     pub use serenity::prelude::*;
 
     pub use super::Module as _;
     pub use crate::buttons::{ButtonAction, ButtonValue as _};
     pub use crate::config::HBotConfig;
-    pub use crate::helper::discord::events::PushEventHandler;
     pub use crate::prelude::*;
 }
 
@@ -37,13 +37,13 @@ mod model_prelude {
     pub use bson_model::ModelDocument;
     pub use bson_model::Sort::Asc;
     pub use chrono::{DateTime, Utc};
+    pub use houston_utils::bson::{IdBson, ModelCollection};
     pub use mongodb::options::{IndexOptions, ReturnDocument};
     pub use mongodb::{Collection, IndexModel};
     pub use serde::{Deserialize, Serialize};
     pub use serde_with::As;
     pub use serenity::model::id::*;
 
-    pub use crate::helper::bson::{IdBson, ModelCollection};
     pub use crate::prelude::*;
 }
 
@@ -134,12 +134,12 @@ macro_rules! impl_handler {
     // the weird `match _ {}` part is intended so that the syntax is something
     // that rustfmt can format. in a sense, it's just a nicety.
     ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
-        impl $crate::helper::discord::events::PushEventHandler for $Type {
+        impl ::houston_utils::discord::events::PushEventHandler for $Type {
             fn push_dispatch<'s, 'c, 'e, 'a>(
                 &'s self,
                 $ctx: &'c ::serenity::gateway::client::Context,
                 event: &'e ::serenity::gateway::client::FullEvent,
-                fut: &mut $crate::helper::futures::BoxedJoinFut<'a>,
+                fut: &mut ::houston_utils::futures::BoxedJoinFut<'a>,
             )
             where
                 's: 'a,

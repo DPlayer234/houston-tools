@@ -2,9 +2,6 @@ mod build;
 mod buttons;
 mod config;
 mod data;
-mod fmt;
-mod helper;
-mod logging;
 mod modules;
 mod prelude;
 mod slashies;
@@ -13,13 +10,13 @@ fn main() -> anyhow::Result<()> {
     use std::panic;
 
     use houston_cmd::Framework;
+    use houston_utils::discord::events::HEventHandler;
     use serenity::gateway::ActivityData;
     use serenity::prelude::*;
 
     use crate::build::{GIT_HASH, VERSION};
     use crate::config::HConfig;
     use crate::data::cache::CacheUpdateHandler;
-    use crate::helper::discord::events::HEventHandler;
     use crate::prelude::*;
 
     return inner();
@@ -41,7 +38,7 @@ fn main() -> anyhow::Result<()> {
     async fn run() -> Result {
         // SAFETY: No other code running that accesses this yet.
         unsafe {
-            crate::helper::time::mark_startup_time();
+            houston_utils::time::mark_startup_time();
         }
 
         let config = build_config()?;
@@ -146,7 +143,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     fn init_logging(config: log4rs::config::RawConfig) -> anyhow::Result<()> {
-        let deserializers = crate::logging::deserializers();
+        let deserializers = houston_utils::logging::deserializers();
         let (appenders, errors) = config.appenders_lossy(&{ deserializers });
         if !errors.is_empty() {
             return Err(errors.into());

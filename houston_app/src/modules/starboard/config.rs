@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use extract_map::ExtractKey;
+use houston_utils::index_extract_map::IndexExtractMap;
 use serenity::small_fixed_array::{FixedArray, FixedString};
 use tokio::sync::Semaphore;
 
 use crate::config::HEmoji;
-use crate::helper::index_extract_map::IndexExtractMap;
 use crate::prelude::*;
 
 pub type Config = HashMap<GuildId, StarboardGuild>;

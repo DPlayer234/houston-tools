@@ -1,10 +1,10 @@
 use azur_lane::equip::*;
+use houston_utils::Join;
 use utils::text::{WriteStr as _, truncate};
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::fmt::Join;
 use crate::modules::azur::LoadedConfig;
 
 /// Views an augment.
@@ -28,7 +28,7 @@ impl View<'_> {
         components.push(CreateTextDisplay::new(format!("### {}", augment.name)));
         components.push(CreateSeparator::new(true));
         components.push(CreateTextDisplay::new(
-            crate::fmt::azur::AugmentStats::new(augment).to_string(),
+            crate::modules::azur::fmt::AugmentStats::new(augment).to_string(),
         ));
 
         if let Some(effect) = &augment.effect {

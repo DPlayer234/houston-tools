@@ -11,21 +11,26 @@
 
 use std::convert::Infallible;
 use std::io::{self, Write as _};
+use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context as _;
 use arrayvec::ArrayVec;
 use log::Record;
 use log4rs::append::Append;
 use log4rs::config::{Deserialize, Deserializers};
 use log4rs::encode::{self, Encode, EncoderConfig, Style};
+use serenity::builder::ExecuteWebhook;
 use serenity::http::Http;
+use serenity::model::id::WebhookId;
 use serenity::secrets::SecretString;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::sync::oneshot;
 use utils::text::push_str_lossy;
 
 use super::WRITE_BUF_SIZE;
-use crate::prelude::*;
+
+type Result<T = ()> = anyhow::Result<T>;
 
 // set a time limit for flushing so we don't block the app unnecessarily.
 // generally, flushing only happens on exit, so blocking is fine, however,

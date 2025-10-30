@@ -2,8 +2,8 @@ use azur_lane::Faction;
 use azur_lane::equip::{AugmentRarity, EquipKind, EquipRarity};
 use azur_lane::ship::{HullType, ShipRarity, TeamType};
 use houston_cmd::{Error, SlashArg};
+use houston_utils::contains_ignore_ascii_case;
 
-use crate::helper::contains_ignore_ascii_case;
 use crate::slashies::prelude::*;
 
 pub struct Ch<T>(T);

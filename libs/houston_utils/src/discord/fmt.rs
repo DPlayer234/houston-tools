@@ -1,11 +1,11 @@
 //! Provides utilities for formatting Discord data.
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result};
 
 use chrono::prelude::*;
 use houston_cmd::ResolvedOption;
-
-use crate::prelude::*;
+use serenity::model::prelude::*;
 
 /// Gets a unique username for this user.
 ///
@@ -112,6 +112,7 @@ pub trait MessageLinkExt {
     /// Sets the guild ID for the link.
     ///
     /// This is useful when the message might not have had the guild ID set.
+    #[must_use]
     fn guild_id(self, guild_id: impl Into<Option<GuildId>>) -> Self;
 
     /// Converts the link to a key. This will only print the tail of the link.

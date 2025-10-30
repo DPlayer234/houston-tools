@@ -1,10 +1,10 @@
 use std::fmt;
 
 use houston_cmd::BoxFuture;
+use houston_utils::discord::fmt::interaction_location;
 use serde::Deserialize;
 
 use super::{AnyContext, AnyInteraction, ButtonAction, ButtonReply, encoding};
-use crate::fmt::discord::interaction_location;
 use crate::prelude::*;
 
 /// Provides a way to dispatch [`ButtonReply`] with different lifetimes.

@@ -4,9 +4,9 @@ use std::ops::DerefMut;
 use arc_swap::ArcSwapOption;
 use dashmap::DashMap;
 use extract_map::ExtractMap;
+use houston_utils::discord::fmt::id_suffix;
 use serenity::http::Http;
 
-use crate::fmt::discord::id_suffix;
 use crate::prelude::*;
 
 mod event_handler;

@@ -8,6 +8,8 @@ members = [
     "libs/bson_model/macros",
     "libs/houston_cmd",
     "libs/houston_cmd/macros",
+    "libs/houston_utils",
+    "libs/houston_utils/discord_components",
     "libs/serde_steph",
     "libs/unity_read",
     "libs/utils",

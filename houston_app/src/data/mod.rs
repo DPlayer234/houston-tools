@@ -1,9 +1,9 @@
 use std::sync::OnceLock;
 
+use houston_utils::discord::events::PushEventHandler;
 use serenity::http::Http;
 
 use crate::config::HBotConfig;
-use crate::helper::discord::events::PushEventHandler;
 use crate::modules::{Module as _, for_each_module};
 use crate::prelude::*;
 

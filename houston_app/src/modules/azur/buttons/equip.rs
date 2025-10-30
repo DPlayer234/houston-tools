@@ -1,11 +1,11 @@
 use azur_lane::equip::*;
 use azur_lane::skill::Skill;
+use houston_utils::Join;
 use utils::text::{WriteStr as _, truncate};
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::fmt::Join;
 
 /// Views an augment.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -26,7 +26,7 @@ impl View<'_> {
         components.push(CreateTextDisplay::new(format!(
             "### {}\n{}",
             equip.kind.name(),
-            crate::fmt::azur::EquipStats::new(equip)
+            crate::modules::azur::fmt::EquipStats::new(equip)
         )));
 
         if !equip.weapons.is_empty() {
@@ -37,7 +37,7 @@ impl View<'_> {
             components.push(CreateTextDisplay::new(format!(
                 "### {}\n{}",
                 weapon.kind.name(),
-                crate::fmt::azur::Details::new(weapon).no_kind(),
+                crate::modules::azur::fmt::Details::new(weapon).no_kind(),
             )));
         }
 

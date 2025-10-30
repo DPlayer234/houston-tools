@@ -1,9 +1,9 @@
 use std::sync::LazyLock;
 
+use houston_utils::discord::unicode_emoji;
 use serenity::http::Http;
 
 use super::HBotConfig;
-use crate::helper::discord::unicode_emoji;
 use crate::modules::Module as _;
 use crate::prelude::*;
 

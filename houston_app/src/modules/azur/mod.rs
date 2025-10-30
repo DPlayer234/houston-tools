@@ -3,6 +3,7 @@ use super::prelude::*;
 pub mod buttons;
 pub mod config;
 mod data;
+mod fmt;
 mod slashies;
 
 pub use config::{Config, LoadedConfig};

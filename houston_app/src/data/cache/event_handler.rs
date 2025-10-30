@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use houston_utils::futures::noop_future;
 use serenity::futures::future::BoxFuture;
 use serenity::gateway::client::{Context, RawEventHandler};
 
 use super::model::*;
 use super::{Cache, CachedGuild};
-use crate::helper::futures::noop_future;
 use crate::prelude::*;
 
 /// [`RawEventHandler`] that updates the cache stored in the [`HContextData`].

@@ -24,12 +24,12 @@ pub(crate) use private::button_value;
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
     pub use const_builder::ConstBuilder;
+    pub use houston_utils::discord::components::*;
     pub use serde::{Deserialize, Serialize};
     pub use serde_with::As;
 
     pub(crate) use super::button_value;
     pub use super::{ButtonContext, ButtonReply, ButtonValue, ModalContext, Nav};
-    pub use crate::helper::discord::components::*;
     pub use crate::prelude::*;
 }
 

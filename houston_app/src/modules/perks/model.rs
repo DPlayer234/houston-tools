@@ -1,10 +1,10 @@
 use bson_model::Filter;
+use houston_utils::Join;
 
 use super::DayOfYear;
 use super::effects::Effect;
 use super::items::Item;
 use crate::data::HArgError;
-use crate::fmt::Join;
 use crate::modules::model_prelude::*;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ModelDocument)]

@@ -2,8 +2,8 @@ use std::str::FromStr as _;
 
 use chrono::TimeDelta;
 use chrono::prelude::*;
+use houston_utils::time::parse_date_time;
 
-use crate::helper::time::parse_date_time;
 use crate::slashies::prelude::*;
 
 /// Provides methods for localized timestamps.

@@ -2,13 +2,13 @@ use std::{fmt, iter};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use houston_utils::Join;
+use houston_utils::discord::unicode_emoji;
 use utils::text::WriteStr as _;
 
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::fmt::Join;
-use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LoadedConfig;
 use crate::modules::azur::config::WikiUrls;
 

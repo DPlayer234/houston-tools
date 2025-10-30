@@ -1,5 +1,6 @@
+use houston_utils::contains_ignore_ascii_case;
+
 use super::BoardId;
-use crate::helper::contains_ignore_ascii_case;
 use crate::slashies::prelude::*;
 
 mod overview;

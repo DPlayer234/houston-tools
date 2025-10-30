@@ -1,9 +1,9 @@
 use std::time::Instant;
 
+use houston_utils::discord::fmt::{TimeMentionable as _, get_unique_username};
+use houston_utils::time::get_startup_time;
 use utils::text::WriteStr as _;
 
-use crate::fmt::discord::{TimeMentionable as _, get_unique_username};
-use crate::helper::time::get_startup_time;
 use crate::modules::Module as _;
 use crate::slashies::prelude::*;
 

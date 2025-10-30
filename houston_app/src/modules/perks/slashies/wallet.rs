@@ -1,6 +1,6 @@
+use houston_utils::StringExt as _;
 use utils::text::WriteStr as _;
 
-use crate::fmt::StringExt as _;
 use crate::modules::perks::Item;
 use crate::modules::perks::model::Wallet;
 use crate::slashies::prelude::*;

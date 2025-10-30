@@ -1,6 +1,6 @@
 use chrono::TimeDelta;
-
-use crate::helper::time::serde_time_delta;
+use houston_utils::time::TimeDeltaStr;
+use serde_with::As;
 
 fn default_cooldown() -> TimeDelta {
     const { TimeDelta::hours(20) }
@@ -8,7 +8,7 @@ fn default_cooldown() -> TimeDelta {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
-    #[serde(with = "serde_time_delta", default = "default_cooldown")]
+    #[serde(with = "As::<TimeDeltaStr>", default = "default_cooldown")]
     pub cooldown: TimeDelta,
     #[serde(default, alias = "cash")]
     pub cash_gain: u32,
