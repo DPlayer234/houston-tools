@@ -1,3 +1,4 @@
+#![expect(unused_crate_dependencies)]
 use std::borrow::Cow;
 
 use houston_cmd::model::*;

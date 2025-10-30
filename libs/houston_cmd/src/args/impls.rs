@@ -7,6 +7,7 @@ macro_rules! impl_slash {
                 ctx: &Context<'ctx>,
                 resolved: &ResolvedValue<'ctx>,
             ) -> Result<Self, Error<'ctx>> {
+                #[allow(clippy::let_underscore_untyped)]
                 let $ctx = ctx;
                 match *resolved {
                     ResolvedValue::$opt( $($resolved),* ) => Ok( $out ),
@@ -52,7 +53,10 @@ fn member_error(ctx: Context<'_>) -> Error<'_> {
     Error::arg_invalid(ctx, "unknown server member")
 }
 
-impl_slash!('ctx f32 => |_, Number(x)| x as f32);
+#[expect(clippy::cast_possible_truncation)]
+const _: () = {
+    impl_slash!('ctx f32 => |_, Number(x)| x as f32);
+};
 impl_slash!('ctx f64 => |_, Number(x)| x);
 impl_slash!('ctx i64 => |_, Integer(x)| x);
 impl_slash!('ctx bool => |_, Boolean(x)| x);

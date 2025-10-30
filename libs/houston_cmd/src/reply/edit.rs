@@ -9,6 +9,7 @@ use super::CreateReply;
 /// Allows building an edit, abstracting away
 /// the differences between different kinds of edits.
 #[derive(Debug, Default, Clone)]
+#[must_use]
 pub struct EditReply<'a> {
     content: Option<Cow<'a, str>>,
     embeds: Option<Vec<CreateEmbed<'a>>>,
@@ -209,7 +210,7 @@ impl Serialize for InEditAttachments<'_> {
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeSeq;
+        use serde::ser::SerializeSeq as _;
 
         #[derive(Debug, Clone, Serialize)]
         struct NewAttachment<'a> {

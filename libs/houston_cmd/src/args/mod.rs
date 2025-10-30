@@ -30,6 +30,11 @@ pub struct ResolvedOption<'a> {
 /// `from_str`.
 pub trait SlashArg<'ctx>: Sized {
     /// Extracts the argument value.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the input is invalid for the value, parsing failed, or
+    /// the argument value can otherwise not be used.
     fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>>;
 
     /// Sets the options relevant to the parameter type.
@@ -93,6 +98,12 @@ where
     message = "this parameter type isn't supported for `user` context commands"
 )]
 pub trait UserContextArg<'ctx>: Sized {
+    /// Extracts the argument value.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the input is invalid for the value, parsing failed, or
+    /// the argument value can otherwise not be used.
     fn extract(
         ctx: &Context<'ctx>,
         user: &'ctx User,
@@ -108,5 +119,11 @@ pub trait UserContextArg<'ctx>: Sized {
     message = "this parameter type isn't supported for `message` context commands"
 )]
 pub trait MessageContextArg<'ctx>: Sized {
+    /// Extracts the argument value.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the input is invalid for the value, parsing failed, or
+    /// the argument value can otherwise not be used.
     fn extract(ctx: &Context<'ctx>, message: &'ctx Message) -> Result<Self, Error<'ctx>>;
 }

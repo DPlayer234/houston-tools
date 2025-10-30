@@ -6,6 +6,7 @@ use serenity::model::channel::MessageFlags;
 /// Allows building a reply to an interaction, abstracting away
 /// the differences between initial responses, follow-ups, and edits.
 #[derive(Debug, Default, Clone)]
+#[must_use]
 pub struct CreateReply<'a> {
     pub(crate) content: Cow<'a, str>,
     pub(crate) embeds: Vec<CreateEmbed<'a>>,

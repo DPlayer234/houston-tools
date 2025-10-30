@@ -111,6 +111,7 @@ impl<'a> Context<'a> {
     }
 
     /// Defers the response, specifying whether it is ephemeral.
+    #[expect(clippy::missing_errors_doc)]
     pub async fn defer(self, ephemeral: bool) -> serenity::Result<()> {
         crate::reply::defer(self, ephemeral).await
     }
@@ -120,6 +121,7 @@ impl<'a> Context<'a> {
     /// This automatically tracks whether this should be the initial response or
     /// a follow-up. However, don't mix use of this function with manual use
     /// of the interaction.
+    #[expect(clippy::missing_errors_doc)]
     pub async fn send(self, reply: CreateReply<'_>) -> serenity::Result<ReplyHandle<'a>> {
         crate::reply::send_reply(self, reply).await
     }

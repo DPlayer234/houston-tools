@@ -61,7 +61,7 @@ pub mod starboard {
 }
 
 fn find_board(ctx: Context<'_>, board: u64) -> Result<(GuildId, BoardId)> {
-    let guild_id = ctx.guild_id().context("command only available in guilds")?;
+    let guild_id = ctx.require_guild_id()?;
 
     let board = BoardId::new(board.cast_signed());
     _ = ctx

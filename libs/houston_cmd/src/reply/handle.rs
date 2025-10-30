@@ -37,6 +37,7 @@ impl<'a> ReplyHandle<'a> {
     }
 
     /// Delete the message.
+    #[expect(clippy::missing_errors_doc)]
     pub async fn delete(self) -> serenity::Result<()> {
         match self.target {
             Target::Original => self.interaction.delete_response(self.http).await?,
@@ -53,6 +54,7 @@ impl<'a> ReplyHandle<'a> {
     /// Edit the message.
     ///
     /// You cannot edit whether a message is ephemeral.
+    #[expect(clippy::missing_errors_doc)]
     pub async fn edit(self, reply: EditReply<'_>) -> serenity::Result<Message> {
         match self.target {
             Target::Original => {
