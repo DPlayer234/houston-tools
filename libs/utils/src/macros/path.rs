@@ -4,18 +4,12 @@
 /// extension of the last segment.
 ///
 /// This is equivalent to creating a [`PathBuf`] from the first segment and then
-/// repeatedly calling [`push`], then finishing with [`set_extension`] if an
+/// repeatedly calling [`push`], then finishing with [`add_extension`] if an
 /// extension is specified.
 ///
-/// # Note
+/// # Panics
 ///
-/// The use of [`set_extension`] may lead to some unexpected behavior:
-///
-/// - If the last component already has an extension, the extension will be
-///   replaced.
-/// - If the last component is `..`, no extension will be set.
-///
-/// See the docs for [`set_extension`] for further details.
+/// Panics if an extension is provided and it contains a path separator.
 ///
 /// # Example
 ///
@@ -31,13 +25,13 @@
 ///
 /// [`PathBuf`]: std::path::PathBuf
 /// [`push`]: std::path::PathBuf::push
-/// [`set_extension`]: std::path::PathBuf::set_extension
+/// [`add_extension`]: std::path::PathBuf::add_extension
 #[macro_export]
 macro_rules! join_path {
     ($root:expr $(,$parts:expr)* $(,)? $(; $ext:expr)?) => {{
         let mut path = ::std::path::PathBuf::from($root);
         $( path.push($parts); )*
-        $( path.set_extension($ext); )?
+        $( path.add_extension($ext); )?
         path
     }};
 }
@@ -52,10 +46,14 @@ mod tests {
     fn join_os_path() {
         if cfg!(windows) {
             let path = join_path!("C:\\", "Windows", "System32", "notepad"; "exe");
+            let eext = join_path!("C:\\", "Users", "Public", "useredit.exe"; "config");
             assert_eq!(&path, Path::new(r#"C:\Windows\System32\notepad.exe"#));
+            assert_eq!(&eext, Path::new(r#"C:\Users\Public\useredit.exe.config"#));
         } else {
             let path = join_path!("/home", "root", "notes"; "txt");
+            let eext = join_path!("/home", "root", "help.bin"; "conf");
             assert_eq!(&path, Path::new(r#"/home/root/notes.txt"#));
+            assert_eq!(&eext, Path::new(r#"/home/root/help.bin.conf"#));
         }
     }
 }

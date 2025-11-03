@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use utils::text::WriteStr as _;
 
 use crate::buttons::ButtonValue as _;
@@ -23,7 +23,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         let channel_id = ctx.channel_id();
         let min_timestamp = Utc::now()
             .checked_sub_signed(snipe.max_age)
-            .context("max_age lands before beginning of time")?;
+            .unwrap_or(<DateTime<Utc>>::MIN_UTC);
 
         // can't hold this lock across awaits, and it should be released asap anyways
         let mut state = snipe.state.lock().expect("should not be poisoned");

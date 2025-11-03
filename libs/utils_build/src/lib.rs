@@ -16,9 +16,8 @@ pub fn embed_windows_resources() {
         println!("cargo::rerun-if-changed=Cargo.toml");
 
         let res = winresource::WindowsResource::new();
-        if let Err(why) = res.compile() {
-            println!("cargo::warning=failed to add windows resources to exe: {why}");
-        }
+        let output = res.compile();
+        ensure::ok_or!(output, why => "failed to add windows resources to exe: {why}");
     }
 }
 

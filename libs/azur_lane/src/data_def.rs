@@ -18,7 +18,6 @@ macro_rules! define_data_enum {
             $($(#[$variant_attr:meta])* $variant:ident $arg:tt),* $(,)?
         }
     } => {
-        $(#[$container_attr])*
         #[derive(Debug, Clone)]
         #[non_exhaustive]
         $vd struct $Data {

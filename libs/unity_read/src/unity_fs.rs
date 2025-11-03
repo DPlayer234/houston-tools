@@ -108,10 +108,8 @@ struct Node {
     uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
 }
 
-// not quite sure what's going but the `bitfield` macro leads to some weird
-// linting, so let's suppress it for now.
-#[expect(dead_code, reason = "buggy lint?")]
-#[expect(unused_parens, reason = "buggy lint?")]
+// some weird lint issue related to the bitfield emit's `new` function and
+// whether the type/function is considered public is fixed by a mod.
 mod bitfields {
     use super::*;
 
@@ -121,7 +119,7 @@ mod bitfields {
     #[br(map = |x: u32| Self::from_bytes(x.to_le_bytes()))]
     pub struct ArchiveFlags {
         #[bits = 6]
-        pub compression: Compression,
+        pub(super) compression: Compression,
         #[skip]
         block_directory_merged: bool,
         pub blocks_info_at_end: bool,
@@ -138,7 +136,7 @@ mod bitfields {
     #[br(map = |x: u16| Self::from_bytes(x.to_le_bytes()))]
     pub struct BlockFlags {
         #[bits = 6]
-        pub compression: Compression,
+        pub(super) compression: Compression,
         #[skip]
         streamed: bool,
         #[skip]

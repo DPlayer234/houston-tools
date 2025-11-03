@@ -36,11 +36,11 @@ pub use write_str::WriteStr;
 /// ```
 #[macro_export]
 macro_rules! join {
-    ($str:expr) => { const {
+    ($str:expr $(,)?) => { const {
         const __STR: &::std::primitive::str = $str;
         __STR
     }};
-    ($($str:expr),*) => { const {
+    ($($str:expr),* $(,)?) => { const {
         const __STRS: &[&::std::primitive::str] = &[$($str),*];
         const __N: ::std::primitive::usize = $crate::text::private::count_str_const(__STRS);
         const __JOIN: $crate::text::InlineStr<__N> = $crate::text::private::join_str_const(__STRS);

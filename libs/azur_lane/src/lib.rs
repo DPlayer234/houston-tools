@@ -37,6 +37,7 @@ pub struct DefinitionData {
 
 define_data_enum! {
     /// The supported game servers.
+    #[derive(Default)]
     pub enum GameServer for GameServerData {
         pub label: &'static str;
 
@@ -46,6 +47,7 @@ define_data_enum! {
         KR("KR"),
         TW("TW"),
         #[serde(other)]
+        #[default]
         Unknown("--"),
     }
 }
@@ -64,12 +66,6 @@ impl FromStr for GameServer {
             .copied()
             .find(|k| s.eq_ignore_ascii_case(k.label()))
             .ok_or(GameServerFromStrError(()))
-    }
-}
-
-impl Default for GameServer {
-    fn default() -> Self {
-        Self::Unknown
     }
 }
 
