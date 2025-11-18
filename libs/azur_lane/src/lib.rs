@@ -106,6 +106,7 @@ define_data_enum! {
         CollabBlackRockShooter("BLACK★ROCK SHOOTER", None),
         CollabAtelierYumia("Atelier Yumia", None),
         CollabDanmachi("Danmachi", None),
+        CollabDateALive("Date A Live", None),
         #[serde(other)]
         Unknown("Unknown", None),
     }

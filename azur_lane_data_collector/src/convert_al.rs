@@ -40,6 +40,7 @@ pub fn to_faction(num: u32) -> Faction {
         112 => Faction::CollabBlackRockShooter,
         113 => Faction::CollabAtelierYumia,
         114 => Faction::CollabDanmachi,
+        115 => Faction::CollabDateALive,
         _ => Faction::Unknown,
     }
 }
