@@ -620,7 +620,12 @@ fn ok_forward_failed<T>(result: Result<T, serenity::Error>) -> Result<Option<T>,
         // "FORWARD_CONTAINS_UNSUPPORTED_CONTENT" but i genuinely can't imagine which
         // other "Invalid Form Body" errors we could be getting here so this is probably
         // just fine. probably. discord is gonna prove me wrong in due time.
-        if matches!(why.error.code, J::InvalidFormBody) {
+        // "Request entity too large" (40005) is triggered if the forwarded message's
+        // attachments are larger than would be allowed to be attached to this message.
+        if matches!(
+            why.error.code,
+            J::InvalidFormBody | J::RequestEntityTooLarge
+        ) {
             return Ok(None);
         }
     }
