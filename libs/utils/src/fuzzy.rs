@@ -177,9 +177,8 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         });
 
         if norm.len() >= MIN {
-            let upper = MAX.min(norm.len());
-
-            for s in (MIN..=upper).rev() {
+            let upper = MAX.min(norm.len()).strict_add(1);
+            for s in (MIN..upper).rev() {
                 // SAFETY: index is a valid index into values
                 unsafe {
                     self.add_segments_of(index, &norm, s);
@@ -205,8 +204,8 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
             // on success, will also be used in the return value.
             let mut buf = Vec::new();
 
-            let upper = MAX.min(norm.len());
-            for size in (MIN..=upper).rev() {
+            let upper = MAX.min(norm.len()).strict_add(1);
+            for size in (MIN..upper).rev() {
                 // `find_with_segment_size` will ensure `buf` is empty when it returns
                 if let Some(matches) = self.find_with_segment_size(norm, size, &mut buf) {
                     return matches;

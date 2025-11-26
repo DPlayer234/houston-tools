@@ -9,7 +9,6 @@
 //! message size. This probably shouldn't be used for all logging messages but
 //! just a subset, i.e. filtered to just warnings and errors.
 
-use std::convert::Infallible;
 use std::io::{self, Write as _};
 use std::time::Duration;
 
@@ -20,8 +19,8 @@ use log4rs::config::{Deserialize, Deserializers};
 use log4rs::encode::{self, Encode, EncoderConfig, Style};
 use serenity::http::Http;
 use serenity::secrets::SecretString;
+use tokio::sync::Notify;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
-use tokio::sync::oneshot;
 use utils::text::push_str_lossy;
 
 use super::WRITE_BUF_SIZE;
@@ -159,15 +158,27 @@ impl encode::Write for LogWriter {
     }
 }
 
+/// Notifies the inner [`Notify`] on drop.
+///
+/// This helper struct ensures the notification happens even if the worker task
+/// dies after receiving the value.
+#[derive(Debug)]
+struct DropNotify(Arc<Notify>);
+
+impl Drop for DropNotify {
+    fn drop(&mut self) {
+        self.0.notify_one();
+    }
+}
+
 /// A message to send to the worker task.
 #[derive(Debug)]
 enum Msg {
     /// A message to log, preferably in UTF-8.
     Log(Vec<u8>),
-    /// A oneshot sender that will be _closed_ after the batch it was received
-    /// with is sent. Awaiting the receiver can then be used to synchronize with
-    /// the worker.
-    Notify(oneshot::Sender<Infallible>),
+    /// A [`Notify`] to be notified after the batch it was received with is
+    /// sent. This is done by dropping the value.
+    Notify(DropNotify),
 }
 
 /// Helper for batching receives.
@@ -247,7 +258,7 @@ async fn worker(webhook: WebhookClient, receiver: Receiver<Msg>, config: InnerCo
                     push_str_lossy(&mut text, &buf);
                     batch.count += 1;
                 },
-                // take out the permit to drop it later
+                // take out the permit to notify it later
                 Msg::Notify(notify) => flush.push(notify),
             }
         }
@@ -294,12 +305,12 @@ fn try_flush(sender: &Sender<Msg>) {
     // async-over-sync from an async context is... great
     let res: Result = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(async {
-            // the worker notifies us of completion by dropping the oneshot-sender we pass
-            // to it. this closes the channel, which is the only receiver error condition.
+            // the worker notifies us of completion by dropping the notify.
             let task = async move {
-                let (tx, rx) = oneshot::channel();
-                sender.send(Msg::Notify(tx)).await?;
-                let Err(_) = rx.await;
+                let notify = Arc::new(Notify::new());
+                let drop_notify = DropNotify(Arc::clone(&notify));
+                sender.send(Msg::Notify(drop_notify)).await?;
+                notify.notified_owned().await;
                 Ok(())
             };
 
