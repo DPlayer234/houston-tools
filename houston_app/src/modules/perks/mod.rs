@@ -142,8 +142,15 @@ async fn check_perks(ctx: &Context) {
 async fn check_perks_inner(ctx: &Context) -> Result {
     let data = ctx.data_ref::<HContextData>();
     let perks = data.config().perks()?;
-    let last = *perks.last_check.read().await;
-    let next = last
+
+    // we hold this lock for the entire task so we can avoid others racing within
+    // this method. exit here if the lock is already held since that means another
+    // task is handling the checks below currently.
+    let Ok(mut last_check) = perks.last_check.try_lock() else {
+        return Ok(());
+    };
+
+    let next = last_check
         .checked_add_signed(perks.check_interval)
         .context("time has broken")?;
 
@@ -152,13 +159,6 @@ async fn check_perks_inner(ctx: &Context) -> Result {
         // no need to check yet
         return Ok(());
     }
-
-    // we hold this lock for the entire process so we can avoid others racing within
-    // this method. exit here on error since it means multiple threads got past
-    // the `read` above and hit this, but that's fine
-    let Ok(mut last_check) = perks.last_check.try_write() else {
-        return Ok(());
-    };
 
     *last_check = now;
 
@@ -170,7 +170,7 @@ async fn check_perks_inner(ctx: &Context) -> Result {
 }
 
 async fn update_perks(ctx: &Context, now: DateTime<Utc>) {
-    for kind in effects::Effect::all() {
+    for kind in effects::Effect::ALL {
         if let Err(why) = kind.update(ctx, now).await {
             log::error!("Failed update for perk effect {kind:?}: {why:?}");
         }

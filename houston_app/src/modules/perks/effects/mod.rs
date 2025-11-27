@@ -81,9 +81,7 @@ impl Effect {
     impl_kind_fn!(disable(args: Args<'_>) -> Result);
     impl_kind_fn!(update(args: &Context, now: DateTime<Utc>) -> Result);
 
-    pub fn all() -> &'static [Self] {
-        &[Self::RainbowRole, Self::Birthday]
-    }
+    pub const ALL: &[Self] = &[Self::RainbowRole, Self::Birthday];
 
     pub fn info(self, perks: &Config) -> EffectInfo<'_> {
         const UNSET: EffectInfo<'_> = EffectInfo {

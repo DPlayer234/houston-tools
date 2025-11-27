@@ -31,7 +31,7 @@ pub async fn wallet(
 
     let mut description = String::new();
 
-    for &item in Item::all() {
+    for &item in Item::ALL {
         let owned = wallet.item(item);
         if owned != 0 {
             let name = item.info(perks).name;

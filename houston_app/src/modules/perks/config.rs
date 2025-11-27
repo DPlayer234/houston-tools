@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use indexmap::IndexMap;
 use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 
 use super::Item;
 use crate::helper::time::serde_time_delta;
@@ -41,7 +41,7 @@ pub struct Config {
     pub birthday: Option<BirthdayConfig>,
 
     #[serde(skip)]
-    pub last_check: RwLock<DateTime<Utc>>,
+    pub last_check: Mutex<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
@@ -150,7 +150,7 @@ pub struct BirthdayRegionConfig {
     pub time_offset: TimeDelta,
 
     #[serde(skip)]
-    pub last_check: RwLock<NaiveDate>,
+    pub last_check: Mutex<NaiveDate>,
 }
 
 #[derive(Debug, serde::Deserialize)]

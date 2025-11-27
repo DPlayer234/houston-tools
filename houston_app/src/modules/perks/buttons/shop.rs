@@ -80,7 +80,7 @@ impl View {
         components.push(CreateTextDisplay::new("### Server Shop"));
 
         // add all effects first
-        for &effect in Effect::all() {
+        for &effect in Effect::ALL {
             let Some(st) = effect.price(perks) else {
                 continue;
             };
@@ -117,7 +117,7 @@ impl View {
         }
 
         // add the items individually after
-        for &item in Item::all() {
+        for &item in Item::ALL {
             let Some(st) = item.price(perks) else {
                 continue;
             };

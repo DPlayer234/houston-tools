@@ -103,6 +103,13 @@ impl Shape for Birthday {
         );
 
         'regions: for (region_id, region) in (0u16..).zip(&birthday.regions) {
+            // exit here if the lock is already held since that means another task is
+            // handling the checks below currently. that shouldn't actually happen in
+            // practice, but there is no reason to treat it as impossible.
+            let Ok(mut check) = region.last_check.try_lock() else {
+                continue 'regions;
+            };
+
             // calculate the correct date with the current time and offset
             let today = now
                 .checked_add_signed(region.time_offset)
@@ -111,7 +118,6 @@ impl Shape for Birthday {
                 .date();
 
             // don't repeat the check if we checked that day already
-            let mut check = region.last_check.write().await;
             if *check == today {
                 continue 'regions;
             }
