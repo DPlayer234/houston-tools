@@ -1,6 +1,7 @@
 //! Shared utilities for build scripts.
 
 use std::env;
+use std::path::PathBuf;
 use std::process::Command;
 
 mod ensure;
@@ -37,18 +38,42 @@ pub fn embed_windows_resources() {
 ///
 /// If you're _really_ sure that this can't fail, you may also use [`env!`].
 pub fn include_git_commit_hash() {
-    // Based on <https://stackoverflow.com/a/44407625>
-    println!("cargo::rerun-if-changed=.git/HEAD");
-
-    let output = Command::new("git").args(["rev-parse", "HEAD"]).output();
+    let output = Command::new("git")
+        .args([
+            "rev-parse",
+            "HEAD",
+            "--symbolic-full-name",
+            "HEAD",
+            "--show-toplevel",
+        ])
+        .output();
 
     let output = ensure::ok_or!(output, why => "cannot find git commit hash: {why}");
     ensure::or!(
         output.status.success(),
-        "`git rev-parse HEAD` exited with non-success error code"
+        "`git rev-parse` exited with non-success error code"
     );
 
-    let git_hash = String::from_utf8(output.stdout);
-    let git_hash = ensure::ok_or!(git_hash, _ => "git commit hash is invalid utf-8");
+    let output = String::from_utf8(output.stdout);
+    let output = ensure::ok_or!(output, _ => "`git rev-parse` output is invalid utf-8");
+
+    let mut lines = output.lines();
+    let git_hash = ensure::some_or!(lines.next(), "could not find git commit hash");
+    let git_ref = ensure::some_or!(lines.next(), "could not find git ref");
+    let git_root = ensure::some_or!(lines.next(), "could not find git root directory");
+    ensure::none_or!(lines.next(), _ => "unexpected `git rev-parse` output");
+
     println!("cargo::rustc-env=GIT_HASH={git_hash}");
+
+    let mut git_dir = PathBuf::new();
+    git_dir.push(git_root);
+    git_dir.push(".git");
+
+    let head_path = git_dir.join("HEAD");
+    println!("cargo::rerun-if-changed={}", head_path.display());
+
+    if git_ref != "HEAD" {
+        let ref_path = git_dir.join(git_ref);
+        println!("cargo::rerun-if-changed={}", ref_path.display());
+    }
 }
