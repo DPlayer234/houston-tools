@@ -1,4 +1,3 @@
-use args::SlashMember;
 use houston_cmd::{BoxFuture, Context};
 
 use crate::data::IntoEphemeral;
@@ -8,12 +7,14 @@ use crate::prelude::*;
 
 pub mod args;
 
+use args::SlashMember;
+
 pub mod prelude {
     pub use bson_model::ModelDocument as _;
     pub use houston_cmd::{Context, chat_command, context_command, sub_command};
 
     pub use super::args::*;
-    pub use super::{ContextExt as _, SlashUserExt as _, create_reply};
+    pub use super::{ContextExt as _, SlashUserOptionExt as _, create_reply};
     pub use crate::helper::discord::components::*;
     pub use crate::prelude::*;
 }
@@ -84,11 +85,15 @@ pub fn create_reply<'new>(ephemeral: impl IntoEphemeral) -> CreateReply<'new> {
 
 /// Extension trait for the poise context.
 pub trait ContextExt<'a> {
+    /// Defers the response with the provided ephemerality.
     async fn defer_as(self, ephemeral: impl IntoEphemeral) -> Result;
 
+    /// Gets the ref to the [`HBotData`] in the context.
     #[must_use]
     fn data_ref(self) -> &'a HBotData;
 
+    /// Gets the guild ID of the guild the command was invoked in or a
+    /// descriptive error if not in a guild.
     fn require_guild_id(self) -> Result<GuildId>;
 }
 
@@ -107,12 +112,17 @@ impl<'a> ContextExt<'a> for Context<'a> {
     }
 }
 
-pub trait SlashUserExt<'a>: Sized {
+/// Extension traits for [`Option<_>`] of slash users etc.
+pub trait SlashUserOptionExt<'a>: Sized {
+    /// The [`Option`] element type.
     type Inner;
+
+    /// If [`Some`], returns [`Ok(value)`][Ok]. Otherwise attempts to extract
+    /// the invoking user from `ctx`.
     fn or_invoking(self, ctx: Context<'a>) -> Result<Self::Inner>;
 }
 
-impl<'a> SlashUserExt<'a> for Option<SlashMember<'a>> {
+impl<'a> SlashUserOptionExt<'a> for Option<SlashMember<'a>> {
     type Inner = SlashMember<'a>;
 
     fn or_invoking(self, ctx: Context<'a>) -> Result<Self::Inner> {

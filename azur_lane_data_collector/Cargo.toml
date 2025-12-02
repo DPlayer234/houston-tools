@@ -30,7 +30,7 @@ features = ["std", "help", "usage", "error-context", "suggestions", "derive"]
 default-features = false
 
 [dependencies.mlua]
-version = "0.11.4"
+version = "0.11.5"
 features = ["lua54", "vendored", "error-send", "serialize"]
 
 [build-dependencies]
