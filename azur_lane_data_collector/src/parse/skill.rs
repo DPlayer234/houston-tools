@@ -577,9 +577,7 @@ fn search_referenced_weapons(
     sc: SkillContext<'_>,
 ) -> LuaResult<()> {
     let len = sc.skill.len()?;
-    if let Ok(len) = usize::try_from(len)
-        && len != 0
-    {
+    if len != 0 {
         let level_entry: LuaTable = sc
             .skill
             .get(len)

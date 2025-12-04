@@ -103,11 +103,11 @@ impl View<'_> {
         let mut nav = vec![nav];
 
         let augments = azur.game_data().augments_by_ship_id(ship.group_id);
-        for (index, augment) in (0..4u8).zip(augments) {
-            if index == 0 {
-                nav.push(self.button_with_augment(None).label("Default"));
-            }
+        if augments.len() != 0 {
+            nav.push(self.button_with_augment(None).label("Default"));
+        }
 
+        for (index, augment) in (0..4u8).zip(augments) {
             let index = Some(index);
             nav.push(
                 self.button_with_augment(index)
