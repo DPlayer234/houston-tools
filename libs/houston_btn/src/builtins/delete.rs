@@ -10,13 +10,13 @@ button_value!(Delete, (u16::MAX - 1) as usize);
 impl ButtonReply for Delete {
     async fn reply(self, ctx: ButtonContext<'_>) -> crate::Result {
         ctx.acknowledge().await?;
-        ctx.interaction().delete_response(ctx.http()).await?;
+        ctx.interaction.delete_response(ctx.http()).await?;
         Ok(())
     }
 
     async fn modal_reply(self, ctx: ModalContext<'_>) -> crate::Result {
         ctx.acknowledge().await?;
-        ctx.interaction().delete_response(ctx.http()).await?;
+        ctx.interaction.delete_response(ctx.http()).await?;
         Ok(())
     }
 }

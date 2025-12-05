@@ -294,7 +294,7 @@ impl<'a> EditReply<'a> {
     /// not supporting keeping existing attachments.
     ///
     /// Hidden because I don't want this in the public API but I do need it in
-    /// `houston_app`.
+    /// `houston_btn`.
     ///
     /// [`create_interaction_response`]: serenity::http::Http::create_interaction_response
     #[doc(hidden)]
@@ -326,7 +326,7 @@ impl<'a> EditReply<'a> {
     /// for edits but not supporting keeping existing attachments.
     ///
     /// Hidden because I don't want this in the public API but I do need it in
-    /// `houston_app`.
+    /// `houston_btn`.
     ///
     /// [`edit_followup_message`]: serenity::http::Http::edit_followup_message
     #[doc(hidden)]

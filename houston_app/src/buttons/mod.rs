@@ -75,11 +75,11 @@ impl Hooks for EventHandlerHooks {
     }
 
     fn on_button(&self, ctx: ButtonContext<'_>, args: &dyn fmt::Debug) {
-        log_interaction("Button", ctx.interaction(), args);
+        log_interaction("Button", ctx.interaction, args);
     }
 
     fn on_modal(&self, ctx: ModalContext<'_>, args: &dyn fmt::Debug) {
-        log_interaction("Modal", ctx.interaction(), args);
+        log_interaction("Modal", ctx.interaction, args);
     }
 }
 
@@ -160,6 +160,6 @@ pub trait ContextExt<'a> {
 
 impl<'a, I: ?Sized + AnyInteraction> ContextExt<'a> for AnyContext<'a, I> {
     fn data_ref(self) -> &'a HBotData {
-        self.serenity().data_ref::<HContextData>()
+        self.serenity.data_ref::<HContextData>()
     }
 }

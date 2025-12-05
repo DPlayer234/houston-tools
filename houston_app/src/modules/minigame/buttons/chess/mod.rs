@@ -218,7 +218,7 @@ button_value!(View, 20);
 impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
         let data = ctx.data_ref();
-        self.players.check_turn(&ctx)?;
+        self.players.check_turn(ctx)?;
 
         if let Action::Move(src, dst) = self.action {
             // take the piece in the source slot
@@ -249,7 +249,8 @@ impl ButtonReply for View {
             // check for checkmate
             if self.is_inactive_player_in_checkmate() {
                 let reply = self.create_win_reply(data);
-                return ctx.edit(reply.into()).await;
+                ctx.edit(reply.into()).await?;
+                return Ok(());
             }
 
             self.action = Action::Idle;
@@ -257,6 +258,7 @@ impl ButtonReply for View {
         }
 
         let reply = self.create_next_reply(data);
-        ctx.edit(reply.into()).await
+        ctx.edit(reply.into()).await?;
+        Ok(())
     }
 }

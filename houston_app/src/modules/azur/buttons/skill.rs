@@ -283,7 +283,8 @@ impl ButtonReply for View<'_> {
             },
         };
 
-        ctx.edit(edit).await
+        ctx.edit(edit).await?;
+        Ok(())
     }
 }
 

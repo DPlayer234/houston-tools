@@ -87,6 +87,7 @@ impl ButtonReply for View<'_> {
             Some(retrofit) => self.create_with_ship(retrofit),
         };
 
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }

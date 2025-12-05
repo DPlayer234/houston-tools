@@ -136,6 +136,7 @@ impl ButtonReply for View<'_> {
             .ok_or(AzurParseError::Equip)?;
 
         let create = self.create_with_equip(equip);
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }

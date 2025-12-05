@@ -40,7 +40,7 @@ pub enum ViewPart {
 impl View<'_> {
     fn edit_with_ship<'a>(
         self,
-        ctx: &ButtonContext<'a>,
+        ctx: ButtonContext<'a>,
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
@@ -365,8 +365,9 @@ impl ButtonReply for View<'_> {
             .get(usize::from(self.skin_index))
             .ok_or(AzurParseError::Ship)?;
 
-        let edit = self.edit_with_ship(&ctx, azur, ship, skin)?;
-        ctx.edit(edit).await
+        let edit = self.edit_with_ship(ctx, azur, ship, skin)?;
+        ctx.edit(edit).await?;
+        Ok(())
     }
 }
 

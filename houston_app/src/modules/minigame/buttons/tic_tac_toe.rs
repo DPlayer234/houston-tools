@@ -221,7 +221,7 @@ button_value!(View, 18);
 impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
         let data = ctx.data_ref();
-        self.players.check_turn(&ctx)?;
+        self.players.check_turn(ctx)?;
 
         let reply = if let Some((winner, line)) = self.winner() {
             self.create_win_reply(data, winner, line)
@@ -232,6 +232,7 @@ impl ButtonReply for View {
             self.create_next_reply(data)
         };
 
-        ctx.edit(reply.into()).await
+        ctx.edit(reply.into()).await?;
+        Ok(())
     }
 }

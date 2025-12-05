@@ -240,6 +240,7 @@ impl ButtonReply for View<'_> {
             .ok_or(AzurParseError::SpecialSecretary)?;
 
         let create = self.create_with_secretary(data, ship)?;
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }

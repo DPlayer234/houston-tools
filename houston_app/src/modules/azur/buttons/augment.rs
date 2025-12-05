@@ -118,6 +118,7 @@ impl ButtonReply for View<'_> {
             .ok_or(AzurParseError::Augment)?;
 
         let create = self.create_with_augment(azur, augment);
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }

@@ -9,7 +9,7 @@ use serenity::model::application::{
 };
 use serenity::prelude::*;
 
-use crate::context::InnerContext;
+use crate::context::ContextInner;
 pub use crate::context::{AnyContext, AnyInteraction, ButtonContext, ErrorContext, ModalContext};
 pub use crate::nav::Nav;
 
@@ -93,57 +93,67 @@ impl EventHandler {
 
     /// Dispatches component interactions.
     pub async fn dispatch_component(&self, ctx: &Context, interaction: &ComponentInteraction) {
-        let inner = InnerContext::new(self, ctx, interaction);
-        if let Err(err) = Self::handle_component(&inner).await {
-            Self::handle_dispatch_error(inner.unsize(), err).await
+        let inner = ContextInner::new(self);
+        if let Err(err) = Self::handle_component(ctx, interaction, &inner).await {
+            Self::handle_dispatch_error(ctx, interaction, &inner, err).await
         }
     }
 
     /// Handles the component interaction dispatch.
-    async fn handle_component(ctx: &InnerContext<'_, ComponentInteraction>) -> Result {
+    async fn handle_component(
+        ctx: &Context,
+        interaction: &ComponentInteraction,
+        inner: &ContextInner<'_>,
+    ) -> Result {
         use ComponentInteractionDataKind as Kind;
 
-        let custom_id: &str = match &ctx.interaction.data.kind {
+        let custom_id: &str = match &interaction.data.kind {
             Kind::StringSelect { values } if values.len() == 1 => &values[0],
-            Kind::Button => &ctx.interaction.data.custom_id,
+            Kind::Button => &interaction.data.custom_id,
             _ => anyhow::bail!("invalid button interaction"),
         };
 
         let mut buf = encoding::StackBuf::new();
         let mut decoder = encoding::decode_custom_id(&mut buf, custom_id)?;
         let key = decoder.read_key()?;
-        let action = ctx.state.action(key)?;
+        let action = inner.state.action(key)?;
 
-        let ctx = ButtonContext { inner: ctx };
+        let ctx = ButtonContext::new(ctx, interaction, inner);
         (action.invoke_button)(ctx, decoder).await
     }
 
     /// Dispatches modal interactions.
     pub async fn dispatch_modal(&self, ctx: &Context, interaction: &ModalInteraction) {
-        let inner = InnerContext::new(self, ctx, interaction);
-        if let Err(err) = Self::handle_modal(&inner).await {
-            Self::handle_dispatch_error(inner.unsize(), err).await
+        let inner = ContextInner::new(self);
+        if let Err(err) = Self::handle_modal(ctx, interaction, &inner).await {
+            Self::handle_dispatch_error(ctx, interaction, &inner, err).await
         }
     }
 
     /// Handles the modal interaction dispatch.
-    async fn handle_modal(ctx: &InnerContext<'_, ModalInteraction>) -> Result {
+    async fn handle_modal(
+        ctx: &Context,
+        interaction: &ModalInteraction,
+        inner: &ContextInner<'_>,
+    ) -> Result {
         let mut buf = encoding::StackBuf::new();
-        let mut decoder = encoding::decode_custom_id(&mut buf, &ctx.interaction.data.custom_id)?;
+        let mut decoder = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
         let key = decoder.read_key()?;
-        let action = ctx.state.action(key)?;
+        let action = inner.state.action(key)?;
 
-        let ctx = ModalContext { inner: ctx };
+        let ctx = ModalContext::new(ctx, interaction, inner);
         (action.invoke_modal)(ctx, decoder).await
     }
 
     #[cold]
     async fn handle_dispatch_error(
-        ctx: InnerContext<'_, dyn AnyInteraction + '_>,
+        ctx: &Context,
+        interaction: &dyn AnyInteraction,
+        inner: &ContextInner<'_>,
         err: anyhow::Error,
     ) {
-        if let Some(hooks) = ctx.state.hooks.as_deref() {
-            let ctx = ErrorContext { inner: &ctx };
+        if let Some(hooks) = inner.state.hooks.as_deref() {
+            let ctx = ErrorContext::new(ctx, interaction, inner);
             hooks.handle_error(ctx, err).await;
         } else {
             log::error!("Dispatching event failed: {err:?}");

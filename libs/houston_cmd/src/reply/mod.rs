@@ -41,25 +41,25 @@ pub async fn send_reply<'ctx>(
 ) -> serenity::Result<ReplyHandle<'ctx>> {
     let state = ctx.inner.reply_state.swap(SENT, Ordering::AcqRel);
 
-    let handle = match state {
+    let target = match state {
         UNSENT => {
             let reply = reply.into_interaction_response();
             let reply = CreateInteractionResponse::Message(reply);
             ctx.interaction.create_response(ctx.http(), reply).await?;
-            ReplyHandle::original(ctx)
+            None
         },
         DEFER => {
             let reply = reply.into_interaction_edit();
             ctx.interaction.edit_response(ctx.http(), reply).await?;
-            ReplyHandle::original(ctx)
+            None
         },
         _ => {
             debug_assert!(state == SENT, "must be SENT state otherwise");
             let reply = reply.into_interaction_followup();
             let message = ctx.interaction.create_followup(ctx.http(), reply).await?;
-            ReplyHandle::followup(ctx, message.id)
+            Some(message.id)
         },
     };
 
-    Ok(handle)
+    Ok(ReplyHandle::new(ctx.http(), &ctx.interaction.token, target))
 }

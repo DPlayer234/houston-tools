@@ -116,7 +116,7 @@ impl ButtonReply for View {
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
         ctx.acknowledge().await?;
 
-        self.page = ToPage::get_page(ctx.interaction())?;
+        self.page = ToPage::get_page(ctx.interaction)?;
         let reply = self.create_reply(ctx.data_ref()).await?;
         ctx.edit(reply.into()).await?;
         Ok(())

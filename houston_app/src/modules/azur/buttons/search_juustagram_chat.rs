@@ -71,14 +71,16 @@ impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
         let data = ctx.data_ref();
         let create = self.create(data)?;
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 
     async fn modal_reply(mut self, ctx: ModalContext<'_>) -> Result {
-        self.page = ToPage::get_page(ctx.interaction())?;
+        self.page = ToPage::get_page(ctx.interaction)?;
         let data = ctx.data_ref();
         let create = self.create(data)?;
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }
 

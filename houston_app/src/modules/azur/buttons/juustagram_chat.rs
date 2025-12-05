@@ -139,6 +139,7 @@ impl ButtonReply for View<'_> {
             .ok_or(AzurParseError::JuustagramChat)?;
 
         let create = self.create_with_chat(data, azur, chat)?;
-        ctx.edit(create.into()).await
+        ctx.edit(create.into()).await?;
+        Ok(())
     }
 }

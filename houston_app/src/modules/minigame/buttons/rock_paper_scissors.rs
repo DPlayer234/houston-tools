@@ -160,7 +160,7 @@ impl ButtonReply for View {
 
         let action = self.action;
         let state = self
-            .state_mut(ctx.interaction().user.id)
+            .state_mut(ctx.interaction.user.id)
             .ok_or(HArgError::new_const("You weren't invited to this round."))?;
 
         state.choice = action;
@@ -170,6 +170,8 @@ impl ButtonReply for View {
         } else {
             self.create_next_reply(data)
         };
-        ctx.edit(reply.into()).await
+
+        ctx.edit(reply.into()).await?;
+        Ok(())
     }
 }

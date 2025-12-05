@@ -60,7 +60,7 @@ impl View<'_> {
 
     fn edit_with_ship<'a>(
         self,
-        ctx: &ButtonContext<'a>,
+        ctx: ButtonContext<'a>,
         azur: LoadedConfig<'a>,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
@@ -489,11 +489,12 @@ impl ButtonReply for View<'_> {
 
         let (ship, retrofit) = self.find_ship(azur)?;
         let edit = match retrofit {
-            None => self.edit_with_ship(&ctx, azur, ship, ship),
-            Some(retrofit) => self.edit_with_ship(&ctx, azur, retrofit, ship),
+            None => self.edit_with_ship(ctx, azur, ship, ship),
+            Some(retrofit) => self.edit_with_ship(ctx, azur, retrofit, ship),
         };
 
-        ctx.edit(edit).await
+        ctx.edit(edit).await?;
+        Ok(())
     }
 }
 

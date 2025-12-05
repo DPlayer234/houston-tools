@@ -1,55 +1,48 @@
 use std::fmt;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use houston_cmd::{CreateReply, EditReply};
+use houston_cmd::{CreateReply, EditReply, ReplyHandle};
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal};
 use serenity::http::Http;
 use serenity::model::application::{ComponentInteraction, ModalInteraction};
 use serenity::model::channel::GenericInteractionChannel;
-use serenity::model::id::{GuildId, InteractionId};
+use serenity::model::id::{GuildId, InteractionId, MessageId};
 use serenity::model::user::User;
 use serenity::prelude::*;
 
 use crate::Result;
 
-pub struct InnerContext<'a, I: ?Sized> {
+const UNSENT: usize = 0;
+const DEFER: usize = 1;
+const SENT: usize = 2;
+
+pub struct ContextInner<'a> {
     pub state: &'a crate::EventHandler,
-    pub serenity: &'a Context,
-    pub interaction: &'a I,
-    pub reply_state: AtomicBool,
+    pub reply_state: AtomicUsize,
 }
 
-impl<'a, I: ?Sized> InnerContext<'a, I> {
-    pub fn new(state: &'a crate::EventHandler, serenity: &'a Context, interaction: &'a I) -> Self {
+impl<'a> ContextInner<'a> {
+    pub fn new(state: &'a crate::EventHandler) -> Self {
         Self {
             state,
-            interaction,
-            serenity,
-            reply_state: AtomicBool::new(false),
-        }
-    }
-}
-
-impl<'a, I: AnyInteraction + 'a> InnerContext<'a, I> {
-    pub fn unsize(self) -> InnerContext<'a, dyn AnyInteraction + 'a> {
-        InnerContext {
-            state: self.state,
-            reply_state: self.reply_state,
-            serenity: self.serenity,
-            interaction: self.interaction,
+            reply_state: AtomicUsize::new(UNSENT),
         }
     }
 }
 
 /// Execution context for [`ButtonReply`](super::ButtonReply).
 pub struct AnyContext<'a, I: ?Sized> {
-    pub(super) inner: &'a InnerContext<'a, I>,
+    /// The serenity context that triggered this interaction.
+    pub serenity: &'a Context,
+    /// The source interaction that this context corresponds to.
+    pub interaction: &'a I,
+    pub(super) inner: &'a ContextInner<'a>,
 }
 
 impl<I: fmt::Debug> fmt::Debug for AnyContext<'_, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AnyContext")
-            .field("interaction", self.inner.interaction)
+            .field("interaction", self.interaction)
             .finish_non_exhaustive()
     }
 }
@@ -71,53 +64,67 @@ pub type ModalContext<'a> = AnyContext<'a, ModalInteraction>;
 pub type ErrorContext<'a> = AnyContext<'a, dyn AnyInteraction + 'a>;
 
 impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
+    pub(crate) fn new(
+        serenity: &'a Context,
+        interaction: &'a I,
+        inner: &'a ContextInner<'a>,
+    ) -> Self {
+        Self {
+            serenity,
+            interaction,
+            inner,
+        }
+    }
+
     #[inline]
-    fn try_first(&self) -> bool {
-        !self.inner.reply_state.swap(true, Ordering::AcqRel)
+    fn try_unsent_to(&self, to: usize) -> bool {
+        self.inner
+            .reply_state
+            .compare_exchange(UNSENT, to, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    }
+
+    fn reply_handle(&self, target: Option<MessageId>) -> ReplyHandle<'a> {
+        ReplyHandle::new(self.http(), self.interaction.token(), target)
     }
 
     /// Gets the HTTP client.
     pub fn http(&self) -> &'a Http {
-        &self.inner.serenity.http
-    }
-
-    /// The source serenity context.
-    pub fn serenity(&self) -> &'a Context {
-        self.inner.serenity
-    }
-
-    /// The source interaction.
-    pub fn interaction(&self) -> &'a I {
-        self.inner.interaction
+        &self.serenity.http
     }
 
     /// Acknowledges the interaction, expecting a later [`Self::edit`].
+    ///
+    /// This function does nothing if the interaction has already been responded
+    /// to.
     ///
     /// # Errors
     ///
     /// Returns `Err` if acknowledging the interaction failed.
     pub async fn acknowledge(&self) -> Result {
-        if self.try_first() {
-            let interaction = self.interaction();
+        if self.try_unsent_to(SENT) {
             CreateInteractionResponse::Acknowledge
-                .execute(self.http(), interaction.id(), interaction.token())
+                .execute(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
         }
 
         Ok(())
     }
 
-    /// Defers the interaction with a new message.
+    /// Defers the interaction with a new message. This new message will become
+    /// the original message for this interaction.
+    ///
+    /// This function does nothing if the interaction has already been responded
+    /// to.
     ///
     /// # Errors
     ///
     /// Returns `Err` if deferring the interaction failed.
     pub async fn defer(&self, ephemeral: bool) -> Result {
-        if self.try_first() {
-            let interaction = self.interaction();
+        if self.try_unsent_to(DEFER) {
             let reply = CreateInteractionResponseMessage::new().ephemeral(ephemeral);
             CreateInteractionResponse::Defer(reply)
-                .execute(self.http(), interaction.id(), interaction.token())
+                .execute(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
         }
 
@@ -126,45 +133,59 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
 
     /// Replies to the interaction with a new message.
     ///
+    /// If the interaction has not been responded to yet, this new message will
+    /// become the original message for this interaction.
+    ///
     /// # Errors
     ///
     /// Returns `Err` if the reply is invalid or failed otherwise.
-    pub async fn reply(&self, create: CreateReply<'_>) -> Result {
-        if self.try_first() {
-            let interaction = self.interaction();
-            let reply = create.into_interaction_response();
-            CreateInteractionResponse::Message(reply)
-                .execute(self.http(), interaction.id(), interaction.token())
-                .await?;
-        } else {
-            let interaction = self.interaction();
-            create
-                .into_interaction_followup()
-                .execute(self.http(), None, interaction.token())
-                .await?;
-        }
+    pub async fn reply(&self, create: CreateReply<'_>) -> Result<ReplyHandle<'a>> {
+        let state = self.inner.reply_state.swap(SENT, Ordering::AcqRel);
 
-        Ok(())
+        let target = match state {
+            UNSENT => {
+                let reply = create.into_interaction_response();
+                CreateInteractionResponse::Message(reply)
+                    .execute(self.http(), self.interaction.id(), self.interaction.token())
+                    .await?;
+                None
+            },
+            DEFER => {
+                create
+                    .into_interaction_edit()
+                    .execute(self.http(), self.interaction.token())
+                    .await?;
+                None
+            },
+            _ => {
+                debug_assert!(state == SENT, "must be SENT state otherwise");
+                let message = create
+                    .into_interaction_followup()
+                    .execute(self.http(), None, self.interaction.token())
+                    .await?;
+                Some(message.id)
+            },
+        };
+
+        Ok(self.reply_handle(target))
     }
 
-    /// Edits a previous reply to the interaction or the original message.
+    /// Edits the original message.
     ///
     /// # Errors
     ///
     /// Returns `Err` if the edit is invalid or failed otherwise.
-    pub async fn edit(&self, edit: EditReply<'_>) -> Result {
-        if self.try_first() {
-            let interaction = self.interaction();
-            edit.execute_as_response(self.http(), interaction.id(), interaction.token())
+    pub async fn edit(&self, edit: EditReply<'_>) -> Result<ReplyHandle<'a>> {
+        if self.try_unsent_to(SENT) {
+            edit.execute_as_response(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
         } else {
-            let interaction = self.interaction();
             edit.into_interaction_edit()
-                .execute(self.http(), interaction.token())
+                .execute(self.http(), self.interaction.token())
                 .await?;
         }
 
-        Ok(())
+        Ok(self.reply_handle(None))
     }
 }
 
@@ -180,12 +201,11 @@ impl ButtonContext<'_> {
     pub async fn modal(&self, modal: CreateModal<'_>) -> Result {
         // this is only available for button interactions
         // because you cannot respond to a modal with another one
-        let first = self.try_first();
+        let first = self.try_unsent_to(SENT);
         anyhow::ensure!(first, "cannot send modals after initial response");
 
-        let interaction = self.interaction();
         CreateInteractionResponse::Modal(modal)
-            .execute(self.http(), interaction.id, &interaction.token)
+            .execute(self.http(), self.interaction.id, &self.interaction.token)
             .await?;
         Ok(())
     }

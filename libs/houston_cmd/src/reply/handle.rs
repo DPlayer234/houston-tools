@@ -2,37 +2,28 @@ use serenity::http::Http;
 use serenity::model::prelude::*;
 
 use super::EditReply;
-use crate::context::Context;
 
 /// Represents a handle to a sent interaction response or follow-up,
 /// allowing edits or deletion.
 #[derive(Debug, Clone, Copy)]
 pub struct ReplyHandle<'a> {
     http: &'a Http,
-    interaction: &'a CommandInteraction,
-    target: Target,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Target {
-    Original,
-    Followup(MessageId),
+    token: &'a str,
+    target: Option<MessageId>,
 }
 
 impl<'a> ReplyHandle<'a> {
-    pub(crate) fn original(ctx: Context<'a>) -> Self {
+    /// Creates a new reply handle to an arbitrary interaction response or
+    /// follow-up.
+    ///
+    /// Hidden because I don't want this in the public API but I do need it in
+    /// `houston_btn`.
+    #[doc(hidden)]
+    pub fn new(http: &'a Http, token: &'a str, target: Option<MessageId>) -> Self {
         Self {
-            http: ctx.http(),
-            interaction: ctx.interaction,
-            target: Target::Original,
-        }
-    }
-
-    pub(crate) fn followup(ctx: Context<'a>, message_id: MessageId) -> Self {
-        Self {
-            http: ctx.http(),
-            interaction: ctx.interaction,
-            target: Target::Followup(message_id),
+            http,
+            token,
+            target,
         }
     }
 
@@ -40,11 +31,15 @@ impl<'a> ReplyHandle<'a> {
     #[expect(clippy::missing_errors_doc)]
     pub async fn delete(self) -> serenity::Result<()> {
         match self.target {
-            Target::Original => self.interaction.delete_response(self.http).await?,
-            Target::Followup(message_id) => {
-                self.interaction
-                    .delete_followup(self.http, message_id)
+            None => {
+                self.http
+                    .delete_original_interaction_response(self.token)
                     .await?
+            },
+            Some(message_id) => {
+                self.http
+                    .delete_followup_message(self.token, message_id)
+                    .await?;
             },
         }
 
@@ -57,13 +52,15 @@ impl<'a> ReplyHandle<'a> {
     #[expect(clippy::missing_errors_doc)]
     pub async fn edit(self, reply: EditReply<'_>) -> serenity::Result<Message> {
         match self.target {
-            Target::Original => {
-                let reply = reply.into_interaction_edit();
-                self.interaction.edit_response(self.http, reply).await
-            },
-            Target::Followup(message_id) => {
+            None => {
                 reply
-                    .execute_as_followup_edit(self.http, &self.interaction.token, message_id)
+                    .into_interaction_edit()
+                    .execute(self.http, self.token)
+                    .await
+            },
+            Some(message_id) => {
+                reply
+                    .execute_as_followup_edit(self.http, self.token, message_id)
                     .await
             },
         }

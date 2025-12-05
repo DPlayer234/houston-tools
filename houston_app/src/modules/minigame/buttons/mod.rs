@@ -55,8 +55,8 @@ impl PlayerState {
         self.user_id(self.turn)
     }
 
-    fn check_turn(&self, ctx: &ButtonContext<'_>) -> Result<(), HArgError> {
-        let interacting = ctx.interaction().user.id;
+    fn check_turn(&self, ctx: ButtonContext<'_>) -> Result<(), HArgError> {
+        let interacting = ctx.interaction.user.id;
         let current_turn = self.turn_user_id();
         if interacting == current_turn {
             Ok(())
