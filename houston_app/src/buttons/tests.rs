@@ -1,3 +1,4 @@
+use houston_btn::{Nav, encoding};
 use serde::{Deserialize, Serialize};
 
 use super::*;
@@ -88,59 +89,4 @@ fn eq_direct_to_custom_id() {
         .build();
 
     assert_eq!(view.to_custom_id(), view.to_nav().to_custom_id());
-}
-
-#[test]
-#[cfg(not(target_pointer_width = "16"))]
-fn ensure_compat() {
-    #[derive(Debug, Serialize, Deserialize)]
-    struct Compat<'a> {
-        a: i32,
-        b: &'a str,
-        c: i32,
-    }
-
-    impl ButtonValue for Compat<'_> {
-        const ACTION: ButtonAction = ButtonAction {
-            key: u32::MAX as usize,
-            invoke_button: |_, _| unreachable!(),
-            invoke_modal: |_, _| unreachable!(),
-        };
-
-        fn to_nav(&self) -> Nav<'_> {
-            Nav::from_button_value(self)
-        }
-    }
-
-    #[rustfmt::skip]
-    // a steph-serialized version of `COMPAT_VAL`, including the action key
-    //
-    //                           u32::MAX          3usize    "hello world"
-    //                              |                |  16i32  |          -16i32
-    //                              |                |   |     |            |
-    //                          [------------------][--][--][-------------][--]
-    const COMPAT_BUF: &[u8] = b"\xFF\xFF\xFF\xFF\x0F\x03\x20\x0Bhello world\x1F";
-    const COMPAT_BUF_STR: &str =
-        "A\u{1007ff}\u{f17ff}\u{b2803}\u{6568}\u{f746c}\u{67f20}\u{c7a6f}\u{62764}&";
-
-    const COMPAT_VAL: Compat<'static> = Compat {
-        a: 16,
-        b: "hello world",
-        c: -16,
-    };
-
-    let val_custom_id = COMPAT_VAL.to_custom_id();
-    let buf_custom_id = encoding::encode_custom_id(COMPAT_BUF);
-
-    assert_eq!(
-        val_custom_id, buf_custom_id,
-        "expected both custom ids to be same\n\
-         this test breaking implies the serialization format changed unexpectedly"
-    );
-
-    assert_eq!(
-        val_custom_id, COMPAT_BUF_STR,
-        "expected `COMPAT_BUF_STR` to match the encoded `COMPAT_BUF`\n\
-         this test breaking implies the encoding format changed unexpectedly"
-    );
 }

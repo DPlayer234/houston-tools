@@ -90,8 +90,6 @@ impl HBotData {
 
     /// Gets the init data needed based on the enabled modules.
     pub fn init(&self) -> Result<HInit> {
-        use crate::buttons::EventHandler;
-
         let config = self.config();
         let mut startup = HInit::default();
         let mut buttons = Vec::new();
@@ -105,7 +103,9 @@ impl HBotData {
         });
 
         if !buttons.is_empty() {
-            let button_handler = EventHandler::new(buttons)?;
+            use crate::buttons::{EventHandler, EventHandlerHooks};
+
+            let button_handler = EventHandler::new(buttons)?.hooks(Box::new(EventHandlerHooks));
             startup.event_handlers.push(Box::new(button_handler));
         }
 

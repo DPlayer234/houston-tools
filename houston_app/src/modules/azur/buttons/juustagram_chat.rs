@@ -131,13 +131,14 @@ impl View<'_> {
 button_value!(for<'v> View<'v>, 16);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
         let chat = azur
             .game_data()
             .juustagram_chat_by_id(self.chat_id)
             .ok_or(AzurParseError::JuustagramChat)?;
 
-        let create = self.create_with_chat(ctx.data, azur, chat)?;
+        let create = self.create_with_chat(data, azur, chat)?;
         ctx.edit(create.into()).await
     }
 }

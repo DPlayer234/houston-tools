@@ -231,13 +231,15 @@ impl ViewPart {
 button_value!(for<'v> View<'v>, 21);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
+
         let ship = azur
             .game_data()
             .special_secretary_by_id(self.secretary_id)
             .ok_or(AzurParseError::SpecialSecretary)?;
 
-        let create = self.create_with_secretary(ctx.data, ship)?;
+        let create = self.create_with_secretary(data, ship)?;
         ctx.edit(create.into()).await
     }
 }

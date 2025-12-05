@@ -156,17 +156,19 @@ impl View {
 button_value!(View, 19);
 impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
+        let data = ctx.data_ref();
+
         let action = self.action;
         let state = self
-            .state_mut(ctx.interaction.user.id)
+            .state_mut(ctx.interaction().user.id)
             .ok_or(HArgError::new_const("You weren't invited to this round."))?;
 
         state.choice = action;
 
         let reply = if let Some(ready) = self.ready() {
-            self.create_ready_reply(ctx.data, ready)
+            self.create_ready_reply(data, ready)
         } else {
-            self.create_next_reply(ctx.data)
+            self.create_next_reply(data)
         };
         ctx.edit(reply.into()).await
     }

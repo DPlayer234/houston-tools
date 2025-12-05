@@ -128,7 +128,8 @@ fn inline_skill(equip: &Equip) -> InlineSkill<'_> {
 button_value!(for<'v> View<'v>, 7);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
         let equip = azur
             .game_data()
             .equip_by_id(self.equip_id)

@@ -22,11 +22,12 @@ impl Set {
 button_value!(Set, 15);
 impl ButtonReply for Set {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let user_id = ctx.interaction.user.id;
+        let user_id = ctx.interaction().user.id;
 
         ctx.acknowledge().await?;
 
-        let db = ctx.data.database()?;
+        let data = ctx.data_ref();
+        let db = data.database()?;
 
         let filter = Birthday::filter().user(user_id).into_document()?;
 
@@ -52,7 +53,7 @@ impl ButtonReply for Set {
 
         let embed = CreateEmbed::new()
             .description(description)
-            .color(ctx.data.config().embed_color);
+            .color(data.config().embed_color);
 
         let reply = EditReply::new().embed(embed).components(&[]);
 

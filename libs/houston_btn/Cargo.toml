@@ -1,0 +1,35 @@
+[package]
+name = "houston_btn"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1.0.97"
+arrayvec = "0.7.6"
+extract_map = "0.3.1"
+log = "0.4.27"
+serde = "1.0.219"
+
+houston_cmd.path = "../houston_cmd"
+serde_steph.path = "../serde_steph"
+utils.path = "../utils"
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
+default-features = false
+features = [
+    "builder", "framework", "gateway", "model", "http", "utils"
+]
+
+[dev-dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity.git"
+branch = "next"
+default-features = false
+features = [
+    "builder", "framework", "gateway", "model", "http", "utils", "rustls_backend"
+]

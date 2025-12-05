@@ -82,7 +82,7 @@ impl View<'_> {
             None
         };
 
-        edit.components_v2(self.with_ship(ctx.data, azur, ship, base_ship, thumbail_key))
+        edit.components_v2(self.with_ship(ctx.data_ref(), azur, ship, base_ship, thumbail_key))
     }
 
     fn with_ship<'a>(
@@ -484,7 +484,8 @@ impl View<'_> {
 button_value!(for<'v> View<'v>, 1);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
 
         let (ship, retrofit) = self.find_ship(azur)?;
         let edit = match retrofit {

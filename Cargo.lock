@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.15.2"
+version = "2.16.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1116,6 +1116,7 @@ dependencies = [
  "const-builder",
  "dashmap",
  "extract_map",
+ "houston_btn",
  "houston_cmd",
  "indexmap 2.12.1",
  "log",
@@ -1125,7 +1126,6 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "serde_steph",
  "serde_with",
  "serenity",
  "smallvec",
@@ -1137,6 +1137,21 @@ dependencies = [
  "urlencoding",
  "utils",
  "utils_build",
+]
+
+[[package]]
+name = "houston_btn"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+ "extract_map",
+ "houston_cmd",
+ "log",
+ "serde",
+ "serde_steph",
+ "serenity",
+ "utils",
 ]
 
 [[package]]

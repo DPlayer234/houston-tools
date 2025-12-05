@@ -5,7 +5,6 @@ use serde::de::{Deserialize, Deserializer, Error};
 use serde::ser::{Serialize, Serializer};
 
 use super::{ButtonValue, encoding};
-use crate::prelude::*;
 
 /// Represents a reference to another menu.
 ///
@@ -41,11 +40,13 @@ impl<'v> Nav<'v> {
         encoding::encode_custom_id(slice)
     }
 
+    /// Creates a [`Nav`] from a byte slice of serialized data.
     #[must_use]
-    pub(super) const fn from_slice(slice: &'v [u8]) -> Self {
+    pub const fn from_slice(slice: &'v [u8]) -> Self {
         Self(NavInner::Slice(slice))
     }
 
+    /// Creates a [`Nav`] from a [`ButtonValue`].
     #[must_use]
     pub fn from_button_value<T>(args: &'v T) -> Self
     where

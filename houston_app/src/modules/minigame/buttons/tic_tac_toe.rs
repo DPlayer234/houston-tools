@@ -220,15 +220,16 @@ impl View {
 button_value!(View, 18);
 impl ButtonReply for View {
     async fn reply(mut self, ctx: ButtonContext<'_>) -> Result {
+        let data = ctx.data_ref();
         self.players.check_turn(&ctx)?;
 
         let reply = if let Some((winner, line)) = self.winner() {
-            self.create_win_reply(ctx.data, winner, line)
+            self.create_win_reply(data, winner, line)
         } else if self.is_full() {
-            self.create_draw_reply(ctx.data)
+            self.create_draw_reply(data)
         } else {
             self.players.next_turn();
-            self.create_next_reply(ctx.data)
+            self.create_next_reply(data)
         };
 
         ctx.edit(reply.into()).await

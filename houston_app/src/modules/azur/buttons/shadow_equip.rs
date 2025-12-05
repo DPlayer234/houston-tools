@@ -78,7 +78,8 @@ impl<'v> View<'v> {
 button_value!(for<'v> View<'v>, 6);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
 
         let (ship, retrofit) = self.inner.find_ship(azur)?;
         let create = match retrofit {

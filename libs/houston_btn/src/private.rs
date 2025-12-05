@@ -1,11 +1,12 @@
+//! Private helpers for the [`button_value`] macro.
+
 use std::fmt;
 
 use houston_cmd::BoxFuture;
 use serde::Deserialize;
 
 use super::{AnyContext, AnyInteraction, ButtonAction, ButtonReply, encoding};
-use crate::fmt::discord::interaction_location;
-use crate::prelude::*;
+use crate::{ButtonContext, ButtonValue, ModalContext, Result};
 
 /// Provides a way to dispatch [`ButtonReply`] with different lifetimes.
 pub trait ButtonDispatch {
@@ -18,9 +19,13 @@ pub trait ButtonDispatch {
 pub const fn make_action<T: ButtonDispatch + 'static>(key: usize) -> ButtonAction {
     ButtonAction {
         key,
-        invoke_button: |ctx, buf| invoke(ctx, buf, T::This::reply, "Button"),
-        invoke_modal: |ctx, buf| invoke(ctx, buf, T::This::modal_reply, "Modal"),
+        invoke_button: |ctx, buf| invoke(ctx, buf, T::This::reply, on_button),
+        invoke_modal: |ctx, buf| invoke(ctx, buf, T::This::modal_reply, on_modal),
     }
+}
+
+pub const fn alias_action<T: ButtonValue>(key: usize) -> ButtonAction {
+    ButtonAction { key, ..T::ACTION }
 }
 
 /// Provides shared code for invoking button value actions.
@@ -28,7 +33,7 @@ fn invoke<'ctx, T, I, F>(
     ctx: AnyContext<'ctx, I>,
     buf: encoding::Decoder<'ctx>,
     f: impl Fn(T, AnyContext<'ctx, I>) -> F,
-    kind: &str,
+    on: impl Fn(AnyContext<'ctx, I>, &dyn fmt::Debug),
 ) -> BoxFuture<'ctx, Result>
 where
     T: fmt::Debug + Deserialize<'ctx>,
@@ -37,20 +42,23 @@ where
 {
     match buf.into_button_value::<T>() {
         Ok(this) => {
-            log_interaction(kind, ctx.interaction, &this);
+            on(ctx, &this);
             Box::pin(f(this, ctx))
         },
         Err(why) => err_fut(why),
     }
 }
 
-// less generic interaction logging
-fn log_interaction<I: AnyInteraction>(kind: &str, interaction: &I, args: &dyn fmt::Debug) {
-    log::info!(
-        "[{kind}] {}, {}: {args:?}",
-        interaction_location(interaction.guild_id(), interaction.channel()),
-        interaction.user().name,
-    );
+fn on_button(ctx: ButtonContext<'_>, args: &dyn fmt::Debug) {
+    if let Some(hooks) = ctx.inner.state.hooks.as_deref() {
+        hooks.on_button(ctx, args)
+    }
+}
+
+fn on_modal(ctx: ModalContext<'_>, args: &dyn fmt::Debug) {
+    if let Some(hooks) = ctx.inner.state.hooks.as_deref() {
+        hooks.on_modal(ctx, args)
+    }
 }
 
 // shared boxed future type for the outer error case
@@ -71,26 +79,25 @@ fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
 /// If the type has lifetimes, specify the type similar to: `for<'v> MyType<'v>`
 ///
 /// [`ButtonValue`]: super::ButtonValue
+#[macro_export]
 macro_rules! button_value {
     (for<$l:lifetime> $Ty:ty, $key:expr) => {
-        impl<$l> $crate::buttons::ButtonValue for $Ty {
-            const ACTION: $crate::buttons::ButtonAction = {
+        impl<$l> $crate::ButtonValue for $Ty {
+            const ACTION: $crate::ButtonAction = {
                 enum __Dispatch {}
-                impl $crate::buttons::private::ButtonDispatch for __Dispatch {
+                impl $crate::private::ButtonDispatch for __Dispatch {
                     type This<$l> = $Ty;
                 }
 
-                $crate::buttons::private::make_action::<__Dispatch>($key)
+                $crate::private::make_action::<__Dispatch>($key)
             };
 
-            fn to_nav(&self) -> $crate::buttons::Nav<'_> {
-                $crate::buttons::Nav::from_button_value(self)
+            fn to_nav(&self) -> $crate::Nav<'_> {
+                $crate::Nav::from_button_value(self)
             }
         }
     };
-    ($Ty:ty, $key:literal) => {
-        $crate::buttons::private::button_value!(for<'__ignore> $Ty, $key);
+    ($Ty:ty, $key:expr) => {
+        $crate::button_value!(for<'__ignore> $Ty, $key);
     };
 }
-
-pub(crate) use button_value;

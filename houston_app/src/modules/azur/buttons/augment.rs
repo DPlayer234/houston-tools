@@ -110,7 +110,8 @@ impl View<'_> {
 button_value!(for<'v> View<'v>, 2);
 impl ButtonReply for View<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let azur = ctx.data.config().azur()?;
+        let data = ctx.data_ref();
+        let azur = data.config().azur()?;
         let augment = azur
             .game_data()
             .augment_by_id(self.augment_id)
