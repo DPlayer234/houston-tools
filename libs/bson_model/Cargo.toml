@@ -13,4 +13,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_with = { version = "3.14.0", default-features = false }
 small-fixed-array = { version = "0.4.10", features = ["serde"] }
 
-bson_model_macros = { path = "./macros" }
+bson_model_macros.path = "./macros"

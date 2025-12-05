@@ -20,9 +20,9 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 small-fixed-array = { version = "0.4.10", features = ["serde"] }
 
-azur_lane = { path = "../libs/azur_lane" }
-unity_read = { path = "../libs/unity_read" }
-utils = { path = "../libs/utils" }
+azur_lane.path = "../libs/azur_lane"
+unity_read.path = "../libs/unity_read"
+utils.path = "../libs/utils"
 
 [dependencies.clap]
 version = "4.5.35"
@@ -34,4 +34,4 @@ version = "0.11.5"
 features = ["lua54", "vendored", "error-send", "serialize"]
 
 [build-dependencies]
-utils_build = { path = "../libs/utils_build" }
+utils_build.path = "../libs/utils_build"
