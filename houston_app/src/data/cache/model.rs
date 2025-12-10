@@ -1,4 +1,6 @@
-use extract_map::ExtractKey;
+use std::collections::{HashMap, HashSet};
+
+use extract_map::{ExtractKey, ExtractMap};
 
 use crate::prelude::*;
 
@@ -78,5 +80,67 @@ impl From<&GuildThread> for CachedThread {
             guild_id: value.base.guild_id,
             parent_id: value.parent_id,
         }
+    }
+}
+
+#[derive(Default)]
+#[must_use]
+pub struct CachedGuild {
+    pub channels: ExtractMap<ChannelId, CachedChannel>,
+    pub threads: ExtractMap<ThreadId, CachedThread>,
+    /// Tracks threads in a channel. The key is the parent channel ID.
+    pub threads_in: HashMap<ChannelId, HashSet<ThreadId>>,
+}
+
+impl CachedGuild {
+    /// Adds a thread to the guild cache.
+    pub fn add_thread(&mut self, thread: CachedThread) {
+        // track the thread for the parent channel
+        self.threads_in
+            .entry(thread.parent_id)
+            .or_default()
+            .insert(thread.id);
+
+        self.threads.insert(thread);
+    }
+
+    /// Removes a thread from the guild cache.
+    pub fn remove_thread(&mut self, parent_id: ChannelId, thread_id: ThreadId) {
+        self.threads.remove(&thread_id);
+
+        // remove the thread from the parent channel set
+        if let Some(set) = self.threads_in.get_mut(&parent_id) {
+            set.remove(&thread_id);
+        }
+    }
+
+    /// Remove all threads associated with a given channel.
+    pub fn remove_associated_threads(&mut self, parent_id: ChannelId) {
+        if let Some(thread_ids) = self.threads_in.remove(&parent_id) {
+            for thread_id in thread_ids {
+                self.threads.remove(&thread_id);
+            }
+        }
+    }
+}
+
+impl From<&Guild> for CachedGuild {
+    fn from(value: &Guild) -> Self {
+        let mut output = Self {
+            channels: value.channels.iter().map(CachedChannel::from).collect(),
+            threads: value.threads.iter().map(CachedThread::from).collect(),
+            threads_in: HashMap::new(),
+        };
+
+        // associate existing threads
+        for thread in &output.threads {
+            output
+                .threads_in
+                .entry(thread.parent_id)
+                .or_default()
+                .insert(thread.id);
+        }
+
+        output
     }
 }

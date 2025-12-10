@@ -1,9 +1,7 @@
-use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
 
 use arc_swap::ArcSwapOption;
 use dashmap::DashMap;
-use extract_map::ExtractMap;
 use serenity::http::Http;
 
 use crate::fmt::discord::id_suffix;
@@ -13,7 +11,7 @@ mod event_handler;
 mod model;
 
 pub use event_handler::CacheUpdateHandler;
-pub use model::{CachedChannel, CachedThread, Ccot};
+pub use model::{CachedChannel, CachedGuild, CachedThread, Ccot};
 
 /// Provides a simple application-specific cache for Discord state.
 ///
@@ -23,14 +21,6 @@ pub use model::{CachedChannel, CachedThread, Ccot};
 pub struct Cache {
     current_user: ArcSwapOption<CurrentUser>,
     guilds: DashMap<GuildId, CachedGuild>,
-}
-
-#[derive(Default)]
-struct CachedGuild {
-    channels: ExtractMap<ChannelId, CachedChannel>,
-    threads: ExtractMap<ThreadId, CachedThread>,
-    /// Tracks threads in a channel. The key is the parent channel ID.
-    threads_in: HashMap<ChannelId, HashSet<ThreadId>>,
 }
 
 utils::impl_debug!(struct Cache: { .. });
@@ -220,37 +210,5 @@ impl Cache {
     /// Replaces the cached current user info.
     fn set_current_user(&self, user: CurrentUser) {
         self.current_user.store(Some(Arc::new(user)));
-    }
-}
-
-impl CachedGuild {
-    /// Adds a thread to the guild cache.
-    fn add_thread(&mut self, thread: CachedThread) {
-        // track the thread for the parent channel
-        self.threads_in
-            .entry(thread.parent_id)
-            .or_default()
-            .insert(thread.id);
-
-        self.threads.insert(thread);
-    }
-
-    /// Removes a thread from the guild cache.
-    fn remove_thread(&mut self, parent_id: ChannelId, thread_id: ThreadId) {
-        self.threads.remove(&thread_id);
-
-        // remove the thread from the parent channel set
-        if let Some(set) = self.threads_in.get_mut(&parent_id) {
-            set.remove(&thread_id);
-        }
-    }
-
-    /// Remove all threads associated with a given channel.
-    fn remove_associated_threads(&mut self, parent_id: ChannelId) {
-        if let Some(thread_ids) = self.threads_in.remove(&parent_id) {
-            for thread_id in thread_ids {
-                self.threads.remove(&thread_id);
-            }
-        }
     }
 }

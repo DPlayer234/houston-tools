@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serenity::futures::future::BoxFuture;
 use serenity::gateway::client::{Context, RawEventHandler};
 
@@ -89,25 +87,7 @@ impl Cache {
 
     fn update_guild_create(&self, value: &GuildCreateEvent) {
         // only available guilds will send a create
-        let Guild {
-            channels, threads, ..
-        } = &value.guild;
-
-        let mut guild = CachedGuild {
-            channels: channels.iter().map(CachedChannel::from).collect(),
-            threads: threads.iter().map(CachedThread::from).collect(),
-            threads_in: HashMap::new(),
-        };
-
-        // associate existing threads
-        for thread in &guild.threads {
-            guild
-                .threads_in
-                .entry(thread.parent_id)
-                .or_default()
-                .insert(thread.id);
-        }
-
+        let guild = CachedGuild::from(&value.guild);
         self.guilds.insert(value.guild.id, guild);
     }
 
