@@ -14,9 +14,15 @@ pub struct TargetFilter {
     config: TargetFilterConfig,
 }
 
+fn is_target_match(target: &str, filter: &str) -> bool {
+    target
+        .strip_prefix(filter)
+        .is_some_and(|s| s.is_empty() || s.starts_with("::"))
+}
+
 impl Filter for TargetFilter {
     fn filter(&self, record: &Record<'_>) -> Response {
-        let is_match = record.target().starts_with(&self.config.target);
+        let is_match = is_target_match(record.target(), &self.config.target);
         match (self.config.mode, is_match) {
             (TargetMode::RejectMismatch, false) => Response::Reject,
             (TargetMode::AcceptMismatch, false) => Response::Accept,

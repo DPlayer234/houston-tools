@@ -77,9 +77,9 @@ fn main() -> anyhow::Result<()> {
 
             let mut client = Client::builder(config.discord.token, init.intents)
                 .activity(ActivityData::custom(status))
-                .raw_event_handler(CacheUpdateHandler)
-                .framework(framework)
-                .event_handler(event_handler)
+                .raw_event_handler(Arc::new(CacheUpdateHandler))
+                .framework(Box::new(framework))
+                .event_handler(Arc::new(event_handler))
                 .data(Arc::clone(&bot_data))
                 .await
                 .context("failed to init discord client")?;

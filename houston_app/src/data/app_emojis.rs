@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use serenity::http::Http;
+use serenity::gateway::client::Context;
 
 use super::HBotConfig;
 use crate::helper::discord::unicode_emoji;
@@ -28,7 +28,7 @@ macro_rules! generate {
         }
 
         impl HAppEmojiStore {
-            pub async fn load_and_update(config: &HBotConfig, ctx: &Http) -> Result<HAppEmojiStore> {
+            pub async fn load_and_update(config: &HBotConfig, ctx: &Context) -> Result<HAppEmojiStore> {
                 let emojis = load_emojis(ctx).await.context("failed to load app emojis")?;
 
                 struct Temp {
@@ -123,7 +123,7 @@ generate!({
     hull_ixm  = "Hull_IXm",  "azur/Hull_IXm.png"  if azur;
 });
 
-async fn load_emojis(ctx: &Http) -> Result<Vec<Emoji>> {
+async fn load_emojis(ctx: &Context) -> Result<Vec<Emoji>> {
     Ok(ctx.get_application_emojis().await?)
 }
 
@@ -135,22 +135,19 @@ fn fallback_emoji() -> &'static ReactionType {
 
 #[cold]
 #[inline(never)]
-async fn update_emoji(ctx: &Http, name: &'static str, image_data: &[u8]) -> Result<ReactionType> {
-    #[derive(serde::Serialize)]
-    struct CreateEmoji {
-        name: &'static str,
-        image: String,
-    }
+async fn update_emoji(
+    ctx: &Context,
+    name: &'static str,
+    image_data: &[u8],
+) -> Result<ReactionType> {
+    let data_uri = png_to_data_url(image_data);
+    let data_uri = DataUri::from_base64(data_uri)?;
 
-    let map = CreateEmoji {
-        name,
-        image: png_to_data_url(image_data),
-    };
-
-    let emoji = ctx.create_application_emoji(&map).await?;
+    let emoji = ctx.create_application_emoji(name, data_uri).await?;
+    let emoji = staticify_emoji_name(emoji.into(), name);
 
     log::info!("Added Application Emoji: {emoji}");
-    Ok(staticify_emoji_name(emoji.into(), name))
+    Ok(emoji)
 }
 
 fn png_to_data_url(png: &[u8]) -> String {

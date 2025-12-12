@@ -40,8 +40,6 @@ macro_rules! join_path {
 mod tests {
     use std::path::Path;
 
-    use crate::join_path;
-
     #[test]
     fn join_os_path() {
         if cfg!(windows) {

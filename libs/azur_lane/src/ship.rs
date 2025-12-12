@@ -64,7 +64,7 @@ pub struct ShipData {
     /// As of now, only DDGs have "multiple" retrofits, with their vanguard
     /// and main fleet states being considered different ones.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub retrofits: FixedArray<ShipData>,
+    pub retrofits: FixedArray<Self>,
     /// The ship's skins, including their default and all retrofit skins.
     ///
     /// This will be empty for nested retrofits. Access the base's skins.

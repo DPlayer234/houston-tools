@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use serenity::http::Http;
+use serenity::gateway::client::Context;
 
 use crate::config::HBotConfig;
 use crate::helper::discord::events::PushEventHandler;
@@ -125,15 +125,15 @@ impl HBotData {
     }
 
     /// Called in ready to perform finalization with Discord state.
-    pub async fn ready(&self, http: &Http) -> Result {
-        self.load_app_emojis(http).await
+    pub async fn ready(&self, ctx: &Context) -> Result {
+        self.load_app_emojis(ctx).await
     }
 
-    async fn load_app_emojis(&self, http: &Http) -> Result {
+    async fn load_app_emojis(&self, ctx: &Context) -> Result {
         if self.app_emojis.get().is_none()
             && self
                 .app_emojis
-                .set(app_emojis::HAppEmojiStore::load_and_update(self.config(), http).await?)
+                .set(app_emojis::HAppEmojiStore::load_and_update(self.config(), ctx).await?)
                 .is_ok()
         {
             log::info!("Loaded App Emojis.");

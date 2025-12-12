@@ -209,6 +209,7 @@ mod impls {
     impl_into_component!(CreateFile<'a>, File);
     impl_into_component!(CreateSeparator, Separator);
     impl_into_component!(CreateContainer<'a>, Container);
+    impl_into_component!(CreateLabel<'a>, Label);
 
     impl_into_section_component!(CreateTextDisplay<'a>, TextDisplay);
 }

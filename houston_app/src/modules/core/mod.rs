@@ -48,7 +48,7 @@ async fn ready(ctx: &Context, ready: &Ready) {
     log::info!("Logged in as: {}#{:04}", ready.user.name, discriminator);
 
     let data = ctx.data_ref::<HContextData>();
-    if let Err(why) = data.ready(&ctx.http).await {
+    if let Err(why) = data.ready(ctx).await {
         log::error!("Failure in ready: {why:?}");
     }
 }

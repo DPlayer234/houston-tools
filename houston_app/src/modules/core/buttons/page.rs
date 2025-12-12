@@ -12,28 +12,17 @@ impl<'v> ToPage<'v> {
     }
 
     pub fn get_page(interaction: &ModalInteraction) -> Result<u16> {
-        Self::get_page_core(interaction)
-            .context("page expected in modal data but not found or invalid")
-    }
-
-    fn get_page_core(interaction: &ModalInteraction) -> Option<u16> {
-        let component = interaction.data.components.first()?.components.first()?;
-
-        let ActionRowComponent::InputText(InputText {
-            value: Some(value),
-            custom_id,
-            ..
-        }) = component
-        else {
-            return None;
-        };
-
-        if custom_id.as_str() != "page" {
-            return None;
+        if let [Component::Label(label)] = interaction.data.components.as_slice()
+            && let LabelComponent::InputText(input) = &label.component
+            && input.custom_id == "page"
+            && let Some(value) = &input.value
+            && let Ok(page) = value.parse::<u16>()
+            && (1..=9999).contains(&page)
+        {
+            Ok(page - 1)
+        } else {
+            anyhow::bail!("page expected in modal data but not found or invalid")
         }
-
-        let page: u16 = value.parse().ok()?;
-        (1..=9999).contains(&page).then_some(page - 1)
     }
 
     pub fn build_row<T, F>(obj: &mut T, page_field: F) -> PageRowBuilder<'_, T, F>
@@ -131,16 +120,17 @@ where
 button_value!(for<'v> ToPage<'v>, 13);
 impl ButtonReply for ToPage<'_> {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let input_text = CreateInputText::new(InputTextStyle::Short, "Page", "page")
+        let input_text = CreateInputText::new(InputTextStyle::Short, "page")
             .min_length(1)
             .max_length(4)
             .placeholder("Enter page...")
             .required(true);
 
-        let components = vec![CreateActionRow::input_text(input_text)];
+        let label = CreateLabel::input_text("Page", input_text);
+        let components = components_array![label];
 
         let custom_id = self.0.to_custom_id();
-        let modal = CreateModal::new(custom_id, "Go to page...").components(components);
+        let modal = CreateModal::new(custom_id, "Go to page...").components(&components);
 
         ctx.modal(modal).await
     }
