@@ -74,21 +74,28 @@ fn to_command_option_command(
         .asyncness
         .map(|a| quote::quote_spanned! {a.span()=> .await});
 
-    let inputs: Vec<_> = func.sig.inputs.iter().collect();
-    let arg_ty = match inputs.as_slice() {
-        [_, FnArg::Receiver(receiver)] => {
-            let err = Error::custom("invalid self argument");
-            acc.push(err.with_span(&receiver));
-            Cow::Borrowed(&*receiver.ty)
+    let mut inputs = func.sig.inputs.pairs().map(|p| p.into_value());
+    let arg_ty = match (inputs.next(), inputs.next(), inputs.next()) {
+        (None, _, _) => {
+            let err = Error::custom("expected context parameter");
+            acc.push(err.with_span(&func.sig));
+            Cow::Owned(Type::Infer(TypeInfer {
+                underscore_token: Default::default(),
+            }))
         },
-        [_, FnArg::Typed(x)] => Cow::Borrowed(&*x.ty),
-        _ => {
+        (_, None, _) | (_, _, Some(_)) => {
             let err = Error::custom("expected exacty 1 command argument");
             acc.push(err.with_span(&func.sig));
             Cow::Owned(Type::Infer(TypeInfer {
                 underscore_token: Default::default(),
             }))
         },
+        (_, Some(FnArg::Receiver(receiver)), _) => {
+            let err = Error::custom("invalid self argument");
+            acc.push(err.with_span(&receiver));
+            Cow::Borrowed(&*receiver.ty)
+        },
+        (_, Some(FnArg::Typed(x)), _) => Cow::Borrowed(&*x.ty),
     };
 
     let CommonArgs { crate_ } = args;

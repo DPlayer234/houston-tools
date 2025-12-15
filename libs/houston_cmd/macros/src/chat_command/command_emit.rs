@@ -110,7 +110,19 @@ fn extract_parameters(func: &mut ItemFn, acc: &mut darling::error::Accumulator) 
     let mut parameters = Vec::new();
 
     let mut fold_type = ReplaceLifetimes::omit();
-    for input in func.sig.inputs.iter_mut().skip(1) {
+
+    let mut inputs = func.sig.inputs.pairs_mut().map(|p| p.into_value());
+
+    match inputs.next() {
+        Some(_) => {}, // "correct"
+        None => {
+            let err = Error::custom("expected context parameter");
+            acc.push(err.with_span(&func.sig));
+            return parameters;
+        },
+    }
+
+    for input in inputs {
         let input = match input {
             FnArg::Typed(x) => x,
             FnArg::Receiver(receiver) => {
