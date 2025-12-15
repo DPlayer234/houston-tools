@@ -4,16 +4,11 @@ use proc_macro2::TokenStream;
 use syn::ext::IdentExt as _;
 use syn::{Data, Fields};
 
-use crate::args::CommonDeriveArgs;
-
-#[derive(Debug, darling::FromMeta)]
-struct VariantArgs {
-    name: Option<String>,
-}
+use crate::args::{ChoiceArgArgs, ChoiceArgVariantArgs};
 
 pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
-    let args = CommonDeriveArgs::from_derive_input(&input)?;
-    let crate_ = args.crate_;
+    let args = ChoiceArgArgs::from_derive_input(&input)?;
+    let crate_ = args.common.crate_;
 
     let Data::Enum(data) = input.data else {
         let err = Error::custom("choice args must be enums");
@@ -38,7 +33,7 @@ pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
             .map(|attr| NestedMeta::Meta(attr.meta))
             .collect();
 
-        if let Some(attrs) = acc.handle(VariantArgs::from_list(&attrs)) {
+        if let Some(attrs) = acc.handle(ChoiceArgVariantArgs::from_list(&attrs)) {
             let name = attrs
                 .name
                 .unwrap_or_else(|| variant.ident.unraw().to_string());

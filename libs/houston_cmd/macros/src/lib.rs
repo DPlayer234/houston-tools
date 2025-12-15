@@ -3,11 +3,11 @@
 use proc_macro::TokenStream as StdTokenStream;
 use syn::DeriveInput;
 
-mod any_command_impl;
 mod args;
-mod chat_command_impl;
-mod choice_arg_impl;
-mod context_command_impl;
+mod chat_command;
+mod context_command;
+mod derive_choice_arg;
+mod shared_command;
 mod util;
 
 /// Turns a function into a chat command or a module into a chat command group.
@@ -15,7 +15,7 @@ mod util;
 /// See the docs on the `houston_cmd` crate.
 #[proc_macro_attribute]
 pub fn chat_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
-    chat_command_impl::entry_point(args.into(), item.into())
+    chat_command::entry_point(args.into(), item.into())
         .unwrap_or_else(|e| e.write_errors())
         .into()
 }
@@ -26,7 +26,7 @@ pub fn chat_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStrea
 /// See the docs on the `houston_cmd` crate.
 #[proc_macro_attribute]
 pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
-    context_command_impl::entry_point(args.into(), item.into())
+    context_command::entry_point(args.into(), item.into())
         .unwrap_or_else(|e| e.write_errors())
         .into()
 }
@@ -38,7 +38,7 @@ pub fn context_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenSt
 /// groups or to be later `use`d in a command group.
 #[proc_macro_attribute]
 pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream {
-    chat_command_impl::sub_entry_point(args.into(), item.into())
+    chat_command::sub_entry_point(args.into(), item.into())
         .unwrap_or_else(|e| e.write_errors())
         .into()
 }
@@ -47,7 +47,7 @@ pub fn sub_command(args: StdTokenStream, item: StdTokenStream) -> StdTokenStream
 #[proc_macro_derive(ChoiceArg, attributes(name, choice_arg))]
 pub fn derive_choice_arg(input: StdTokenStream) -> StdTokenStream {
     let input = syn::parse_macro_input!(input as DeriveInput);
-    choice_arg_impl::entry_point(input)
+    derive_choice_arg::entry_point(input)
         .unwrap_or_else(|e| e.write_errors())
         .into()
 }

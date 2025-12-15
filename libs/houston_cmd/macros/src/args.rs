@@ -54,16 +54,20 @@ pub struct SubCommandArgs {
     pub name: Option<String>,
 }
 
-fn default_crate() -> Path {
-    syn::parse_quote!(::houston_cmd)
-}
-
 #[derive(Debug, darling::FromDeriveInput)]
 #[darling(attributes(choice_arg))]
-pub struct CommonDeriveArgs {
-    #[darling(rename = "crate")]
-    #[darling(default = "default_crate")]
-    pub crate_: Path,
+pub struct ChoiceArgArgs {
+    #[darling(flatten)]
+    pub common: CommonArgs,
+}
+
+#[derive(Debug, darling::FromMeta)]
+pub struct ChoiceArgVariantArgs {
+    pub name: Option<String>,
+}
+
+fn default_crate() -> Path {
+    syn::parse_quote!(::houston_cmd)
 }
 
 #[derive(Debug, darling::FromMeta)]

@@ -2,8 +2,8 @@ use darling::{Error, FromMeta as _};
 use proc_macro2::TokenStream;
 use syn::Item;
 
-use crate::any_command_impl::{to_command_option_shared, to_command_shared};
 use crate::args::{ChatCommandArgs, TopSubCommandArgs};
+use crate::shared_command::{to_command_option_shared, to_command_shared};
 
 mod command_emit;
 mod group_emit;

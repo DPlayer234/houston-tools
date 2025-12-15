@@ -5,8 +5,8 @@ use proc_macro2::TokenStream;
 use syn::spanned::Spanned as _;
 use syn::{FnArg, ItemFn, Type, TypeInfer};
 
-use crate::any_command_impl::to_command_shared;
 use crate::args::{CommonArgs, ContextCommandArgs};
+use crate::shared_command::to_command_shared;
 
 enum ContextKind {
     Undefined,
