@@ -1,9 +1,13 @@
 //! Private helpers for the [`button_value`] macro.
 
+use std::convert::Infallible;
 use std::fmt;
+use std::marker::PhantomData;
 
 use houston_cmd::BoxFuture;
 use serde::Deserialize;
+pub use serenity::all as serenity;
+pub use thiserror;
 
 use super::{AnyContext, AnyInteraction, ButtonAction, ButtonReply, encoding};
 use crate::{ButtonContext, ButtonValue, ModalContext, Result};
@@ -99,5 +103,134 @@ macro_rules! button_value {
     };
     ($Ty:ty, $key:expr) => {
         $crate::button_value!(for<'__ignore> $Ty, $key);
+    };
+}
+
+/// Error type for `text_ref` kind [`modal_parser`] fields.
+///
+/// This type is uninhabited and cannot occur.
+#[derive(Debug, thiserror::Error)]
+#[error("unreachable")]
+pub struct TextRefError<T> {
+    /// Public field so users can match on this type being empty.
+    pub infallible: Infallible,
+    marker: PhantomData<T>,
+}
+
+/// Emits utility types to parse a specified modal structure.
+///
+/// The emitted types are:
+/// - `Fields`: The successful return type matching the macro input syntax.
+/// - `Error`: An error type for failures.
+/// - `parse`: The entry point function.
+///
+/// # Examples
+///
+/// ```
+/// houston_btn::modal_parser! {
+///     required text page: u16,
+///     optional text key: String,
+/// }
+/// ```
+#[macro_export]
+macro_rules! modal_parser {
+    (@field_ty required $Ty:ty) => { $Ty };
+    (@field_ty optional $Ty:ty) => { ::std::option::Option<$Ty> };
+
+    (@error_ty text $Ty:ty) => { <$Ty as ::std::str::FromStr>::Err };
+    (@error_ty text_ref $Ty:ty) => { $crate::private::TextRefError<$Ty> };
+
+    (@parse required text $key:ident : $Ty:ty) => {
+        match &$key.component {
+            $crate::private::serenity::LabelComponent::InputText($crate::private::serenity::InputText {
+                value: ::std::option::Option::Some(value),
+                custom_id,
+                ..
+            }) if custom_id == ::std::stringify!($key) => {
+                match value.parse::<$Ty>() {
+                    ::std::result::Result::Ok(value) => value,
+                    ::std::result::Result::Err(err) => return ::std::result::Result::Err(Error::$key(err)),
+                }
+            },
+            _ => return ::std::result::Result::Err(Error::Invalid),
+        }
+    };
+    (@parse optional text $key:ident : $Ty:ty) => {
+        match &$key.component {
+            $crate::private::serenity::LabelComponent::InputText($crate::private::serenity::InputText {
+                value: ::std::option::Option::Some(value),
+                custom_id,
+                ..
+            }) if custom_id == ::std::stringify!($key) => {
+                match value.parse::<$Ty>() {
+                    ::std::result::Result::Ok(value) => ::std::option::Option::Some(value),
+                    ::std::result::Result::Err(err) => return ::std::result::Result::Err(Error::$key(err)),
+                }
+            },
+            $crate::private::serenity::LabelComponent::InputText(_) => return ::std::result::Result::Err(Error::Invalid),
+            _ => ::std::option::Option::None,
+        }
+    };
+
+    (@parse required text_ref $key:ident : $Ty:ty) => {
+        match &$key.component {
+            $crate::private::serenity::LabelComponent::InputText($crate::private::serenity::InputText {
+                value: ::std::option::Option::Some(value),
+                custom_id,
+                ..
+            }) if custom_id == ::std::stringify!($key) => value,
+            _ => return ::std::result::Result::Err(Error::Invalid),
+        }
+    };
+    (@parse optional text_ref $key:ident : $Ty:ty) => {
+        match &$key.component {
+            $crate::private::serenity::LabelComponent::InputText($crate::private::serenity::InputText {
+                value: ::std::option::Option::Some(value),
+                custom_id,
+                ..
+            }) if custom_id == ::std::stringify!($key) => ::std::option::Option::Some(value as $Ty),
+            $crate::private::serenity::LabelComponent::InputText(_) => return ::std::result::Result::Err(Error::Invalid),
+            _ => ::std::option::Option::None,
+        }
+    };
+
+    (
+        $($life:lifetime =>)?
+        $( $required:ident $kind:ident $key:ident : $Ty:ty ),*
+        $(,)?
+    ) => {
+        /// The fields returned and loaded by [`parse`].
+        pub struct Fields$(<$life>)? {
+            $(pub $key: $crate::modal_parser!(@field_ty $required $Ty)),*
+        }
+
+        /// An error for [`parse`].
+        #[derive(::std::fmt::Debug, $crate::private::thiserror::Error)]
+        #[expect(non_camel_case_types)]
+        pub enum Error$(<$life>)? {
+            /// The interaction does not match the expected modal shape.
+            #[error("interaction does not match expected modal")]
+            Invalid,
+            $(
+                /// Parsing the field failed.
+                #[error("field {}: {}", ::std::stringify!($key), _0)]
+                $key($crate::modal_parser!(@error_ty $kind $Ty))
+            ),*
+        }
+
+        /// Parses a modal interaction and returns the loaded fields.
+        pub fn parse$(<$life>)?(interaction: &$($life)? $crate::private::serenity::ModalInteraction) -> ::std::result::Result<Fields$(<$life>)?, Error$(<$life>)?> {
+            let [$($crate::private::serenity::Component::Label($key)),*] = interaction.data.components.as_slice() else {
+                return ::std::result::Result::Err(Error::Invalid);
+            };
+
+            $(
+                let $key = $crate::modal_parser!(@parse $required $kind $key: $Ty);
+            )*
+
+            ::std::result::Result::Ok(Fields {
+                $($key),*
+            })
+        }
     };
 }

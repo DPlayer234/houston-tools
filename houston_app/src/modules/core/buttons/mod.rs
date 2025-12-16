@@ -2,5 +2,5 @@
 
 mod page;
 
-pub use houston_btn::builtins::{Delete, Noop};
+pub use houston_btn::builtins::{Delete, Noop, SelectNav};
 pub use page::ToPage;

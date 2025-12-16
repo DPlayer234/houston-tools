@@ -4,9 +4,7 @@ use anyhow::Context as _;
 use extract_map::{ExtractKey, ExtractMap};
 use serenity::futures::future::BoxFuture;
 use serenity::gateway::client::FullEvent;
-use serenity::model::application::{
-    ComponentInteraction, ComponentInteractionDataKind, Interaction, ModalInteraction,
-};
+use serenity::model::application::{ComponentInteraction, Interaction, ModalInteraction};
 use serenity::prelude::*;
 
 use crate::context::ContextInner;
@@ -105,16 +103,8 @@ impl EventHandler {
         interaction: &ComponentInteraction,
         inner: &ContextInner<'_>,
     ) -> Result {
-        use ComponentInteractionDataKind as Kind;
-
-        let custom_id: &str = match &interaction.data.kind {
-            Kind::StringSelect { values } if values.len() == 1 => &values[0],
-            Kind::Button => &interaction.data.custom_id,
-            _ => anyhow::bail!("invalid button interaction"),
-        };
-
         let mut buf = encoding::StackBuf::new();
-        let mut decoder = encoding::decode_custom_id(&mut buf, custom_id)?;
+        let mut decoder = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
         let key = decoder.read_key()?;
         let action = inner.state.action(key)?;
 

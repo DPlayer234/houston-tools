@@ -12,16 +12,15 @@ impl<'v> ToPage<'v> {
     }
 
     pub fn get_page(interaction: &ModalInteraction) -> Result<u16> {
-        if let [Component::Label(label)] = interaction.data.components.as_slice()
-            && let LabelComponent::InputText(input) = &label.component
-            && input.custom_id == "page"
-            && let Some(value) = &input.value
-            && let Ok(page) = value.parse::<u16>()
-            && (1..=9999).contains(&page)
-        {
-            Ok(page - 1)
-        } else {
-            anyhow::bail!("page expected in modal data but not found or invalid")
+        houston_btn::modal_parser! {
+            required text page: u16,
+        }
+
+        match parse(interaction) {
+            Ok(i) if (1..=9999).contains(&i.page) => Ok(i.page - 1),
+            Ok(_) => Err(HArgError::new("Page must be at least 1.").into()),
+            Err(Error::page(_)) => Err(HArgError::new("Page must be an integer.").into()),
+            Err(Error::Invalid) => Err(Error::Invalid.into()),
         }
     }
 

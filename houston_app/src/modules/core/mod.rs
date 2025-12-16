@@ -29,6 +29,7 @@ impl super::Module for Module {
             buttons::Noop::ACTION,
             buttons::Delete::ACTION,
             buttons::ToPage::ACTION,
+            buttons::SelectNav::ACTION,
         ]
     }
 

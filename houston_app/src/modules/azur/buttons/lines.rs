@@ -2,6 +2,7 @@ use std::fmt;
 
 use azur_lane::GameServer;
 use azur_lane::ship::*;
+use houston_btn::builtins::SelectNav;
 use utils::text::WriteStr as _;
 
 use super::AzurParseError;
@@ -113,7 +114,7 @@ impl View<'_> {
                 .collect();
 
             components.push(create_string_select_menu_row(
-                self.to_custom_id(),
+                SelectNav::new(0).to_custom_id(),
                 options,
                 &skin.name,
             ));
