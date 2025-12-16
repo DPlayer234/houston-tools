@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::mem::take;
+use std::num::NonZero;
 use std::path::{Component, Path};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::{fs, io, slice};
 
 use azur_lane::equip::*;
@@ -9,12 +10,19 @@ use azur_lane::juustagram::*;
 use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use bytes::Bytes;
-use dashmap::DashMap;
+use lru::LruCache;
 use serenity::small_fixed_array::TruncatingInto as _;
 use smallvec::{SmallVec, smallvec};
 use utils::fuzzy::{Match, MatchIter, Search};
 
 type IndexVec = SmallVec<[usize; 2]>;
+
+// use Bytes to avoid copying the data redundantly
+type LruBytes = LruCache<Box<str>, Option<Bytes>>;
+
+/// Sufficient capacity that shouldn't lead to too much wasted space in the
+/// underlying hash map based on `capacity_to_buckets` in hashbrown.
+const CHIBI_SPRITE_CAP: NonZero<usize> = NonZero::new(28).unwrap();
 
 /// Extended Azur Lane game data for quicker access.
 #[derive(Debug)]
@@ -39,8 +47,7 @@ pub struct GameData {
     special_secretary_id_to_index: HashMap<u32, usize>,
     special_secretary_simsearch: Search<()>,
 
-    // use Bytes to avoid copying the data redundantly
-    chibi_sprite_cache: DashMap<Box<str>, Option<Bytes>>,
+    chibi_sprite_cache: Mutex<LruBytes>,
 }
 
 impl GameData {
@@ -105,7 +112,7 @@ impl GameData {
             equip_simsearch: Search::new(),
             augment_simsearch: Search::new(),
             special_secretary_simsearch: Search::new(),
-            chibi_sprite_cache: DashMap::new(),
+            chibi_sprite_cache: Mutex::new(LruCache::new(CHIBI_SPRITE_CAP)),
         };
 
         // we trim away "hull_disallowed" equip values that never matter in practice to
@@ -300,14 +307,21 @@ impl GameData {
         // Consult the cache first. If the image has been seen already, it will be
         // stored here. It may also have a None entry if the image was requested
         // but not found.
-        match self.chibi_sprite_cache.get(image_key) {
-            Some(entry) => entry.clone(),
-            None => self.load_and_cache_chibi_image(image_key),
-        }
+        // Must drop the guard before entering `load_and_cache_chibi_image`!
+        { self.chibi_sprite_cache().get(image_key).cloned() }
+            .unwrap_or_else(|| self.load_and_cache_chibi_image(image_key))
+    }
+
+    fn chibi_sprite_cache(&self) -> MutexGuard<'_, LruBytes> {
+        self.chibi_sprite_cache
+            .lock()
+            .expect("chibi image cache never poisoned")
     }
 
     #[cold]
     fn load_and_cache_chibi_image(&self, image_key: &str) -> Option<Bytes> {
+        log::trace!("Loading chibi sprite: '{image_key}'");
+
         // IMPORTANT: the right-hand side of join may be absolute or relative and can
         // therefore read files outside of `data_path`. Currently, this doesn't
         // take user-input, but this should be considered for the future.
@@ -315,21 +329,17 @@ impl GameData {
         match fs::read(path) {
             Ok(data) => {
                 // File read successfully, cache the data.
-                use dashmap::mapref::entry::Entry;
-
-                match self.chibi_sprite_cache.entry(image_key.into()) {
-                    // data race: loaded concurrently, too slow here. drop the newly read data.
-                    Entry::Occupied(entry) => entry.get().clone(),
-                    // still empty: wrap the current data and return it
-                    Entry::Vacant(entry) => {
+                // If we were slower than a concurrent caller for the same key, drops the newly
+                // read data and returns the one that was loaded first.
+                self.chibi_sprite_cache()
+                    .get_or_insert(image_key.into(), || {
                         // convert the data `Vec<u8>` to a `Box<[u8]>` first so we can be sure it
                         // doesn't end up caching with excess capacity. this is usually a noop since
                         // `fs::read` should preallocate the correct size, and `Bytes` would do this
                         // itself if the capacity is exact, but we'll just make sure with this.
-                        let data = data.into_boxed_slice();
-                        (*entry.insert(Some(Bytes::from(data)))).clone()
-                    },
-                }
+                        Some(Bytes::from(data.into_boxed_slice()))
+                    })
+                    .clone()
             },
             Err(err) => {
                 // Reading failed. Check the error kind.
@@ -341,14 +351,15 @@ impl GameData {
                     // attempts at loading the file.
                     NotFound | PermissionDenied => {
                         // insert, but do not replace a present entry
-                        self.chibi_sprite_cache.entry(image_key.into()).or_default();
+                        self.chibi_sprite_cache()
+                            .get_or_insert(image_key.into(), || None)
+                            .clone()
                     },
                     _ => {
                         log::warn!("Failed to load chibi sprite '{image_key}': {err:?}");
+                        None
                     },
-                };
-
-                None
+                }
             },
         }
     }

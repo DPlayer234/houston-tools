@@ -1132,6 +1132,7 @@ dependencies = [
  "indexmap 2.12.1",
  "log",
  "log4rs",
+ "lru",
  "mongodb",
  "num-traits",
  "rand",
@@ -1592,6 +1593,12 @@ dependencies = [
  "typemap-ors",
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "lru"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96051b46fc183dc9cd4a223960ef37b9af631b55191852a8274bfef064cda20f"
 
 [[package]]
 name = "lru-slab"
