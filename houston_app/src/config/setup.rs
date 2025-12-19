@@ -95,7 +95,8 @@ impl<'a> TomlText<'a> {
 /// Nested values can be specified by using `__` (two underscores) as a
 /// separator, (i.e. `DISCORD__TOKEN` will refer to `discord.token`).
 ///
-/// Currently, all values are treated as strings.
+/// Currently, all values are treated as strings. Values that are not fully
+/// valid UTF-8 may be converted to UTF-8 with a lossy conversion.
 #[must_use]
 pub struct Env(());
 
@@ -109,15 +110,15 @@ impl Env {
 impl Layer for File {
     fn extend_table(&self, table: &mut Table) -> Result<()> {
         let file = match fs::read_to_string(&self.path) {
-            Ok(content) => deserialize_str_to_table(&content)?,
+            Ok(content) => deserialize_str_to_table(&content)
+                .with_context(|| format!("failed to load config {:?}", self.path))?,
             Err(why) => {
                 // on error, we definitely return and don't merge tables
                 if !self.required && why.kind() == io::ErrorKind::NotFound {
                     return Ok(());
                 }
 
-                let path = self.path.display();
-                return Err(why).context(format!("cannot read required config `{path}`"));
+                return Err(why).context(format!("cannot read required config {:?}", self.path));
             },
         };
 
@@ -128,7 +129,7 @@ impl Layer for File {
 
 impl Layer for TomlText<'_> {
     fn extend_table(&self, table: &mut Table) -> Result<()> {
-        let toml = deserialize_str_to_table(self.text)?;
+        let toml = deserialize_str_to_table(self.text).context("toml str literal invalid")?;
         merge_tables(table, toml);
         Ok(())
     }
@@ -136,10 +137,22 @@ impl Layer for TomlText<'_> {
 
 impl Layer for Env {
     fn extend_table(&self, table: &mut Table) -> Result<()> {
-        for (mut key, value) in env::vars_os()
-            .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)))
-        {
+        for (key, value) in env::vars_os() {
+            // non-utf8 keys cannot possibly refer to anything that serde or toml allows as
+            // keys so they can just be excluded
+            let Ok(mut key) = key.into_string() else {
+                continue;
+            };
+
             key.make_ascii_lowercase();
+
+            // excluding values based on them not being utf8 isn't super great for error
+            // reporting later, so just use lossy conversion so that at least gets seen.
+            // also doesn't matter if the env var isn't used by this program
+            let value = value
+                .into_string()
+                .unwrap_or_else(|o| o.to_string_lossy().into_owned());
+
             let segments = key.split("__").collect::<SmallVec<[&str; 8]>>();
             insert_at(table, &segments, Value::String(value));
         }
