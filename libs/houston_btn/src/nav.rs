@@ -93,10 +93,24 @@ impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
     }
 }
 
+struct Hex<'a>(&'a [u8]);
+
+impl fmt::Debug for Hex<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, &b) in self.0.iter().enumerate() {
+            if i & 3 == 0 && i != 0 {
+                f.write_str("-")?;
+            }
+            write!(f, "{b:02x}")?;
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Debug for Nav<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
-            NavInner::Slice(slice) => f.debug_tuple("Slice").field(&slice).finish(),
+            NavInner::Slice(slice) => f.debug_tuple("Slice").field(&Hex(slice)).finish(),
             NavInner::Value(args) => f.debug_tuple("Value").field(&args).finish(),
         }
     }
