@@ -41,7 +41,7 @@ impl<'a> BoxedJoinFut<'a> {
 #[cfg(test)]
 mod tests {
     use std::pin::Pin;
-    use std::sync::Mutex;
+    use std::sync::{Mutex, MutexGuard};
     use std::task::{Context, Poll, Waker};
 
     use super::BoxedJoinFut;
@@ -60,12 +60,17 @@ mod tests {
         }
     }
 
+    fn lock(m: &Mutex<u8>) -> MutexGuard<'_, u8> {
+        m.lock().expect("unpoisoned")
+    }
+
     #[test]
     fn single() {
         let state = Mutex::new(0);
         let one = async {
-            *state.lock().expect("unpoisoned") = 1;
+            *lock(&state) = 1;
             YieldOnce(true).await;
+            *lock(&state) = 2;
         };
 
         let mut f = BoxedJoinFut::default();
@@ -74,24 +79,24 @@ mod tests {
 
         let mut cx = Context::from_waker(Waker::noop());
         assert_eq!(f.as_mut().poll(&mut cx), Poll::Pending);
-        assert_eq!(*state.lock().expect("unpoisoned"), 1);
+        assert_eq!(*lock(&state), 1);
         assert_eq!(f.as_mut().poll(&mut cx), Poll::Ready(()));
-        assert_eq!(*state.lock().expect("unpoisoned"), 1);
+        assert_eq!(*lock(&state), 2);
     }
 
     #[test]
     fn multi() {
         let state = Mutex::new(0);
         let one = async {
-            *state.lock().expect("unpoisoned") |= 0x1;
+            *lock(&state) |= 0x1;
         };
         let two = async {
-            *state.lock().expect("unpoisoned") |= 0x2;
+            *lock(&state) |= 0x2;
             YieldOnce(true).await;
-            *state.lock().expect("unpoisoned") |= 0x8;
+            *lock(&state) |= 0x8;
         };
         let three = async {
-            *state.lock().expect("unpoisoned") |= 0x4;
+            *lock(&state) |= 0x4;
         };
 
         let mut f = BoxedJoinFut::default();
@@ -102,8 +107,8 @@ mod tests {
 
         let mut cx = Context::from_waker(Waker::noop());
         assert_eq!(f.as_mut().poll(&mut cx), Poll::Pending);
-        assert_eq!(*state.lock().expect("unpoisoned"), 0x7);
+        assert_eq!(*lock(&state), 0x7);
         assert_eq!(f.as_mut().poll(&mut cx), Poll::Ready(()));
-        assert_eq!(*state.lock().expect("unpoisoned"), 0xF);
+        assert_eq!(*lock(&state), 0xF);
     }
 }

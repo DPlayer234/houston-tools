@@ -95,6 +95,7 @@ pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
 }
 
 /// Asserts that `T` is zero bytes in size or fails to compile.
+#[inline(always)]
 pub const fn assert_zst<T>(value: T) -> T {
     const {
         assert!(size_of::<T>() == 0, "expected value to be zero-sized");

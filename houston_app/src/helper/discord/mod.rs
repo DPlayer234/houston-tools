@@ -10,11 +10,8 @@ pub mod events;
 ///
 /// No validation. I wish this could be const.
 pub fn unicode_emoji(text: &'static str) -> ReactionType {
-    // it is worth noting that `ReactionType::from` unconditionally allocates only
-    // to throw the allocation away. it seems the compiler isn't quite smart enough
-    // to eliminate it.
-    // but this is useful even if it was smart enough to optimize that better since
-    // some unicode emojis take up more than 1 char anyways.
+    // `ReactionType::from(char)` may work for most cases, but this saves us the
+    // encoding step and some unicode emojis need more than 1 char anyways.
     let text = FixedString::from_static_trunc(text);
     ReactionType::Unicode(text)
 }

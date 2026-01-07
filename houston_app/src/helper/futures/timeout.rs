@@ -86,8 +86,7 @@ mod tests {
 
     const TEST_DUR: Duration = Duration::from_millis(100);
 
-    #[tokio::main(flavor = "current_thread")]
-    #[test]
+    #[tokio::test]
     async fn short() {
         let fut = pin!(async { 42 });
         let intercept = pin!(async { 69 });
@@ -96,8 +95,7 @@ mod tests {
         assert_eq!(out, (42, None));
     }
 
-    #[tokio::main(flavor = "current_thread")]
-    #[test]
+    #[tokio::test]
     async fn long() {
         let fut = pin!(async {
             sleep(TEST_DUR).await;
