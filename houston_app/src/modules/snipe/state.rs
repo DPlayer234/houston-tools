@@ -31,7 +31,7 @@ pub struct SnipedAuthor {
 
 #[derive(Debug, Clone)]
 pub struct SnipedAttachment {
-    pub filename: FixedString<u8>,
+    pub filename: FixedString,
     pub url: FixedString,
 }
 
@@ -39,7 +39,7 @@ fn capture_attachments(attachments: &[Attachment]) -> FixedArray<SnipedAttachmen
     let attachments = attachments
         .iter()
         .map(|a| SnipedAttachment {
-            filename: FixedString::from_str_trunc(a.filename.as_str()),
+            filename: a.filename.clone(),
             url: a.url.clone(),
         })
         .collect();
@@ -67,7 +67,18 @@ impl SnipedMessage {
 
     pub fn update(&mut self, msg: &Message) {
         self.content.clone_from(&msg.content);
-        self.attachments = capture_attachments(&msg.attachments);
+
+        // the only options for a user are removing all attachments or editing the
+        // content, so trying to reuse the memory here is better. probably won't do
+        // anything usually.
+        if u32::from(self.attachments.len()) == msg.attachments.len() {
+            for (old, new) in self.attachments.iter_mut().zip(&msg.attachments) {
+                old.filename.clone_from(&new.filename);
+                old.url.clone_from(&new.url);
+            }
+        } else {
+            self.attachments = capture_attachments(&msg.attachments);
+        }
     }
 }
 

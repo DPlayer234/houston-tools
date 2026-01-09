@@ -115,7 +115,7 @@ pub trait Module: Sized {
 
     /// Provides a function to call to initialize the database.
     ///
-    /// This will generally create indices on related collection.
+    /// This will generally create indices on related collections.
     async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
         _ = data;
         _ = db;
