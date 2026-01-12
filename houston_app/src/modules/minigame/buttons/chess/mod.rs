@@ -61,8 +61,12 @@ impl View {
         }
     }
 
-    fn board_components<'a>(&mut self, data: &'a HBotData, label: String) -> CreateComponents<'a> {
-        let mut components = CreateComponents::with_capacity(N + 2);
+    fn board_components<'a>(
+        &mut self,
+        data: &'a HBotData,
+        label: String,
+    ) -> ComponentVec<CreateContainerComponent<'a>> {
+        let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 
@@ -124,8 +128,8 @@ impl View {
         &self,
         data: &'a HBotData,
         label: String,
-    ) -> CreateComponents<'a> {
-        let mut components = CreateComponents::with_capacity(N + 2);
+    ) -> ComponentVec<CreateContainerComponent<'a>> {
+        let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 

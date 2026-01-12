@@ -19,7 +19,7 @@ pub struct View<'v> {
 impl View<'_> {
     /// Modifies the create-reply with a preresolved equipment.
     pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("## {}", equip.name)));
         components.push(CreateSeparator::new(true));
 
@@ -80,7 +80,7 @@ impl View<'_> {
         ])
     }
 
-    fn get_skills_field<'a>(&self, skills: &[Skill]) -> CreateComponent<'a> {
+    fn get_skills_field<'a>(&self, skills: &[Skill]) -> CreateContainerComponent<'a> {
         let mut text = String::new();
         text.push_str("### Skills\n");
 
@@ -102,7 +102,7 @@ impl View<'_> {
         };
 
         CreateSection::new(
-            section_components![CreateTextDisplay::new(text)],
+            components![CreateTextDisplay::new(text)],
             CreateSectionAccessory::Button(button),
         )
         .into_component()

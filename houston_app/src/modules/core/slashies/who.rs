@@ -67,12 +67,12 @@ async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>
 
 /* Format the embeds */
 
-fn section<'new>(content: String, face: Option<String>) -> CreateComponent<'new> {
+fn section<'new>(content: String, face: Option<String>) -> CreateContainerComponent<'new> {
     let text = CreateTextDisplay::new(content);
     match face {
-        None => CreateComponent::TextDisplay(text),
-        Some(face) => CreateComponent::Section(CreateSection::new(
-            section_components![text],
+        None => CreateContainerComponent::TextDisplay(text),
+        Some(face) => CreateContainerComponent::Section(CreateSection::new(
+            components![text],
             CreateSectionAccessory::Thumbnail(CreateThumbnail::new(CreateUnfurledMediaItem::new(
                 face,
             ))),
@@ -226,6 +226,7 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
         flag!(MENTION_EVERYONE, "Mention @\u{200D}everyone"),
         flag!(MANAGE_MESSAGES),
         flag!(PIN_MESSAGES),
+        flag!(BYPASS_SLOWMODE),
         flag!(MANAGE_THREADS),
         flag!(READ_MESSAGE_HISTORY),
         flag!(SEND_TTS_MESSAGES),

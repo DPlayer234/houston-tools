@@ -44,8 +44,8 @@ enum AzurParseError {
 /// - whose accessory is a thumbnail with the preview.
 fn get_ship_preview_name(ctx: ButtonContext<'_>) -> Option<&str> {
     if let Some(Component::Container(container)) = ctx.interaction.message.components.first()
-        && let Some(Component::Section(section)) = container.components.first()
-        && let Component::Thumbnail(thumbnail) = &*section.accessory
+        && let Some(ContainerComponent::Section(section)) = container.components.first()
+        && let SectionAccessory::Thumbnail(thumbnail) = &*section.accessory
     {
         get_thumbnail_filename(&thumbnail.media.url)
     } else {

@@ -35,11 +35,9 @@ fn filter(guild_id: GuildId, user_id: UserId) -> Result<Document> {
         .into_document()?)
 }
 
-fn shop_footer<'new>(perks: &Config, wallet: &Wallet) -> CreateComponent<'new> {
-    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
-        "-# **Wallet:** {}{}",
-        perks.cash_name, wallet.cash
-    )))
+fn shop_footer<'new>(perks: &Config, wallet: &Wallet) -> CreateContainerComponent<'new> {
+    CreateTextDisplay::new(format!("-# **Wallet:** {}{}", perks.cash_name, wallet.cash))
+        .into_component()
 }
 
 impl View {
@@ -76,7 +74,7 @@ impl View {
             active.iter().find(|p| p.effect == effect)
         }
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new("### Server Shop"));
 
         // add all effects first
@@ -111,7 +109,7 @@ impl View {
             let button = CreateButton::new(custom_id).emoji(emoji::right());
 
             components.push(CreateSection::new(
-                section_components![CreateTextDisplay::new(content)],
+                components![CreateTextDisplay::new(content)],
                 CreateSectionAccessory::Button(button),
             ));
         }
@@ -137,7 +135,7 @@ impl View {
             let button = CreateButton::new(custom_id).emoji(emoji::right());
 
             components.push(CreateSection::new(
-                section_components![CreateTextDisplay::new(content)],
+                components![CreateTextDisplay::new(content)],
                 CreateSectionAccessory::Button(button),
             ));
         }

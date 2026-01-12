@@ -32,7 +32,7 @@ impl<'v> View<'v> {
             Some(value)
         }
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(format!(
             "### {} [Shadow Equip]",

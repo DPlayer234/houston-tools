@@ -23,7 +23,7 @@ impl View<'_> {
         azur: LoadedConfig<'a>,
         augment: &'a Augment,
     ) -> CreateReply<'a> {
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(format!("### {}", augment.name)));
         components.push(CreateSeparator::new(true));

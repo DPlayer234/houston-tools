@@ -69,7 +69,7 @@ impl View<'_> {
         ship: &'a ShipData,
         skin: &'a ShipSkin,
         thumbnail_key: Option<&str>,
-    ) -> Result<CreateComponents<'a>> {
+    ) -> Result<ComponentVec<CreateComponent<'a>>> {
         let (words, words_extra) = skin.words(self.server).context("skin has no words set")?;
 
         self.server = words.server;
@@ -83,7 +83,7 @@ impl View<'_> {
 
         self.try_redirect_to_non_empty_part(words);
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(self.get_main_field(azur, skin, words, thumbnail_key));
 
@@ -196,7 +196,7 @@ impl View<'_> {
         skin: &'a ShipSkin,
         words: &ShipSkinWords,
         thumbnail_key: Option<&str>,
-    ) -> CreateComponent<'a> {
+    ) -> CreateContainerComponent<'a> {
         let label = if self.extra { "EX Lines" } else { "Lines" };
 
         let mut content = format!("### {} [{label}]\n", skin.name);
@@ -211,7 +211,7 @@ impl View<'_> {
             let thumbnail = CreateThumbnail::new(media);
 
             CreateSection::new(
-                section_components![content],
+                components![content],
                 CreateSectionAccessory::Thumbnail(thumbnail),
             )
             .into_component()

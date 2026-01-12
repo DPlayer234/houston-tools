@@ -42,7 +42,7 @@ impl View<'_> {
     fn edit_with_skills<'a>(
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
-        components: &mut CreateComponents<'a>,
+        components: &mut ComponentVec<CreateContainerComponent<'a>>,
     ) {
         components.push(CreateSeparator::new(true));
 
@@ -54,7 +54,7 @@ impl View<'_> {
     /// Appends info for a skill to the `components`.
     fn append_skill<'a>(
         &mut self,
-        components: &mut CreateComponents<'a>,
+        components: &mut ComponentVec<CreateContainerComponent<'a>>,
         index: u8,
         skill: &'a Skill,
     ) {
@@ -90,7 +90,7 @@ impl View<'_> {
     fn edit_with_ship<'a>(mut self, azur: LoadedConfig<'a>, ship: &'a ShipData) -> EditReply<'a> {
         let mut skills: ArrayVec<&Skill, 5> = ship.skills.iter().take(4).collect();
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!(
             "### {} [Skills]",
             ship.name
@@ -168,7 +168,7 @@ impl View<'_> {
         color_rgb: u32,
         skills: impl Iterator<Item = &'a Skill>,
     ) -> EditReply<'a> {
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("### {name} [Skills]")));
 
         let nav = CreateActionRow::buttons(vec![
@@ -205,7 +205,11 @@ impl View<'_> {
     }
 
     /// Creates the embed fields for the selected skill.
-    fn append_barrage_info<'a>(&self, skill: &'a Skill, components: &mut CreateComponents<'a>) {
+    fn append_barrage_info<'a>(
+        &self,
+        skill: &'a Skill,
+        components: &mut ComponentVec<CreateContainerComponent<'a>>,
+    ) {
         if !skill.barrages.is_empty() {
             let mut content = String::new();
             content.push_str("### __Barrage__\n");

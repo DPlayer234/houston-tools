@@ -92,8 +92,8 @@ impl View<'_> {
         ship: &'a ShipData,
         base_ship: &'a ShipData,
         thumbnail_key: Option<&str>,
-    ) -> CreateComponents<'a> {
-        let mut components = CreateComponents::new();
+    ) -> ComponentVec<CreateComponent<'a>> {
+        let mut components = ComponentVec::new();
 
         components.push(self.get_header_field(data, ship, base_ship, thumbnail_key));
         components.extend(self.get_retro_state_row(base_ship));
@@ -125,7 +125,7 @@ impl View<'_> {
         &self,
         azur: LoadedConfig<'a>,
         base_ship: &'a ShipData,
-    ) -> CreateComponent<'a> {
+    ) -> CreateContainerComponent<'a> {
         let view_lines = super::lines::View::builder()
             .ship_id(self.ship_id)
             .back(self.to_nav())
@@ -154,7 +154,10 @@ impl View<'_> {
         CreateActionRow::buttons(buttons).into_component()
     }
 
-    fn get_retro_state_row<'a>(&mut self, base_ship: &ShipData) -> Option<CreateComponent<'a>> {
+    fn get_retro_state_row<'a>(
+        &mut self,
+        base_ship: &ShipData,
+    ) -> Option<CreateContainerComponent<'a>> {
         let base_button = || self.button_with_retrofit(None).label("Base");
 
         let buttons = match base_ship.retrofits.len() {
@@ -189,7 +192,7 @@ impl View<'_> {
         ship: &'a ShipData,
         base_ship: &'a ShipData,
         thumbnail_key: Option<&str>,
-    ) -> CreateComponent<'a> {
+    ) -> CreateContainerComponent<'a> {
         let content = format!(
             "## {}\n\
              [{}] {:★<star_pad$}\n{} {} {}\n\
@@ -212,7 +215,7 @@ impl View<'_> {
             let thumbnail = CreateThumbnail::new(media);
 
             CreateSection::new(
-                section_components![content],
+                components![content],
                 CreateSectionAccessory::Thumbnail(thumbnail),
             )
             .into_component()
@@ -222,7 +225,7 @@ impl View<'_> {
     }
 
     /// Creates the embed field that display the stats.
-    fn get_stats_field<'a>(&self, ship: &ShipData) -> CreateComponent<'a> {
+    fn get_stats_field<'a>(&self, ship: &ShipData) -> CreateContainerComponent<'a> {
         let stats = &ship.stats;
         let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
@@ -275,7 +278,7 @@ impl View<'_> {
         CreateTextDisplay::new(content).into_component()
     }
 
-    fn get_upgrade_row<'a>(&mut self) -> CreateComponent<'a> {
+    fn get_upgrade_row<'a>(&mut self) -> CreateContainerComponent<'a> {
         CreateActionRow::buttons(vec![
             self.button_with_level(120).label("Lv.120"),
             self.button_with_level(125).label("Lv.125"),
@@ -290,7 +293,11 @@ impl View<'_> {
     }
 
     /// Creates the embed field that displays the weapon equipment slots.
-    fn get_equip_field<'a>(&self, azur: LoadedConfig<'a>, ship: &ShipData) -> CreateComponent<'a> {
+    fn get_equip_field<'a>(
+        &self,
+        azur: LoadedConfig<'a>,
+        ship: &ShipData,
+    ) -> CreateContainerComponent<'a> {
         let slots = ship
             .equip_slots
             .iter()
@@ -357,11 +364,8 @@ impl View<'_> {
                 .label("Shadow Equip")
                 .style(ButtonStyle::Secondary);
 
-            CreateSection::new(
-                section_components![text],
-                CreateSectionAccessory::Button(button),
-            )
-            .into_component()
+            CreateSection::new(components![text], CreateSectionAccessory::Button(button))
+                .into_component()
         }
     }
 
@@ -370,7 +374,7 @@ impl View<'_> {
         &self,
         azur: LoadedConfig<'a>,
         ship: &ShipData,
-    ) -> Option<CreateComponent<'a>> {
+    ) -> Option<CreateContainerComponent<'a>> {
         if ship.skills.is_empty() {
             return None;
         }
@@ -410,7 +414,7 @@ impl View<'_> {
 
         Some(
             CreateSection::new(
-                section_components![CreateTextDisplay::new(text)],
+                components![CreateTextDisplay::new(text)],
                 CreateSectionAccessory::Button(button),
             )
             .into_component(),
@@ -422,7 +426,7 @@ impl View<'_> {
         &self,
         data: &HBotData,
         base_ship: &ShipData,
-    ) -> Option<CreateComponent<'a>> {
+    ) -> Option<CreateContainerComponent<'a>> {
         let fleet_tech = base_ship.fleet_tech.as_ref()?;
 
         fn stat_display(data: &HBotData, stats: &FleetTechStatBonus) -> impl fmt::Display {

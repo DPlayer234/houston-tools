@@ -35,10 +35,10 @@ impl<'v> View<'v> {
         mut iter: Query<'a, 'v>,
     ) -> Result<CreateReply<'a>> {
         let page_iter = super::page_iter!(iter, self.page);
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateSection::new(
-            section_components![CreateTextDisplay::new("### Ships")],
+            components![CreateTextDisplay::new("### Ships")],
             CreateSectionAccessory::Button(
                 CreateButton::new_link(&azur.wiki_urls().ship_list).label("Wiki"),
             ),

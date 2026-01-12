@@ -81,7 +81,7 @@ impl View {
         let label = format!("### {} Leaderboards", board.emoji());
         let description = description.or_default("<None>");
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));

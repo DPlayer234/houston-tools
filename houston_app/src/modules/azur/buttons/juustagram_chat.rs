@@ -70,7 +70,7 @@ impl View<'_> {
             }
         }
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("### {}", chat.name)));
         components.push(CreateSeparator::new(true));
 

@@ -29,7 +29,7 @@ impl View {
         mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
         let page_iter = super::page_iter!(iter, self.page);
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new("### JUUS [Chats]"));
         components.push(CreateSeparator::new(true));

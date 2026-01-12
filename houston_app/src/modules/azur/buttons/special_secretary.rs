@@ -41,7 +41,7 @@ impl View<'_> {
             .context("secretary has no words set")?;
 
         self.server = words.server;
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(self.get_main_field(secretary, words));
 

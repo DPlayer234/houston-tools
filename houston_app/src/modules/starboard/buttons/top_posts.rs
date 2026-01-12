@@ -91,7 +91,7 @@ impl View {
         let label = format!("### {} Top Posts", board.emoji());
         let description = description.or_default("<None>");
 
-        let mut components = CreateComponents::new();
+        let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(label));
 

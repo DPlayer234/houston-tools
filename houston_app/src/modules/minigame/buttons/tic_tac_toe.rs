@@ -106,11 +106,11 @@ impl View {
         label: String,
         current: Player,
         modify: F,
-    ) -> CreateComponents<'a>
+    ) -> ComponentVec<CreateContainerComponent<'a>>
     where
         F: Fn(CreateButton<'a>, usize, usize, Option<Player>) -> CreateButton<'a>,
     {
-        let mut components = CreateComponents::with_capacity(N + 2);
+        let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
         components.push(CreateSeparator::new(true));
 
