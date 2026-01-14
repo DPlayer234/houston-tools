@@ -65,6 +65,19 @@ mod tests {
     }
 
     #[test]
+    fn test_logic_ok() {
+        let run = async {
+            YieldOnce(false).await;
+            YieldOnce(false).await;
+        };
+
+        let run = std::pin::pin!(run);
+
+        let mut cx = Context::from_waker(Waker::noop());
+        assert_eq!(run.poll(&mut cx), Poll::Ready(()));
+    }
+
+    #[test]
     fn single() {
         let state = Mutex::new(0);
         let one = async {

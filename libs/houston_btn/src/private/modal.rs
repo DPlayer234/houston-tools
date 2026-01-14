@@ -124,16 +124,28 @@ macro_rules! impl_from_select_menu_resolved {
 }
 
 impl_from_select_menu_resolved!(&'a User, data, |id| data.users.get(&id));
+impl_from_select_menu_resolved!(User, data, |id| data.users.get(&id).cloned());
 impl_from_select_menu_resolved!(&'a PartialMember, data, |id| data.members.get(&id));
+impl_from_select_menu_resolved!(PartialMember, data, |id| data.members.get(&id).cloned());
 impl_from_select_menu_resolved!(&'a Role, data, |id| data.roles.get(&id));
+impl_from_select_menu_resolved!(Role, data, |id| data.roles.get(&id).cloned());
 impl_from_select_menu_resolved!(&'a GenericInteractionChannel, data, |id| data
     .channels
     .get(&id));
+impl_from_select_menu_resolved!(GenericInteractionChannel, data, |id| data
+    .channels
+    .get(&id)
+    .cloned());
 
 impl_from_select_menu_resolved!((&'a User, &'a PartialMember), data, |id| data
     .users
     .get(&id)
     .zip(data.members.get(&id)));
+impl_from_select_menu_resolved!((User, PartialMember), data, |id| data
+    .users
+    .get(&id)
+    .zip(data.members.get(&id))
+    .map(|(u, m)| (u.clone(), m.clone())));
 
 pub fn text_field<T, E>(
     label: &Label,
@@ -232,7 +244,11 @@ where
 /// |:---------- |:---------------------------------- |
 /// | `text`     | Any type implementing [`FromStr`]. |
 /// | `text_ref` | [`&str`](str)                      |
-/// | `select`   | [`&str`](str), [`&User`](User), [`&PartialMember`](PartialMember), `(&User, &PartialMember)`, [`&Role`](Role), [`&GenericInteractionChannel`](GenericInteractionChannel), or a [`Vec`] of any those types if accepting more than 1 value. |
+/// | `select`   | [`&str`](str), [`User`], [`PartialMember`], `(User, PartialMember)`, [`Role`], [`GenericInteractionChannel`], references to these, or a [`Vec`] of any those types if accepting more than 1 value. |
+///
+/// Generally, it is recommended to take `select` values by reference since it
+/// needs to clone them internally. Similarly, `text` values of type `String`
+/// should instead use `text_ref` and `&str`.
 ///
 /// # Examples
 ///
@@ -240,7 +256,6 @@ where
 /// ```
 /// houston_btn::modal_parser! {
 ///     required text page: u16,
-///     optional text key: String,
 /// }
 /// ```
 ///
@@ -317,7 +332,7 @@ macro_rules! modal_parser {
 
         /// Parses a modal interaction and returns the loaded fields.
         pub fn parse$(<$life>)?(interaction: &$($life)? $crate::private::serenity::ModalInteraction) -> ::std::result::Result<Fields$(<$life>)?, Error$(<$life>)?> {
-            let [$($crate::private::serenity::Component::Label($key)),*] = interaction.data.components.as_slice() else {
+            let [$($crate::private::serenity::ModalComponent::Label($key)),*] = interaction.data.components.as_slice() else {
                 return ::std::result::Result::Err(Error::Invalid);
             };
 
