@@ -60,18 +60,13 @@ where
         out.push_str(raw);
 
         if let Some(end) = rest.find('}') {
+            // `}` is a 1-byte char, so `end + 1` must be a char boundary.
             let (hole, rest) = rest.split_at(end + 1);
-            debug_assert!(hole.len() >= 2, "must be at least 2 bytes long");
-            debug_assert!(end >= 1, "end must be >= 1");
-            debug_assert!(
-                hole.is_char_boundary(1) && hole.is_char_boundary(end),
-                "must have a char boundaries at index 1 and {end}"
-            );
 
-            // SAFETY: we must have at least 2 bytes here now, `{` and `}`.
+            // hole must be a string starting with `{` and ending with `}`.
             // `end` is within the range (due to successful split), and must be >=1.
             // `{` is a 1-byte char, so 1 must be a char boundary.
-            let name = unsafe { hole.get_unchecked(1..end) };
+            let name = &hole[1..end];
 
             // call user append function
             f(&mut out, name);

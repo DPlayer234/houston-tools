@@ -9,53 +9,48 @@
 
 use std::fmt;
 use std::io::{IoSlice, LineWriter, Result, Stderr, Write, stderr};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 /// Provides a line-buffered wrapper around [`stderr`].
 ///
-/// Re-entrant use will deadlock.
+/// Calling this function while a [`BufStderr`] is already in use will deadlock.
 pub fn buf_stderr() -> BufStderr {
-    static INSTANCE: Mutex<Option<LineWriter<Stderr>>> = Mutex::new(None);
+    // ideally we'd copy what stdout does, but `ReentrantLock` isn't stable yet, so
+    // we instead use a `Mutex` and skip the `RefCell` to get a _similar_ effect.
+    // note that this will deadlock instead of panic on recursive use.
+    static STDERR: OnceLock<Mutex<LineWriter<Stderr>>> = OnceLock::new();
 
-    let mut inner = INSTANCE.lock().expect("mutex should not be poisoned");
-    inner.get_or_insert_with(|| LineWriter::new(stderr()));
+    let inner = STDERR
+        .get_or_init(|| Mutex::new(LineWriter::new(stderr())))
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
 
     BufStderr { inner }
 }
 
 /// A line-buffered writer to [`Stderr`].
 pub struct BufStderr {
-    // safety note: must always be `Some`
-    inner: MutexGuard<'static, Option<LineWriter<Stderr>>>,
-}
-
-impl BufStderr {
-    fn inner(&mut self) -> &mut LineWriter<Stderr> {
-        debug_assert!(self.inner.is_some(), "inner must be Some");
-
-        // SAFETY: always constructed with `Some`.
-        unsafe { self.inner.as_mut().unwrap_unchecked() }
-    }
+    inner: MutexGuard<'static, LineWriter<Stderr>>,
 }
 
 impl Write for BufStderr {
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        self.inner().write(buf)
+        self.inner.write(buf)
     }
 
     fn write_all(&mut self, buf: &[u8]) -> Result<()> {
-        self.inner().write_all(buf)
+        self.inner.write_all(buf)
     }
 
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> Result<usize> {
-        self.inner().write_vectored(bufs)
+        self.inner.write_vectored(bufs)
     }
 
     fn flush(&mut self) -> Result<()> {
-        self.inner().flush()
+        self.inner.flush()
     }
 
     fn write_fmt(&mut self, fmt: fmt::Arguments<'_>) -> Result<()> {
-        self.inner().write_fmt(fmt)
+        self.inner.write_fmt(fmt)
     }
 }
