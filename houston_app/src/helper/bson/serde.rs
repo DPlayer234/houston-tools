@@ -8,8 +8,7 @@ use serde::de::{Error, Visitor};
 use serde::{Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
-trait CastI64: From<u64> + Into<u64> + Copy {}
-impl<T: From<u64> + Into<u64> + Copy> CastI64 for T {}
+use crate::helper::discord::CastU64;
 
 /// Marker type to use with [`serde_with`] in place of the ID type to serialize
 /// the Discord ID's underlying [`u64`] value as [`i64`], and reversing
@@ -18,7 +17,7 @@ impl<T: From<u64> + Into<u64> + Copy> CastI64 for T {}
 /// When deserializing, also accepts stringified [`u64`] values.
 pub enum IdBson {}
 
-impl<T: CastI64> SerializeAs<T> for IdBson {
+impl<T: CastU64> SerializeAs<T> for IdBson {
     fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -28,7 +27,7 @@ impl<T: CastI64> SerializeAs<T> for IdBson {
     }
 }
 
-impl<'de, T: CastI64> DeserializeAs<'de, T> for IdBson {
+impl<'de, T: CastU64> DeserializeAs<'de, T> for IdBson {
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,
@@ -37,9 +36,10 @@ impl<'de, T: CastI64> DeserializeAs<'de, T> for IdBson {
     }
 }
 
+/// Helper to accept either [`i64`] or [`str`].
 struct I64Visitor<T>(PhantomData<T>);
 
-impl<T: CastI64> Visitor<'_> for I64Visitor<T> {
+impl<T: CastU64> Visitor<'_> for I64Visitor<T> {
     type Value = T;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -73,5 +73,50 @@ impl<T: CastI64> Visitor<'_> for I64Visitor<T> {
         E: Error,
     {
         v.parse().map_err(E::custom).and_then(|v| self.visit_u64(v))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bson::Bson;
+    use bson::de::Deserializer;
+    use bson::ser::Serializer;
+    use serde_with::As;
+    use serenity::model::id::UserId;
+
+    use super::*;
+
+    #[test]
+    fn from_i64() {
+        let bson = Bson::Int64(1234);
+        let de = Deserializer::new(bson);
+        let id: UserId = As::<IdBson>::deserialize(de).expect("must deserialize");
+
+        assert_eq!(id, UserId::new(1234));
+    }
+
+    #[test]
+    fn from_str() {
+        let bson = Bson::String("2345".to_owned());
+        let de = Deserializer::new(bson);
+        let id: UserId = As::<IdBson>::deserialize(de).expect("must deserialize");
+
+        assert_eq!(id, UserId::new(2345));
+    }
+
+    // this does not check for `Ok(_)`, but just that there isn't a panic
+    fn no_panic_on_de(val: i64) {
+        let ser = Serializer::new();
+        let bson = As::<IdBson>::serialize(&val.cast_unsigned(), ser).expect("must serialize");
+        let de = Deserializer::new(bson);
+        let _: Result<UserId, _> = As::<IdBson>::deserialize(de);
+    }
+
+    #[test]
+    fn edge_values_ok() {
+        no_panic_on_de(0);
+        no_panic_on_de(-1);
+        no_panic_on_de(i64::MIN);
+        no_panic_on_de(i64::MAX);
     }
 }

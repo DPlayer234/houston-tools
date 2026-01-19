@@ -68,7 +68,7 @@ impl WithPartial for Member {
 /// serialize Discord IDs as fixed-length 8-byte values.
 pub enum IdBytes {}
 
-trait CastU64: From<u64> + Into<u64> + Copy {}
+pub trait CastU64: From<u64> + Into<u64> + Copy {}
 impl<T: From<u64> + Into<u64> + Copy> CastU64 for T {}
 
 mod impl_id_bytes {
@@ -107,5 +107,35 @@ mod impl_id_bytes {
                 Err(D::Error::custom("discord id cannot be u64::MAX"))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::value::Serializer;
+    use serde_with::As;
+
+    use super::*;
+
+    #[test]
+    fn round_trip_id_bytes() {
+        let id = UserId::new(1234);
+
+        let json = As::<IdBytes>::serialize(&id, Serializer).expect("must serialize");
+        let re_id: UserId = As::<IdBytes>::deserialize(json).expect("must deserialize");
+
+        assert_eq!(id, re_id);
+    }
+
+    // this does not check for `Ok(_)`, but just that there isn't a panic
+    fn no_panic_on_de(val: u64) {
+        let json = As::<IdBytes>::serialize(&val, Serializer).expect("must serialize");
+        let _: Result<UserId, _> = As::<IdBytes>::deserialize(json);
+    }
+
+    #[test]
+    fn edge_values_ok() {
+        no_panic_on_de(u64::MIN);
+        no_panic_on_de(u64::MAX);
     }
 }

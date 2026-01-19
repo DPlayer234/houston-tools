@@ -106,4 +106,29 @@ mod tests {
         let out = if_too_long(fut, Duration::ZERO, intercept).await;
         assert_eq!(out, (42, Some(69)));
     }
+
+    #[tokio::test]
+    async fn example() {
+        async fn run() -> u32 {
+            12345
+        }
+        async fn intercept() -> ! {
+            panic!()
+        }
+
+        // create both futures
+        let run = run();
+        let intercept = intercept();
+
+        // run and try intercept
+        let (run_result, intercept_result) =
+            if_too_long(pin!(run), Duration::from_secs(5), pin!(intercept)).await;
+
+        println!("run result: {run_result:?}");
+        if let Some(i) = intercept_result {
+            println!("run intercepted: {i:?}");
+        }
+
+        assert_eq!((run_result, intercept_result), (12345, None));
+    }
 }
