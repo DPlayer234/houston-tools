@@ -247,20 +247,20 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
         },
 
         // these shouldn't show up here
-        b"," | b")" => return Err(MathError::ExprExpected(Some(token))),
+        b"," | b")" => return Err(tokens.expr_expected()),
 
         // lastly, also check for unary operators and functions
         _ => {
             if let Some(op) = UnaryOp::from_token(token) {
                 op.apply(read_sub_expr(tokens)?)
             } else if let Some(call) = CallOp::from_token(token) {
-                read_call(tokens, call, token)?
+                read_call(tokens, Ok(call), token)?
             } else if matches_token!(tokens.peek(), "(") {
-                return Err(MathError::InvalidFunction(token));
+                read_call(tokens, Err(MathError::InvalidFunction(token)), token)?
             } else if tokens.peek().is_some() {
                 return Err(MathError::InvalidUnaryOperator(token));
             } else {
-                return Err(MathError::ExprExpected(tokens.last_token()));
+                return Err(tokens.expr_expected());
             }
         },
     };
@@ -278,7 +278,7 @@ fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
 /// This also checks that the next token is `(`.
 fn read_call<'a>(
     tokens: &mut impl Tokenizer<'a>,
-    call_fn: CallOp,
+    call_fn: Result<'a, CallOp>,
     call_fn_token: Token<'a>,
 ) -> Result<'a, f64> {
     if !matches_token!(tokens.next(), "(") {
@@ -302,7 +302,7 @@ fn read_call<'a>(
         }
     }
 
-    call_fn.apply(call_fn_token, &params)
+    call_fn.and_then(|f| f.apply(call_fn_token, &params))
 }
 
 /// Merges a list of expression pairs into a singular expression.
