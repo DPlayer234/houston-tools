@@ -39,10 +39,7 @@ fn main() -> anyhow::Result<()> {
 
     // actual main logic
     async fn run() -> Result {
-        // SAFETY: No other code running that accesses this yet.
-        unsafe {
-            crate::helper::time::mark_startup_time();
-        }
+        crate::helper::time::mark_startup_time();
 
         let config = build_config()?;
         init_logging(config.log.log4rs)?;

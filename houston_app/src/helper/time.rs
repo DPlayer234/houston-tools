@@ -1,52 +1,28 @@
 //! Convenience module for dealing with times and timestamps.
 
-use std::cell::UnsafeCell;
+use std::sync::OnceLock;
 
 use chrono::format::Item;
 use chrono::prelude::*;
 
-// basically SyncUnsafeCell<DateTime<Utc>>
-struct DateTimeCell {
-    value: UnsafeCell<DateTime<Utc>>,
-}
-
-// SAFETY: consumers must uphold aliasing requirements for the inner value.
-unsafe impl Sync for DateTimeCell {}
-
 /// Stores a timestamp on when the application was started.
-//
-// I don't think it's actually possible to cause safety issues on _expected
-// hardware_ with `DateTime` - it has invariants, but they exist per field and
-// those are small enough to have atomic writes/reads - as long as you don't
-// keep references around. Either way, it's still UB to Rust, so we treat it
-// with the appropriate care.
-static STARTUP_TIME: DateTimeCell = DateTimeCell {
-    value: UnsafeCell::new(DateTime::UNIX_EPOCH),
-};
+static STARTUP_TIME: OnceLock<DateTime<Utc>> = OnceLock::new();
 
 /// Marks the current time as the startup time of the application.
 ///
-/// This should be called once at the start of your `main` entry point.
-///
-/// # Safety
-///
-/// This function is unsafe as the underlying memory is static.
-/// This must not be called concurrently with itself or [`get_startup_time`].
-pub unsafe fn mark_startup_time() {
-    // SAFETY: Caller guarantees exclusive access
-    unsafe {
-        *STARTUP_TIME.value.get() = Utc::now();
-    }
+/// This should be called once at the start of your `main` entry point. If this
+/// function has been called already, it does nothing.
+pub fn mark_startup_time() {
+    _ = STARTUP_TIME.set(Utc::now());
 }
 
 /// Gets the marked startup time of the application.
 ///
-/// If the program setup never called [`mark_startup_time`], this will be the
-/// unix epoch.
+/// If the program setup never called [`mark_startup_time`], this will return
+/// the unix epoch.
 #[must_use]
 pub fn get_startup_time() -> DateTime<Utc> {
-    // SAFETY: only concurrent reads
-    unsafe { *STARTUP_TIME.value.get() }
+    STARTUP_TIME.get().copied().unwrap_or(DateTime::UNIX_EPOCH)
 }
 
 /// Tries to parse a date time from some default formats, in the context of a

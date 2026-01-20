@@ -24,6 +24,7 @@ use std::slice;
 /// ```
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
+    // CMBK: rust 1.93 - remove in favor of `<[T]>::as_array`
     try_as_sized(slice).expect("requested size should match slice length exactly")
 }
 
@@ -50,6 +51,7 @@ pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
 /// ```
 #[must_use = "if you don't need the return value, just assert the length"]
 pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
+    // CMBK: rust 1.93 - remove in favor of `<[T]>::as_array`
     if slice.len() == N {
         // SAFETY: The length has already been validated.
         Some(unsafe { &*slice.as_ptr().cast::<[T; N]>() })
@@ -84,14 +86,12 @@ pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
 /// ```
 #[must_use = "transmuting has no effect if you don't use the return value"]
 pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
-    let ptr = slice.as_ptr_range();
+    let byte_len = size_of_val(slice);
+    let ptr = slice.as_ptr().cast();
 
-    // SAFETY: Both pointers are to the slice, so the offset must be valid.
-    let byte_len = unsafe { ptr.end.byte_offset_from(ptr.start) };
-
-    // SAFETY: Pointer is derived from a reference and byte length is known to be in
-    // range and positive.
-    unsafe { slice::from_raw_parts(ptr.start.cast(), byte_len.cast_unsigned()) }
+    // SAFETY: pointer is derived from a reference and length is based on
+    // `size_of_val` so it must match the original object and is in range
+    unsafe { slice::from_raw_parts(ptr, byte_len) }
 }
 
 /// Asserts that `T` is zero bytes in size or fails to compile.

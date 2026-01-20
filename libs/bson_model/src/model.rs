@@ -181,21 +181,20 @@ impl ModelField {
     pub const fn new(expr: &'static str) -> Self {
         assert!(
             matches!(expr.as_bytes(), [b'$', ..]),
-            "expr must start with $"
+            "`expr` must start with `$`"
         );
         Self { expr, _unsafe: () }
     }
 
     /// Gets the name of this field.
     pub const fn name(self) -> &'static str {
-        // essentially `self.expr.get_unchecked(1..)` but const
-        let [_, bytes @ ..] = self.expr.as_bytes() else {
-            // SAFETY: string always begins with '$', so it can't be empty
-            unsafe { hint::unreachable_unchecked() }
-        };
-
-        // SAFETY: string always begins with '$', so the tail after is valid UTF-8
-        unsafe { str::from_utf8_unchecked(bytes) }
+        // slice away the prefix '$' (1 byte)
+        match self.expr.as_bytes() {
+            // SAFETY: the tail after '$' is valid UTF-8 because it is derived from `str`
+            [b'$', tail @ ..] => unsafe { str::from_utf8_unchecked(tail) },
+            // SAFETY: `expr` always starts with '$' so this cannot be reached
+            _ => unsafe { hint::unreachable_unchecked() },
+        }
     }
 
     /// Gets the expression of this field. That is, the name of the field
