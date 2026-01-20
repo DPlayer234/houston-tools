@@ -9,7 +9,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::modules::azur::{GameData, LoadedConfig};
+use crate::modules::azur::{GameData, LazyData};
 
 /// Views ship lines.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -42,7 +42,7 @@ impl View<'_> {
     fn edit_with_ship<'a>(
         self,
         ctx: ButtonContext<'a>,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
     ) -> Result<EditReply<'a>> {
@@ -65,7 +65,7 @@ impl View<'_> {
 
     fn with_ship<'a>(
         mut self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &'a ShipData,
         skin: &'a ShipSkin,
         thumbnail_key: Option<&str>,
@@ -192,7 +192,7 @@ impl View<'_> {
 
     fn get_main_field<'a>(
         &self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         skin: &'a ShipSkin,
         words: &ShipSkinWords,
         thumbnail_key: Option<&str>,

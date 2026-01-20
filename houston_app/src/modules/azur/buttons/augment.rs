@@ -5,7 +5,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
-use crate::modules::azur::LoadedConfig;
+use crate::modules::azur::LazyData;
 
 /// Views an augment.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -20,7 +20,7 @@ impl View<'_> {
     /// Modifies the create-reply with a preresolved augment.
     pub fn create_with_augment<'a>(
         self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         augment: &'a Augment,
     ) -> CreateReply<'a> {
         let mut components = ComponentVec::new();

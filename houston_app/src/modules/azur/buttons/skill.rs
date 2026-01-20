@@ -7,7 +7,7 @@ use utils::text::truncate;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
-use crate::modules::azur::LoadedConfig;
+use crate::modules::azur::LazyData;
 
 /// View skill details of a ship or augment.
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
@@ -87,7 +87,7 @@ impl View<'_> {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn edit_with_ship<'a>(mut self, azur: LoadedConfig<'a>, ship: &'a ShipData) -> EditReply<'a> {
+    fn edit_with_ship<'a>(mut self, azur: &'a LazyData, ship: &'a ShipData) -> EditReply<'a> {
         let mut skills: ArrayVec<&Skill, 5> = ship.skills.iter().take(4).collect();
 
         let mut components = ComponentVec::new();

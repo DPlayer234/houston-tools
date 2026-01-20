@@ -1,4 +1,3 @@
-use std::hint;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
@@ -15,50 +14,46 @@ fn default_early_load() -> bool {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
-    data_path: Arc<Path>,
+    pub data_path: Arc<Path>,
     #[serde(default = "default_early_load")]
     pub early_load: bool,
-
     #[serde(default)]
-    pub wiki_urls: WikiUrls,
+    wiki_urls: Arc<WikiUrls>,
 
-    /// Stores the lazy-loaded game data.
+    /// Stores the lazy-loaded data.
     ///
     /// If this holds [`None`], the data could not be loaded. This state is
     /// mapped to an error for callers outside this module.
     #[serde(skip)]
-    game_data: OnceLock<Option<GameData>>,
+    lazy: OnceLock<Option<Box<LazyData>>>,
 }
 
 impl Config {
-    /// Loads the config. Calling this on the same value will always return the
-    /// same result.
-    ///
-    /// Only one thread will load the config. Concurrent callers will wait for
-    /// it to finish loading. After it has been loaded, future calls will no
-    /// longer block and reuse the results.
-    pub fn load(&self) -> anyhow::Result<LoadedConfig<'_>> {
-        LoadedConfig::new(self)
-    }
-
-    /// Gets a string describing the load state of the data.
+    /// Gets a string describing the load state of the lazy data.
     pub fn load_state(&self) -> &'static str {
-        match self.game_data.get() {
+        match self.lazy.get() {
             None => "pending",
             Some(None) => "failed",
             Some(Some(_)) => "loaded",
         }
     }
 
-    /// Gets or loads the game data.
+    /// Gets or loads the lazy data.
     ///
-    /// Only one thread will load the game data, other threads will wait for it
+    /// Only one thread will load this data, other threads will wait for it
     /// to finish loading. Future calls will return the cached data.
-    pub fn game_data(&self) -> anyhow::Result<&GameData> {
-        self.game_data
-            .get_or_init(|| self.load_game_data())
-            .as_ref()
+    pub fn lazy(&self) -> anyhow::Result<&LazyData> {
+        self.lazy
+            .get_or_init(|| self.load_lazy_data())
+            .as_deref()
             .context("failed to load azur lane data")
+    }
+
+    fn load_lazy_data(&self) -> Option<Box<LazyData>> {
+        Some(Box::new(LazyData {
+            game_data: self.load_game_data()?,
+            wiki_urls: Arc::clone(&self.wiki_urls),
+        }))
     }
 
     fn load_game_data(&self) -> Option<GameData> {
@@ -143,63 +138,24 @@ impl WikiUrls {
     }
 }
 
-/// Represents a config with loaded game data.
-//
-// Note: this type has a safety invariant for the `raw` field: Its `game_data` field must hold
-// `Some(GameData)` already. If that's not the case, UB may follow the use of this value.
-// Using `LoadedConfig::new` or `Config::load` ensures the data is loaded successfully.
-#[derive(Debug, Clone, Copy)]
-pub struct LoadedConfig<'a> {
-    /// The raw configuration. This field must not be writable for other code.
-    raw: &'a Config,
-
-    // this field only serves to make it explicit that this type has safety invariants for
-    // construction and to avoid constructing it outside of this module.
-    _unsafe: (),
+/// Lazily-loaded data based on the [`Config`].
+#[derive(Debug)]
+pub struct LazyData {
+    // if `Config` were to get more fields that need to be shared here, adjust `Config` to `Arc` a
+    // bundle of those fields and clone said `Arc` instead of one per field
+    wiki_urls: Arc<WikiUrls>,
+    // this is actually all that's lazy-loaded currently
+    game_data: GameData,
 }
 
-impl<'a> LoadedConfig<'a> {
-    /// Creates a new [`LoadedConfig`] from a raw value, ensuring that the game
-    /// data is loaded. If the game data hasn't been loaded yet, attempts to
-    /// load it and returns an error on failure.
-    ///
-    /// If this function has returned an error once, it will always return one.
-    fn new(raw: &'a Config) -> anyhow::Result<Self> {
-        let _: &'a GameData = raw.game_data()?;
-
-        // SAFETY: just ensured that the game data is loaded
-        Ok(unsafe { Self::new_unchecked(raw) })
-    }
-
-    /// Creates a new [`Config`] from a raw value, assuming that the game data
-    /// is already loaded.
-    ///
-    /// # Safety
-    ///
-    /// The raw config must already hold resolved `game_data`. This is ensured
-    /// if [`Config::game_data`] has returned [`Ok`] before.
-    unsafe fn new_unchecked(raw: &'a Config) -> Self {
-        debug_assert!(
-            matches!(raw.game_data.get(), Some(Some(_))),
-            "must have initialized `game_data` by now"
-        );
-        Self { raw, _unsafe: () }
-    }
-
+impl LazyData {
     /// Gets a reference to the wiki URLs.
-    pub fn wiki_urls(self) -> &'a WikiUrls {
-        &self.raw.wiki_urls
+    pub fn wiki_urls(&self) -> &WikiUrls {
+        &self.wiki_urls
     }
 
     /// Gets a reference to the game data.
-    pub fn game_data(self) -> &'a GameData {
-        // `Acquire` load not optimized away but may be necessary for other threads to
-        // see the correct value anyways. don't use `get_unchecked` if stabilized.
-        match self.raw.game_data.get() {
-            Some(Some(data)) => data,
-            // SAFETY: `new` ensures that the game data is already loaded and not `None`
-            // and `raw` field is private to this module and can't be modified by other code
-            _ => unsafe { hint::unreachable_unchecked() },
-        }
+    pub fn game_data(&self) -> &GameData {
+        &self.game_data
     }
 }

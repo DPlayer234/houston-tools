@@ -5,7 +5,7 @@ pub mod config;
 mod data;
 mod slashies;
 
-pub use config::{Config, LoadedConfig};
+pub use config::{Config, LazyData};
 pub use data::GameData;
 
 pub struct Module;

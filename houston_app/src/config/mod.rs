@@ -50,8 +50,8 @@ pub struct HBotConfig {
 }
 
 impl HBotConfig {
-    pub fn azur(&self) -> anyhow::Result<crate::modules::azur::LoadedConfig<'_>> {
-        self.azur_raw()?.load()
+    pub fn azur(&self) -> anyhow::Result<&crate::modules::azur::LazyData> {
+        self.azur_raw()?.lazy()
     }
 
     pub fn azur_raw(&self) -> anyhow::Result<&crate::modules::azur::Config> {

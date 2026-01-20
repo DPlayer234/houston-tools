@@ -3,7 +3,7 @@ use utils::text::truncate;
 
 use super::search::{All, Filtered, PAGE_SIZE};
 use crate::buttons::prelude::*;
-use crate::modules::azur::{GameData, LoadedConfig};
+use crate::modules::azur::{GameData, LazyData};
 use crate::modules::core::buttons::ToPage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ impl View {
     fn create_with_iter<'a>(
         mut self,
         data: &'a HBotData,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         mut iter: Query<'a>,
     ) -> Result<CreateReply<'a>> {
         let page_iter = super::page_iter!(iter, self.page);

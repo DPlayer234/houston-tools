@@ -9,7 +9,7 @@ use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::Join;
 use crate::helper::discord::unicode_emoji;
-use crate::modules::azur::LoadedConfig;
+use crate::modules::azur::LazyData;
 use crate::modules::azur::config::WikiUrls;
 
 /// View general ship details.
@@ -40,7 +40,7 @@ impl View<'_> {
     pub fn create_with_ship<'a>(
         self,
         data: &'a HBotData,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &'a ShipData,
     ) -> CreateReply<'a> {
         let mut create = CreateReply::new();
@@ -61,7 +61,7 @@ impl View<'_> {
     fn edit_with_ship<'a>(
         self,
         ctx: ButtonContext<'a>,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
     ) -> EditReply<'a> {
@@ -88,7 +88,7 @@ impl View<'_> {
     fn with_ship<'a>(
         mut self,
         data: &'a HBotData,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &'a ShipData,
         base_ship: &'a ShipData,
         thumbnail_key: Option<&str>,
@@ -123,7 +123,7 @@ impl View<'_> {
 
     fn get_nav_row<'a>(
         &self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         base_ship: &'a ShipData,
     ) -> CreateContainerComponent<'a> {
         let view_lines = super::lines::View::builder()
@@ -295,7 +295,7 @@ impl View<'_> {
     /// Creates the embed field that displays the weapon equipment slots.
     fn get_equip_field<'a>(
         &self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &ShipData,
     ) -> CreateContainerComponent<'a> {
         let slots = ship
@@ -372,7 +372,7 @@ impl View<'_> {
     /// Creates the embed field that displays the skill summary.
     fn get_skills_field<'a>(
         &self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         ship: &ShipData,
     ) -> Option<CreateContainerComponent<'a>> {
         if ship.skills.is_empty() {
@@ -470,7 +470,7 @@ impl View<'_> {
 
     pub fn find_ship<'a>(
         &self,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
     ) -> Result<(&'a ShipData, Option<&'a ShipData>)> {
         let ship = azur
             .game_data()

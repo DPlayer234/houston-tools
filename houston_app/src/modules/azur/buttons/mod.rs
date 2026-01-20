@@ -1,6 +1,6 @@
 //! Some small guidelines for the API of buttons here:
 //!
-//! - Accept `LoadedConfig` instead of re-grabbing it manually from the bot data
+//! - Accept `LazyData` instead of re-grabbing it manually from the bot data
 //!   unless there is no benefit to it.
 //! - Private methods should avoid doing duplicate work and be infallible if
 //!   possible -- pass the Config through as an additional parameter if needed

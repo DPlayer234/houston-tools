@@ -6,7 +6,7 @@ use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
 use crate::fmt::discord::escape_markdown;
-use crate::modules::azur::{GameData, LoadedConfig};
+use crate::modules::azur::{GameData, LazyData};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ConstBuilder)]
 pub struct View<'v> {
@@ -24,7 +24,7 @@ impl View<'_> {
     pub fn create_with_chat<'a>(
         mut self,
         data: &'a HBotData,
-        azur: LoadedConfig<'a>,
+        azur: &'a LazyData,
         chat: &'a Chat,
     ) -> Result<CreateReply<'a>> {
         fn get_sender_name(azur: &GameData, sender_id: u32) -> &str {
