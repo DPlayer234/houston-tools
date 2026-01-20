@@ -280,8 +280,8 @@ impl WalletExt for Collection<Wallet> {
 }
 
 fn item_take_error(items: &[(Item, i64)], perks: &super::config::Config) -> HArgError {
-    let fmt = Join::AND.display_with(items, |(item, amount), f| {
-        write!(f, "{amount} {}", item.info(perks).name)
+    let fmt = Join::AND.display_as(items, |&(item, amount)| {
+        utils::format_owned!("{amount} {}", item.info(perks).name)
     });
 
     HArgError::new(format!("You need {fmt} to do this."))
