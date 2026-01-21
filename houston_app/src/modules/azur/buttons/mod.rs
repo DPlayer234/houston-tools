@@ -84,6 +84,10 @@ pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
     }
 }
 
+/// Returns an iterator for the elements on this page.
+///
+/// If there are no results or the page is out of bounds, _returns from the
+/// caller_ with an alternate reply.
 macro_rules! page_iter {
     ($iter:expr, $page:expr) => {{
         let mut iter = $iter.by_ref().take(PAGE_SIZE).peekable();
@@ -94,6 +98,7 @@ macro_rules! page_iter {
     }};
 }
 
+/// Appends the page navigation row to the [`ComponentVec`].
 macro_rules! page_nav {
     ($components:expr, $obj:expr, $remainder:expr) => {
         if let Some(nav) =

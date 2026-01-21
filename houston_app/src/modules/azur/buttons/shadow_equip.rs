@@ -66,7 +66,9 @@ impl<'v> View<'v> {
 
         components.push(CreateActionRow::buttons(vec![{
             let back = self.inner.to_custom_id();
-            CreateButton::new(back).emoji(emoji::back()).label("Back")
+            CreateButton::new(back.repeat(40))
+                .emoji(emoji::back())
+                .label("Back")
         }]));
 
         CreateReply::new().components_v2(components![

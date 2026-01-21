@@ -1,13 +1,18 @@
 use std::fmt;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
 use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
 use serenity::model::prelude::*;
 
 use crate::ReplyHandle;
 use crate::args::ResolvedOption;
-use crate::reply::{CreateReply, UNSENT};
+use crate::reply::CreateReply;
+
+const UNSENT: usize = 0;
+const DEFER: usize = 1;
+const SENT: usize = 2;
 
 /// The context for a command invocation.
 #[derive(Clone, Copy)]
@@ -110,10 +115,30 @@ impl<'a> Context<'a> {
             .map(|o| &o.value)
     }
 
+    #[inline]
+    fn get_reply_state(&self) -> usize {
+        self.inner.reply_state.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_reply_state(&self, to: usize) {
+        self.inner.reply_state.store(to, Ordering::Release);
+    }
+
     /// Defers the response, specifying whether it is ephemeral.
     #[expect(clippy::missing_errors_doc)]
     pub async fn defer(self, ephemeral: bool) -> serenity::Result<()> {
-        crate::reply::defer(self, ephemeral).await
+        let state = self.get_reply_state();
+        if state == DEFER {
+            let reply = CreateInteractionResponse::Defer(
+                CreateInteractionResponseMessage::new().ephemeral(ephemeral),
+            );
+
+            self.interaction.create_response(self.http(), reply).await?;
+            self.set_reply_state(DEFER);
+        }
+
+        Ok(())
     }
 
     /// Sends a reply.
@@ -123,6 +148,33 @@ impl<'a> Context<'a> {
     /// of the interaction.
     #[expect(clippy::missing_errors_doc)]
     pub async fn send(self, reply: CreateReply<'_>) -> serenity::Result<ReplyHandle<'a>> {
-        crate::reply::send_reply(self, reply).await
+        let state = self.get_reply_state();
+        let target = match state {
+            UNSENT => {
+                let reply = reply.into_interaction_response();
+                let reply = CreateInteractionResponse::Message(reply);
+                self.interaction.create_response(self.http(), reply).await?;
+                self.set_reply_state(SENT);
+                None
+            },
+            DEFER => {
+                let reply = reply.into_interaction_edit();
+                self.interaction.edit_response(self.http(), reply).await?;
+                self.set_reply_state(SENT);
+                None
+            },
+            _ => {
+                debug_assert!(state == SENT, "must be SENT state otherwise");
+                let reply = reply.into_interaction_followup();
+                let message = self.interaction.create_followup(self.http(), reply).await?;
+                Some(message.id)
+            },
+        };
+
+        Ok(ReplyHandle::new(
+            self.http(),
+            &self.interaction.token,
+            target,
+        ))
     }
 }

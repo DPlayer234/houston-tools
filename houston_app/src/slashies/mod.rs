@@ -55,7 +55,8 @@ pub fn error_handler(error: houston_cmd::Error<'_>) -> BoxFuture<'_, ()> {
             Err(err) => {
                 if let Some(ser_err) = err.downcast_ref::<serenity::Error>() {
                     // print both errors to preserve the stack trace, if present
-                    log::warn!("Discord error in command: {ser_err:?} / {err:?}")
+                    log::warn!("Discord error in command: {ser_err:?} / {err:?}");
+                    return noop_future();
                 } else {
                     log::error!("Error in command: {err:?}");
                 }

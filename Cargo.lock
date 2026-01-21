@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "houston_btn"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -1172,7 +1172,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "anyhow",
  "const-builder",

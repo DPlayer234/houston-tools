@@ -77,11 +77,13 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
     }
 
     #[inline]
-    fn try_unsent_to(&self, to: usize) -> bool {
-        self.inner
-            .reply_state
-            .compare_exchange(UNSENT, to, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
+    fn get_reply_state(&self) -> usize {
+        self.inner.reply_state.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_reply_state(&self, to: usize) {
+        self.inner.reply_state.store(to, Ordering::Release);
     }
 
     fn reply_handle(&self, target: Option<MessageId>) -> ReplyHandle<'a> {
@@ -102,10 +104,20 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
     ///
     /// Returns `Err` if acknowledging the interaction failed.
     pub async fn acknowledge(&self) -> Result {
-        if self.try_unsent_to(SENT) {
+        let state = self.get_reply_state();
+        if state == UNSENT {
             CreateInteractionResponse::Acknowledge
                 .execute(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
+
+            // - next `edit` needs to edit the original
+            // - next `reply` needs to create a followup
+            self.set_reply_state(SENT);
+        } else {
+            anyhow::ensure!(
+                state != DEFER,
+                "cannot acknowledge and defer the same context"
+            );
         }
 
         Ok(())
@@ -121,11 +133,13 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
     ///
     /// Returns `Err` if deferring the interaction failed.
     pub async fn defer(&self, ephemeral: bool) -> Result {
-        if self.try_unsent_to(DEFER) {
+        let state = self.get_reply_state();
+        if state == UNSENT {
             let reply = CreateInteractionResponseMessage::new().ephemeral(ephemeral);
             CreateInteractionResponse::Defer(reply)
                 .execute(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
+            self.set_reply_state(DEFER);
         }
 
         Ok(())
@@ -140,14 +154,14 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
     ///
     /// Returns `Err` if the reply is invalid or failed otherwise.
     pub async fn reply(&self, create: CreateReply<'_>) -> Result<ReplyHandle<'a>> {
-        let state = self.inner.reply_state.swap(SENT, Ordering::AcqRel);
-
+        let state = self.get_reply_state();
         let target = match state {
             UNSENT => {
                 let reply = create.into_interaction_response();
                 CreateInteractionResponse::Message(reply)
                     .execute(self.http(), self.interaction.id(), self.interaction.token())
                     .await?;
+                self.set_reply_state(SENT);
                 None
             },
             DEFER => {
@@ -155,6 +169,7 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
                     .into_interaction_edit()
                     .execute(self.http(), self.interaction.token())
                     .await?;
+                self.set_reply_state(SENT);
                 None
             },
             _ => {
@@ -176,9 +191,10 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
     ///
     /// Returns `Err` if the edit is invalid or failed otherwise.
     pub async fn edit(&self, edit: EditReply<'_>) -> Result<ReplyHandle<'a>> {
-        if self.try_unsent_to(SENT) {
+        if self.get_reply_state() == UNSENT {
             edit.execute_as_response(self.http(), self.interaction.id(), self.interaction.token())
                 .await?;
+            self.set_reply_state(SENT);
         } else {
             edit.into_interaction_edit()
                 .execute(self.http(), self.interaction.token())
@@ -201,12 +217,13 @@ impl ButtonContext<'_> {
     pub async fn modal(&self, modal: CreateModal<'_>) -> Result {
         // this is only available for button interactions
         // because you cannot respond to a modal with another one
-        let first = self.try_unsent_to(SENT);
+        let first = self.get_reply_state() == UNSENT;
         anyhow::ensure!(first, "cannot send modals after initial response");
 
         CreateInteractionResponse::Modal(modal)
             .execute(self.http(), self.interaction.id, &self.interaction.token)
             .await?;
+        self.set_reply_state(SENT);
         Ok(())
     }
 }
