@@ -302,7 +302,7 @@ fn read_call<'a>(
         }
     }
 
-    call_fn.and_then(|f| f.apply(call_fn_token, &params))
+    call_fn?.apply(call_fn_token, &params)
 }
 
 /// Merges a list of expression pairs into a singular expression.
@@ -314,12 +314,11 @@ fn merge_expr_pairs(mut pairs: Vec<ValuePair>) -> f64 {
     while pairs.len() > 1 {
         // iterate over adjacent pairs (e.g. basically `pairs.windows(2)` but mutable).
         // the cell trick documented for `windows` could work, but it's harder to deal
-        // with and not any less code.
-        'merge_once: for index in 0..(pairs.len() - 1) {
-            let [lhs, rhs, ..] = &mut pairs[index..] else {
-                unreachable!()
-            };
-
+        // with and both more and more complex code.
+        let mut iter = 0usize..;
+        'merge_once: while let Some(index) = iter.next()
+            && let Some([lhs, rhs, ..]) = pairs.get_mut(index..)
+        {
             // None is only set for the last element
             let kind = lhs.operator.expect("only last operator must be empty");
 
