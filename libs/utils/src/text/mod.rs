@@ -1,7 +1,6 @@
 //! Provides helper methods to work with displayed text.
 
 mod escape;
-mod from_fn_impl;
 mod inline_str;
 mod lossy_impl;
 mod option_display;
@@ -11,7 +10,6 @@ mod truncate_impl;
 mod write_str;
 
 pub use escape::{EscapeByChar, escape_by_char};
-pub use from_fn_impl::{FromFn, from_fn};
 pub use inline_str::InlineStr;
 pub use lossy_impl::push_str_lossy;
 pub use option_display::{DisplayExt, OptionDisplay, ResultDisplay};

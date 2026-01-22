@@ -67,7 +67,7 @@ impl<const LEN: usize> InlineStr<LEN> {
     ///
     /// Returns [`Err`] if the length of the slice does not match `N`.
     pub const fn from_str(str: &str) -> Result<&Self, FromStrError> {
-        match crate::mem::try_as_sized(str.as_bytes()) {
+        match str.as_bytes().as_array() {
             // SAFETY: `InlineStr<LEN>` is a transparent wrapper around `[u8; LEN]`
             // and `array` is derived from a `str`, so it must be valid UTF-8.
             Some(array) => Ok(unsafe { transmute::<&[u8; LEN], &Self>(array) }),
@@ -208,5 +208,58 @@ impl<'a, const LEN: usize> TryFrom<&'a str> for &'a InlineStr<LEN> {
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         InlineStr::from_str(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Borrow;
+    use std::hash::{BuildHasher as _, RandomState};
+
+    use super::InlineStr;
+
+    #[test]
+    fn from_utf8() {
+        assert_eq!(
+            InlineStr::from_utf8(*b"hello world").ok().as_deref(),
+            Some("hello world"),
+            "valid utf-8 must be ok to convert"
+        );
+        assert_eq!(
+            InlineStr::from_utf8(*b"hello\xFFworld").ok().as_deref(),
+            None,
+            "invalid utf-8 should error"
+        );
+    }
+
+    #[test]
+    fn from_str() {
+        assert!(
+            InlineStr::<11>::from_str("hello world").is_ok(),
+            "11 len str ok"
+        );
+        assert!(
+            InlineStr::<11>::from_str("hello").is_err(),
+            "5 != 11 len str ok"
+        );
+        assert!(
+            InlineStr::<11>::from_str("hello, world!").is_err(),
+            "13 != 11 len str ok"
+        );
+    }
+
+    #[test]
+    fn hash_eq() {
+        let ref_str = "hello, world!";
+        let inline = InlineStr::from_utf8(*b"hello, world!").expect("must be ok");
+
+        let inline_borrow: &str = Borrow::borrow(&inline);
+
+        let hash = RandomState::new();
+        let ref_str_hash = hash.hash_one(ref_str);
+        let inline_hash = hash.hash_one(inline);
+
+        assert_eq!(ref_str, inline_borrow, "must be the same borrow value");
+        assert_eq!(ref_str_hash, inline_hash, "must be the same hash");
     }
 }

@@ -1,64 +1,6 @@
 //! Provides helper functions to work with blocks of memory.
-//!
-//! For example, this allows const-time conversion of slices into arrays via
-//! [`as_sized`].
 
 use std::slice;
-
-/// Converts a slice to an array reference of size `N`.
-/// This is a const-friendly alternative to `<&[T; N]>::try_from`.
-///
-/// Slices must have the right size.
-///
-/// # Panics
-///
-/// Panics if the slice is not exactly `N` long.
-/// If you cannot guarantee this, use [`try_as_sized`].
-///
-/// # Examples
-///
-/// ```
-/// let x: &[u8] = &[1, 2, 3, 4];
-/// let y: &[u8; 4] = utils::mem::as_sized(x);
-/// assert_eq!(x, y);
-/// ```
-#[must_use = "if you don't need the return value, just assert the length"]
-pub const fn as_sized<T, const N: usize>(slice: &[T]) -> &[T; N] {
-    // CMBK: rust 1.93 - remove in favor of `<[T]>::as_array`
-    try_as_sized(slice).expect("requested size should match slice length exactly")
-}
-
-/// Tries to convert a slice to an array reference of size `N`.
-/// This is a const-friendly alternative to `<&[T; N]>::try_from`.
-///
-/// Returns [`None`] if the slice isn't exactly `N` long.
-///
-/// If you need a prefix or suffix of the slice instead, use
-/// `[T]::first_chunk` or `[T]::last_chunk` instead.
-///
-/// # Examples
-///
-/// ```
-/// let x: &[u8] = &[1, 2, 3, 4];
-///
-/// let exact = utils::mem::try_as_sized::<u8, 4>(x);
-/// let small = utils::mem::try_as_sized::<u8, 2>(x);
-/// let large = utils::mem::try_as_sized::<u8, 6>(x);
-///
-/// assert_eq!(exact, Some(&[1, 2, 3, 4]));
-/// assert_eq!(small, None);
-/// assert_eq!(large, None);
-/// ```
-#[must_use = "if you don't need the return value, just assert the length"]
-pub const fn try_as_sized<T, const N: usize>(slice: &[T]) -> Option<&[T; N]> {
-    // CMBK: rust 1.93 - remove in favor of `<[T]>::as_array`
-    if slice.len() == N {
-        // SAFETY: The length has already been validated.
-        Some(unsafe { &*slice.as_ptr().cast::<[T; N]>() })
-    } else {
-        None
-    }
-}
 
 /// Transmutes a slice into raw bytes. Take note of endianness.
 ///
@@ -101,51 +43,4 @@ pub const fn assert_zst<T>(value: T) -> T {
         assert!(size_of::<T>() == 0, "expected value to be zero-sized");
     }
     value
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn as_sized_correct_size() {
-        let x: &[u8] = &[1, 2, 3, 4];
-        let y: &[u8; 4] = as_sized(x);
-        assert_eq!(x, y);
-    }
-
-    #[test]
-    #[should_panic(expected = "requested size should match slice length exactly")]
-    fn as_sized_too_small() {
-        let x: &[u8] = &[1, 2, 3];
-        let _y: &[u8; 4] = as_sized(x);
-    }
-
-    #[test]
-    #[should_panic(expected = "requested size should match slice length exactly")]
-    fn as_sized_too_large() {
-        let x: &[u8] = &[1, 2, 3, 4, 5];
-        let _y: &[u8; 4] = as_sized(x);
-    }
-
-    #[test]
-    fn try_as_sized_correct_size() {
-        let x: &[u8] = &[1, 2, 3, 4];
-        let y: Option<&[u8; 4]> = try_as_sized(x);
-        assert_eq!(y, Some(&[1, 2, 3, 4]));
-    }
-
-    #[test]
-    fn try_as_sized_too_small() {
-        let x: &[u8] = &[1, 2, 3];
-        let y: Option<&[u8; 4]> = try_as_sized(x);
-        assert_eq!(y, None);
-    }
-
-    #[test]
-    fn try_as_sized_too_large() {
-        let x: &[u8] = &[1, 2, 3, 4, 5];
-        let y: Option<&[u8; 4]> = try_as_sized(x);
-        assert_eq!(y, None);
-    }
 }

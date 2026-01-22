@@ -430,7 +430,7 @@ impl View<'_> {
         let fleet_tech = base_ship.fleet_tech.as_ref()?;
 
         fn stat_display(data: &HBotData, stats: &FleetTechStatBonus) -> impl fmt::Display {
-            utils::text::from_fn(|f| {
+            fmt::from_fn(|f| {
                 let hulls =
                     Join::EMPTY.display_as(&stats.hull_types, |h| super::hull_emoji(*h, data));
                 let stat = stats.stat.name();

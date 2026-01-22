@@ -93,7 +93,7 @@ macro_rules! titlecase {
 
             // Include length in constant for next call.
             const __RESULT: [::std::primitive::u8; __N] = {
-                let mut value = *$crate::mem::as_sized(__INPUT);
+                let mut value = *__INPUT.as_array().expect("must be same size as output");
                 $crate::text::private::to_titlecase_u8(&mut value);
                 value
             };

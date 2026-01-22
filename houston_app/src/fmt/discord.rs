@@ -1,6 +1,6 @@
 //! Provides utilities for formatting Discord data.
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result, from_fn};
 
 use chrono::prelude::*;
 use houston_cmd::ResolvedOption;
@@ -37,7 +37,7 @@ pub fn interaction_location(
     guild_id: Option<GuildId>,
     channel: Option<&GenericInteractionChannel>,
 ) -> impl Display + '_ {
-    utils::text::from_fn(move |f| {
+    from_fn(move |f| {
         match (
             guild_id.map(id_suffix),
             channel.and_then(|c| c.base().name.as_deref()),

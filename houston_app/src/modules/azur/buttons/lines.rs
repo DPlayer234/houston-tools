@@ -392,7 +392,7 @@ fn ship_couple_encourage_label(
     let condition = &opt.condition;
     let amount = opt.amount;
 
-    utils::text::from_fn(move |f| match condition {
+    fmt::from_fn(move |f| match condition {
         ShipCouple::ShipGroup(ship_ids) => {
             let get_name = |&id| {
                 game_data
