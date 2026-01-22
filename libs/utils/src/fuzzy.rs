@@ -72,6 +72,9 @@ const MATCH_INLINE: usize = 4;
 #[cfg(not(target_pointer_width = "64"))]
 const MATCH_INLINE: usize = 2;
 
+// this type should be `3 * size_of::<usize>()` in inline size
+type MatchVec = SmallVec<[MatchIndex; MATCH_INLINE]>;
+
 #[inline(always)]
 const fn to_usize(index: MatchIndex) -> usize {
     const {
@@ -101,7 +104,7 @@ pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
 
     // Safety invariant: Every value in the vectors within `match_map`
     // _must_ be a valid index into `values`. Unsafe code may rely on this.
-    match_map: HashMap<Segment<MAX>, SmallVec<[MatchIndex; MATCH_INLINE]>>,
+    match_map: HashMap<Segment<MAX>, MatchVec>,
     values: Vec<ValueMetadata<T>>,
 }
 
@@ -260,11 +263,10 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
                 );
 
                 // find & modify, or insert
-                match results.iter_mut().find(|m| m.index == index) {
-                    Some(res) => res.count += 1,
+                match results.iter_mut().find(|m| m.info.index == index) {
+                    Some(res) => res.info.count += 1,
                     None => results.push(MatchInfoLen {
-                        count: 1,
-                        index,
+                        info: MatchInfo { count: 1, index },
                         // SAFETY: entry index must be valid into `self.values`
                         len: unsafe { self.values.get_unchecked(to_usize(index)).len },
                     }),
@@ -276,17 +278,17 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let match_count = total * self.min_match_score;
 
         // remove insufficiently accurate matches
-        results.retain(|r| f64::from(r.count) >= match_count);
+        results.retain(|r| f64::from(r.info.count) >= match_count);
         if !results.is_empty() {
             // sort by count desc
             // then by len asc
             // then by index asc
-            results.sort_unstable_by_key(|r| (Reverse(r.count), r.len, r.index));
+            results.sort_unstable_by_key(|r| (Reverse(r.info.count), r.len, r.info.index));
 
             // copy as MatchInfo; TrustedLen should avoid redundant allocations
             // original code here already allocated, and it's fine perf-wise
             // don't use `into_iter`, that's not TrustedLen!
-            let results = take(results).into_iter().map(MatchInfoLen::info).collect();
+            let results = take(results).into_iter().map(|m| m.info).collect();
 
             // SAFETY: every index in `results` is a valid index into `values`
             // as guaranteed by the type invariants; indices come from `match_map`.
@@ -332,8 +334,6 @@ impl<T> Clone for Match<'_, T> {
 }
 
 /// Info stored for each [`Match`] in the [`MatchIter`].
-///
-/// Constructed from [`MatchInfoLen`], usually.
 #[derive(Debug, Clone, Copy)]
 struct MatchInfo {
     count: MatchIndex,
@@ -343,19 +343,8 @@ struct MatchInfo {
 /// A sortable [`MatchInfo`], with an additional `len` field.
 #[derive(Debug, Clone, Copy)]
 struct MatchInfoLen {
-    count: MatchIndex,
-    index: MatchIndex,
+    info: MatchInfo,
     len: MatchIndex,
-}
-
-impl MatchInfoLen {
-    /// Discards the `len` and creates a [`MatchInfo`].
-    fn info(self) -> MatchInfo {
-        MatchInfo {
-            index: self.index,
-            count: self.count,
-        }
-    }
 }
 
 /// An iterator over [`Matches`](Match) returned by [`Search::search`].
@@ -592,7 +581,7 @@ fn norm_str(str: &str) -> SmallVec<[u16; 20]> {
 
 #[cfg(test)]
 mod tests {
-    use super::{MatchIter, Search, norm_str};
+    use super::{MatchIter, MatchVec, Search, norm_str};
 
     type TSearch = Search<u8>;
 
@@ -653,5 +642,14 @@ mod tests {
         assert_ne!(norm_str("(hELLOwORLD)"), norm_str("Hello World!"));
         assert_ne!(norm_str(""), norm_str("--a--"));
         assert_ne!(norm_str("Hello123"), norm_str("Hello 123"));
+    }
+
+    #[test]
+    fn match_vec_size() {
+        assert_eq!(
+            size_of::<MatchVec>(),
+            size_of::<usize>() * 3,
+            "MatchVec has an unexpected size. this is functionally ok."
+        );
     }
 }
