@@ -36,7 +36,9 @@ pub const unsafe fn as_bytes<T>(slice: &[T]) -> &[u8] {
     unsafe { slice::from_raw_parts(ptr, byte_len) }
 }
 
-/// Asserts that `T` is zero bytes in size or fails to compile.
+/// This function asserts that `T` is a zero-sized type and returns the input.
+///
+/// If the input is not zero-sized, fails to compile.
 #[inline(always)]
 pub const fn assert_zst<T>(value: T) -> T {
     const {

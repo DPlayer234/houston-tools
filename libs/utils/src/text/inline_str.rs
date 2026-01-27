@@ -262,4 +262,13 @@ mod tests {
         assert_eq!(ref_str, inline_borrow, "must be the same borrow value");
         assert_eq!(ref_str_hash, inline_hash, "must be the same hash");
     }
+
+    #[test]
+    fn join() {
+        let front = InlineStr::from_utf8(*b"hello, ").expect("must be ok");
+        let back = InlineStr::from_utf8(*b"world!").expect("must be ok");
+
+        let full: InlineStr<13> = front.join(back);
+        assert_eq!(full.as_str(), "hello, world!");
+    }
 }
