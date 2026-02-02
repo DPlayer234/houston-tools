@@ -2,18 +2,19 @@
 
 use std::sync::OnceLock;
 
-use chrono::format::Item;
-use chrono::prelude::*;
+use time::format_description::StaticFormatDescription;
+use time::macros::format_description;
+use time::{Duration, UtcDateTime};
 
 /// Stores a timestamp on when the application was started.
-static STARTUP_TIME: OnceLock<DateTime<Utc>> = OnceLock::new();
+static STARTUP_TIME: OnceLock<UtcDateTime> = OnceLock::new();
 
 /// Marks the current time as the startup time of the application.
 ///
 /// This should be called once at the start of your `main` entry point. If this
 /// function has been called already, it does nothing.
 pub fn mark_startup_time() {
-    _ = STARTUP_TIME.set(Utc::now());
+    _ = STARTUP_TIME.set(UtcDateTime::now());
 }
 
 /// Gets the marked startup time of the application.
@@ -21,190 +22,93 @@ pub fn mark_startup_time() {
 /// If the program setup never called [`mark_startup_time`], this will return
 /// the unix epoch.
 #[must_use]
-pub fn get_startup_time() -> DateTime<Utc> {
-    STARTUP_TIME.get().copied().unwrap_or(DateTime::UNIX_EPOCH)
+pub fn get_startup_time() -> UtcDateTime {
+    STARTUP_TIME
+        .get()
+        .copied()
+        .unwrap_or(UtcDateTime::UNIX_EPOCH)
 }
 
-/// Tries to parse a date time from some default formats, in the context of a
-/// specific time zone.
-pub fn parse_date_time<Tz: TimeZone>(s: &str, tz: Tz) -> Option<DateTime<FixedOffset>> {
-    use chrono::format::{Parsed, parse_and_remainder};
-
-    let formats = &FORMATS;
-
-    fn parse_section<'s>(
-        parsed: &mut Parsed,
-        parts: &[&[Item<'_>]],
-        s: &'s str,
-    ) -> Option<&'s str> {
-        let backup = parsed.clone();
-
-        for &f in parts {
-            if let Ok(s) = parse_and_remainder(parsed, s, f.iter()) {
-                return Some(s);
-            }
-
-            *parsed = backup.clone();
-        }
-
-        None
-    }
-
-    let mut parsed = Parsed::new();
-
-    // parse the date & time and consume the input
-    let s = parse_section(&mut parsed, formats.date, s)?;
-    let s = parse_section(&mut parsed, formats.time, s)?;
-
-    // if the input already entirely consumed, it has no time zone
-    // assume the time zone passed to this function is to be used
-    if s.is_empty() {
-        // we do it like this rather than `to_datetime_with_timezone` to still be able
-        // to return a value when it's ambigious due to DST. this use case isn't _that_
-        // error sensitive
-        return parsed
-            .to_naive_datetime_with_offset(0)
-            .ok()?
-            .and_local_timezone(tz)
-            .earliest()
-            .map(|d| d.fixed_offset());
-    }
-
-    // nothing expected after time zone so it must be fully consumed
-    let s = parse_section(&mut parsed, formats.tz, s)?;
-    if s.is_empty() {
-        return parsed.to_datetime().ok();
-    }
-
-    None
+/// Tries to parse a date time from some default formats.
+pub fn parse_date_time(s: &str) -> Option<UtcDateTime> {
+    UtcDateTime::parse(s, FORMAT).ok()
 }
 
-struct Formats {
-    pub date: &'static [&'static [Item<'static>]],
-    pub time: &'static [&'static [Item<'static>]],
-    pub tz: &'static [&'static [Item<'static>]],
+const FORMAT: StaticFormatDescription = format_description!(
+    version = 2,
+    "[first \
+     [[year]-[month]-[day]]\
+     [[month]/[day]/[year]]\
+     [[day].[month].[year]]\
+     [[first [[month repr:long case_sensitive:false]][[month repr:short case_sensitive:false]]] [day],[optional [ ]][year]]\
+     ] \
+     [first \
+     [[hour repr:12 padding:none]:[minute][optional [:[second]]][optional [ ]][period case_sensitive:false]]
+     [[hour repr:24 padding:none]:[minute][optional [:[second]]]]\
+     ]\
+     [optional [ ]]\
+     [first \
+     [[offset_hour sign:mandatory padding:none]:[offset_minute]]\
+     [[offset_hour sign:mandatory padding:zero][offset_minute]]\
+     [[offset_hour sign:mandatory padding:zero]]\
+     []\
+     ]"
+);
+
+pub fn parse_duration(v: &str) -> Option<Duration> {
+    use time::convert::{Day, Hour, Minute, Second};
+
+    let v = v.trim();
+    let (v, neg) = match v.strip_prefix('-') {
+        Some(v) => (v, true),
+        None => (v, false),
+    };
+
+    if v.contains('-') {
+        return None;
+    }
+
+    let (h, v) = v.split_once(':')?;
+    let (m, s) = v.split_once(':')?;
+
+    let (d, h) = match h.split_once('.') {
+        Some((d, h)) => (d.parse().ok()?, h),
+        None => (0i64, h),
+    };
+
+    let h = h.parse().ok()?;
+    let m = m.parse().ok()?;
+    let s = s.parse().ok()?;
+
+    if !(0..60).contains(&m) || !(0..60).contains(&s) {
+        return None;
+    }
+
+    let total = d
+        .checked_mul(Hour::per_t(Day))?
+        .checked_add(h)?
+        .checked_mul(Minute::per_t(Hour))?
+        .checked_add(m)?
+        .checked_mul(Second::per_t(Minute))?
+        .checked_add(s)?;
+
+    let total = if neg { total.checked_neg()? } else { total };
+    Some(Duration::seconds(total))
 }
 
-const FORMATS: Formats = {
-    use chrono::format::Item::{Fixed, Literal};
-    use chrono::format::{Fixed as F, Numeric as N, Pad};
-
-    const fn space() -> Item<'static> {
-        Item::Space(" ")
-    }
-
-    const fn num_pz(n: N) -> Item<'static> {
-        Item::Numeric(n, Pad::Zero)
-    }
-
-    const fn simple_date(a: N, b: N, c: N, sep: &str) -> [Item<'_>; 7] {
-        [
-            space(),
-            num_pz(a),
-            Literal(sep),
-            num_pz(b),
-            Literal(sep),
-            num_pz(c),
-            space(),
-        ]
-    }
-
-    Formats {
-        date: &[
-            // %Y-%m-%d
-            &simple_date(N::Year, N::Month, N::Day, "-"),
-            // %m/%d/%Y
-            &simple_date(N::Month, N::Day, N::Year, "/"),
-            // %d.%m.%Y
-            &simple_date(N::Day, N::Month, N::Year, "."),
-            // %B %d, %Y
-            &[
-                space(),
-                Fixed(F::LongMonthName),
-                space(),
-                num_pz(N::Day),
-                Literal(","),
-                space(),
-                num_pz(N::Year),
-                space(),
-            ],
-        ],
-        // 12-hour format must come first so the 24-hour format doesn't succeed on parts of it
-        // and then causes parsing failures later when the AM/PM is encountered
-        time: &[
-            // %I:%M %p
-            &[
-                space(),
-                num_pz(N::Hour12),
-                Literal(":"),
-                num_pz(N::Minute),
-                space(),
-                Fixed(F::UpperAmPm),
-                space(),
-            ],
-            // %H:%M
-            &[
-                space(),
-                num_pz(N::Hour),
-                Literal(":"),
-                num_pz(N::Minute),
-                space(),
-            ],
-        ],
-        tz: &[
-            // emulates "%#z" by trying multiple formats
-            &[space(), Fixed(F::TimezoneOffsetZ), space()],
-            &[space(), Fixed(F::TimezoneOffsetTripleColon), space()],
-        ],
-    }
-};
-
-pub mod serde_time_delta {
+pub mod serde_duration {
     use std::fmt;
 
-    use chrono::TimeDelta;
     use serde::Deserializer;
     use serde::de::Error;
+    use time::Duration;
+
+    use super::parse_duration;
 
     struct Visitor;
 
-    pub(super) fn parse_str(v: &str) -> Option<TimeDelta> {
-        let v = v.trim();
-        let (v, neg) = match v.strip_prefix('-') {
-            Some(v) => (v, true),
-            None => (v, false),
-        };
-
-        if v.contains('-') {
-            return None;
-        }
-
-        let (h, v) = v.split_once(':')?;
-        let (m, s) = v.split_once(':')?;
-
-        let (d, h) = match h.split_once('.') {
-            Some((d, h)) => (d.parse().ok()?, h),
-            None => (0i64, h),
-        };
-
-        let h = h.parse().ok()?;
-        let m = m.parse().ok()?;
-        let s = s.parse().ok()?;
-
-        if !(0..60).contains(&m) || !(0..60).contains(&s) {
-            return None;
-        }
-
-        let delta = TimeDelta::try_days(d)?
-            .checked_add(&TimeDelta::try_hours(h)?)?
-            .checked_add(&TimeDelta::try_minutes(m)?)?
-            .checked_add(&TimeDelta::try_seconds(s)?)?;
-
-        Some(if neg { -delta } else { delta })
-    }
-
     impl serde::de::Visitor<'_> for Visitor {
-        type Value = TimeDelta;
+        type Value = Duration;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             formatter.write_str("duration string in hh:mm:ss format")
@@ -214,11 +118,11 @@ pub mod serde_time_delta {
         where
             E: Error,
         {
-            parse_str(v).ok_or_else(|| E::custom("expected duration in hh:mm:ss format"))
+            parse_duration(v).ok_or_else(|| E::custom("expected duration in hh:mm:ss format"))
         }
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<TimeDelta, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -228,109 +132,127 @@ pub mod serde_time_delta {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, TimeDelta, Utc};
+    use time::Duration;
+    use time::macros::{datetime, utc_datetime};
 
-    use super::{parse_date_time, serde_time_delta};
+    use super::{parse_date_time, parse_duration};
 
     #[test]
     fn parse_date_time1() {
         let input = "2024-02-16 15:31";
-        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
+        let parsed = parse_date_time(input).expect("parse should succeed");
 
-        assert_eq!(
-            parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
-        );
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:00));
+    }
+
+    #[test]
+    fn parse_date_time1s() {
+        let input = "2024-02-16 15:31:42";
+        let parsed = parse_date_time(input).expect("parse should succeed");
+
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:42));
     }
 
     #[test]
     fn parse_date_time2() {
         let input = "02/16/2024 03:31pm";
-        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
+        let parsed = parse_date_time(input).expect("parse should succeed");
 
-        assert_eq!(
-            parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
-        );
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:00));
+    }
+
+    #[test]
+    fn parse_date_time2s() {
+        let input = "02/16/2024 03:31:42pm";
+        let parsed = parse_date_time(input).expect("parse should succeed");
+
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:42));
     }
 
     #[test]
     fn parse_date_time3() {
         let input = "16.02.2024 15:31";
-        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
+        let parsed = parse_date_time(input).expect("parse should succeed");
 
-        assert_eq!(
-            parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
-        );
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:00));
     }
 
     #[test]
     fn parse_date_time4() {
         let input = "February 16, 2024 15:31";
-        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
+        let parsed = parse_date_time(input).expect("parse should succeed");
 
-        assert_eq!(
-            parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00Z").expect("must be valid")
-        );
+        assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:00));
     }
 
     #[test]
-    fn parse_date_time_with_offset() {
+    fn parse_date_time_with_offset1() {
         let input = "2024-02-16 15:31 +0230";
-        let parsed = parse_date_time(input, Utc).expect("parse should succeed");
+        let parsed = parse_date_time(input).expect("parse should succeed");
 
-        assert_eq!(
-            parsed,
-            DateTime::parse_from_rfc3339("2024-02-16T15:31:00+02:30").expect("must be valid")
-        );
+        assert_eq!(parsed, datetime!(2024-02-16 15:31:00+02:30).to_utc());
+    }
+
+    #[test]
+    fn parse_date_time_with_offset2() {
+        let input = "2024-02-16 15:31 +2:30";
+        let parsed = parse_date_time(input).expect("parse should succeed");
+
+        assert_eq!(parsed, datetime!(2024-02-16 15:31:00+02:30).to_utc());
+    }
+
+    #[test]
+    fn parse_date_time_with_offset3() {
+        let input = "2024-02-16 15:31 +02";
+        let parsed = parse_date_time(input).expect("parse should succeed");
+
+        assert_eq!(parsed, datetime!(2024-02-16 15:31:00+02:00).to_utc());
     }
 
     #[test]
     fn fail_parse_date_partial_time() {
         let input = "2024-02-16 11:";
-        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
+        assert!(parse_date_time(input).is_none(), "parse should fail");
     }
 
     #[test]
     fn fail_parse_date_invalid_time() {
         let input = "2024-02-16 11:61";
-        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
+        assert!(parse_date_time(input).is_none(), "parse should fail");
     }
 
     #[test]
     fn fail_parse_partial_date() {
         let input = "13/13/ 14:15";
-        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
+        assert!(parse_date_time(input).is_none(), "parse should fail");
     }
 
     #[test]
     fn fail_parse_invalid_date() {
         let input = "13/13/13 14:15";
-        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
+        assert!(parse_date_time(input).is_none(), "parse should fail");
     }
 
     #[test]
     fn fail_parse_date_time_invalid_time_zone() {
         let input = "2024-02-12 11:51 CET";
-        assert!(parse_date_time(input, Utc).is_none(), "parse should fail");
+        assert!(parse_date_time(input).is_none(), "parse should fail");
     }
 
     #[test]
     fn parse_serde_time_delta_hms() {
         let input = "12:34:56";
-        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
-        assert_eq!(parsed, TimeDelta::seconds(((12 * 60 + 34) * 60) + 56));
+        let parsed = parse_duration(input).expect("parse should succeed");
+        assert_eq!(parsed, Duration::seconds(((12 * 60 + 34) * 60) + 56));
     }
 
     #[test]
     fn parse_serde_time_delta_dhms() {
         let input = "8.12:34:56";
-        let parsed = serde_time_delta::parse_str(input).expect("parse should succeed");
+        let parsed = parse_duration(input).expect("parse should succeed");
         assert_eq!(
             parsed,
-            TimeDelta::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)
+            Duration::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)
         );
     }
 }

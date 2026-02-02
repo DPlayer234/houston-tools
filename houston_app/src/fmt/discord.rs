@@ -2,8 +2,8 @@
 
 use std::fmt::{Display, Formatter, Result, from_fn};
 
-use chrono::prelude::*;
 use houston_cmd::ResolvedOption;
+use time::{OffsetDateTime, UtcDateTime};
 
 use crate::prelude::*;
 
@@ -85,10 +85,19 @@ pub trait TimeMentionable {
     }
 }
 
-impl<Tz: TimeZone> TimeMentionable for DateTime<Tz> {
+impl TimeMentionable for OffsetDateTime {
     fn mention(&self, format: &'static str) -> TimeMention {
         TimeMention {
-            timestamp: self.timestamp(),
+            timestamp: self.unix_timestamp(),
+            format,
+        }
+    }
+}
+
+impl TimeMentionable for UtcDateTime {
+    fn mention(&self, format: &'static str) -> TimeMention {
+        TimeMention {
+            timestamp: self.unix_timestamp(),
             format,
         }
     }

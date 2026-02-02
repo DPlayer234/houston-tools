@@ -1,9 +1,8 @@
 use std::str::FromStr as _;
 
-use chrono::TimeDelta;
-use chrono::prelude::*;
+use time::UtcDateTime;
 
-use crate::helper::time::parse_date_time;
+use crate::helper::time::{parse_date_time, parse_duration};
 use crate::slashies::prelude::*;
 
 /// Provides methods for localized timestamps.
@@ -12,38 +11,23 @@ use crate::slashies::prelude::*;
     integration_types = "Guild | User"
 )]
 pub mod timestamp {
+    use time::UtcDateTime;
+
     /// Gets a timestamp offset from the current time.
     #[sub_command]
     async fn r#in(
         ctx: Context<'_>,
-        /// Days in the future.
-        days: Option<i64>,
-        /// Hours in the future.
-        hours: Option<i64>,
-        /// Minutes in the future.
-        minutes: Option<i64>,
+        /// The offset from the current time, specified in "H:MM:SS" format.
+        delta: &str,
     ) -> Result {
-        const TIME_OUT_OF_RANGE: HArgError =
-            HArgError::new_const("The inputs exceed the allowed range.");
+        let delta = parse_duration(delta).ok_or(HArgError::new_const(
+            "Invalid duration. The expected format is `H:MM:SS`, f.e. `1:00:00` for 1 hour.",
+        ))?;
 
-        let mut delta = TimeDelta::zero();
-
-        if let Some(days) = days {
-            delta += TimeDelta::try_days(days).ok_or(TIME_OUT_OF_RANGE)?;
-        }
-
-        if let Some(hours) = hours {
-            delta += TimeDelta::try_hours(hours).ok_or(TIME_OUT_OF_RANGE)?;
-        }
-
-        if let Some(minutes) = minutes {
-            delta += TimeDelta::try_minutes(minutes).ok_or(TIME_OUT_OF_RANGE)?;
-        }
-
-        let timestamp = Utc::now()
-            .checked_add_signed(delta)
-            .and_then(|d| d.with_second(0))
-            .ok_or(TIME_OUT_OF_RANGE)?;
+        let timestamp = UtcDateTime::now()
+            .checked_add(delta)
+            .ok_or(HArgError::new_const("The inputs exceed the allowed range."))?
+            .truncate_to_minute();
 
         show_timestamp(ctx, timestamp).await
     }
@@ -68,7 +52,7 @@ pub mod timestamp {
              - `Apr 16, 2024 14:53`",
         );
 
-        let timestamp = parse_date_time(date_time, Utc).ok_or(INVALID_INPUT)?;
+        let timestamp = parse_date_time(date_time).ok_or(INVALID_INPUT)?;
         show_timestamp(ctx, timestamp).await
     }
 
@@ -80,20 +64,20 @@ pub mod timestamp {
         snowflake: &str,
     ) -> Result {
         let timestamp = UserId::from_str(snowflake)
-            .ok()
-            .map(|s| *s.created_at())
-            .ok_or(HArgError::new_const("The Discord snowflake is invalid."))?;
+            .map_err(|_| HArgError::new_const("The Discord snowflake is invalid."))?
+            .created_at()
+            .to_utc();
 
         show_timestamp(ctx, timestamp).await
     }
 }
 
-async fn show_timestamp<Tz: TimeZone>(ctx: Context<'_>, timestamp: DateTime<Tz>) -> Result {
+async fn show_timestamp(ctx: Context<'_>, timestamp: UtcDateTime) -> Result {
     fn format_time(timestamp: i64, f: char) -> String {
         format!("<t:{timestamp}:{f}>\n```\n<t:{timestamp}:{f}>\n```")
     }
 
-    let timestamp = timestamp.timestamp();
+    let timestamp = timestamp.unix_timestamp();
     let embed = CreateEmbed::new()
         .field("Date & Time", format_time(timestamp, 'f'), true)
         .field("Time Only", format_time(timestamp, 't'), true)

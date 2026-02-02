@@ -2,7 +2,7 @@ use std::slice;
 
 use anyhow::Context as _;
 use bson_model::{Filter, ModelDocument as _};
-use chrono::prelude::*;
+use time::{Time, UtcDateTime};
 use utils::text::WriteStr as _;
 
 use super::*;
@@ -90,7 +90,7 @@ impl Shape for Birthday {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context, now: DateTime<Utc>) -> Result {
+    async fn update(&self, ctx: &Context, now: UtcDateTime) -> Result {
         let data = ctx.data::<HContextData>();
         let perks = data.config().perks()?;
         let Some(birthday) = &perks.birthday else {
@@ -112,9 +112,8 @@ impl Shape for Birthday {
 
             // calculate the correct date with the current time and offset
             let today = now
-                .checked_add_signed(region.time_offset)
+                .checked_add(region.time_offset)
                 .context("birthday time offset breaks start time")?
-                .naive_utc()
                 .date();
 
             // don't repeat the check if we checked that day already
@@ -124,12 +123,12 @@ impl Shape for Birthday {
 
             // from the current date, consider the offset and calculate the end time
             let tomorrow = today
-                .and_time(NaiveTime::MIN)
-                .and_utc()
-                .checked_sub_signed(region.time_offset)
+                .with_time(Time::MIDNIGHT)
+                .checked_add(region.time_offset)
                 .context("birthday time offset breaks end time")?
-                .checked_add_signed(birthday.duration)
-                .context("birthday duration breaks end time")?;
+                .checked_add(birthday.duration)
+                .context("birthday duration breaks end time")?
+                .as_utc();
 
             let db = data.database()?;
 

@@ -18,22 +18,21 @@ arc-swap = "1.8.0"
 arrayvec = "0.7.6"
 base64 = "0.22.1"
 bitflags = "2.10.0"
-bson = { version = "3.1.0", features = ["chrono-0_4", "serde", "serde_with-3"] }
+bson = { version = "3.1.0", features = ["time-0_3", "serde", "serde_with-3"] }
 bytes = "1.11.0"
-chrono = { version = "0.4.41", default-features = false }
 const-builder = "0.1.4"
 dashmap = "6.1.0"
 extract_map = "0.3.1"
 indexmap = { version = "2.13.0", features = ["serde"] }
 log = "0.4.27"
 lru = { version = "0.16.2", default-features = false }
-num-traits = "0.2.19"
 rand = "0.9.2"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_with = { version = "3.16.0", features = ["std"], default-features = false }
 smallvec = { version = "1.15.0", features = ["const_generics", "const_new", "union", "serde", "write"] }
 thiserror = "2.0.12"
+time = { version = "0.3.46", features = ["serde", "formatting", "parsing"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
 toml = "0.9.11"
 to-arraystring = "0.2.2"
@@ -52,7 +51,7 @@ branch = "next"
 default-features = false
 features = [
     "rustls_backend",
-    "builder", "chrono", "framework", "gateway", "model", "http", "utils"
+    "builder", "framework", "gateway", "model", "http", "utils"
 ]
 
 [dependencies.mongodb]
@@ -71,7 +70,6 @@ features = [
     "rolling_file_appender", "compound_policy", "delete_roller", "fixed_window_roller", "size_trigger",
     "pattern_encoder",
     "threshold_filter",
-    "chrono",
 ]
 
 [build-dependencies]

@@ -36,8 +36,8 @@ pub struct ActivePerk {
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
-    #[serde(with = "As::<FromChrono04DateTime>")]
-    pub until: DateTime<Utc>,
+    #[serde(with = "As::<FromTime03OffsetDateTime>")]
+    pub until: OffsetDateTime,
     #[model(filter = false)]
     pub state: Option<Bson>,
 }
@@ -293,7 +293,7 @@ pub trait ActivePerkExt {
         guild_id: GuildId,
         user_id: UserId,
         effect: Effect,
-        until: DateTime<Utc>,
+        until: UtcDateTime,
     ) -> Result;
 
     async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result;
@@ -320,12 +320,12 @@ impl ActivePerkExt for Collection<ActivePerk> {
         guild_id: GuildId,
         user_id: UserId,
         effect: Effect,
-        until: DateTime<Utc>,
+        until: UtcDateTime,
     ) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         let update = ActivePerk::update()
-            .set(|a| a.until(until))
+            .set(|a| a.until(until.into()))
             .into_document()?;
 
         self.update_one(filter, update)

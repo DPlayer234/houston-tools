@@ -1,6 +1,6 @@
 use bson::Document;
-use chrono::Utc;
 use serenity::prelude::*;
+use time::UtcDateTime;
 use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
@@ -313,8 +313,8 @@ impl View {
             .take_items(guild_id, user_id, &[(Item::Cash, st.cost.into())], perks)
             .await?;
 
-        let until = Utc::now()
-            .checked_add_signed(st.duration)
+        let until = UtcDateTime::now()
+            .checked_add(st.duration)
             .context("duration beyond the end of time")?;
 
         ActivePerk::collection(db)

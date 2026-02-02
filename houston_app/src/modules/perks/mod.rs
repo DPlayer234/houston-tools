@@ -1,6 +1,5 @@
 use bson_model::{Filter, ModelDocument as _};
-use chrono::TimeDelta;
-use chrono::prelude::*;
+use time::{Duration, UtcDateTime};
 
 use super::prelude::*;
 
@@ -93,7 +92,8 @@ impl super::Module for Module {
 
         log::info!("Perks are enabled.");
 
-        if perks.rainbow.is_some() && perks.check_interval < TimeDelta::minutes(2) {
+        let min_interval = const { Duration::minutes(2) };
+        if perks.rainbow.is_some() && perks.check_interval < min_interval {
             log::warn!(
                 "`perks.check_interval` is less than 2 minutes and rainbow role is enabled. \
                  You will likely hit Discord rate limits with this configuration. \
@@ -151,10 +151,10 @@ async fn check_perks_inner(ctx: &Context) -> Result {
     };
 
     let next = last_check
-        .checked_add_signed(perks.check_interval)
+        .checked_add(perks.check_interval)
         .context("time has broken")?;
 
-    let now = Utc::now();
+    let now = UtcDateTime::now();
     if now < next {
         // no need to check yet
         return Ok(());
@@ -169,7 +169,7 @@ async fn check_perks_inner(ctx: &Context) -> Result {
     result
 }
 
-async fn update_perks(ctx: &Context, now: DateTime<Utc>) {
+async fn update_perks(ctx: &Context, now: UtcDateTime) {
     for kind in effects::Effect::ALL {
         if let Err(why) = kind.update(ctx, now).await {
             log::error!("Failed update for perk effect {kind:?}: {why:?}");
@@ -177,12 +177,12 @@ async fn update_perks(ctx: &Context, now: DateTime<Utc>) {
     }
 }
 
-async fn check_expiry(ctx: &Context, now: DateTime<Utc>) -> Result {
+async fn check_expiry(ctx: &Context, now: UtcDateTime) -> Result {
     let data = ctx.data_ref::<HContextData>();
     let db = data.database()?;
 
     let filter = model::ActivePerk::filter()
-        .until(Filter::Lt(now))
+        .until(Filter::Lt(now.into()))
         .into_document()?;
 
     let mut query = model::ActivePerk::collection(db)

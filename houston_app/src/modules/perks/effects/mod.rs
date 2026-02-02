@@ -1,5 +1,5 @@
 use bson::Bson;
-use chrono::{DateTime, Utc};
+use time::UtcDateTime;
 
 use super::config::{Config, EffectPrice};
 use crate::modules::prelude::*;
@@ -51,7 +51,7 @@ trait Shape {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context, now: DateTime<Utc>) -> Result {
+    async fn update(&self, ctx: &Context, now: UtcDateTime) -> Result {
         _ = ctx;
         _ = now;
         Ok(())
@@ -79,7 +79,7 @@ impl Effect {
     impl_kind_fn!(supported(args: Args<'_>) -> Result<bool>);
     impl_kind_fn!(enable(args: Args<'_>, state: Option<Bson>) -> Result);
     impl_kind_fn!(disable(args: Args<'_>) -> Result);
-    impl_kind_fn!(update(args: &Context, now: DateTime<Utc>) -> Result);
+    impl_kind_fn!(update(args: &Context, now: UtcDateTime) -> Result);
 
     pub const ALL: &[Self] = &[Self::RainbowRole, Self::Birthday];
 

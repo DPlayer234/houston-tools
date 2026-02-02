@@ -11,8 +11,8 @@ pub struct Record {
     pub guild: GuildId,
     #[serde(default)]
     pub received: i64,
-    #[serde(with = "As::<FromChrono04DateTime>")]
-    pub cooldown_ends: DateTime<Utc>,
+    #[serde(with = "As::<FromTime03OffsetDateTime>")]
+    pub cooldown_ends: OffsetDateTime,
 }
 
 fn name_unique(name: &str) -> IndexOptions {

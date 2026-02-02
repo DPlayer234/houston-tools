@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use indexmap::IndexMap;
 use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
+use time::{Date, Duration, UtcDateTime};
 use tokio::sync::Mutex;
 
 use super::Item;
-use crate::helper::time::serde_time_delta;
+use crate::helper::time::serde_duration;
 use crate::prelude::*;
 
 macro_rules! fsd {
@@ -22,33 +22,37 @@ macro_rules! fsd {
 
 fsd!(default_cash_name = "$");
 
-fn default_check_interval() -> TimeDelta {
+fn default_check_interval() -> Duration {
     // 2 minutes is about the minimum safe interval for constant role updates
     // we go a little higher since we use this interval for other stuff too
-    const { TimeDelta::minutes(3) }
+    const { Duration::minutes(3) }
+}
+
+fn default_last_check_datetime() -> Mutex<UtcDateTime> {
+    Mutex::new(UtcDateTime::MIN)
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: FixedString<u8>,
-    #[serde(with = "serde_time_delta", default = "default_check_interval")]
-    pub check_interval: TimeDelta,
+    #[serde(with = "serde_duration", default = "default_check_interval")]
+    pub check_interval: Duration,
     pub rainbow: Option<RainbowConfig>,
     pub pushpin: Option<PushpinConfig>,
     pub role_edit: Option<RoleEditConfig>,
     pub collectible: Option<CollectibleConfig>,
     pub birthday: Option<BirthdayConfig>,
 
-    #[serde(skip)]
-    pub last_check: Mutex<DateTime<Utc>>,
+    #[serde(skip, default = "default_last_check_datetime")]
+    pub last_check: Mutex<UtcDateTime>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct EffectPrice {
     pub cost: u32,
-    #[serde(with = "serde_time_delta")]
-    pub duration: TimeDelta,
+    #[serde(with = "serde_duration")]
+    pub duration: Duration,
 }
 
 fn default_item_amount() -> u32 {
@@ -130,27 +134,31 @@ pub struct CollectibleNotice {
     pub text: FixedString,
 }
 
-fn default_birthday_duration() -> TimeDelta {
-    const { TimeDelta::hours(24) }
+fn default_birthday_duration() -> Duration {
+    const { Duration::hours(24) }
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
-    #[serde(with = "serde_time_delta", default = "default_birthday_duration")]
-    pub duration: TimeDelta,
+    #[serde(with = "serde_duration", default = "default_birthday_duration")]
+    pub duration: Duration,
     pub regions: FixedArray<BirthdayRegionConfig>,
     #[serde(default, flatten)]
     pub guilds: IndexMap<GuildId, BirthdayGuildConfig>,
 }
 
+fn default_last_check_date() -> Mutex<Date> {
+    Mutex::new(Date::MIN)
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayRegionConfig {
     pub name: FixedString<u8>,
-    #[serde(with = "serde_time_delta", default)]
-    pub time_offset: TimeDelta,
+    #[serde(with = "serde_duration", default)]
+    pub time_offset: Duration,
 
-    #[serde(skip)]
-    pub last_check: Mutex<NaiveDate>,
+    #[serde(skip, default = "default_last_check_date")]
+    pub last_check: Mutex<Date>,
 }
 
 #[derive(Debug, serde::Deserialize)]

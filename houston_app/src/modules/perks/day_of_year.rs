@@ -2,8 +2,8 @@ use std::fmt;
 use std::num::NonZero;
 
 use arrayvec::ArrayVec;
-use chrono::{Datelike as _, Month, NaiveDate};
-use num_traits::cast::FromPrimitive as _;
+use time::util::is_leap_year;
+use time::{Date, Month};
 
 /// Represents a day of a year, without a specific year number.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -58,15 +58,15 @@ impl DayOfYear {
     /// Returns [`None`] when the `day` is zero or not valid for `month` in a
     /// leap year.
     pub fn from_md(month: Month, day: u8) -> Option<Self> {
-        let date = NaiveDate::from_ymd_opt(Self::REF_YEAR, month.number_from_month(), day.into())?;
-        let ordinal = expect_ordinal(date.ordinal());
+        let date = Date::from_calendar_date(Self::REF_YEAR, month, day).ok()?;
+        let ordinal = date.ordinal();
         Some(Self::new(ordinal))
     }
 
     /// Creates a [`DayOfYear`] from a date.
-    pub fn from_date(date: NaiveDate) -> Self {
-        let mut ordinal = expect_ordinal(date.ordinal());
-        if !date.leap_year() && ordinal >= Self::FEB_29.ordinal() {
+    pub fn from_date(date: Date) -> Self {
+        let mut ordinal = date.ordinal();
+        if !is_leap_year(date.year()) && ordinal >= Self::FEB_29.ordinal() {
             debug_assert!(ordinal <= 365, "non-leap year ordinal cannot be 366");
             ordinal += 1;
         }
@@ -79,11 +79,11 @@ impl DayOfYear {
     ///
     /// In practice, all this does is return the associated [`DayOfYear`], and,
     /// if it is March 1st in a non-leap year, also returns February 29th.
-    pub fn search_days(date: NaiveDate) -> ArrayVec<Self, 2> {
+    pub fn search_days(date: Date) -> ArrayVec<Self, 2> {
         let mut res = ArrayVec::new();
         let doy = Self::from_date(date);
 
-        if !date.leap_year() && doy == Self::MAR_1 {
+        if !is_leap_year(date.year()) && doy == Self::MAR_1 {
             res.push(Self::FEB_29);
         }
 
@@ -92,26 +92,16 @@ impl DayOfYear {
     }
 
     /// Converts this day into a date in the [`Self::REF_YEAR`].
-    fn into_date(self) -> NaiveDate {
-        NaiveDate::from_yo_opt(Self::REF_YEAR, self.ordinal().into())
+    fn into_date(self) -> Date {
+        Date::from_ordinal_date(Self::REF_YEAR, self.ordinal())
             .expect("DayOfYear value must be valid in REF_YEAR")
     }
 
     /// Converts this day into the Month and Day it represents.
-    fn into_month_day(self) -> (Month, u32) {
+    fn into_month_day(self) -> (Month, u8) {
         let date = self.into_date();
-        let month = date.month();
-        let month = Month::from_u32(month).expect("month number must be convertible to `Month`");
-        (month, date.day())
+        (date.month(), date.day())
     }
-}
-
-/// Converts [`u32`] to a [`u16`], assuming that the value is in range for a
-/// date ordinal.
-#[expect(clippy::cast_possible_truncation)]
-fn expect_ordinal(ordinal: u32) -> u16 {
-    debug_assert!(ordinal <= 366, "expected date ordinal in range 1..=366");
-    ordinal as u16
 }
 
 impl serde::Serialize for DayOfYear {
@@ -147,7 +137,6 @@ impl fmt::Display for DayOfYear {
             _ => "th",
         };
 
-        let month = month.name();
         write!(f, "{month} {day}{suffix}")
     }
 }
@@ -160,16 +149,14 @@ impl fmt::Debug for DayOfYear {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use time::macros::date;
 
-    fn date(year: i32, month: u32, day: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(year, month, day).expect("test date should be valid")
-    }
+    use super::*;
 
     #[test]
     fn consts_correct() {
         assert!(
-            NaiveDate::from_yo_opt(DayOfYear::REF_YEAR, 1).is_some_and(|d| d.leap_year()),
+            Date::from_ordinal_date(DayOfYear::REF_YEAR, 1).is_ok_and(|d| is_leap_year(d.year())),
             "DayOfYear::REF_YEAR must be a leap year",
         );
         assert_eq!(
@@ -192,35 +179,35 @@ mod tests {
     #[test]
     fn exact_day_only() {
         assert_eq!(
-            DayOfYear::search_days(date(2024, 12, 8)).as_slice(),
+            DayOfYear::search_days(date!(2024 - 12 - 8)).as_slice(),
             &[DayOfYear::from_md(Month::December, 8).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2024, 3, 1)).as_slice(),
+            DayOfYear::search_days(date!(2024 - 3 - 1)).as_slice(),
             &[DayOfYear::from_md(Month::March, 1).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2024, 2, 29)).as_slice(),
+            DayOfYear::search_days(date!(2024 - 2 - 29)).as_slice(),
             &[DayOfYear::from_md(Month::February, 29).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2022, 4, 1)).as_slice(),
+            DayOfYear::search_days(date!(2022 - 4 - 1)).as_slice(),
             &[DayOfYear::from_md(Month::April, 1).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2022, 1, 1)).as_slice(),
+            DayOfYear::search_days(date!(2022 - 1 - 1)).as_slice(),
             &[DayOfYear::from_md(Month::January, 1).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2024, 1, 1)).as_slice(),
+            DayOfYear::search_days(date!(2024 - 1 - 1)).as_slice(),
             &[DayOfYear::from_md(Month::January, 1).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2022, 12, 31)).as_slice(),
+            DayOfYear::search_days(date!(2022 - 12 - 31)).as_slice(),
             &[DayOfYear::from_md(Month::December, 31).expect("checked day should be valid")],
         );
         assert_eq!(
-            DayOfYear::search_days(date(2024, 12, 31)).as_slice(),
+            DayOfYear::search_days(date!(2024 - 12 - 31)).as_slice(),
             &[DayOfYear::from_md(Month::December, 31).expect("checked day should be valid")],
         );
     }
@@ -228,7 +215,7 @@ mod tests {
     #[test]
     fn non_leap_day_adjustment() {
         assert_eq!(
-            DayOfYear::search_days(date(2022, 3, 1)).as_slice(),
+            DayOfYear::search_days(date!(2022 - 3 - 1)).as_slice(),
             &[DayOfYear::FEB_29, DayOfYear::MAR_1],
         );
     }

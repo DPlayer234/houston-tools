@@ -1,5 +1,4 @@
 use bson::doc;
-use chrono::*;
 use houston_cmd::model::{Command, CommandOptionData};
 use utils::text::WriteStr as _;
 
@@ -32,6 +31,10 @@ pub fn perk_admin(perks: &Config) -> Command {
     integration_types = "Guild"
 )]
 mod root {
+    use time::UtcDateTime;
+
+    use crate::helper::time::parse_duration;
+
     /// Enables a perk for a member.
     #[sub_command]
     async fn enable(
@@ -40,19 +43,21 @@ mod root {
         member: SlashMember<'_>,
         /// The perk to enable.
         perk: Effect,
-        /// How long to enable it for, in hours.
-        duration: u32,
+        /// How long to enable it for, specified in "H:MM:SS" format.
+        duration: &str,
     ) -> Result {
+        let duration = parse_duration(duration).ok_or(HArgError::new_const(
+            "Invalid duration. The expected format is `H:MM:SS`, f.e. `1:00:00` for 1 hour.",
+        ))?;
+
         let data = ctx.data_ref();
         let guild_id = ctx.require_guild_id()?;
         let perks = data.config().perks()?;
         let db = data.database()?;
         let args = Args::new(ctx.serenity, guild_id, member.user.id);
 
-        let duration = TimeDelta::try_hours(i64::from(duration)).context("too many hours")?;
-
-        let until = Utc::now()
-            .checked_add_signed(duration)
+        let until = UtcDateTime::now()
+            .checked_add(duration)
             .context("duration lasts beyond the end of time")?;
 
         ctx.defer_as(Ephemeral).await?;

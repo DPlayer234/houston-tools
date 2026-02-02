@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bson_model::Filter;
-use chrono::{DateTime, Utc};
 use rand::prelude::*;
+use time::{OffsetDateTime, UtcDateTime};
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
@@ -70,9 +70,9 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     let defer = async { ctx.defer(ephemeral.load(Ordering::Acquire)).await };
 
     let cooldown_check = async {
-        let now = Utc::now();
-        let next_cooldown_end = Utc::now()
-            .checked_add_signed(rep.cooldown)
+        let now = UtcDateTime::now();
+        let next_cooldown_end = now
+            .checked_add(rep.cooldown)
             .context("cooldown broke the end of time")?;
 
         // try to update the cooldown in the document.
@@ -82,11 +82,11 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         let filter = model::Record::filter()
             .user(ctx.user().id)
             .guild(guild_id)
-            .cooldown_ends(Filter::Lte(now))
+            .cooldown_ends(Filter::Lte(now.into()))
             .into_document()?;
 
         let update = model::Record::update()
-            .set(|r| r.cooldown_ends(next_cooldown_end))
+            .set(|r| r.cooldown_ends(next_cooldown_end.into()))
             .into_document()?;
 
         let update_res = model::Record::collection(db)
@@ -162,7 +162,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .into_document()?;
 
     let update = model::Record::update()
-        .set_on_insert(|r| r.cooldown_ends(DateTime::UNIX_EPOCH))
+        .set_on_insert(|r| r.cooldown_ends(OffsetDateTime::UNIX_EPOCH))
         .inc(|r| r.received(1))
         .into_document()?;
 

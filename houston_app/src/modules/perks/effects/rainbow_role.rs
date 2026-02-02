@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use bson_model::ModelDocument as _;
-use chrono::prelude::*;
+use time::Time;
 
 use super::*;
 use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
@@ -50,17 +50,17 @@ impl Shape for RainbowRole {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context, _now: DateTime<Utc>) -> Result {
+    async fn update(&self, ctx: &Context, _now: UtcDateTime) -> Result {
         const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {
             return Ok(());
         };
 
-        let loop_sec = Utc::now()
+        let loop_sec = UtcDateTime::now()
             .time()
-            .signed_duration_since(NaiveTime::MIN)
-            .num_seconds()
+            .duration_since(Time::MIDNIGHT)
+            .whole_seconds()
             .rem_euclid(LOOP_TIME);
 
         let loop_rel = loop_sec as f32 / LOOP_TIME as f32;
