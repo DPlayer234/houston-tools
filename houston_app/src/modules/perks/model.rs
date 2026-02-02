@@ -36,8 +36,8 @@ pub struct ActivePerk {
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
-    #[serde(with = "As::<FromTime03OffsetDateTime>")]
-    pub until: OffsetDateTime,
+    #[serde(with = "As::<DateTimeBson>")]
+    pub until: UtcDateTime,
     #[model(filter = false)]
     pub state: Option<Bson>,
 }
@@ -325,7 +325,7 @@ impl ActivePerkExt for Collection<ActivePerk> {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 
         let update = ActivePerk::update()
-            .set(|a| a.until(until.into()))
+            .set(|a| a.until(until))
             .into_document()?;
 
         self.update_one(filter, update)

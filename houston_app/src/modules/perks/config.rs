@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
+use serde_with::As;
 use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
 use time::{Date, Duration, UtcDateTime};
 use tokio::sync::Mutex;
 
 use super::Item;
-use crate::helper::time::serde_duration;
+use crate::helper::time::DhmsDuration;
 use crate::prelude::*;
 
 macro_rules! fsd {
@@ -36,7 +37,7 @@ fn default_last_check_datetime() -> Mutex<UtcDateTime> {
 pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: FixedString<u8>,
-    #[serde(with = "serde_duration", default = "default_check_interval")]
+    #[serde(with = "As::<DhmsDuration>", default = "default_check_interval")]
     pub check_interval: Duration,
     pub rainbow: Option<RainbowConfig>,
     pub pushpin: Option<PushpinConfig>,
@@ -51,7 +52,7 @@ pub struct Config {
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct EffectPrice {
     pub cost: u32,
-    #[serde(with = "serde_duration")]
+    #[serde(with = "As::<DhmsDuration>")]
     pub duration: Duration,
 }
 
@@ -140,7 +141,7 @@ fn default_birthday_duration() -> Duration {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
-    #[serde(with = "serde_duration", default = "default_birthday_duration")]
+    #[serde(with = "As::<DhmsDuration>", default = "default_birthday_duration")]
     pub duration: Duration,
     pub regions: FixedArray<BirthdayRegionConfig>,
     #[serde(default, flatten)]
@@ -154,7 +155,7 @@ fn default_last_check_date() -> Mutex<Date> {
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayRegionConfig {
     pub name: FixedString<u8>,
-    #[serde(with = "serde_duration", default)]
+    #[serde(with = "As::<DhmsDuration>", default)]
     pub time_offset: Duration,
 
     #[serde(skip, default = "default_last_check_date")]

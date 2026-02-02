@@ -6,6 +6,10 @@ use time::format_description::StaticFormatDescription;
 use time::macros::format_description;
 use time::{Duration, UtcDateTime};
 
+mod serde;
+
+pub use serde::DhmsDuration;
+
 /// Stores a timestamp on when the application was started.
 static STARTUP_TIME: OnceLock<UtcDateTime> = OnceLock::new();
 
@@ -34,6 +38,11 @@ pub fn parse_date_time(s: &str) -> Option<UtcDateTime> {
     UtcDateTime::parse(s, FORMAT).ok()
 }
 
+/// This format has 3 distinct sections:
+///
+/// - Date & Year: "Y-M-D", "M/D/Y", "D.M.Y", or "Month D, Y"
+/// - Time: "hh:mm[:ss] AM/PM" or "HH:mm[:ss]"
+/// - UTC-Offset (optional): "+H:mm", "+HHMM", or "+HH"
 const FORMAT: StaticFormatDescription = format_description!(
     version = 2,
     "[first \
@@ -55,7 +64,14 @@ const FORMAT: StaticFormatDescription = format_description!(
      ]"
 );
 
-pub fn parse_duration(v: &str) -> Option<Duration> {
+/// Parses a [`Duration`] from a string in the format `d?.hh:mm:ss`. If parsing
+/// fails, returns [`None`].
+///
+/// The minute and second components must be between 0 and 59 but may be single
+/// digits. There are numeric limits on the hour and day components. If
+/// specified, days are considered to be exactly 24 hours. The string may be
+/// prefixed with `-` for negative durations.
+pub fn parse_dhms_duration(v: &str) -> Option<Duration> {
     use time::convert::{Day, Hour, Minute, Second};
 
     let v = v.trim();
@@ -96,46 +112,12 @@ pub fn parse_duration(v: &str) -> Option<Duration> {
     Some(Duration::seconds(total))
 }
 
-pub mod serde_duration {
-    use std::fmt;
-
-    use serde::Deserializer;
-    use serde::de::Error;
-    use time::Duration;
-
-    use super::parse_duration;
-
-    struct Visitor;
-
-    impl serde::de::Visitor<'_> for Visitor {
-        type Value = Duration;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("duration string in hh:mm:ss format")
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            parse_duration(v).ok_or_else(|| E::custom("expected duration in hh:mm:ss format"))
-        }
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(Visitor)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use time::Duration;
     use time::macros::{datetime, utc_datetime};
 
-    use super::{parse_date_time, parse_duration};
+    use super::{parse_date_time, parse_dhms_duration};
 
     #[test]
     fn parse_date_time1() {
@@ -163,7 +145,7 @@ mod tests {
 
     #[test]
     fn parse_date_time2s() {
-        let input = "02/16/2024 03:31:42pm";
+        let input = "02/16/2024 3:31:42pm";
         let parsed = parse_date_time(input).expect("parse should succeed");
 
         assert_eq!(parsed, utc_datetime!(2024-02-16 15:31:42));
@@ -242,14 +224,14 @@ mod tests {
     #[test]
     fn parse_serde_time_delta_hms() {
         let input = "12:34:56";
-        let parsed = parse_duration(input).expect("parse should succeed");
+        let parsed = parse_dhms_duration(input).expect("parse should succeed");
         assert_eq!(parsed, Duration::seconds(((12 * 60 + 34) * 60) + 56));
     }
 
     #[test]
     fn parse_serde_time_delta_dhms() {
         let input = "8.12:34:56";
-        let parsed = parse_duration(input).expect("parse should succeed");
+        let parsed = parse_dhms_duration(input).expect("parse should succeed");
         assert_eq!(
             parsed,
             Duration::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)

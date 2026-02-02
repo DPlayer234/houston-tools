@@ -182,7 +182,7 @@ async fn check_expiry(ctx: &Context, now: UtcDateTime) -> Result {
     let db = data.database()?;
 
     let filter = model::ActivePerk::filter()
-        .until(Filter::Lt(now.into()))
+        .until(Filter::Lt(now))
         .into_document()?;
 
     let mut query = model::ActivePerk::collection(db)

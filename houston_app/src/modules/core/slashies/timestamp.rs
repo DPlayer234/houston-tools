@@ -2,7 +2,7 @@ use std::str::FromStr as _;
 
 use time::UtcDateTime;
 
-use crate::helper::time::{parse_date_time, parse_duration};
+use crate::helper::time::{parse_date_time, parse_dhms_duration};
 use crate::slashies::prelude::*;
 
 /// Provides methods for localized timestamps.
@@ -20,7 +20,7 @@ pub mod timestamp {
         /// The offset from the current time, specified in "H:MM:SS" format.
         delta: &str,
     ) -> Result {
-        let delta = parse_duration(delta).ok_or(HArgError::new_const(
+        let delta = parse_dhms_duration(delta).ok_or(HArgError::new_const(
             "Invalid duration. The expected format is `H:MM:SS`, f.e. `1:00:00` for 1 hour.",
         ))?;
 

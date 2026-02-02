@@ -33,7 +33,7 @@ pub fn perk_admin(perks: &Config) -> Command {
 mod root {
     use time::UtcDateTime;
 
-    use crate::helper::time::parse_duration;
+    use crate::helper::time::parse_dhms_duration;
 
     /// Enables a perk for a member.
     #[sub_command]
@@ -46,7 +46,7 @@ mod root {
         /// How long to enable it for, specified in "H:MM:SS" format.
         duration: &str,
     ) -> Result {
-        let duration = parse_duration(duration).ok_or(HArgError::new_const(
+        let duration = parse_dhms_duration(duration).ok_or(HArgError::new_const(
             "Invalid duration. The expected format is `H:MM:SS`, f.e. `1:00:00` for 1 hour.",
         ))?;
 

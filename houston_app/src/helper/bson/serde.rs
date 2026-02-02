@@ -5,8 +5,9 @@
 use std::marker::PhantomData;
 
 use serde::de::{Error, Visitor};
-use serde::{Deserializer, Serializer};
+use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
+use time::UtcDateTime;
 
 use crate::helper::discord::CastU64;
 
@@ -76,13 +77,38 @@ impl<T: CastU64> Visitor<'_> for I64Visitor<T> {
     }
 }
 
+pub enum DateTimeBson {}
+
+impl SerializeAs<UtcDateTime> for DateTimeBson {
+    fn serialize_as<S>(source: &UtcDateTime, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        bson::DateTime::from_time_0_3((*source).into()).serialize(serializer)
+    }
+}
+
+impl<'de> DeserializeAs<'de, UtcDateTime> for DateTimeBson {
+    fn deserialize_as<D>(deserializer: D) -> Result<UtcDateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(bson::DateTime::deserialize(deserializer)?
+            .to_time_0_3()
+            .to_utc())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use bson::Bson;
     use bson::de::Deserializer;
     use bson::ser::Serializer;
+    use bson::serde_helpers::datetime::FromTime03OffsetDateTime;
     use serde_with::As;
     use serenity::model::id::UserId;
+    use time::OffsetDateTime;
+    use time::macros::{datetime, utc_datetime};
 
     use super::*;
 
@@ -102,6 +128,35 @@ mod tests {
         let id: UserId = As::<IdBson>::deserialize(de).expect("must deserialize");
 
         assert_eq!(id, UserId::new(2345));
+    }
+
+    #[test]
+    fn datetime_same_as_builtin_helper1() {
+        let origin_datetime = datetime!(2025-04-01 15:42:31+02);
+
+        let ser = Serializer::new();
+        let bson = As::<FromTime03OffsetDateTime>::serialize(&origin_datetime, ser)
+            .expect("must serialize");
+
+        let de = Deserializer::new(bson);
+        let output_datetime: UtcDateTime =
+            As::<DateTimeBson>::deserialize(de).expect("must deserialize");
+
+        assert_eq!(output_datetime, origin_datetime.to_utc());
+    }
+
+    #[test]
+    fn datetime_same_as_builtin_helper2() {
+        let origin_datetime = utc_datetime!(2025-04-02 15:42:31);
+
+        let ser = Serializer::new();
+        let bson = As::<DateTimeBson>::serialize(&origin_datetime, ser).expect("must serialize");
+
+        let de = Deserializer::new(bson);
+        let output_datetime: OffsetDateTime =
+            As::<FromTime03OffsetDateTime>::deserialize(de).expect("must deserialize");
+
+        assert_eq!(output_datetime.to_utc(), origin_datetime);
     }
 
     // this does not check for `Ok(_)`, but just that there isn't a panic

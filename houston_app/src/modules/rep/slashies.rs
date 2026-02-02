@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use bson_model::Filter;
 use rand::prelude::*;
-use time::{OffsetDateTime, UtcDateTime};
+use time::UtcDateTime;
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
@@ -82,11 +82,11 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         let filter = model::Record::filter()
             .user(ctx.user().id)
             .guild(guild_id)
-            .cooldown_ends(Filter::Lte(now.into()))
+            .cooldown_ends(Filter::Lte(now))
             .into_document()?;
 
         let update = model::Record::update()
-            .set(|r| r.cooldown_ends(next_cooldown_end.into()))
+            .set(|r| r.cooldown_ends(next_cooldown_end))
             .into_document()?;
 
         let update_res = model::Record::collection(db)
@@ -162,7 +162,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .into_document()?;
 
     let update = model::Record::update()
-        .set_on_insert(|r| r.cooldown_ends(OffsetDateTime::UNIX_EPOCH))
+        .set_on_insert(|r| r.cooldown_ends(UtcDateTime::UNIX_EPOCH))
         .inc(|r| r.received(1))
         .into_document()?;
 

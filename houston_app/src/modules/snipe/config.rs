@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::num::NonZero;
 use std::sync::Mutex;
 
+use serde_with::As;
 use time::Duration;
 
 use super::state::GuildState;
-use crate::helper::time::serde_duration;
+use crate::helper::time::DhmsDuration;
 use crate::prelude::*;
 
 fn default_max_age() -> Duration {
@@ -20,7 +21,7 @@ pub type Config = HashMap<GuildId, GuildConfig>;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct GuildConfig {
-    #[serde(with = "serde_duration", default = "default_max_age")]
+    #[serde(with = "As::<DhmsDuration>", default = "default_max_age")]
     pub max_age: Duration,
     #[serde(default = "default_max_cache_size")]
     pub max_cache_size: NonZero<usize>,
