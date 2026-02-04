@@ -15,7 +15,7 @@ smallvec = { version = "1.15.0", features = ["const_generics", "union"] }
 thiserror = "2.0.12"
 
 [dev-dependencies]
-criterion = "0.8.0"
+criterion = "0.8.2"
 smallvec = { version = "1.15.0", features = ["const_generics", "union", "write"] }
 
 [[bench]]

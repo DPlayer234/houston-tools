@@ -2,12 +2,12 @@ use anyhow::Context as _;
 use serde::Deserialize;
 use serenity::model::Color;
 use serenity::secrets::Token;
+use serenity::small_fixed_array::FixedString;
 
 pub mod emoji;
 pub mod setup;
 
 pub use emoji::HEmoji;
-use serenity::small_fixed_array::FixedString;
 
 #[derive(Debug, Deserialize)]
 pub struct HConfig {
