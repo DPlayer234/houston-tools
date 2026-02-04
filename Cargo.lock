@@ -1114,7 +1114,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.16.0"
+version = "2.16.1"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1170,7 +1170,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "anyhow",
  "const-builder",

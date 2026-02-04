@@ -129,7 +129,7 @@ impl<'a> Context<'a> {
     #[expect(clippy::missing_errors_doc)]
     pub async fn defer(self, ephemeral: bool) -> serenity::Result<()> {
         let state = self.get_reply_state();
-        if state == DEFER {
+        if state == UNSENT {
             let reply = CreateInteractionResponse::Defer(
                 CreateInteractionResponseMessage::new().ephemeral(ephemeral),
             );
