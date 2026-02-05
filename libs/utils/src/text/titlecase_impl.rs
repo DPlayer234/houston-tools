@@ -49,8 +49,50 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
     }
 }
 
-/// Transforms a const [`str`] in `SNAKE_CASE` format into titlecase version
+/// Transforms a const `&[u8]` in `SNAKE_CASE` format into titlecase version
 /// (i.e. `Snake Case`). The resulting value is still const.
+///
+/// For [`&str`](str), use [`titlecase`] instead.
+///
+/// # Examples
+///
+/// ```
+/// const TITLE: &[u8] = utils::titlecase_u8!(b"HELLO_NEW_WORLD");
+/// assert_eq!(TITLE, b"Hello New World");
+/// ```
+///
+/// Also works with lower snake case:
+/// ```
+/// const TITLE: &[u8] = utils::titlecase_u8!(b"hello_new_world");
+/// assert_eq!(TITLE, b"Hello New World");
+/// ```
+#[macro_export]
+macro_rules! titlecase_u8 {
+    ($input:expr) => {
+        // const-block to force compile-time eval and hide temporary named consts.
+        // result is turned into a &[u8], with the size hidden again.
+        &const {
+            // Ensure input is a `&'static [u8]`
+            const __INPUT: &[::std::primitive::u8] = $input;
+
+            // Reusable const for byte length
+            const __N: ::std::primitive::usize = __INPUT.len();
+
+            // Include length in constant for next call.
+            let mut value = *__INPUT
+                .as_array::<__N>()
+                .expect("must be same size as output");
+
+            $crate::text::private::to_titlecase_u8(&mut value);
+            value
+        } as &[::std::primitive::u8]
+    };
+}
+
+/// Transforms a const [`&str`](str) in `SNAKE_CASE` format into titlecase
+/// version (i.e. `Snake Case`). The resulting value is still const.
+///
+/// For `&[u8]`, use [`titlecase_u8`] instead.
 ///
 /// # Examples
 ///
@@ -64,40 +106,22 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 /// const TITLE: &str = utils::titlecase!("hello_new_world");
 /// assert_eq!(TITLE, "Hello New World");
 /// ```
-///
-/// Or byte strings, if prefixed with `b:`:
-/// ```
-/// const TITLE: &[u8] = utils::titlecase!(b: b"HELLO_NEW_WORLD");
-/// assert_eq!(TITLE, b"Hello New World");
-/// ```
 #[macro_export]
 macro_rules! titlecase {
     ($input:expr) => {
-        const {
-            // Ensure input is a `&'static str`
-            const __INPUT_STR: &::std::primitive::str = $input;
-
-            // SAFETY: `titlecase!` does not affect UTF-8 validity and input was `&str`.
-            unsafe { ::std::primitive::str::from_utf8_unchecked(
-                $crate::titlecase!(b: __INPUT_STR.as_bytes())
-            ) }
+        // SAFETY: `titlecase!` does not affect UTF-8 validity and input was `&str`.
+        unsafe {
+            ::std::primitive::str::from_utf8_unchecked($crate::titlecase_u8!(
+                // Ensure input is a `&'static str`
+                ::std::primitive::str::as_bytes($input)
+            ))
         }
     };
     (b: $input:expr) => {
         const {
-            // Ensure input is a `&'static [u8]`
-            const __INPUT: &[::std::primitive::u8] = $input;
-
-            // Reusable const for byte length
-            const __N: ::std::primitive::usize = __INPUT.len();
-
-            // Include length in constant for next call.
-            const __RESULT: [::std::primitive::u8; __N] = {
-                let mut value = *__INPUT.as_array().expect("must be same size as output");
-                $crate::text::private::to_titlecase_u8(&mut value);
-                value
-            };
-            &__RESULT as &[::std::primitive::u8]
+            #[deprecated = "`titlecase!(b: ..)` should be replaced with `titlecase_u8!(..)`"]
+            const __TITLECASE_B_DEPRECATED: &[u8] = $crate::titlecase_u8!($input);
+            __TITLECASE_B_DEPRECATED
         }
     };
 }
