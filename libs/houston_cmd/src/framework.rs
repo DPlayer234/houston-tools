@@ -71,6 +71,7 @@ impl Framework {
         I: IntoIterator<Item = Command>,
     {
         self.commands = commands.into_iter().collect();
+        self.commands.shrink_to_fit();
         self
     }
 
@@ -240,10 +241,10 @@ impl Framework {
         interaction: &'ctx CommandInteraction,
     ) -> Result<(&SubCommandData, Box<[ResolvedOption<'ctx>]>), &'static str> {
         let data = &interaction.data;
-        let name = data.name.as_str();
+        let key = (data.kind, data.name.as_str());
 
         // find the root command
-        let root = self.commands.get(name).ok_or("unknown command")?;
+        let root = self.commands.get(key).ok_or("unknown command")?;
         let mut resolver = CommandOptionResolver::new(data);
 
         // traverse the command tree to find the correct sub command
@@ -282,11 +283,14 @@ fn invoke_structure_mismatch(ctx: Context<'_>, invoke: Invoke) -> Error<'_> {
 /// Provides a set/map for commands that avoids having to clone command names to
 /// be used as the key of the map.
 mod command_set {
-    use std::borrow::Borrow;
-    use std::collections::HashSet;
-    use std::hash::{Hash, Hasher};
+    use std::hash::{Hash, Hasher, RandomState};
 
-    use crate::model::Command;
+    use hashbrown::{Equivalent, HashSet};
+    use serenity::all::CommandType;
+
+    use crate::model::{Command, CommandOptionData, Invoke};
+
+    pub type Key<'a> = (CommandType, &'a str);
 
     /// Internal wrapper around [`Command`] to implement set equality.
     #[derive(Debug)]
@@ -294,8 +298,18 @@ mod command_set {
     struct Item(Command);
 
     impl Item {
-        fn key(&self) -> &str {
-            &self.0.data.name
+        fn key(&self) -> Key<'_> {
+            let data = &self.0.data;
+            let kind = match &data.data {
+                CommandOptionData::Group(_) => CommandType::ChatInput,
+                CommandOptionData::Command(cmd) => match cmd.invoke {
+                    Invoke::ChatInput(_) => CommandType::ChatInput,
+                    Invoke::User(_) => CommandType::User,
+                    Invoke::Message(_) => CommandType::Message,
+                },
+            };
+
+            (kind, &data.name)
         }
 
         fn inner(&self) -> &Command {
@@ -311,29 +325,33 @@ mod command_set {
 
     impl Eq for Item {}
 
-    impl Borrow<str> for Item {
-        fn borrow(&self) -> &str {
-            self.key()
-        }
-    }
-
     impl Hash for Item {
         fn hash<H: Hasher>(&self, state: &mut H) {
             self.key().hash(state);
         }
     }
 
-    /// Semi-storage-specialized `HashMap<str, Command>`.
+    impl Equivalent<Item> for Key<'_> {
+        fn equivalent(&self, key: &Item) -> bool {
+            *self == key.key()
+        }
+    }
+
+    /// Semi-storage-specialized `HashMap<(CommandType, str), Command>`.
     #[derive(Debug, Default)]
-    pub struct CommandSet(HashSet<Item>);
+    pub struct CommandSet(HashSet<Item, RandomState>);
 
     impl CommandSet {
-        pub fn get(&self, key: &str) -> Option<&Command> {
-            self.0.get(key).map(Item::inner)
+        pub fn get(&self, key: Key<'_>) -> Option<&Command> {
+            self.0.get(&key).map(Item::inner)
         }
 
         pub fn iter(&self) -> impl Iterator<Item = &Command> {
             self.0.iter().map(Item::inner)
+        }
+
+        pub fn shrink_to_fit(&mut self) {
+            self.0.shrink_to_fit();
         }
     }
 
