@@ -2,7 +2,10 @@ use std::borrow::Cow;
 
 pub use houston_cmd_macros::ChoiceArg;
 use serenity::builder::CreateCommandOption;
-use serenity::model::prelude::*;
+use serenity::model::application::{CommandOptionType, ResolvedValue};
+use serenity::model::channel::{Attachment, GenericInteractionChannel, Message};
+use serenity::model::guild::{PartialMember, Role};
+use serenity::model::user::User;
 
 use crate::context::Context;
 use crate::error::Error;

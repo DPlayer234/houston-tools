@@ -6,8 +6,14 @@
 use std::borrow::Cow;
 
 use const_builder::ConstBuilder;
-use serenity::builder::*;
-use serenity::model::prelude::*;
+use serenity::builder::{CreateAutocompleteResponse, CreateCommand, CreateCommandOption};
+use serenity::model::application::{
+    CommandOptionType, CommandType, InstallationContext, InteractionContext,
+};
+use serenity::model::channel::Message;
+use serenity::model::guild::PartialMember;
+use serenity::model::permissions::Permissions;
+use serenity::model::user::User;
 
 use crate::BoxFuture;
 use crate::context::Context;

@@ -3,12 +3,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use houston_cmd::{CreateReply, EditReply, ReplyHandle};
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal};
+use serenity::gateway::client::Context;
 use serenity::http::Http;
 use serenity::model::application::{ComponentInteraction, ModalInteraction};
 use serenity::model::channel::GenericInteractionChannel;
 use serenity::model::id::{GuildId, InteractionId, MessageId};
 use serenity::model::user::User;
-use serenity::prelude::*;
 
 use crate::Result;
 

@@ -1,4 +1,6 @@
-use serenity::model::prelude::*;
+use serenity::model::application::{
+    CommandData, CommandDataOption, CommandDataOptionValue, CommandDataResolved, ResolvedValue,
+};
 
 use super::ResolvedOption;
 

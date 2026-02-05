@@ -1,5 +1,6 @@
 use serenity::http::Http;
-use serenity::model::prelude::*;
+use serenity::model::channel::Message;
+use serenity::model::id::MessageId;
 
 use super::EditReply;
 

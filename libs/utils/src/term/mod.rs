@@ -6,16 +6,16 @@ pub mod style;
 
 /// Performs automatic detection of whether ANSI escape codes are supported.
 pub fn supports_ansi_escapes<T: io::IsTerminal>(stream: &T) -> bool {
-    use anstyle_query::*;
+    use anstyle_query as a;
 
-    let clicolor = clicolor();
-    if no_color() {
+    let clicolor = a::clicolor();
+    if a::no_color() {
         false
-    } else if clicolor_force() {
+    } else if a::clicolor_force() {
         true
     } else if clicolor == Some(false) {
         false
     } else {
-        stream.is_terminal() && (term_supports_color() || clicolor == Some(true) || is_ci())
+        stream.is_terminal() && (a::term_supports_color() || clicolor == Some(true) || a::is_ci())
     }
 }

@@ -4,7 +4,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
 use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
-use serenity::model::prelude::*;
+use serenity::model::application::{CommandInteraction, ResolvedValue};
+use serenity::model::guild::Member;
+use serenity::model::id::{GenericChannelId, GuildId};
+use serenity::model::user::User;
 
 use crate::ReplyHandle;
 use crate::args::ResolvedOption;

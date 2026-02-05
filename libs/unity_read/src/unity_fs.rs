@@ -374,7 +374,7 @@ fn decompress_data(
             Some(i32::from_int(size)?),
         )?)),
         Compression::Lzma => {
-            use lzma_rs::decompress::*;
+            use lzma_rs::decompress::{Options, UnpackedSize};
 
             let mut output = Cursor::new(Vec::with_capacity(usize::from_int(size)?));
             let mut reader = Cursor::new(compressed_data);

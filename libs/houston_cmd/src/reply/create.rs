@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use serenity::builder::*;
+use serenity::builder::{
+    CreateAllowedMentions, CreateAttachment, CreateComponent, CreateEmbed,
+    CreateInteractionResponseFollowup, CreateInteractionResponseMessage, EditInteractionResponse,
+};
 use serenity::model::channel::MessageFlags;
 
 /// Allows building a reply to an interaction, abstracting away

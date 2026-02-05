@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 
 use serde::Serialize;
-use serenity::builder::*;
-use serenity::model::prelude::*;
+use serenity::builder::{
+    CreateAllowedMentions, CreateAttachment, CreateComponent, CreateEmbed, EditInteractionResponse,
+};
+use serenity::model::channel::{Message, MessageFlags};
+use serenity::model::id::{AttachmentId, InteractionId, MessageId};
 
 use super::CreateReply;
 
