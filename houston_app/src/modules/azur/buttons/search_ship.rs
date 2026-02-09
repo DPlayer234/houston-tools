@@ -47,15 +47,15 @@ impl<'v> View<'v> {
         components.push(CreateSeparator::new(true));
 
         for ship in page_iter {
-            let emoji = super::hull_emoji(ship.hull_type, data);
+            let emoji = super::hull_emoji(ship.base.hull_type, data);
 
             let view = super::ship::View::builder()
-                .ship_id(ship.group_id)
+                .ship_id(ship.base.group_id)
                 .back(self.to_nav())
                 .build();
 
             let button = CreateButton::new(view.to_custom_id())
-                .label(&ship.name)
+                .label(&ship.base.name)
                 .emoji(emoji.clone())
                 .style(ButtonStyle::Secondary);
 
@@ -94,7 +94,7 @@ impl ButtonReply for View<'_> {
     }
 }
 
-type Query<'a, 'v> = Filtered<'a, ShipData, (Filter<'v>, &'a GameData)>;
+type Query<'a, 'v> = Filtered<'a, Ship, (Filter<'v>, &'a GameData)>;
 
 impl<'v> Filter<'v> {
     fn iterate(self, azur: &GameData) -> Query<'_, 'v> {
@@ -106,8 +106,8 @@ impl<'v> Filter<'v> {
     }
 }
 
-impl Filtering<ShipData> for (Filter<'_>, &GameData) {
-    fn is_match(&self, item: &ShipData) -> bool {
+impl Filtering<Ship> for (Filter<'_>, &GameData) {
+    fn is_match(&self, item: &Ship) -> bool {
         let (filter, azur) = *self;
         let Filter {
             name: _,
@@ -118,24 +118,25 @@ impl Filtering<ShipData> for (Filter<'_>, &GameData) {
             has_augment,
         } = filter;
 
-        fn match_has_augment(azur: &GameData, item: &ShipData, has_augment: bool) -> bool {
-            azur.augments_by_ship_id(item.group_id).next().is_some() == has_augment
+        fn match_has_augment(azur: &GameData, item: &Ship, has_augment: bool) -> bool {
+            let any = azur.augments_by_ship_id(item.base.group_id).next();
+            any.is_some() == has_augment
         }
 
-        fn has_hull_type(ship: &ShipData, hull_type: HullType) -> bool {
-            let is_hull_type = move |r: &ShipData| r.hull_type == hull_type;
-            is_hull_type(ship) || ship.retrofits.iter().any(is_hull_type)
+        fn has_hull_type(ship: &Ship, hull_type: HullType) -> bool {
+            let is_hull_type = move |r: &BaseShip| r.hull_type == hull_type;
+            is_hull_type(&ship.base) || ship.retrofits.iter().any(|r| is_hull_type(&r.base))
         }
 
-        fn has_team_type(ship: &ShipData, team_type: TeamType) -> bool {
-            let is_team = move |r: &ShipData| r.hull_type.team_type() == team_type;
-            is_team(ship) || ship.retrofits.iter().any(is_team)
+        fn has_team_type(ship: &Ship, team_type: TeamType) -> bool {
+            let is_team = move |r: &BaseShip| r.hull_type.team_type() == team_type;
+            is_team(&ship.base) || ship.retrofits.iter().any(|r| is_team(&r.base))
         }
 
-        faction.is_none_or(|f| item.faction == f)
+        faction.is_none_or(|f| item.base.faction == f)
             && hull_type.is_none_or(|h| has_hull_type(item, h))
             && team_type.is_none_or(|t| has_team_type(item, t))
-            && rarity.is_none_or(|r| item.rarity == r)
+            && rarity.is_none_or(|r| item.base.rarity == r)
             && has_augment.is_none_or(|h| match_has_augment(azur, item, h))
     }
 }

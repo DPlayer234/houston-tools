@@ -20,7 +20,7 @@ pub mod skill;
 pub struct DefinitionData {
     /// All known ships.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub ships: FixedArray<ship::ShipData>,
+    pub ships: FixedArray<ship::Ship>,
     /// All known equips.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub equips: FixedArray<equip::Equip>,

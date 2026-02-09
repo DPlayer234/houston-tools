@@ -41,11 +41,11 @@ impl View<'_> {
         self,
         data: &'a HBotData,
         azur: &'a LazyData,
-        ship: &'a ShipData,
+        ship: &'a Ship,
     ) -> CreateReply<'a> {
         let mut create = CreateReply::new();
 
-        let thumbail_key = if let Some(skin) = ship.skin_by_id(ship.default_skin_id)
+        let thumbail_key = if let Some(skin) = ship.skin_by_id(ship.base.default_skin_id)
             && let Some(image_data) = azur.game_data().get_chibi_image(&skin.image_key)
         {
             let filename = format!("{}.webp", skin.image_key);
@@ -55,15 +55,15 @@ impl View<'_> {
             None
         };
 
-        create.components_v2(self.with_ship(data, azur, ship, ship, thumbail_key))
+        create.components_v2(self.with_ship(data, azur, &ship.base, ship, thumbail_key))
     }
 
     fn edit_with_ship<'a>(
         self,
         ctx: ButtonContext<'a>,
         azur: &'a LazyData,
-        ship: &'a ShipData,
-        base_ship: &'a ShipData,
+        ship: &'a BaseShip,
+        base_ship: &'a Ship,
     ) -> EditReply<'a> {
         let mut edit = EditReply::new();
 
@@ -89,8 +89,8 @@ impl View<'_> {
         mut self,
         data: &'a HBotData,
         azur: &'a LazyData,
-        ship: &'a ShipData,
-        base_ship: &'a ShipData,
+        ship: &'a BaseShip,
+        base_ship: &'a Ship,
         thumbnail_key: Option<&str>,
     ) -> ComponentVec<CreateComponent<'a>> {
         let mut components = ComponentVec::new();
@@ -124,7 +124,7 @@ impl View<'_> {
     fn get_nav_row<'a>(
         &self,
         azur: &'a LazyData,
-        base_ship: &'a ShipData,
+        base_ship: &'a Ship,
     ) -> CreateContainerComponent<'a> {
         let view_lines = super::lines::View::builder()
             .ship_id(self.ship_id)
@@ -156,7 +156,7 @@ impl View<'_> {
 
     fn get_retro_state_row<'a>(
         &mut self,
-        base_ship: &ShipData,
+        base_ship: &Ship,
     ) -> Option<CreateContainerComponent<'a>> {
         let base_button = || self.button_with_retrofit(None).label("Base");
 
@@ -176,28 +176,30 @@ impl View<'_> {
 
     fn multi_retro_buttons<'a, 'b>(
         &'a mut self,
-        base_ship: &'a ShipData,
+        base_ship: &'a Ship,
     ) -> impl Iterator<Item = CreateButton<'b>> + 'a {
         (0..4u8).zip(&base_ship.retrofits).map(|(index, retro)| {
             // using team_type for the label since currently only DDGs have multiple
             // retro states and their main identifier is what fleet they go in
-            self.button_with_retrofit(Some(index))
-                .label(format!("Retrofit ({})", retro.hull_type.team_type().name()))
+            self.button_with_retrofit(Some(index)).label(format!(
+                "Retrofit ({})",
+                retro.base.hull_type.team_type().name()
+            ))
         })
     }
 
     fn get_header_field<'a>(
         &self,
         data: &'a HBotData,
-        ship: &'a ShipData,
-        base_ship: &'a ShipData,
+        ship: &'a BaseShip,
+        base_ship: &'a Ship,
         thumbnail_key: Option<&str>,
     ) -> CreateContainerComponent<'a> {
         let content = format!(
             "## {}\n\
              [{}] {:★<star_pad$}\n{} {} {}\n\
              -# **ID:** `{}`",
-            base_ship.name,
+            base_ship.base.name,
             ship.rarity.name(),
             "",
             super::hull_emoji(ship.hull_type, data),
@@ -225,7 +227,7 @@ impl View<'_> {
     }
 
     /// Creates the embed field that display the stats.
-    fn get_stats_field<'a>(&self, ship: &ShipData) -> CreateContainerComponent<'a> {
+    fn get_stats_field<'a>(&self, ship: &BaseShip) -> CreateContainerComponent<'a> {
         let stats = &ship.stats;
         let level = u32::from(self.level);
         let affinity = self.affinity.to_mult();
@@ -296,7 +298,7 @@ impl View<'_> {
     fn get_equip_field<'a>(
         &self,
         azur: &'a LazyData,
-        ship: &ShipData,
+        ship: &BaseShip,
     ) -> CreateContainerComponent<'a> {
         let slots = ship
             .equip_slots
@@ -373,7 +375,7 @@ impl View<'_> {
     fn get_skills_field<'a>(
         &self,
         azur: &'a LazyData,
-        ship: &ShipData,
+        ship: &BaseShip,
     ) -> Option<CreateContainerComponent<'a>> {
         if ship.skills.is_empty() {
             return None;
@@ -425,7 +427,7 @@ impl View<'_> {
     fn get_fleet_tech_field<'a>(
         &self,
         data: &HBotData,
-        base_ship: &ShipData,
+        base_ship: &Ship,
     ) -> Option<CreateContainerComponent<'a>> {
         let fleet_tech = base_ship.fleet_tech.as_ref()?;
 
@@ -468,10 +470,7 @@ impl View<'_> {
         )
     }
 
-    pub fn find_ship<'a>(
-        &self,
-        azur: &'a LazyData,
-    ) -> Result<(&'a ShipData, Option<&'a ShipData>)> {
+    pub fn find_ship<'a>(&self, azur: &'a LazyData) -> Result<(&'a Ship, Option<&'a Retrofit>)> {
         let ship = azur
             .game_data()
             .ship_by_id(self.ship_id)
@@ -493,8 +492,8 @@ impl ButtonReply for View<'_> {
 
         let (ship, retrofit) = self.find_ship(azur)?;
         let edit = match retrofit {
-            None => self.edit_with_ship(ctx, azur, ship, ship),
-            Some(retrofit) => self.edit_with_ship(ctx, azur, retrofit, ship),
+            None => self.edit_with_ship(ctx, azur, &ship.base, ship),
+            Some(retrofit) => self.edit_with_ship(ctx, azur, &retrofit.base, ship),
         };
 
         ctx.edit(edit).await?;

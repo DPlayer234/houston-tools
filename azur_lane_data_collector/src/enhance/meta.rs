@@ -4,7 +4,7 @@ use mlua::prelude::*;
 use crate::context;
 
 /// Adds meta repair attributes to the ship stats.
-pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
+pub fn add_repair(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
     let effect: LuaTable = table.get("effect_attr")?;
 
     let attr: String = effect.get(1).with_context(context!(
@@ -21,7 +21,7 @@ pub fn add_repair(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
 /// Adds meta repair effect attributes to the ship stats.
 ///
 /// This refers to the x% complete milestones.
-pub fn add_repair_effect(ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
+pub fn add_repair_effect(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
     let effect_attr: Vec<LuaTable> = table.get("effect_attr")?;
     for effect in effect_attr {
         let attr: String = effect.get(1).with_context(context!(

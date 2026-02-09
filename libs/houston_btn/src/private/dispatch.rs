@@ -1,4 +1,4 @@
-//! Private helpers for the [`button_value`] macro.
+//! Private helpers for the [`crate::button_value`] macro.
 
 use std::fmt;
 
@@ -17,7 +17,7 @@ pub trait ButtonDispatch {
 
 /// Shared code to create a button action.
 ///
-/// Used by the [`super::button_value`] macro.
+/// Used by the [`crate::button_value`] macro.
 pub const fn make_action<T: ButtonDispatch + 'static>(key: usize) -> ButtonAction {
     ButtonAction {
         key,
@@ -76,7 +76,7 @@ fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
 ///
 /// If the type has lifetimes, specify the type similar to: `for<'v> MyType<'v>`
 ///
-/// [`ButtonValue`]: super::ButtonValue
+/// [`ButtonValue`]: crate::ButtonValue
 #[macro_export]
 macro_rules! button_value {
     (for<$l:lifetime> $Ty:ty, $key:expr) => {

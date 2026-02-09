@@ -13,14 +13,14 @@ macro_rules! define_data_enum {
     // actual entry point
     {
         $(#[$container_attr:meta])*
-        $v:vis enum $Enum:ident for $vd:vis $Data:ident {
+        $enum_vis:vis enum $Enum:ident for $data_vis:vis $Data:ident {
             $($(#[$data_field_attr:meta])* $data_field_vis:vis $data_field:ident : $DataFieldTy:ty),* ;
             $($(#[$variant_attr:meta])* $variant:ident $arg:tt),* $(,)?
         }
     } => {
         #[derive(Debug, Clone)]
         #[non_exhaustive]
-        $vd struct $Data {
+        $data_vis struct $Data {
             $(
                 $(#[$data_field_attr])*
                 $data_field_vis $data_field : $DataFieldTy
@@ -29,7 +29,7 @@ macro_rules! define_data_enum {
 
         $(#[$container_attr])*
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-        $v enum $Enum {
+        $enum_vis enum $Enum {
             $(
                 $(#[$variant_attr])*
                 $variant
@@ -37,18 +37,19 @@ macro_rules! define_data_enum {
         }
 
         impl $Enum {
+            /// All known values of this enumeration.
             pub const ALL: &[$Enum] = $crate::define_data_enum!(@all_item [] $($variant)*);
 
             /// Gets the entire associated data structure.
             #[must_use]
-            $vd const fn data(self) -> &'static $Data {
+            $data_vis const fn data(self) -> &'static $Data {
                 const fn make_val($($data_field : $DataFieldTy),*) -> $Data {
                     $Data { $($data_field),* }
                 }
 
                 match self {
                     $(
-                        $Enum::$variant => const { &make_val $arg }
+                        Self::$variant => const { &make_val $arg }
                     ),*
                 }
             }

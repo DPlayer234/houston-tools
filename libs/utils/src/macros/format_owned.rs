@@ -1,5 +1,5 @@
-/// Creates a [`Display`] value with [`format_args`] syntax that tries to own
-/// its captures.
+/// Creates a [`Display`](std::fmt::Display) value with [`format_args`] syntax
+/// that tries to own its captures.
 ///
 /// Optionally, you may specify how additional named captures upfront:
 ///
@@ -10,7 +10,7 @@
 /// println!("{fmt}");
 /// ```
 ///
-/// This macro returns a [`crate::text::FromFn`].
+/// This macro returns a [`FromFn`](std::fmt::FromFn).
 #[macro_export]
 macro_rules! format_owned {
     ([$($n:ident = $cap:expr),* $(,)?], $($t:tt)*) => {{

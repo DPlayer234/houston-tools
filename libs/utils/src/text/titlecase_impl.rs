@@ -52,7 +52,7 @@ pub const fn titlecase_transform(c: u8, is_start: bool) -> (u8, bool) {
 /// Transforms a const `&[u8]` in `SNAKE_CASE` format into titlecase version
 /// (i.e. `Snake Case`). The resulting value is still const.
 ///
-/// For [`&str`](str), use [`titlecase`] instead.
+/// For [`&str`](str), use [`titlecase`](crate::titlecase) instead.
 ///
 /// # Examples
 ///
@@ -92,7 +92,7 @@ macro_rules! titlecase_u8 {
 /// Transforms a const [`&str`](str) in `SNAKE_CASE` format into titlecase
 /// version (i.e. `Snake Case`). The resulting value is still const.
 ///
-/// For `&[u8]`, use [`titlecase_u8`] instead.
+/// For `&[u8]`, use [`titlecase_u8`](crate::titlecase_u8) instead.
 ///
 /// # Examples
 ///

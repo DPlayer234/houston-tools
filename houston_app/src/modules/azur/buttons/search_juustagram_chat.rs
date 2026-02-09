@@ -36,7 +36,7 @@ impl View {
 
         for chat in page_iter {
             let label = match azur.game_data().ship_by_id(chat.group_id) {
-                Some(ship) => Cow::Owned(format!("{} [{}]", chat.name, ship.name)),
+                Some(ship) => Cow::Owned(format!("{} [{}]", chat.name, ship.base.name)),
                 None => Cow::Borrowed(chat.name.as_str()),
             };
 

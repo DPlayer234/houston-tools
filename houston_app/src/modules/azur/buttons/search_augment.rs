@@ -116,7 +116,7 @@ impl Filtering<Augment> for (Filter<'_>, &GameData) {
                 AugmentUsability::HullTypes(h) => h.contains(&hull_type),
                 AugmentUsability::UniqueShipId(id) => azur
                     .ship_by_id(*id)
-                    .is_some_and(|s| s.hull_type == hull_type),
+                    .is_some_and(|s| s.base.hull_type == hull_type),
             }
         }
 

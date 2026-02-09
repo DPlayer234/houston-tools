@@ -32,7 +32,8 @@ impl View<'_> {
                 return "<You>";
             }
 
-            azur.ship_by_id(sender_id).map_or("<unknown>", |s| &s.name)
+            azur.ship_by_id(sender_id)
+                .map_or("<unknown>", |s| &s.base.name)
         }
 
         let mut content = String::new();

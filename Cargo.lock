@@ -148,7 +148,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "azur_lane"
-version = "4.1.1"
+version = "5.0.0"
 dependencies = [
  "bitflags",
  "serde",
@@ -159,7 +159,7 @@ dependencies = [
 
 [[package]]
 name = "azur_lane_data_collector"
-version = "2.7.1"
+version = "2.8.0"
 dependencies = [
  "anyhow",
  "azur_lane",
@@ -1117,7 +1117,7 @@ dependencies = [
 
 [[package]]
 name = "houston_app"
-version = "2.16.1"
+version = "2.17.0"
 dependencies = [
  "anyhow",
  "arc-swap",

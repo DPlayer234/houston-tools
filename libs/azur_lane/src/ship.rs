@@ -6,14 +6,14 @@ use std::ops::{Add, AddAssign};
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
-use crate::data_def::is_default;
+use crate::data_def::{define_data_enum, is_default};
 use crate::equip::*;
 use crate::skill::*;
-use crate::{Faction, GameServer, define_data_enum};
+use crate::{Faction, GameServer};
 
-/// Provides data for a singular ship or a retrofit.
+/// Base data to represent one ship, retrofit, or similar.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipData {
+pub struct BaseShip {
     /// The ship ID for either the max limit break version or the retrofit,
     /// depending on which you're checking.
     pub id: u32,
@@ -23,7 +23,7 @@ pub struct ShipData {
     pub name: FixedString,
     /// The ship's rarity.
     ///
-    /// For its star rating, see [`ShipData::stars`].
+    /// For its star rating, see [`BaseShip::stars`].
     pub rarity: ShipRarity,
     /// The faction this ship belongs to.
     pub faction: Faction,
@@ -39,7 +39,7 @@ pub struct ShipData {
     /// The ID of the default skin.
     /// Retrofits will have the retrofit skin set as the default.
     ///
-    /// [`ShipData::skin_by_id`] can be used to easily get skin data.
+    /// [`Ship::skin_by_id`] can be used to easily get skin data.
     pub default_skin_id: u32,
     /// The real equipment slots visible in-game, including auxiliary slots.
     pub equip_slots: FixedArray<EquipSlot>,
@@ -59,20 +59,34 @@ pub struct ShipData {
     /// Also referred to as the "specific type".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ultimate_bonus: Option<UltimateBonus>,
+}
+
+/// Provides data for a single ship.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ship {
+    /// The base data.
+    pub base: BaseShip,
     /// Available retrofits for this ship in their maxed-out state.
     ///
     /// As of now, only DDGs have "multiple" retrofits, with their vanguard
     /// and main fleet states being considered different ones.
-    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub retrofits: FixedArray<Self>,
+    #[serde(skip_serializing_if = "FixedArray::is_empty")]
+    pub retrofits: FixedArray<Retrofit>,
     /// The ship's skins, including their default and all retrofit skins.
     ///
     /// This will be empty for nested retrofits. Access the base's skins.
-    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    #[serde(skip_serializing_if = "FixedArray::is_empty")]
     pub skins: FixedArray<ShipSkin>,
     /// The fleet tech bonuses for this ship.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fleet_tech: Option<FleetTechInfo>,
+}
+
+/// Provides data for a retrofit.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Retrofit {
+    /// The base data.
+    pub base: BaseShip,
 }
 
 /// Provides stat block information for a ship.
@@ -148,7 +162,7 @@ pub struct ShadowEquip {
 /// Data for a ship skin. This may represent the default skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShipSkin {
-    /// The skin's ID. [`ShipData::skin_by_id`] searches for this.
+    /// The skin's ID. [`Ship::skin_by_id`] searches for this.
     pub skin_id: u32,
     /// The image/asset key.
     ///
@@ -451,10 +465,8 @@ impl fmt::Display for ShipArmor {
     }
 }
 
-impl ShipData {
+impl Ship {
     /// Gets a skin for this ship by its ID.
-    ///
-    /// Retrofits will have empty skin lists. Call this on the base ship.
     #[must_use]
     pub fn skin_by_id(&self, skin_id: u32) -> Option<&ShipSkin> {
         self.skins.iter().find(|s| s.skin_id == skin_id)

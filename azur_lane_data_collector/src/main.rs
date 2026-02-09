@@ -193,11 +193,7 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     Ok(lua)
 }
 
-fn load_ships(
-    lua: &Lua,
-    pg: &LuaTable,
-    server: GameServer,
-) -> anyhow::Result<FixedArray<ShipData>> {
+fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<FixedArray<Ship>> {
     let ship_data_template: LuaTable = pg
         .get("ship_data_template")
         .context("global pg.ship_data_template")?;
@@ -337,7 +333,7 @@ fn load_ships(
         let retrofit_data: Option<LuaTable> = ship_data_trans
             .get(strengthen_id)
             .with_context(context!("ship_data_trans with {id}"))?;
-        let retrofit_data = retrofit_data.map(|r| Retrofit {
+        let retrofit_data = retrofit_data.map(|r| RetrofitSet {
             data: r,
             list_lookup: &transform_data_template,
         });
@@ -410,39 +406,45 @@ fn load_ships(
             .map(make_skin)
             .try_collect()?;
 
-        let mut mlb = parse::ship::load_ship_data(lua, raw_mlb)?;
-        if let Some(name_override) = config.name_overrides.get(&mlb.group_id) {
-            mlb.name = FixedString::from_str_trunc(name_override);
+        let mut base = parse::ship::load_ship_data(lua, raw_mlb)?;
+        if let Some(name_override) = config.name_overrides.get(&base.group_id) {
+            base.name = FixedString::from_str_trunc(name_override);
         }
 
+        let mut retrofits = FixedArray::new();
         if let Some(retrofit_data) = &raw_mlb.retrofit_data {
-            mlb.retrofits = raw_retrofits
+            retrofits = raw_retrofits
                 .map(|retrofit_set| {
-                    let mut retrofit = parse::ship::load_ship_data(lua, retrofit_set)?;
+                    let base = parse::ship::load_ship_data(lua, retrofit_set)?;
+                    let mut retrofit = Retrofit { base };
                     enhance::retrofit::apply_retrofit(lua, &mut retrofit, retrofit_data)?;
                     fix_up_retrofitted_data(&mut retrofit, retrofit_set)?;
                     Ok::<_, LuaError>(retrofit)
                 })
                 .try_collect_fixed_array()?;
 
-            if mlb.retrofits.is_empty() {
-                let mut retrofit = mlb.clone();
+            if retrofits.is_empty() {
+                let mut retrofit = Retrofit { base: base.clone() };
                 enhance::retrofit::apply_retrofit(lua, &mut retrofit, retrofit_data)?;
-
                 fix_up_retrofitted_data(&mut retrofit, raw_mlb)?;
-                mlb.retrofits.push(retrofit);
+                retrofits.push(retrofit);
             }
         }
 
-        mlb.skins = raw_skins
+        let skins = raw_skins
             .into_iter()
             .map(|s| parse::skin::load_skin(&s, server))
             .try_collect_fixed_array()?;
 
-        mlb.fleet_tech = make_fleet_tech(group.id)?;
+        let fleet_tech = make_fleet_tech(group.id)?;
 
         action.inc_amount();
-        Ok::<_, LuaError>(mlb)
+        Ok::<_, LuaError>(Ship {
+            base,
+            retrofits,
+            skins,
+            fleet_tech,
+        })
     };
 
     let mut ships = groups
@@ -452,7 +454,7 @@ fn load_ships(
 
     action.finish();
 
-    ships.sort_unstable_by_key(|t| t.group_id);
+    ships.sort_unstable_by_key(|t| t.base.group_id);
     Ok(ships)
 }
 
@@ -674,9 +676,9 @@ fn load_special_secretaries(
     Ok(ships)
 }
 
-fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<()> {
+fn fix_up_retrofitted_data(ship: &mut Retrofit, set: &ShipSet<'_>) -> LuaResult<()> {
     let buff_list_display: Vec<u32> = set.template.get("buff_list_display")?;
-    ship.skills.sort_by_key(|s| {
+    ship.base.skills.sort_by_key(|s| {
         buff_list_display
             .iter()
             .enumerate()
@@ -690,15 +692,15 @@ fn fix_up_retrofitted_data(ship: &mut ShipData, set: &ShipSet<'_>) -> LuaResult<
 
 fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
     macro_rules! eq {
-        ($fn:ident, $Ty:ty, $key:ident) => {
+        ($fn:ident, $Ty:ty, $($key:ident).*) => {
             fn $fn(a: &$Ty, b: &$Ty) -> bool {
-                a.$key == b.$key
+                a.$($key).* == b.$($key).*
             }
         };
     }
 
-    eq!(ship_eq, ShipData, group_id);
-    eq!(retrofit_eq, ShipData, default_skin_id);
+    eq!(ship_eq, Ship, base.group_id);
+    eq!(retrofit_eq, Retrofit, base.default_skin_id);
     eq!(skin_eq, ShipSkin, skin_id);
     eq!(augment_eq, Augment, augment_id);
     eq!(equip_eq, Equip, equip_id);
@@ -712,7 +714,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
         r.words_extra.extend_from_array(n.words_extra);
     };
 
-    let update_ship = move |r: &mut ShipData, n: ShipData| {
+    let update_ship = move |r: &mut Ship, n: Ship| {
         add_missing(&mut r.retrofits, n.retrofits, retrofit_eq);
         add_or_update(&mut r.skins, n.skins, skin_eq, update_skin);
     };

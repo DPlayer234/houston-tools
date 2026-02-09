@@ -41,7 +41,7 @@ pub fn parse_date_time(s: &str) -> Option<UtcDateTime> {
 /// This format has 3 distinct sections:
 ///
 /// - Date & Year: "Y-M-D", "M/D/Y", "D.M.Y", or "Month D, Y"
-/// - Time: "hh:mm[:ss] AM/PM" or "HH:mm[:ss]"
+/// - Time: "hh:mm\[:ss\] AM/PM" or "HH:mm\[:ss\]"
 /// - UTC-Offset (optional): "+H:mm", "+HHMM", or "+HH"
 const FORMAT: StaticFormatDescription = format_description!(
     version = 2,

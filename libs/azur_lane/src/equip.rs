@@ -3,9 +3,10 @@
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
+use crate::Faction;
+use crate::data_def::define_data_enum;
 use crate::ship::*;
 use crate::skill::*;
-use crate::{Faction, define_data_enum};
 
 /// Represents a piece of equipment.
 #[derive(Debug, Clone, Serialize, Deserialize)]

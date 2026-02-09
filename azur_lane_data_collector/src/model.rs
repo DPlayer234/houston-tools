@@ -37,9 +37,9 @@ pub struct ShipGroup {
     pub members: Vec<u32>,
 }
 
-/// A set of data from which [`ShipData`] can be constructed.
+/// A set of data from which [`BaseShip`] can be constructed.
 ///
-/// [`ShipData`]: azur_lane::ship::ShipData
+/// [`BaseShip`]: azur_lane::ship::BaseShip
 #[derive(Debug)]
 pub struct ShipSet<'a> {
     /// The ship ID. Not the group's.
@@ -51,7 +51,7 @@ pub struct ShipSet<'a> {
     /// The associated strengthen data.
     pub strengthen: Strengthen<'a>,
     /// The associated retrofit data.
-    pub retrofit_data: Option<Retrofit<'a>>,
+    pub retrofit_data: Option<RetrofitSet<'a>>,
 }
 
 /// A set of data from which [`ShipSkin`] can be constructed.
@@ -102,7 +102,7 @@ pub struct MetaStrengthen<'a> {
 
 /// Retrofit data some ship.
 #[derive(Debug)]
-pub struct Retrofit<'a> {
+pub struct RetrofitSet<'a> {
     /// The `ship_data_trans` entry.
     pub data: LuaTable,
     /// A reference to `transform_data_template`.

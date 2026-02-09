@@ -87,7 +87,7 @@ impl View<'_> {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn edit_with_ship<'a>(mut self, azur: &'a LazyData, ship: &'a ShipData) -> EditReply<'a> {
+    fn edit_with_ship<'a>(mut self, azur: &'a LazyData, ship: &'a BaseShip) -> EditReply<'a> {
         let mut skills: ArrayVec<&Skill, 5> = ship.skills.iter().take(4).collect();
 
         let mut components = ComponentVec::new();
@@ -263,9 +263,10 @@ impl ButtonReply for View<'_> {
                     .ship_by_id(ship_id)
                     .ok_or(AzurParseError::Ship)?;
 
-                let ship = retrofit
+                let ship: &BaseShip = retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
-                    .unwrap_or(base_ship);
+                    .map(|r| &r.base)
+                    .unwrap_or(&base_ship.base);
 
                 self.edit_with_ship(azur, ship)
             },

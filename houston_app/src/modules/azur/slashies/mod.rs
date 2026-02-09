@@ -32,7 +32,7 @@ pub mod azur {
         let ship = find::ship(azur.game_data(), name)?;
 
         let view = buttons::ship::View::builder()
-            .ship_id(ship.group_id)
+            .ship_id(ship.base.group_id)
             .build();
 
         ctx.send(
@@ -138,7 +138,7 @@ pub mod azur {
 
         let view = View::new(Filter {
             ship: match ship {
-                Some(ship) => Some(find::ship(azur.game_data(), ship)?.group_id),
+                Some(ship) => Some(find::ship(azur.game_data(), ship)?.base.group_id),
                 None => None,
             },
         });
@@ -283,7 +283,7 @@ pub mod azur {
             let azur = data.config().azur()?;
 
             let unique_ship_id = match for_ship {
-                Some(for_ship) => Some(find::ship(azur.game_data(), for_ship)?.group_id),
+                Some(for_ship) => Some(find::ship(azur.game_data(), for_ship)?.base.group_id),
                 None => None,
             };
 

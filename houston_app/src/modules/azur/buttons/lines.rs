@@ -43,7 +43,7 @@ impl View<'_> {
         self,
         ctx: ButtonContext<'a>,
         azur: &'a LazyData,
-        ship: &'a ShipData,
+        ship: &'a Ship,
         skin: &'a ShipSkin,
     ) -> Result<EditReply<'a>> {
         let mut create = EditReply::new();
@@ -66,7 +66,7 @@ impl View<'_> {
     fn with_ship<'a>(
         mut self,
         azur: &'a LazyData,
-        ship: &'a ShipData,
+        ship: &'a Ship,
         skin: &'a ShipSkin,
         thumbnail_key: Option<&str>,
     ) -> Result<ComponentVec<CreateComponent<'a>>> {
@@ -134,7 +134,7 @@ impl View<'_> {
         components.push(CreateActionRow::buttons(nav_row));
 
         Ok(components![
-            CreateContainer::new(components).accent_color(ship.rarity.color_rgb())
+            CreateContainer::new(components).accent_color(ship.base.rarity.color_rgb())
         ])
     }
 
@@ -397,7 +397,7 @@ fn ship_couple_encourage_label(
             let get_name = |&id| {
                 game_data
                     .ship_by_id(id)
-                    .map_or("<unknown>", |s| s.name.as_str())
+                    .map_or("<unknown>", |s| &s.base.name)
             };
 
             if ship_ids.len() == amount {

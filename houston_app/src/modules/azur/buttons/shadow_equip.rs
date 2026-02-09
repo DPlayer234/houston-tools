@@ -18,7 +18,7 @@ impl<'v> View<'v> {
         Self { inner }
     }
 
-    fn create_with_ship(self, ship: &ShipData) -> CreateReply<'_> {
+    fn create_with_ship(self, ship: &BaseShip) -> CreateReply<'_> {
         fn format_weapons(weapons: &[Weapon]) -> Option<String> {
             if weapons.is_empty() {
                 return None;
@@ -83,8 +83,8 @@ impl ButtonReply for View<'_> {
 
         let (ship, retrofit) = self.inner.find_ship(azur)?;
         let create = match retrofit {
-            None => self.create_with_ship(ship),
-            Some(retrofit) => self.create_with_ship(retrofit),
+            None => self.create_with_ship(&ship.base),
+            Some(retrofit) => self.create_with_ship(&retrofit.base),
         };
 
         ctx.edit(create.into()).await?;

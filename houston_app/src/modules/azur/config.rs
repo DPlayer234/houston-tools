@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
 use anyhow::Context as _;
-use azur_lane::ship::ShipData;
+use azur_lane::ship::Ship;
 use serenity::small_fixed_array::FixedString;
 use utils::join;
 
@@ -129,11 +129,11 @@ impl Default for WikiUrls {
 }
 
 impl WikiUrls {
-    pub fn ship(&self, base_ship: &ShipData) -> String {
+    pub fn ship(&self, base_ship: &Ship) -> String {
         format!(
             "{}{}",
             self.ship_base,
-            urlencoding::Encoded::new(base_ship.name.as_str())
+            urlencoding::Encoded::new(base_ship.base.name.as_str())
         )
     }
 }

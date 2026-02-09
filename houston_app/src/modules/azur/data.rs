@@ -29,7 +29,7 @@ const CHIBI_SPRITE_CAP: NonZero<usize> = NonZero::new(28).unwrap();
 pub struct GameData {
     data_path: Arc<Path>,
 
-    ships: Box<[ShipData]>,
+    ships: Box<[Ship]>,
     equips: Box<[Equip]>,
     augments: Box<[Augment]>,
     juustagram_chats: Box<[Chat]>,
@@ -65,7 +65,7 @@ impl GameData {
                 || path.components().next().is_none()
         }
 
-        fn verify_ship(ship: &ShipData) {
+        fn verify_ship(ship: &Ship) {
             for skin in &ship.skins {
                 if is_path_sus(Path::new(&skin.image_key)) {
                     log::warn!(
@@ -121,25 +121,24 @@ impl GameData {
         let mut actual_equip_exist = HashSet::new();
         fn insert_equip_exist(
             actual_equip_exist: &mut HashSet<(EquipKind, HullType)>,
-            data: &ShipData,
+            data: &BaseShip,
         ) {
             for equip_kind in data.equip_slots.iter().flat_map(|h| &h.allowed) {
                 actual_equip_exist.insert((*equip_kind, data.hull_type));
-            }
-
-            for retrofit in &data.retrofits {
-                insert_equip_exist(actual_equip_exist, retrofit);
             }
         }
 
         for (index, data) in this.ships.iter().enumerate() {
             verify_ship(data);
 
-            this.ship_id_to_index.insert(data.group_id, index);
-            this.ship_simsearch.insert(&data.name, ());
+            this.ship_id_to_index.insert(data.base.group_id, index);
+            this.ship_simsearch.insert(&data.base.name, ());
 
             // collect known "equip & hull" pairs
-            insert_equip_exist(&mut actual_equip_exist, data);
+            insert_equip_exist(&mut actual_equip_exist, &data.base);
+            for retrofit in &data.retrofits {
+                insert_equip_exist(&mut actual_equip_exist, &retrofit.base);
+            }
         }
 
         for (index, data) in this.equips.iter_mut().enumerate() {
@@ -201,7 +200,7 @@ impl GameData {
     }
 
     /// Gets all known ships.
-    pub fn ships(&self) -> &[ShipData] {
+    pub fn ships(&self) -> &[Ship] {
         &self.ships
     }
 
@@ -227,13 +226,13 @@ impl GameData {
 
     /// Gets a ship by its ID.
     #[must_use]
-    pub fn ship_by_id(&self, id: u32) -> Option<&ShipData> {
+    pub fn ship_by_id(&self, id: u32) -> Option<&Ship> {
         let index = *self.ship_id_to_index.get(&id)?;
         self.ships.get(index)
     }
 
     /// Gets all ships by a name prefix.
-    pub fn ships_by_prefix(&self, prefix: &str) -> ByPrefixIter<'_, ShipData> {
+    pub fn ships_by_prefix(&self, prefix: &str) -> ByPrefixIter<'_, Ship> {
         ByPrefixIter::new(&self.ship_simsearch, &self.ships, prefix)
     }
 

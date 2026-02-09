@@ -1,7 +1,7 @@
 use crate::slashies::prelude::*;
 
 macro_rules! make_autocomplete {
-    ($fn_name:ident, $by_prefix:ident, $id:ident) => {
+    ($fn_name:ident, $by_prefix:ident, $val:ident, $id:expr, $name:expr) => {
         pub async fn $fn_name<'a>(
             ctx: Context<'a>,
             partial: &'a str,
@@ -11,7 +11,7 @@ macro_rules! make_autocomplete {
                     .game_data()
                     .$by_prefix(partial)
                     .take(25)
-                    .map(|e| AutocompleteChoice::new(&e.name, Cow::Owned(format!("/id:{}", e.$id))))
+                    .map(|$val| AutocompleteChoice::new($name, Cow::Owned(format!("/id:{}", $id))))
                     .collect();
 
                 CreateAutocompleteResponse::new().set_choices(choices)
@@ -22,10 +22,16 @@ macro_rules! make_autocomplete {
     };
 }
 
-make_autocomplete!(ship_name, ships_by_prefix, group_id);
-make_autocomplete!(equip_name, equips_by_prefix, equip_id);
-make_autocomplete!(augment_name, augments_by_prefix, augment_id);
-make_autocomplete!(special_secretary_name, special_secretaries_by_prefix, id);
+make_autocomplete!(ship_name, ships_by_prefix, e, e.base.group_id, &e.base.name);
+make_autocomplete!(equip_name, equips_by_prefix, e, e.equip_id, &e.name);
+make_autocomplete!(augment_name, augments_by_prefix, e, e.augment_id, &e.name);
+make_autocomplete!(
+    special_secretary_name,
+    special_secretaries_by_prefix,
+    e,
+    e.id,
+    &e.name
+);
 
 pub async fn ship_name_juustagram_chats<'a>(
     ctx: Context<'a>,
@@ -37,12 +43,17 @@ pub async fn ship_name_juustagram_chats<'a>(
             .ships_by_prefix(partial)
             .filter(|s| {
                 azur.game_data()
-                    .juustagram_chats_by_ship_id(s.group_id)
+                    .juustagram_chats_by_ship_id(s.base.group_id)
                     .next()
                     .is_some()
             })
             .take(25)
-            .map(|e| AutocompleteChoice::new(&e.name, Cow::Owned(format!("/id:{}", e.group_id))))
+            .map(|e| {
+                AutocompleteChoice::new(
+                    &e.base.name,
+                    Cow::Owned(format!("/id:{}", e.base.group_id)),
+                )
+            })
             .collect();
 
         CreateAutocompleteResponse::new().set_choices(choices)

@@ -1,6 +1,6 @@
 use azur_lane::equip::{Augment, Equip};
 use azur_lane::secretary::SpecialSecretary;
-use azur_lane::ship::ShipData;
+use azur_lane::ship::Ship;
 
 use crate::modules::azur::GameData;
 use crate::slashies::prelude::*;
@@ -20,7 +20,7 @@ macro_rules! make_find {
     };
 }
 
-make_find!(ship -> ShipData, ship_by_id, ships_by_prefix, "Unknown ship.");
+make_find!(ship -> Ship, ship_by_id, ships_by_prefix, "Unknown ship.");
 make_find!(equip -> Equip, equip_by_id, equips_by_prefix, "Unknown equipment.");
 make_find!(augment -> Augment, augment_by_id, augments_by_prefix, "Unknown augment module.");
 make_find!(special_secretary -> SpecialSecretary, special_secretary_by_id, special_secretaries_by_prefix, "Unknown special secretary.");

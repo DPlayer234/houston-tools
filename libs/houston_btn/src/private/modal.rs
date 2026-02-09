@@ -1,4 +1,4 @@
-//! Private helpers for the [`modal_parser`] macro.
+//! Private helpers for the [`crate::modal_parser`] macro.
 
 use std::convert::Infallible;
 use std::marker::PhantomData;
@@ -14,7 +14,7 @@ pub trait ModalError: Sized {
     const INVALID: Self;
 }
 
-/// Error type for `text_ref` kind [`modal_parser`] fields.
+/// Error type for `text_ref` kind [`crate::modal_parser`] fields.
 ///
 /// This type is uninhabited and cannot occur.
 #[derive(Debug, thiserror::Error)]

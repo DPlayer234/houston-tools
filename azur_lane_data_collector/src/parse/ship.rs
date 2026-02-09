@@ -1,13 +1,12 @@
 use azur_lane::ship::*;
 use mlua::prelude::*;
-use small_fixed_array::FixedArray;
 
 use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al, enhance, parse};
 
 /// Constructs ship data from this set.
-pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
+pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
     /// Reads a single value; target-typed.
     macro_rules! read {
         ($table:expr, $field:expr) => {
@@ -87,7 +86,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
     // just take the first item if non-empty
     let specific_type: Vec<String> = read!(set.template, "specific_type");
 
-    let mut ship = ShipData {
+    let mut ship = BaseShip {
         id: set.id,
         group_id: read!(set.template, "group_type"),
         name: name.into_fixed(),
@@ -142,9 +141,6 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<ShipData> {
         ultimate_bonus: specific_type
             .first()
             .map(|s| convert_al::to_ultimate_bonus(s)),
-        retrofits: FixedArray::new(), // Added by caller.
-        skins: FixedArray::new(),     // Added by caller.
-        fleet_tech: None,             // Added by caller.
     };
 
     if ship.hull_type.team_type() == TeamType::Submarine {

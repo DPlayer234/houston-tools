@@ -6,7 +6,7 @@ use crate::{context, parse};
 /// Modifies the ship data, adding a blueprint effect.
 ///
 /// This refers to a single enhance/fate simulation level.
-pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) -> LuaResult<()> {
+pub fn add_blueprint_effect(lua: &Lua, ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
     fn b(n: f64) -> ShipStat {
         ShipStat::new().with_base(n * 0.01)
     }
@@ -42,7 +42,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut ShipData, table: &LuaTable) ->
 }
 
 /// `effect_attr` adds a flat amount of base stats.
-fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> {
+fn add_effect_attr(ship: &mut BaseShip, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
         let attr: String = v.get(1).with_context(context!(
             "effect_attr name for blueprint ship id {}",
@@ -57,7 +57,7 @@ fn add_effect_attr(ship: &mut ShipData, effect_attr: LuaTable) -> LuaResult<()> 
 }
 
 /// `change_skill` replaces the skill with a given ID with another one.
-fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
+fn replace_skill(lua: &Lua, ship: &mut BaseShip, effect: LuaTable) -> LuaResult<()> {
     let from_id: u32 = effect.get(1)?;
     let to_id: u32 = effect.get(2)?;
 
@@ -72,7 +72,7 @@ fn replace_skill(lua: &Lua, ship: &mut ShipData, effect: LuaTable) -> LuaResult<
 /// equipment slots.
 fn replace_equip_slot_part(
     lua: &Lua,
-    ship: &mut ShipData,
+    ship: &mut BaseShip,
     effect: LuaTable,
     select: impl Fn(&mut EquipWeaponMount) -> &mut u8,
 ) -> LuaResult<()> {
@@ -93,7 +93,7 @@ fn replace_equip_slot_part(
 }
 
 /// `effect_equipment_proficiency` adds efficiency to some gear slot.
-fn add_equip_efficiency(ship: &mut ShipData, effect: LuaTable) -> LuaResult<()> {
+fn add_equip_efficiency(ship: &mut BaseShip, effect: LuaTable) -> LuaResult<()> {
     let index: usize = effect.get(1)?;
     let amount: f64 = effect.get(2)?;
 
