@@ -158,13 +158,14 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
         "antiaircraft" => StatKind::AA,
         "air" => StatKind::AVI,
         "reload" => StatKind::RLD,
+        "armor" => StatKind::Armor,
         "hit" => StatKind::ACC,
         "dodge" => StatKind::EVA,
         "speed" => StatKind::SPD,
         "luck" => StatKind::LCK,
         "antisub" => StatKind::ASW,
         "oxy_max" => StatKind::OXY,
-        _ => StatKind::EVA,
+        _ => StatKind::Unknown,
     }
 }
 
@@ -177,13 +178,13 @@ pub fn num_to_stat_kind(stat: u32) -> StatKind {
         4 => StatKind::AA,
         5 => StatKind::AVI,
         6 => StatKind::RLD,
-        // 7 is Armor
+        7 => StatKind::Armor,
         8 => StatKind::ACC,
         9 => StatKind::EVA,
         10 => StatKind::SPD,
         11 => StatKind::LCK,
         12 => StatKind::ASW,
-        _ => StatKind::EVA,
+        _ => StatKind::Unknown,
     }
 }
 
@@ -195,7 +196,7 @@ pub fn weapon_attack_attr_to_stat_kind(num: u32) -> StatKind {
         3 => StatKind::AA,
         4 => StatKind::AVI,
         5 => StatKind::ASW,
-        _ => StatKind::LCK,
+        _ => StatKind::Unknown,
     }
 }
 

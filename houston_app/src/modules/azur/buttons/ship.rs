@@ -251,7 +251,7 @@ impl View<'_> {
         let cost = stats.cost;
 
         let armor_name = stats.armor.name();
-        let armor_pad = 8usize.saturating_sub(stats.armor.name().len());
+        let armor_pad = 8usize.saturating_sub(armor_name.len());
 
         let content = if ship.hull_type.team_type() != TeamType::Submarine {
             calc_all!(asw);

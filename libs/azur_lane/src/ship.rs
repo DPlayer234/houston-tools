@@ -70,15 +70,15 @@ pub struct Ship {
     ///
     /// As of now, only DDGs have "multiple" retrofits, with their vanguard
     /// and main fleet states being considered different ones.
-    #[serde(skip_serializing_if = "FixedArray::is_empty")]
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub retrofits: FixedArray<Retrofit>,
     /// The ship's skins, including their default and all retrofit skins.
     ///
     /// This will be empty for nested retrofits. Access the base's skins.
-    #[serde(skip_serializing_if = "FixedArray::is_empty")]
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub skins: FixedArray<ShipSkin>,
     /// The fleet tech bonuses for this ship.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fleet_tech: Option<FleetTechInfo>,
 }
 
@@ -383,7 +383,10 @@ define_data_enum! {
         ASW("ASW"),
         SPD("SPD"),
         LCK("LCK"),
-        OXY("OXY")
+        OXY("OXY"),
+        Armor("Armor"),
+        #[serde(other)]
+        Unknown("???"),
     }
 }
 
@@ -429,7 +432,7 @@ define_data_enum! {
 
         Light("Light"),
         Medium("Medium"),
-        Heavy("Heavy")
+        Heavy("Heavy"),
     }
 }
 
@@ -470,29 +473,6 @@ impl Ship {
     #[must_use]
     pub fn skin_by_id(&self, skin_id: u32) -> Option<&ShipSkin> {
         self.skins.iter().find(|s| s.skin_id == skin_id)
-    }
-}
-
-impl ShipStatBlock {
-    /// Gets and calculates a certain stat value.
-    ///
-    /// Refer to [`ShipStat::calc`] for potential caveats.
-    #[must_use]
-    pub fn calc_stat(&self, kind: StatKind, level: u32, affinity: f64) -> f64 {
-        match kind {
-            StatKind::HP => self.hp.calc(level, affinity),
-            StatKind::RLD => self.rld.calc(level, affinity),
-            StatKind::FP => self.fp.calc(level, affinity),
-            StatKind::TRP => self.trp.calc(level, affinity),
-            StatKind::EVA => self.eva.calc(level, affinity),
-            StatKind::AA => self.aa.calc(level, affinity),
-            StatKind::AVI => self.avi.calc(level, affinity),
-            StatKind::ACC => self.acc.calc(level, affinity),
-            StatKind::ASW => self.asw.calc(level, affinity),
-            StatKind::SPD => self.spd,
-            StatKind::LCK => self.lck,
-            StatKind::OXY => f64::from(self.oxy),
-        }
     }
 }
 
