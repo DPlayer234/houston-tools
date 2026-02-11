@@ -7,7 +7,7 @@ use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al};
 
-pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
+pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<Skin> {
     macro_rules! get {
         ($key:literal) => {
             set.template
@@ -17,7 +17,7 @@ pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
         };
     }
 
-    let mut skin = ShipSkin {
+    let mut skin = Skin {
         skin_id: set.skin_id,
         image_key: get!("painting"),
         name: get!("name"),
@@ -33,7 +33,7 @@ pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
     Ok(skin)
 }
 
-fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
+fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<SkinWords> {
     macro_rules! get {
         ($src:literal) => {{
             let text: String = set.words.get($src).with_context(context!(
@@ -48,7 +48,7 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
             }
         }};
         ($key:ident, $src:literal) => {
-            get!($src).map(|x| (ShipSkinWordKey::$key, x))
+            get!($src).map(|x| (SkinWordsKey::$key, x))
         };
     }
 
@@ -82,7 +82,7 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
         get!(gift_dislike, "gift_dislike"),
     ];
 
-    Ok(ShipSkinWords {
+    Ok(SkinWords {
         server,
         main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
         couple_encourage: set
@@ -93,16 +93,17 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
             .flatten()
             .map(|t| load_couple_encourage(set, t))
             .try_collect_fixed_array()?,
-        sparse: SparseShipSkinWords::new(sparse.into_iter().flatten().collect_fixed_array()),
+        other: SkinWordsMap::new(sparse.into_iter().flatten().collect_fixed_array())
+            .expect("should be prevalidated"),
     })
 }
 
 fn load_words_extra(
     set: &SkinSet,
     table: &LuaTable,
-    base: &ShipSkinWords,
+    base: &SkinWords,
     server: GameServer,
-) -> LuaResult<ShipSkinWords> {
+) -> LuaResult<SkinWords> {
     macro_rules! get {
         ($src:literal) => {{
             let value: LuaValue = table.get($src).with_context(context!(
@@ -121,7 +122,7 @@ fn load_words_extra(
             }
         }};
         ($key:ident, $src:literal) => {
-            get!($src).map(|x| (ShipSkinWordKey::$key, x))
+            get!($src).map(|x| (SkinWordsKey::$key, x))
         };
     }
 
@@ -162,23 +163,24 @@ fn load_words_extra(
         get!(gift_dislike, "gift_dislike"),
     ];
 
-    Ok(ShipSkinWords {
+    Ok(SkinWords {
         server,
         main_screen,
         couple_encourage: FixedArray::empty(),
-        sparse: SparseShipSkinWords::new(sparse.into_iter().flatten().collect_fixed_array()),
+        other: SkinWordsMap::new(sparse.into_iter().flatten().collect_fixed_array())
+            .expect("should be prevalidated"),
     })
 }
 
-pub fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = ShipMainScreenLine> + '_ {
+pub fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = MainScreenLine> + '_ {
     raw.into_iter()
         .flat_map(|s| s.split('|'))
         .enumerate()
         .filter(|(_, text)| !text.is_empty() && *text != "nil")
-        .map(|(index, text)| ShipMainScreenLine::new(index, FixedString::from_str_trunc(text)))
+        .map(|(index, text)| MainScreenLine::new(index, FixedString::from_str_trunc(text)))
 }
 
-fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCoupleEncourage> {
+fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<CoupleEncourage> {
     let filter: Vec<u32> = table
         .get(1)
         .with_context(context!("couple_encourage 1 for skin {}", set.skin_id))?;
@@ -190,7 +192,7 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
         filter.into_iter().map(map).collect_fixed_array()
     }
 
-    Ok(ShipCoupleEncourage {
+    Ok(CoupleEncourage {
         amount: table
             .get(2)
             .with_context(context!("couple_encourage 2 for skin {}", set.skin_id))?,
@@ -204,13 +206,13 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<ShipCouple
             //   type, clearly intended to be ShipGroup. these lines do not work, but we include
             //   them as intended anyways
             // - Hatsuharu and Richelieu have lines defined with the wrong filter type
-            None | Some(0) => ShipCouple::ShipGroup(filter.into_fixed()),
-            Some(1) => ShipCouple::HullType(map(filter, convert_al::to_hull_type)),
-            Some(2) => ShipCouple::Rarity(map(filter, convert_al::to_rarity)),
-            Some(3) => ShipCouple::Faction(map(filter, convert_al::to_faction)),
-            Some(4) => ShipCouple::Illustrator,
-            Some(5) => ShipCouple::Team,
-            _ => ShipCouple::Unknown,
+            None | Some(0) => CoupleCondition::ShipGroup(filter.into_fixed()),
+            Some(1) => CoupleCondition::HullType(map(filter, convert_al::to_hull_type)),
+            Some(2) => CoupleCondition::Rarity(map(filter, convert_al::to_rarity)),
+            Some(3) => CoupleCondition::Faction(map(filter, convert_al::to_faction)),
+            Some(4) => CoupleCondition::Illustrator,
+            Some(5) => CoupleCondition::Team,
+            _ => CoupleCondition::Unknown,
         },
     })
 }

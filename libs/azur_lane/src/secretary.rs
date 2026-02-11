@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
 use crate::GameServer;
-use crate::skin::ShipMainScreenLine;
+use crate::skin::MainScreenLine;
 
 /// Data for a special secretary (i.e. TB).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub struct SpecialSecretaryWords {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub login: Option<FixedString>, // login
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub main_screen: FixedArray<ShipMainScreenLine>, // main
+    pub main_screen: FixedArray<MainScreenLine>, // main
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub touch: Option<FixedString>, // touch
     #[serde(default, skip_serializing_if = "Option::is_none")]

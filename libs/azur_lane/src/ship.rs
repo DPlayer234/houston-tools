@@ -10,7 +10,7 @@ use crate::Faction;
 use crate::data_def::{define_data_enum, is_default};
 use crate::equip::*;
 use crate::skill::*;
-use crate::skin::ShipSkin;
+use crate::skin::Skin;
 
 /// Base data to represent one ship, retrofit, or similar.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,7 +77,7 @@ pub struct Ship {
     ///
     /// This will be empty for nested retrofits. Access the base's skins.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub skins: FixedArray<ShipSkin>,
+    pub skins: FixedArray<Skin>,
     /// The fleet tech bonuses for this ship.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fleet_tech: Option<FleetTechInfo>,
@@ -331,7 +331,7 @@ impl fmt::Display for ShipArmor {
 impl Ship {
     /// Gets a skin for this ship by its ID.
     #[must_use]
-    pub fn skin_by_id(&self, skin_id: u32) -> Option<&ShipSkin> {
+    pub fn skin_by_id(&self, skin_id: u32) -> Option<&Skin> {
         self.skins.iter().find(|s| s.skin_id == skin_id)
     }
 }

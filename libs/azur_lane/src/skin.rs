@@ -8,7 +8,7 @@ use crate::{Faction, GameServer};
 
 /// Data for a ship skin. This may represent the default skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipSkin {
+pub struct Skin {
     /// The skin's ID. [`Ship::skin_by_id`](crate::ship::Ship::skin_by_id)
     /// searches for this.
     pub skin_id: u32,
@@ -24,54 +24,54 @@ pub struct ShipSkin {
     /// The default dialogue lines.
     ///
     /// This has one entry per game server. Which server each entry belongs to
-    /// is indicated by [`ShipSkinWords::server`].
-    pub words: FixedArray<ShipSkinWords>,
+    /// is indicated by [`SkinWords::server`].
+    pub words: FixedArray<SkinWords>,
     /// Replacement dialogue lines, usually after oath.
     ///
     /// This has one entry per game server. Which server each entry belongs to
-    /// is indicated by [`ShipSkinWords::server`].
+    /// is indicated by [`SkinWords::server`].
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub words_extra: FixedArray<ShipSkinWords>,
+    pub words_extra: FixedArray<SkinWords>,
 }
 
 /// The block of dialogue for a given skin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipSkinWords {
+pub struct SkinWords {
     /// The server with these words.
     pub server: GameServer,
     /// Voice lines played on the main screen when idle or tapped.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub main_screen: FixedArray<ShipMainScreenLine>,
+    pub main_screen: FixedArray<MainScreenLine>,
     /// Voices lines that may be played when sortieing other specific ships.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
-    pub couple_encourage: FixedArray<ShipCoupleEncourage>,
-    /// Sparse collection of other simple lines. Instead of accessing this,
-    /// consider the helper properties like [`Self::touch`].
+    pub couple_encourage: FixedArray<CoupleEncourage>,
+    /// A map of other simple lines. Instead of accessing this, consider the
+    /// helper properties like [`Self::touch`].
     #[serde(flatten)]
-    pub sparse: SparseShipSkinWords,
+    pub other: SkinWordsMap,
 }
 
 /// Information about a ship line that may be displayed on the main screen.
 ///
-/// Also see [`ShipSkinWords::main_screen`].
+/// Also see [`SkinWords::main_screen`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipMainScreenLine(usize, FixedString);
+pub struct MainScreenLine(usize, FixedString);
 
 /// Data for voices lines that may be played when sortieing other specific
 /// ships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShipCoupleEncourage {
+pub struct CoupleEncourage {
     /// The line to be played.
     pub line: FixedString,
     /// The amount of allies that need to match the condition.
     pub amount: u32,
     /// The condition rule.
-    pub condition: ShipCouple,
+    pub condition: CoupleCondition,
 }
 
-/// Condition for [`ShipCoupleEncourage`].
+/// Condition for [`CoupleEncourage`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ShipCouple {
+pub enum CoupleCondition {
     /// Triggered when other specific ships are present.
     /// Holds a vector of ship group IDs.
     ShipGroup(FixedArray<u32>),
@@ -93,8 +93,9 @@ pub enum ShipCouple {
     Unknown,
 }
 
-impl ShipSkin {
-    pub fn words(&self, server: GameServer) -> Option<(&ShipSkinWords, Option<&ShipSkinWords>)> {
+impl Skin {
+    /// Get the words and extra words for a specific server.
+    pub fn words(&self, server: GameServer) -> Option<(&SkinWords, Option<&SkinWords>)> {
         let main = self
             .words
             .iter()
@@ -111,7 +112,7 @@ impl ShipSkin {
     }
 }
 
-impl ShipMainScreenLine {
+impl MainScreenLine {
     /// Creates a new instance.
     #[must_use]
     pub fn new(index: usize, text: FixedString) -> Self {
@@ -135,28 +136,29 @@ impl ShipMainScreenLine {
     }
 }
 
-/// Declares [`ShipSkinWordKey`] and all associated helper methods.
-macro_rules! ship_skin_word_key {
+/// Declares [`SkinWordsKey`] and all associated helper methods.
+macro_rules! ship_skin_words_key {
     (
         $(
             $(#[$attr:meta])*
             $label:ident,
         )*
     ) => {
-        /// Key for sparse ship skin words.
+        /// Key for ship skin words.
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
         #[expect(non_camel_case_types)]
-        pub enum ShipSkinWordKey {
+        pub enum SkinWordsKey {
             $(
                 $(#[$attr])*
                 $label
             ),*
         }
 
-        impl ShipSkinWordKey {
+        impl SkinWordsKey {
             /// The total count of known keys.
             const COUNT: usize = <[_]>::len(&[$(Self::$label),*]);
 
+            #[must_use]
             fn name(self) -> &'static str {
                 match self {
                     $(Self::$label => stringify!($label),)*
@@ -164,21 +166,22 @@ macro_rules! ship_skin_word_key {
             }
         }
 
-        impl ShipSkinWords {
+        impl SkinWords {
             $(
                 $(#[$attr])*
+                #[must_use]
                 pub fn $label(&self) -> Option<&str> {
-                    self.sparse.get(ShipSkinWordKey::$label)
+                    self.other.get(SkinWordsKey::$label)
                 }
             )*
         }
     };
 }
 
-ship_skin_word_key! {
+ship_skin_words_key! {
     /// The skin's description.
     ///
-    /// Note that [`ShipSkin::description`] originates from the skin's template,
+    /// Note that [`Skin::description`] originates from the skin's template,
     /// whereas this field is actually part of the skin's words.
     description,
     /// The "introduction". In-game, this is the profile text in the archive.
@@ -212,29 +215,54 @@ ship_skin_word_key! {
 }
 
 // avoid duplicating the `name` fn match
-impl fmt::Debug for ShipSkinWordKey {
+impl fmt::Debug for SkinWordsKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.name())
     }
 }
 
-/// A sparse set of ship skin words.
+type SkinWordsEntry = (SkinWordsKey, FixedString);
+
+/// A map of ship skin words.
+///
+/// This is optimized for memory rather than access speed.
+//
+// most `SkinWords` instances are for non-default skins that often lack about half the possibly
+// entries. subsequently it saves memory to "pack" the fields that _are_ present into an array.
 #[derive(Clone)]
-pub struct SparseShipSkinWords(
+pub struct SkinWordsMap(
     /// A list of key-value pairs sorted by the key.
-    FixedArray<(ShipSkinWordKey, FixedString)>,
+    FixedArray<SkinWordsEntry>,
 );
 
-// no way to "unwrap" this struct since the assumption is that it's mostly used
-// for borrowed data and rarely in an owned consumable form.
-impl SparseShipSkinWords {
-    /// Creates a new sparse ship skin word set.
+fn key_fn(t: &SkinWordsEntry) -> SkinWordsKey {
+    t.0
+}
+
+// no way offered to "unwrap" this struct since the assumption is that it's
+// mostly used for borrowed data and rarely in an owned consumable form.
+impl SkinWordsMap {
+    /// Creates a new skin words map.
     ///
     /// This array is sorted by the key upon construction and does not need to
     /// be pre-sorted.
-    pub fn new(mut value: FixedArray<(ShipSkinWordKey, FixedString)>) -> Self {
-        value.sort_by_key(|x| x.0);
-        Self(value)
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` when a key is duplicated.
+    pub fn new(mut value: FixedArray<SkinWordsEntry>) -> Result<Self, SkinWordsMapError> {
+        value.sort_unstable_by_key(key_fn);
+
+        // ensure there are no duplicate keys provided. since it's already sorted by the
+        // keys, comparing all pairs of adjacent keys is good enough to figure that out.
+        for window in value.windows(2) {
+            let [l, r] = window.as_array().expect("must be len 2");
+            if l.0 == r.0 {
+                return Err(SkinWordsMapError::DuplicateKey(l.0));
+            }
+        }
+
+        Ok(Self(value))
     }
 
     /// The amount of lines stored.
@@ -248,27 +276,28 @@ impl SparseShipSkinWords {
     }
 
     /// Gets the line for a specific key, if present.
-    pub fn get(&self, key: ShipSkinWordKey) -> Option<&str> {
+    pub fn get(&self, key: SkinWordsKey) -> Option<&str> {
         let slice = self.0.as_slice();
-        let index = slice.binary_search_by_key(&key, |x| x.0).ok()?;
+        let index = slice.binary_search_by_key(&key, key_fn).ok()?;
         Some(slice.get(index)?.1.as_str())
     }
 
     /// Iterates over all key-value pairs.
     pub fn iter(
         &self,
-    ) -> impl DoubleEndedIterator<Item = (ShipSkinWordKey, &str)> + ExactSizeIterator {
+    ) -> impl DoubleEndedIterator<Item = (SkinWordsKey, &str)> + ExactSizeIterator {
         self.0.iter().map(|(key, value)| (*key, value.as_str()))
     }
 }
 
-impl fmt::Debug for SparseShipSkinWords {
+// debug and serde as a map
+impl fmt::Debug for SkinWordsMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
     }
 }
 
-impl Serialize for SparseShipSkinWords {
+impl Serialize for SkinWordsMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -277,17 +306,17 @@ impl Serialize for SparseShipSkinWords {
     }
 }
 
-impl<'de> Deserialize<'de> for SparseShipSkinWords {
+impl<'de> Deserialize<'de> for SkinWordsMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::de::{Error as _, MapAccess, Visitor};
 
-        struct Visit;
+        struct ThisVisitor;
 
-        impl<'de> Visitor<'de> for Visit {
-            type Value = SparseShipSkinWords;
+        impl<'de> Visitor<'de> for ThisVisitor {
+            type Value = SkinWordsMap;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("ship skin words key-value pairs")
@@ -297,10 +326,7 @@ impl<'de> Deserialize<'de> for SparseShipSkinWords {
             where
                 A: MapAccess<'de>,
             {
-                let count = map
-                    .size_hint()
-                    .unwrap_or_default()
-                    .max(ShipSkinWordKey::COUNT);
+                let count = map.size_hint().unwrap_or_default().max(SkinWordsKey::COUNT);
 
                 let mut buf = Vec::with_capacity(count);
                 while let Some((key, value)) = map.next_entry()? {
@@ -308,10 +334,20 @@ impl<'de> Deserialize<'de> for SparseShipSkinWords {
                 }
 
                 let buf = buf.try_into().map_err(A::Error::custom)?;
-                Ok(SparseShipSkinWords::new(buf))
+                SkinWordsMap::new(buf).map_err(|SkinWordsMapError::DuplicateKey(k)| {
+                    A::Error::duplicate_field(k.name())
+                })
             }
         }
 
-        deserializer.deserialize_map(Visit)
+        deserializer.deserialize_map(ThisVisitor)
     }
+}
+
+/// Error when constructing a [`SkinWordsMap`].
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum SkinWordsMapError {
+    #[error("key {0:?} was duplicated")]
+    DuplicateKey(SkinWordsKey),
 }

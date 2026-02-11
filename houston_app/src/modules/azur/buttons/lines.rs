@@ -45,7 +45,7 @@ impl View<'_> {
         ctx: ButtonContext<'a>,
         azur: &'a LazyData,
         ship: &'a Ship,
-        skin: &'a ShipSkin,
+        skin: &'a Skin,
     ) -> Result<EditReply<'a>> {
         let mut create = EditReply::new();
 
@@ -68,7 +68,7 @@ impl View<'_> {
         mut self,
         azur: &'a LazyData,
         ship: &'a Ship,
-        skin: &'a ShipSkin,
+        skin: &'a Skin,
         thumbnail_key: Option<&str>,
     ) -> Result<ComponentVec<CreateComponent<'a>>> {
         let (words, words_extra) = skin.words(self.server).context("skin has no words set")?;
@@ -148,7 +148,7 @@ impl View<'_> {
     fn button_with_part<'a>(
         &mut self,
         part: ViewPart,
-        words: &ShipSkinWords,
+        words: &SkinWords,
         label: &'a str,
         active_label: &'a str,
     ) -> CreateButton<'a> {
@@ -175,7 +175,7 @@ impl View<'_> {
     /// Creates a button that redirects to a different skin's lines.
     fn select_with_skin_index<'a>(
         &mut self,
-        skin: &'a ShipSkin,
+        skin: &'a Skin,
         index: u8,
     ) -> CreateSelectMenuOption<'a> {
         self.new_select_option(&skin.name, |s| &mut s.skin_index, index)
@@ -183,7 +183,7 @@ impl View<'_> {
 
     /// Attempts to change to a part that has texts, if the view isn't already
     /// on one.
-    fn try_redirect_to_non_empty_part(&mut self, words: &ShipSkinWords) {
+    fn try_redirect_to_non_empty_part(&mut self, words: &SkinWords) {
         if !self.part.has_texts(words)
             && let Some(part) = first_non_empty_part(words)
         {
@@ -194,8 +194,8 @@ impl View<'_> {
     fn get_main_field<'a>(
         &self,
         azur: &'a LazyData,
-        skin: &'a ShipSkin,
-        words: &ShipSkinWords,
+        skin: &'a Skin,
+        words: &SkinWords,
         thumbnail_key: Option<&str>,
     ) -> CreateContainerComponent<'a> {
         let label = if self.extra { "EX Lines" } else { "Lines" };
@@ -222,7 +222,7 @@ impl View<'_> {
     }
 }
 
-fn first_non_empty_part(words: &ShipSkinWords) -> Option<ViewPart> {
+fn first_non_empty_part(words: &SkinWords) -> Option<ViewPart> {
     macro_rules! check {
         ($part:expr) => {
             if $part.has_texts(words) {
@@ -295,7 +295,7 @@ macro_rules! impl_view_part_fn {
 
 impl ViewPart {
     /// Creates the embed description for the current state.
-    fn append_description(self, result: &mut String, game_data: &GameData, words: &ShipSkinWords) {
+    fn append_description(self, result: &mut String, game_data: &GameData, words: &SkinWords) {
         use crate::fmt::discord::escape_markdown;
 
         let len = result.len();
@@ -332,7 +332,7 @@ impl ViewPart {
     }
 
     /// Determines whether this part shows any lines.
-    fn has_texts(self, words: &ShipSkinWords) -> bool {
+    fn has_texts(self, words: &SkinWords) -> bool {
         macro_rules! check {
             ($_:literal, $text:expr) => {
                 if $text.is_some() {
@@ -374,10 +374,7 @@ impl ButtonReply for View<'_> {
 }
 
 /// Creates a label for a couple line.
-fn ship_couple_encourage_label(
-    game_data: &GameData,
-    opt: &ShipCoupleEncourage,
-) -> impl fmt::Display {
+fn ship_couple_encourage_label(game_data: &GameData, opt: &CoupleEncourage) -> impl fmt::Display {
     fn fmt_sortie_count<T>(
         f: &mut fmt::Formatter<'_>,
         label: &str,
@@ -394,7 +391,7 @@ fn ship_couple_encourage_label(
     let amount = opt.amount;
 
     fmt::from_fn(move |f| match condition {
-        ShipCouple::ShipGroup(ship_ids) => {
+        CoupleCondition::ShipGroup(ship_ids) => {
             let get_name = |&id| {
                 game_data
                     .ship_by_id(id)
@@ -409,16 +406,16 @@ fn ship_couple_encourage_label(
                 write!(f, "Sortie with {amount} of {fmt}")
             }
         },
-        ShipCouple::HullType(hull_types) => {
+        CoupleCondition::HullType(hull_types) => {
             fmt_sortie_count(f, "", amount, hull_types, |h| h.designation())
         },
-        ShipCouple::Rarity(rarities) => {
+        CoupleCondition::Rarity(rarities) => {
             fmt_sortie_count(f, " ship", amount, rarities, |r| r.name())
         },
-        ShipCouple::Faction(factions) => {
+        CoupleCondition::Faction(factions) => {
             fmt_sortie_count(f, " ship", amount, factions, |f| f.name())
         },
-        ShipCouple::Illustrator => {
+        CoupleCondition::Illustrator => {
             write!(f, "Sortie with {amount} more ships by the same illustrator")
         },
         _ => {

@@ -38,7 +38,7 @@ macro_rules! define_data_enum {
 
         impl $Enum {
             /// All known values of this enumeration.
-            pub const ALL: &[$Enum] = $crate::define_data_enum!(@all_item [] $($variant)*);
+            pub const ALL: &[Self] = $crate::define_data_enum!(@all_item [] $($variant)*);
 
             /// Gets the entire associated data structure.
             #[must_use]

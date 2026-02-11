@@ -702,7 +702,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
 
     eq!(ship_eq, Ship, base.group_id);
     eq!(retrofit_eq, Retrofit, base.default_skin_id);
-    eq!(skin_eq, ShipSkin, skin_id);
+    eq!(skin_eq, Skin, skin_id);
     eq!(augment_eq, Augment, augment_id);
     eq!(equip_eq, Equip, equip_id);
     eq!(chat_eq, juustagram::Chat, chat_id);
@@ -710,7 +710,7 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
 
     let action = log::action!("Merging data.").start();
 
-    let update_skin = move |r: &mut ShipSkin, n: ShipSkin| {
+    let update_skin = move |r: &mut Skin, n: Skin| {
         r.words.extend_from_array(n.words);
         r.words_extra.extend_from_array(n.words_extra);
     };

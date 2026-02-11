@@ -5,6 +5,7 @@ use std::mem::replace;
 /// This works for both immutable and mutable slices the same way. If you leave
 /// the iteration before the end, the remaining slice can be obtained with
 /// [`Self::into_slice`].
+#[must_use = "ConstIter does nothing unless used"]
 pub struct ConstIter<S> {
     slice: S,
 }

@@ -54,9 +54,9 @@ pub struct ShipSet<'a> {
     pub retrofit_data: Option<RetrofitSet<'a>>,
 }
 
-/// A set of data from which [`ShipSkin`] can be constructed.
+/// A set of data from which [`Skin`] can be constructed.
 ///
-/// [`ShipSkin`]: azur_lane::ship::ShipSkin
+/// [`Skin`]: azur_lane::skin::Skin
 #[derive(Debug)]
 pub struct SkinSet {
     /// The skin ID.
