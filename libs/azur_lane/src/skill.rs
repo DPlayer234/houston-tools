@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
-use crate::data_def::define_data_enum;
+use crate::data_def::{define_data_enum, is_default};
 use crate::equip::Weapon;
 
 /// Represents a single skill.
@@ -115,6 +115,6 @@ pub struct BuffInfo {
     /// The chance to inflict it. Expected to be in range `[0.0 .. 1.0]`.
     pub probability: f64,
     /// The buff level.
-    #[serde(default, skip_serializing_if = "crate::data_def::is_default")]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub level: u32,
 }

@@ -243,46 +243,46 @@ macro_rules! impl_view_part_fn {
     ($self:expr, $words:expr, $add:ident) => {
         match $self {
             ViewPart::Info => {
-                $add!("Description", &$words.description);
-                $add!("Profile", &$words.introduction);
-                $add!("Acquisition", &$words.acquisition);
+                $add!("Description", $words.description());
+                $add!("Profile", $words.introduction());
+                $add!("Acquisition", $words.acquisition());
             }
             ViewPart::Main1 => {
-                $add!("Login", &$words.login);
+                $add!("Login", $words.login());
 
                 for line in &$words.main_screen {
                     $add!(main line);
                 }
 
-                $add!("Touch", &$words.touch);
-                $add!("Special Touch", &$words.special_touch);
-                $add!("Rub", &$words.rub);
+                $add!("Touch", $words.touch());
+                $add!("Special Touch", $words.special_touch());
+                $add!("Rub", $words.rub());
             }
             ViewPart::Main2 => {
-                $add!("Mission Reminder", &$words.mission_reminder);
-                $add!("Mission Complete", &$words.mission_complete);
-                $add!("Mail Reminder", &$words.mail_reminder);
-                $add!("Return to Port", &$words.return_to_port);
-                $add!("Commission Complete", &$words.commission_complete);
-                $add!("Liked Gift", &$words.gift_prefer);
-                $add!("Disliked Gift", &$words.gift_dislike);
+                $add!("Mission Reminder", $words.mission_reminder());
+                $add!("Mission Complete", $words.mission_complete());
+                $add!("Mail Reminder", $words.mail_reminder());
+                $add!("Return to Port", $words.return_to_port());
+                $add!("Commission Complete", $words.commission_complete());
+                $add!("Liked Gift", $words.gift_prefer());
+                $add!("Disliked Gift", $words.gift_dislike());
             }
             ViewPart::Affinity => {
-                $add!("Details", &$words.details);
-                $add!("Disappointed", &$words.disappointed);
-                $add!("Stranger", &$words.stranger);
-                $add!("Friendly", &$words.friendly);
-                $add!("Crush", &$words.crush);
-                $add!("Love", &$words.love);
-                $add!("Oath", &$words.oath);
+                $add!("Details", $words.details());
+                $add!("Disappointed", $words.disappointed());
+                $add!("Stranger", $words.stranger());
+                $add!("Friendly", $words.friendly());
+                $add!("Crush", $words.crush());
+                $add!("Love", $words.love());
+                $add!("Oath", $words.oath());
             }
             ViewPart::Combat => {
-                $add!("Enhance", &$words.enhance);
-                $add!("Flagship Fight", &$words.flagship_fight);
-                $add!("Victory", &$words.victory);
-                $add!("Defeat", &$words.defeat);
-                $add!("Skill", &$words.skill);
-                $add!("Low Health", &$words.low_health);
+                $add!("Enhance", $words.enhance());
+                $add!("Flagship Fight", $words.flagship_fight());
+                $add!("Victory", $words.victory());
+                $add!("Defeat", $words.defeat());
+                $add!("Skill", $words.skill());
+                $add!("Low Health", $words.low_health());
 
                 for opt in &$words.couple_encourage {
                     $add!(couple opt);

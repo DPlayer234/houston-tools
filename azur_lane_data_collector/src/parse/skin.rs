@@ -35,10 +35,10 @@ pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkin> {
 
 fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
     macro_rules! get {
-        ($key:literal) => {{
-            let text: String = set.words.get($key).with_context(context!(
+        ($src:literal) => {{
+            let text: String = set.words.get($src).with_context(context!(
                 "skin word {} for skin {}",
-                $key,
+                $src,
                 set.skin_id
             ))?;
             if text.is_empty() {
@@ -47,38 +47,44 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
                 Some(FixedString::<u32>::from_string_trunc(text))
             }
         }};
+        ($key:ident, $src:literal) => {
+            get!($src).map(|x| (ShipSkinWordKey::$key, x))
+        };
     }
+
+    let sparse = [
+        get!(description, "drop_descrip"),
+        get!(introduction, "profile"),
+        get!(acquisition, "unlock"),
+        get!(login, "login"),
+        get!(details, "detail"),
+        get!(touch, "touch"),
+        get!(special_touch, "touch2"),
+        get!(rub, "headtouch"),
+        get!(mission_reminder, "mission"),
+        get!(mission_complete, "mission_complete"),
+        get!(mail_reminder, "mail"),
+        get!(return_to_port, "home"),
+        get!(commission_complete, "expedition"),
+        get!(enhance, "upgrade"),
+        get!(flagship_fight, "battle"),
+        get!(victory, "win_mvp"),
+        get!(defeat, "lose"),
+        get!(skill, "skill"),
+        get!(low_health, "hp_warning"),
+        get!(disappointed, "feeling1"),
+        get!(stranger, "feeling2"),
+        get!(friendly, "feeling3"),
+        get!(crush, "feeling4"),
+        get!(love, "feeling5"),
+        get!(oath, "propose"),
+        get!(gift_prefer, "gift_prefer"),
+        get!(gift_dislike, "gift_dislike"),
+    ];
 
     Ok(ShipSkinWords {
         server,
-        description: get!("drop_descrip"),
-        introduction: get!("profile"),
-        acquisition: get!("unlock"),
-        login: get!("login"),
-        details: get!("detail"),
         main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
-        touch: get!("touch"),
-        special_touch: get!("touch2"),
-        rub: get!("headtouch"),
-        mission_reminder: get!("mission"),
-        mission_complete: get!("mission_complete"),
-        mail_reminder: get!("mail"),
-        return_to_port: get!("home"),
-        commission_complete: get!("expedition"),
-        enhance: get!("upgrade"),
-        flagship_fight: get!("battle"),
-        victory: get!("win_mvp"),
-        defeat: get!("lose"),
-        skill: get!("skill"),
-        low_health: get!("hp_warning"),
-        disappointed: get!("feeling1"),
-        stranger: get!("feeling2"),
-        friendly: get!("feeling3"),
-        crush: get!("feeling4"),
-        love: get!("feeling5"),
-        oath: get!("propose"),
-        gift_prefer: get!("gift_prefer"),
-        gift_dislike: get!("gift_dislike"),
         couple_encourage: set
             .words
             .get::<Vec<LuaTable>>("couple_encourage")
@@ -87,6 +93,7 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<ShipSkinWords> {
             .flatten()
             .map(|t| load_couple_encourage(set, t))
             .try_collect_fixed_array()?,
+        sparse: SparseShipSkinWords::new(sparse.into_iter().flatten().collect_fixed_array()),
     })
 }
 
@@ -97,10 +104,10 @@ fn load_words_extra(
     server: GameServer,
 ) -> LuaResult<ShipSkinWords> {
     macro_rules! get {
-        ($key:literal) => {{
-            let value: LuaValue = table.get($key).with_context(context!(
+        ($src:literal) => {{
+            let value: LuaValue = table.get($src).with_context(context!(
                 "skin word extra {} for skin {}",
-                $key,
+                $src,
                 set.skin_id
             ))?;
 
@@ -113,6 +120,9 @@ fn load_words_extra(
                 _ => None,
             }
         }};
+        ($key:ident, $src:literal) => {
+            get!($src).map(|x| (ShipSkinWordKey::$key, x))
+        };
     }
 
     let main_screen = to_main_screen(get!("main").as_deref())
@@ -122,37 +132,41 @@ fn load_words_extra(
         }))
         .collect_fixed_array();
 
+    let sparse = [
+        get!(description, "drop_descrip"),
+        get!(introduction, "profile"),
+        get!(acquisition, "unlock"),
+        get!(login, "login"),
+        get!(details, "detail"),
+        get!(touch, "touch"),
+        get!(special_touch, "touch2"),
+        get!(rub, "headtouch"),
+        get!(mission_reminder, "mission"),
+        get!(mission_complete, "mission_complete"),
+        get!(mail_reminder, "mail"),
+        get!(return_to_port, "home"),
+        get!(commission_complete, "expedition"),
+        get!(enhance, "upgrade"),
+        get!(flagship_fight, "battle"),
+        get!(victory, "win_mvp"),
+        get!(defeat, "lose"),
+        get!(skill, "skill"),
+        get!(low_health, "hp_warning"),
+        get!(disappointed, "feeling1"),
+        get!(stranger, "feeling2"),
+        get!(friendly, "feeling3"),
+        get!(crush, "feeling4"),
+        get!(love, "feeling5"),
+        get!(oath, "propose"),
+        get!(gift_prefer, "gift_prefer"),
+        get!(gift_dislike, "gift_dislike"),
+    ];
+
     Ok(ShipSkinWords {
         server,
-        description: get!("drop_descrip"),
-        introduction: get!("profile"),
-        acquisition: get!("unlock"),
-        login: get!("login"),
-        details: get!("detail"),
         main_screen,
-        touch: get!("touch"),
-        special_touch: get!("touch2"),
-        rub: get!("headtouch"),
-        mission_reminder: get!("mission"),
-        mission_complete: get!("mission_complete"),
-        mail_reminder: get!("mail"),
-        return_to_port: get!("home"),
-        commission_complete: get!("expedition"),
-        enhance: get!("upgrade"),
-        flagship_fight: get!("battle"),
-        victory: get!("win_mvp"),
-        defeat: get!("lose"),
-        skill: get!("skill"),
-        low_health: get!("hp_warning"),
-        disappointed: get!("feeling1"),
-        stranger: get!("feeling2"),
-        friendly: get!("feeling3"),
-        crush: get!("feeling4"),
-        love: get!("feeling5"),
-        oath: get!("propose"),
-        gift_prefer: get!("gift_prefer"),
-        gift_dislike: get!("gift_dislike"),
         couple_encourage: FixedArray::empty(),
+        sparse: SparseShipSkinWords::new(sparse.into_iter().flatten().collect_fixed_array()),
     })
 }
 

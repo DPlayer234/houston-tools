@@ -4,7 +4,7 @@ use std::fmt;
 use std::ops::{Add, AddAssign};
 
 use serde::{Deserialize, Serialize};
-use small_fixed_array::{FixedArray, FixedString};
+use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
 use crate::data_def::{define_data_enum, is_default};
 use crate::equip::*;
@@ -191,71 +191,13 @@ pub struct ShipSkin {
 pub struct ShipSkinWords {
     /// The server with these words.
     pub server: GameServer,
-    /// The skin's description.
-    ///
-    /// Note that [`ShipSkin::description`] originates from the skin's template,
-    /// whereas this field is actually part of the skin's words.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub description: Option<FixedString>,
-    /// The "introduction". In-game, this is the profile text in the archive.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub introduction: Option<FixedString>,
-    /// Dialogue played when the ship is obtained.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub acquisition: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub login: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub details: Option<FixedString>,
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub main_screen: FixedArray<ShipMainScreenLine>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub touch: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub special_touch: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rub: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mission_reminder: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mission_complete: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mail_reminder: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub return_to_port: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub commission_complete: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub enhance: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flagship_fight: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub victory: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub defeat: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub skill: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub low_health: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub disappointed: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub stranger: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub friendly: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub crush: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub love: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub oath: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gift_prefer: Option<FixedString>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gift_dislike: Option<FixedString>,
     /// Voices lines that may be played when sortieing other specific ships.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub couple_encourage: FixedArray<ShipCoupleEncourage>,
+    #[serde(flatten)]
+    pub sparse: SparseShipSkinWords,
 }
 
 /// Information about a ship line that may be displayed on the main screen.
@@ -298,6 +240,168 @@ pub enum ShipCouple {
     /// Unknown trigger types.
     #[serde(other)]
     Unknown,
+}
+
+macro_rules! ship_skin_words {
+    (@one $any:ident) => { 1 };
+    (
+        $(
+            $(#[$attr:meta])*
+            $label:ident,
+        )*
+    ) => {
+        /// Key for sparse ship skin words.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+        #[expect(non_camel_case_types)]
+        pub enum ShipSkinWordKey {
+            $(
+                $(#[$attr])*
+                $label
+            ),*
+        }
+
+        impl ShipSkinWordKey {
+            /// The total count of known keys.
+            const COUNT: usize = 0 $(+ ship_skin_words!(@one $label))*;
+        }
+
+        impl ShipSkinWords {
+            $(
+                $(#[$attr])*
+                pub fn $label(&self) -> Option<&str> {
+                    self.sparse.get(ShipSkinWordKey::$label)
+                }
+            )*
+        }
+    };
+}
+
+ship_skin_words! {
+    /// The skin's description.
+    ///
+    /// Note that [`ShipSkin::description`] originates from the skin's template,
+    /// whereas this field is actually part of the skin's words.
+    description,
+    /// The "introduction". In-game, this is the profile text in the archive.
+    introduction,
+    /// Dialogue played when the ship is obtained.
+    acquisition,
+    login,
+    details,
+    touch,
+    special_touch,
+    rub,
+    mission_reminder,
+    mission_complete,
+    mail_reminder,
+    return_to_port,
+    commission_complete,
+    enhance,
+    flagship_fight,
+    victory,
+    defeat,
+    skill,
+    low_health,
+    disappointed,
+    stranger,
+    friendly,
+    crush,
+    love,
+    oath,
+    gift_prefer,
+    gift_dislike,
+}
+
+/// A sparse set of ship skin words.
+#[derive(Clone)]
+pub struct SparseShipSkinWords(
+    /// A list of key-value pairs sorted by the key.
+    FixedArray<(ShipSkinWordKey, FixedString)>,
+);
+
+impl SparseShipSkinWords {
+    /// Creates a new sparse ship skin word set.
+    pub fn new(mut value: FixedArray<(ShipSkinWordKey, FixedString)>) -> Self {
+        value.sort_by_key(|x| x.0);
+        Self(value)
+    }
+
+    /// The amount of lines stored.
+    pub fn len(&self) -> usize {
+        self.0.len().to_usize()
+    }
+
+    /// Whether this collection is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Gets the line for a specific key, if present.
+    pub fn get(&self, key: ShipSkinWordKey) -> Option<&str> {
+        let index = self.0.binary_search_by_key(&key, |x| x.0).ok()?;
+        Some(self.0.get(index)?.1.as_str())
+    }
+
+    /// Iterates over all key-value pairs.
+    pub fn iter(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = (ShipSkinWordKey, &str)> + ExactSizeIterator {
+        self.0.iter().map(|(key, value)| (*key, value.as_str()))
+    }
+}
+
+impl fmt::Debug for SparseShipSkinWords {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map().entries(self.iter()).finish()
+    }
+}
+
+impl Serialize for SparseShipSkinWords {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_map(self.iter())
+    }
+}
+
+impl<'de> Deserialize<'de> for SparseShipSkinWords {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{Error as _, MapAccess, Visitor};
+
+        struct Visit;
+
+        impl<'de> Visitor<'de> for Visit {
+            type Value = SparseShipSkinWords;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("ship skin words key-value pairs")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let count = map
+                    .size_hint()
+                    .unwrap_or_default()
+                    .max(ShipSkinWordKey::COUNT);
+
+                let mut buf = Vec::with_capacity(count);
+                while let Some((key, value)) = map.next_entry()? {
+                    buf.push((key, value));
+                }
+
+                let buf = buf.try_into().map_err(A::Error::custom)?;
+                Ok(SparseShipSkinWords::new(buf))
+            }
+        }
+
+        deserializer.deserialize_map(Visit)
+    }
 }
 
 /// Information about fleet tech bonuses for a ship.
