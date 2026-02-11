@@ -2,6 +2,7 @@ use std::fmt;
 
 use azur_lane::GameServer;
 use azur_lane::ship::*;
+use azur_lane::skin::*;
 use houston_btn::builtins::SelectNav;
 use utils::text::WriteStr as _;
 

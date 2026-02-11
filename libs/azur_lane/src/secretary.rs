@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
 use crate::GameServer;
-use crate::ship::ShipMainScreenLine;
+use crate::skin::ShipMainScreenLine;
 
 /// Data for a special secretary (i.e. TB).
 #[derive(Debug, Clone, Serialize, Deserialize)]

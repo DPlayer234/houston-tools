@@ -14,6 +14,7 @@ pub mod juustagram;
 pub mod secretary;
 pub mod ship;
 pub mod skill;
+pub mod skin;
 
 /// Definition data to be saved/loaded in bulk.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]

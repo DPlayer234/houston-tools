@@ -7,6 +7,7 @@ use std::{fs, io};
 use azur_lane::equip::*;
 use azur_lane::secretary::*;
 use azur_lane::ship::*;
+use azur_lane::skin::*;
 use azur_lane::{DefinitionData, GameServer, juustagram};
 use clap::Parser;
 use mlua::prelude::*;

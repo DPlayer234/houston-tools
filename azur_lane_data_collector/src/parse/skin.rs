@@ -1,5 +1,5 @@
 use azur_lane::GameServer;
-use azur_lane::ship::*;
+use azur_lane::skin::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
