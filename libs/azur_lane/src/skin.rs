@@ -377,8 +377,8 @@ impl<'de> Deserialize<'de> for SkinWordsMap {
                 let count = map.size_hint().unwrap_or_default().max(SkinWordsKey::COUNT);
 
                 let mut buf = Vec::with_capacity(count);
-                while let Some((key, value)) = map.next_entry()? {
-                    buf.push((key, value));
+                while let Some(entry) = map.next_entry()? {
+                    buf.push(entry);
                 }
 
                 let buf = buf.try_into().map_err(A::Error::custom)?;
