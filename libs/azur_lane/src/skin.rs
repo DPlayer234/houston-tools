@@ -158,8 +158,12 @@ macro_rules! ship_skin_words_key {
             /// The total count of known keys.
             const COUNT: usize = <[_]>::len(&[$(Self::$label),*]);
 
+            /// Gets the stringified name of the active variant.
+            ///
+            /// This matches the name of the field this corresponds to in the
+            /// serialized format.
             #[must_use]
-            fn name(self) -> &'static str {
+            pub const fn name(self) -> &'static str {
                 match self {
                     $(Self::$label => stringify!($label),)*
                 }
@@ -186,36 +190,80 @@ ship_skin_words_key! {
     description,
     /// The "introduction". In-game, this is the profile text in the archive.
     introduction,
-    /// Dialogue played when the ship is obtained.
+    /// Voice line played when the ship is obtained.
     acquisition,
+    /// Voice line played when the ship is the current secretary and logging
+    /// in.
     login,
+    /// Voice line played when viewing the ships details and tapping the ship
+    /// after its affinity line has finished playing.
     details,
+    /// Voice line randomly played in place of a main screen line when tapping
+    /// the ship.
     touch,
+    /// Voice line played when tapping the "special" area of the ship on the
+    /// main screen.
     special_touch,
+    /// Voice line played when tapping the "rub" area of the ship on the main
+    /// screen. This line is not defined for every ship.
     rub,
+    /// Voice line played in place of a main screen line when there are
+    /// incomplete missions.
     mission_reminder,
+    /// Voice line played in place of a main screen line when there are
+    /// complete but unclaimed
+    /// missions.
     mission_complete,
+    /// Voice line played in place of a main screen line when there is unread
+    /// mail.
     mail_reminder,
+    /// Voice line played when the ship is the current secretary and the main
+    /// screen is viewed for
+    /// the first time since a battle.
     return_to_port,
+    /// Voice line played in place of a main screen line when there are
+    /// finished commissions.
     commission_complete,
+    /// Voice line played when enhancing the ship.
     enhance,
+    /// Voice line played at the start of a battle the ship is sortied in the
+    /// front of the vanguard
+    /// or as the flagship.
     flagship_fight,
+    /// Voice line played when the ship is the MVP in a victory.
     victory,
+    /// Voice line played when the ship is the MVP is a defeat.
     defeat,
+    /// Voice line played when the ship activates a skill.
     skill,
+    /// Voice line played when the ship drops to low HP.
     low_health,
+    /// Affinity voice line for "Disappointed".
     disappointed,
+    /// Affinity voice line for "Stranger".
     stranger,
+    /// Affinity voice line for "Friendly".
     friendly,
+    /// Affinity voice line for "Crush".
     crush,
+    /// Affinity voice line for "Love".
     love,
+    /// Voice line played in the oath scene.
     oath,
+    /// Voice line played when receiving a preferred gift.
     gift_prefer,
+    /// Voice line played when receiving a disliked gift.
     gift_dislike,
 }
 
 // avoid duplicating the `name` fn match
 impl fmt::Debug for SkinWordsKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
+impl fmt::Display for SkinWordsKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.name())
     }
@@ -227,7 +275,7 @@ type SkinWordsEntry = (SkinWordsKey, FixedString);
 ///
 /// This is optimized for memory rather than access speed.
 //
-// most `SkinWords` instances are for non-default skins that often lack about half the possibly
+// most `SkinWords` instances are for non-default skins that often lack about half the possible
 // entries. subsequently it saves memory to "pack" the fields that _are_ present into an array.
 #[derive(Clone)]
 pub struct SkinWordsMap(
