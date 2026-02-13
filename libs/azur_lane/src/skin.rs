@@ -1,8 +1,11 @@
+//! Data structures modelling ship skins.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
+use small_fixed_array::{FixedArray, FixedString};
 
+use crate::private::thin_bmap::{ThinBMap, ThinBMapKey};
 use crate::ship::{HullType, ShipRarity};
 use crate::{Faction, GameServer};
 
@@ -154,16 +157,10 @@ macro_rules! ship_skin_words_key {
             ),*
         }
 
-        impl SkinWordsKey {
-            /// The total count of known keys.
+        impl ThinBMapKey for SkinWordsKey {
             const COUNT: usize = <[_]>::len(&[$(Self::$label),*]);
 
-            /// Gets the stringified name of the active variant.
-            ///
-            /// This matches the name of the field this corresponds to in the
-            /// serialized format.
-            #[must_use]
-            pub const fn name(self) -> &'static str {
+            fn name(self) -> &'static str {
                 match self {
                     $(Self::$label => stringify!($label),)*
                 }
@@ -269,7 +266,8 @@ impl fmt::Display for SkinWordsKey {
     }
 }
 
-type SkinWordsEntry = (SkinWordsKey, FixedString);
+/// Error when constructing a [`SkinWordsMap`].
+pub type SkinWordsMapError = crate::private::thin_bmap::ThinBMapError<SkinWordsKey>;
 
 /// A map of ship skin words.
 ///
@@ -277,15 +275,11 @@ type SkinWordsEntry = (SkinWordsKey, FixedString);
 //
 // most `SkinWords` instances are for non-default skins that often lack about half the possible
 // entries. subsequently it saves memory to "pack" the fields that _are_ present into an array.
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkinWordsMap(
     /// A list of key-value pairs sorted by the key.
-    FixedArray<SkinWordsEntry>,
+    ThinBMap<SkinWordsKey, FixedString>,
 );
-
-fn key_fn(t: &SkinWordsEntry) -> SkinWordsKey {
-    t.0
-}
 
 // no way offered to "unwrap" this struct since the assumption is that it's
 // mostly used for borrowed data and rarely in an owned consumable form.
@@ -298,24 +292,13 @@ impl SkinWordsMap {
     /// # Errors
     ///
     /// Returns `Err` when a key is duplicated.
-    pub fn new(mut value: FixedArray<SkinWordsEntry>) -> Result<Self, SkinWordsMapError> {
-        value.sort_unstable_by_key(key_fn);
-
-        // ensure there are no duplicate keys provided. since it's already sorted by the
-        // keys, comparing all pairs of adjacent keys is good enough to figure that out.
-        for window in value.windows(2) {
-            let [l, r] = window.as_array().expect("must be len 2");
-            if l.0 == r.0 {
-                return Err(SkinWordsMapError::DuplicateKey(l.0));
-            }
-        }
-
-        Ok(Self(value))
+    pub fn new(value: FixedArray<(SkinWordsKey, FixedString)>) -> Result<Self, SkinWordsMapError> {
+        ThinBMap::new(value).map(Self)
     }
 
     /// The amount of lines stored.
     pub fn len(&self) -> usize {
-        self.0.len().to_usize()
+        self.0.len()
     }
 
     /// Whether this collection is empty.
@@ -325,77 +308,13 @@ impl SkinWordsMap {
 
     /// Gets the line for a specific key, if present.
     pub fn get(&self, key: SkinWordsKey) -> Option<&str> {
-        let slice = self.0.as_slice();
-        let index = slice.binary_search_by_key(&key, key_fn).ok()?;
-        Some(slice.get(index)?.1.as_str())
+        self.0.get(key).map(|x| &**x)
     }
 
     /// Iterates over all key-value pairs.
     pub fn iter(
         &self,
     ) -> impl DoubleEndedIterator<Item = (SkinWordsKey, &str)> + ExactSizeIterator {
-        self.0.iter().map(|(key, value)| (*key, value.as_str()))
+        self.0.iter().map(|(key, value)| (key, &**value))
     }
-}
-
-// debug and serde as a map
-impl fmt::Debug for SkinWordsMap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(self.iter()).finish()
-    }
-}
-
-impl Serialize for SkinWordsMap {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.collect_map(self.iter())
-    }
-}
-
-impl<'de> Deserialize<'de> for SkinWordsMap {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{Error as _, MapAccess, Visitor};
-
-        struct ThisVisitor;
-
-        impl<'de> Visitor<'de> for ThisVisitor {
-            type Value = SkinWordsMap;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("ship skin words key-value pairs")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let count = map.size_hint().unwrap_or_default().max(SkinWordsKey::COUNT);
-
-                let mut buf = Vec::with_capacity(count);
-                while let Some(entry) = map.next_entry()? {
-                    buf.push(entry);
-                }
-
-                let buf = buf.try_into().map_err(A::Error::custom)?;
-                SkinWordsMap::new(buf).map_err(|SkinWordsMapError::DuplicateKey(k)| {
-                    A::Error::duplicate_field(k.name())
-                })
-            }
-        }
-
-        deserializer.deserialize_map(ThisVisitor)
-    }
-}
-
-/// Error when constructing a [`SkinWordsMap`].
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum SkinWordsMapError {
-    #[error("key {0:?} was duplicated")]
-    DuplicateKey(SkinWordsKey),
 }

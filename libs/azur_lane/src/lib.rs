@@ -4,13 +4,13 @@
 
 use std::str::FromStr;
 
-use data_def::define_data_enum;
+use private::data_def::define_data_enum;
 use serde::{Deserialize, Serialize};
 use small_fixed_array::FixedArray;
 
-mod data_def;
 pub mod equip;
 pub mod juustagram;
+mod private;
 pub mod secretary;
 pub mod ship;
 pub mod skill;

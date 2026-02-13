@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
-use crate::data_def::{define_data_enum, is_default};
 use crate::equip::Weapon;
+use crate::private::data_def::{define_data_enum, is_default};
 
 /// Represents a single skill.
 #[derive(Debug, Clone, Serialize, Deserialize)]
