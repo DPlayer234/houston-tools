@@ -130,7 +130,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let count = map.size_hint().unwrap_or_default().max(K::COUNT);
+                let count = map.size_hint().unwrap_or_default().min(K::COUNT);
 
                 let mut buf = Vec::with_capacity(count);
                 while let Some(entry) = map.next_entry::<K, V>()? {

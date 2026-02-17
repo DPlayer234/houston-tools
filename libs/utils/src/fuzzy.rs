@@ -287,7 +287,6 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 
             // copy as MatchInfo; TrustedLen should avoid redundant allocations
             // original code here already allocated, and it's fine perf-wise
-            // don't use `into_iter`, that's not TrustedLen!
             let results = take(results).into_iter().map(|m| m.info).collect();
 
             // SAFETY: every index in `results` is a valid index into `values`

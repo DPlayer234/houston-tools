@@ -137,7 +137,7 @@ fn emit_internals(args: &ModelArgs<'_>) -> TokenStream {
                     where
                         S: #crate_::private::serde::ser::Serializer,
                     {
-                        struct __With #impl_gen (::std::marker::PhantomData<#ty_name #ty_gen>) #where_clause;
+                        struct __With #impl_gen (#crate_::private::Never<#ty_name #ty_gen>) #where_clause;
 
                         impl #impl_gen #crate_::private::serde_with::SerializeAs<#ty> for __With #ty_gen #where_clause {
                             fn serialize_as<S>(source: &#ty, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
