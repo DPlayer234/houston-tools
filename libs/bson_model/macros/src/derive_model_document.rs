@@ -1,7 +1,7 @@
 use darling::{Error, FromAttributes as _, FromDeriveInput as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
-use syn::{Data, Fields, FieldsNamed};
+use syn::{Data, Fields, FieldsNamed, GenericParam};
 
 use crate::args::{FieldArgs, FieldMeta, FieldSerdeMeta, ModelArgs, ModelMeta};
 
@@ -557,11 +557,13 @@ fn emit_into_document(
         .cloned()
         .unwrap_or_else(|| syn::parse_quote!(where));
 
-    for t in generics.type_params() {
-        let ident = &t.ident;
-        where_clause
-            .predicates
-            .push(syn::parse_quote!(#ident: #crate_::private::serde::Serialize));
+    for pair in generics.params.pairs() {
+        if let GenericParam::Type(ty) = pair.into_value() {
+            let ident = &ty.ident;
+            where_clause
+                .predicates
+                .push(syn::parse_quote!(#ident: #crate_::private::serde::Serialize));
+        }
     }
 
     quote::quote! {

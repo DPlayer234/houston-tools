@@ -171,7 +171,8 @@ fn use_include(item: &mut ItemUse) -> darling::Result<Option<Vec<TokenStream>>> 
                 Err(Error::custom("cannot glob-import `#[sub_command] use`").with_span(&tree))
             },
             UseTree::Group(group) => {
-                for item in &group.items {
+                for pair in group.items.pairs() {
+                    let item = pair.into_value();
                     resolve_tree(buf, prefix, item)?;
                 }
                 Ok(())

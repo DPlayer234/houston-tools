@@ -20,7 +20,8 @@ pub fn entry_point(input: syn::DeriveInput) -> darling::Result<TokenStream> {
     let mut names = Vec::new();
     let mut idents = Vec::new();
 
-    for variant in data.variants {
+    for pair in data.variants.into_pairs() {
+        let variant = pair.into_value();
         if !matches!(variant.fields, Fields::Unit) {
             let err = Error::custom("choice arg variants cannot have fields");
             acc.push(err.with_span(&variant));
