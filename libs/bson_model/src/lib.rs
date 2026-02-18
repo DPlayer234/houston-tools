@@ -6,6 +6,7 @@
 //! queries with [`bson::doc!`] if the typed system is unsufficient.
 //!
 //! See the documentation on the [`ModelDocument`] trait, which can be derived.
+#![warn(missing_docs)]
 
 pub use bson_model_macros::ModelDocument;
 

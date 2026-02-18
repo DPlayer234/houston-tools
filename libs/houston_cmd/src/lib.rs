@@ -173,6 +173,7 @@
 //! [`InteractionContext`]: serenity::model::application::InteractionContext
 //! [`InstallationContext`]: serenity::model::application::InstallationContext
 //! [`Permissions`]: serenity::model::Permissions
+#![warn(missing_docs)]
 
 pub use houston_cmd_macros::{chat_command, context_command, sub_command};
 
@@ -194,6 +195,7 @@ pub use error::Error;
 pub use framework::Framework;
 pub use reply::{CreateReply, EditReply, ReplyHandle};
 
+#[expect(missing_docs)]
 pub type BoxFuture<'a, T> = serenity::futures::future::BoxFuture<'a, T>;
 
 /// Converts an iterator of commands into create-command payloads to be

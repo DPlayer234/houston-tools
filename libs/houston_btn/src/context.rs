@@ -235,10 +235,15 @@ pub trait Sealed {}
 ///
 /// This trait cannot be implemented by other crates.
 pub trait AnyInteraction: Send + Sync + Sealed {
+    /// Gets the interaction ID.
     fn id(&self) -> InteractionId;
+    /// Gets the interaction token.
     fn token(&self) -> &str;
+    /// Gets the guild ID for the interaction.
     fn guild_id(&self) -> Option<GuildId>;
+    /// Gets the channel for the interaction.
     fn channel(&self) -> Option<&GenericInteractionChannel>;
+    /// Gets the user that triggered the interaction.
     fn user(&self) -> &User;
 }
 

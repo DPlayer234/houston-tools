@@ -1,4 +1,5 @@
 //! Shared utilities for build scripts.
+#![warn(missing_docs)]
 
 use std::env;
 use std::path::PathBuf;

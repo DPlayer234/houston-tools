@@ -76,6 +76,26 @@ fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
 ///
 /// If the type has lifetimes, specify the type similar to: `for<'v> MyType<'v>`
 ///
+/// # Examples
+///
+/// ```
+/// use houston_btn::{ButtonContext, ButtonReply, button_value};
+/// use serde::{Deserialize, Serialize};
+///
+/// #[derive(Debug, Deserialize, Serialize)]
+/// struct View {
+///     data: u32,
+/// }
+///
+/// // the key must be unique per app
+/// button_value!(View, 1234);
+/// impl ButtonReply for View {
+///     async fn reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<()> {
+///         todo!()
+///     }
+/// }
+/// ```
+///
 /// [`ButtonValue`]: crate::ButtonValue
 #[macro_export]
 macro_rules! button_value {

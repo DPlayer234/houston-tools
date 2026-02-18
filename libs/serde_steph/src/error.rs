@@ -7,6 +7,7 @@ use std::{fmt, io};
 
 use serde_core::{de, ser};
 
+#[expect(missing_docs)]
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Potential errors to encounter when serializing or deserializing binary data.

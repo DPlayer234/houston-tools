@@ -18,10 +18,16 @@ mod str_arg;
 pub use resolver::CommandOptionResolver;
 pub use str_arg::FromStrArg;
 
+/// A resolved option of a slash command.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct ResolvedOption<'a> {
+    /// The name of the option.
+    ///
+    /// This usually matches the name of the user-defined command function
+    /// parameter.
     pub name: &'a str,
+    /// The resolved value of the option.
     pub value: ResolvedValue<'a>,
 }
 

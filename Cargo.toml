@@ -25,13 +25,11 @@ panic = 'abort'
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"
+impl_trait_overcaptures = "warn"
+meta_variable_misuse = "warn"
 unsafe_op_in_unsafe_fn = "deny"
 unused_crate_dependencies = "warn"
 unused_macro_rules = "warn"
-
-# edition 2024 compatability
-impl_trait_overcaptures = "warn"
-rust_2024_incompatible_pat = "warn"
 
 [workspace.lints.clippy]
 # pedantic
@@ -121,6 +119,6 @@ nonstandard_macro_braces = "warn"
 or_fun_call = "warn"
 redundant_clone = "warn"
 trait_duplication_in_bounds = "deny"
-uninhabited_references = "deny"
+uninhabited_references = "warn"
 use_self = "warn"
 useless_let_if_seq = "warn"

@@ -124,6 +124,7 @@
 //! [`serde_bare`]: <https://git.sr.ht/~tdeo/serde_bare>
 //! [`postcard`]: <https://github.com/jamesmunns/postcard/tree/main>
 //! [`ciborium`]: <https://github.com/enarx/ciborium>
+#![warn(missing_docs)]
 
 pub mod compat;
 pub mod de;

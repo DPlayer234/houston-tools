@@ -1,5 +1,6 @@
 //! A variety of utility types and functions for use across the crates in this
 //! repo.
+#![warn(missing_docs)]
 
 // for benchmarks
 #[cfg(test)]

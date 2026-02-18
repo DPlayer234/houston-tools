@@ -1,3 +1,112 @@
+//! Provides a way to handle message interactions and modals in a simple,
+//! uniform way through view models.
+//!
+//! This is intended as an extension to [`houston_cmd`].
+//!
+//! # Registration
+//!
+//! The [`EventHander`](crate::EventHandler) must be manually
+//! [dispatched](crate::EventHandler::dispatch) in your own custom
+//! [`serenity::gateway::client::EventHandler`].
+//!
+//! # Restrictions
+//!
+//! Not every possible shape of serializable struct may be supported. Refer to
+//! the crate-level docs for [`serde_steph`] for additional information.
+//!
+//! # Examples
+//!
+//! To create the button actions expected, use the [`button_value`] macro:
+//!
+//! ```
+//! use houston_btn::prelude::*;
+//! use houston_cmd::CreateReply;
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Debug, Deserialize, Serialize)]
+//! pub struct View {
+//!     pub data: u32,
+//! }
+//!
+//! // the key must be unique per app
+//! button_value!(View, 1234);
+//! impl ButtonReply for View {
+//!     async fn reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<()> {
+//!         ctx.reply(
+//!             CreateReply::new()
+//!                 .content(format!("Data: {}", self.data))
+//!                 .ephemeral(true)
+//!         )
+//!         .await?;
+//!         Ok(())
+//!     }
+//! }
+//!
+//! // this can be passed to the constructor of `EventHandler`
+//! // you may need to import `houston_btn::ButtonValue` in the scope
+//! let view_action = View::ACTION;
+//! # _ = view_action;
+//! ```
+//!
+//! To make a message component (button or select) or modal trigger a registered
+//! [`ButtonAction`], convert it to a custom ID via
+//! [`ButtonValue::to_custom_id`] and provide that as the custom ID of the
+//! component or modal. For example, from a slash command:
+//!
+//! ```
+//! /// The module with our view from above.
+//! # mod view {
+//! # use houston_btn::prelude::*;
+//! # use houston_cmd::CreateReply;
+//! # use serde::{Deserialize, Serialize};
+//! # #[derive(Debug, Deserialize, Serialize)]
+//! # pub struct View {
+//! #     pub data: u32,
+//! # }
+//! # button_value!(View, 1234);
+//! # impl ButtonReply for View {
+//! #     async fn reply(self, ctx: ButtonContext<'_>) -> anyhow::Result<()> {
+//! #         todo!()
+//! #     }
+//! # }
+//! # }
+//! # _ = stringify!(
+//! mod view;
+//! # );
+//!
+//! use houston_btn::ButtonValue as _;
+//! use houston_cmd::{Context, CreateReply, chat_command};
+//! use serenity::builder::*;
+//!
+//! /// Posts the example button.
+//! #[chat_command(
+//!     contexts = "Guild | BotDm | PrivateChannel",
+//!     integration_types = "Guild | User"
+//! )]
+//! async fn my_command(
+//!     ctx: Context<'_>,
+//!     /// The data value to show.
+//!     data: u32,
+//! ) -> anyhow::Result<()> {
+//!     let view = view::View { data };
+//!     let custom_id = view.to_custom_id();
+//!
+//!     let button = CreateButton::new(custom_id).label("Click!");
+//!     let action_row = CreateActionRow::buttons(vec![button]);
+//!     let component = CreateComponent::ActionRow(action_row);
+//!     let components = vec![component];
+//!
+//!     ctx.send(
+//!         CreateReply::new()
+//!             .components_v2(components)
+//!             .ephemeral(true)
+//!     )
+//!     .await?;
+//!     Ok(())
+//! }
+//! ```
+#![warn(missing_docs)]
+
 use std::fmt;
 
 use anyhow::Context as _;
@@ -19,16 +128,27 @@ pub mod private;
 #[cfg(test)]
 mod tests;
 
+/// A prelude for commonly used types and traits for defining view models.
 pub mod prelude {
     pub use crate::{ButtonContext, ButtonReply, ButtonValue, ModalContext, Nav, button_value};
 }
 
 type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 
+/// A set of functions to hook into the [`EventHandler`].
 #[serenity::async_trait]
 pub trait Hooks: Send + Sync + 'static {
+    /// Handles an error that occurred during handling.
+    ///
+    /// This could, f.e. log an error.
     async fn handle_error(&self, _ctx: ErrorContext<'_>, _err: anyhow::Error) {}
+
+    /// Called when a button interaction occurs. Receives a reference to the
+    /// view.
     fn on_button(&self, _ctx: ButtonContext<'_>, _args: &dyn fmt::Debug) {}
+
+    /// Called when a modal interaction occurs. Receives a reference to the
+    /// view.
     fn on_modal(&self, _ctx: ModalContext<'_>, _args: &dyn fmt::Debug) {}
 }
 
@@ -40,6 +160,10 @@ pub struct EventHandler {
 
 impl EventHandler {
     /// Create a new handler with the given button actions.
+    ///
+    /// [`ButtonAction`] values are generally created by implementing
+    /// [`ButtonValue`] via [`button_value`] and then accessing its
+    /// [`ButtonValue::ACTION`].
     ///
     /// # Errors
     ///
@@ -64,12 +188,18 @@ impl EventHandler {
         self.actions.get(&key).context("unknown button action")
     }
 
+    /// Sets the hooks to call.
     #[must_use]
     pub fn hooks(mut self, handler: Box<dyn Hooks>) -> Self {
         self.hooks = Some(handler);
         self
     }
 
+    /// Dispatches the event to the correct handler.
+    ///
+    /// If the return value is [`Some`], the event was handled and it needs to
+    /// be awaited. If it is [`None`], the event isn't relevant for this
+    /// handler.
     pub fn dispatch<'a>(
         &'a self,
         ctx: &'a Context,
