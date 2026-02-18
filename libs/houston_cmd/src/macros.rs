@@ -1,25 +1,45 @@
-/// Parses a slash argument from a context by its name and type.
+/// Parses a slash argument from a context by its name and type, using its
+/// [`SlashArg`] implementation.
+///
+/// If the type is [`Option<T>`], a missing parameter is accepted and the
+/// macro returns `Ok(None)`. Otherwise, a missing parameter returns
+/// `Err`.
+///
+/// # Errors
+///
+/// Returns `Err` if parsing of the present value fails or the parameter is
+/// missing but the type isn't [`Option<T>`].
+///
+/// # Examples
+///
+/// ```
+/// # use houston_cmd::{Context, Error, parse_slash_argument};
+/// # fn example(ctx: Context<'_>) -> Result<(), Error<'_>> {
+/// let value = parse_slash_argument!(ctx, "count", u32)?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Optional parameters can be transparently handled the same way:
+///
+/// ```
+/// # use houston_cmd::{Context, Error, parse_slash_argument};
+/// # fn example(ctx: Context<'_>) -> Result<(), Error<'_>> {
+/// match parse_slash_argument!(ctx, "count", Option<u32>)? {
+///     Some(found) => println!("has count: {found}"),
+///     None => println!("has no count"),
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// [`SlashArg`]: crate::SlashArg
 #[macro_export]
 macro_rules! parse_slash_argument {
     ($ctx:expr, $name:literal, $ty:ty) => {{
         let value = $ctx.option_value($name);
         <$ty as $crate::private::SlashArgOption<'_>>::try_extract(&$ctx, value)
     }};
-}
-
-/// Creates the base data needed for a slash argument.
-///
-/// This exists only to support the macro infrastructure and isn't considered
-/// public API.
-#[macro_export]
-#[doc(hidden)]
-macro_rules! create_slash_argument {
-    ($ty:ty, $($setter:tt)*) => {
-        $crate::model::Parameter::builder()
-            .required(<$ty as $crate::private::SlashArgOption<'_>>::REQUIRED)
-            .choices(<<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::choices)
-            .type_setter(#[allow(unnecessary_cast)] |c| <<$ty as $crate::private::SlashArgOption<'_>>::Required as $crate::SlashArg<'_>>::set_options(c) $($setter)*)
-    };
 }
 
 /// Implements [`SlashArg`] via a type's [`FromStr`] implementations.

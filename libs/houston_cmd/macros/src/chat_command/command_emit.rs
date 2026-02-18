@@ -1,7 +1,6 @@
 use darling::ast::NestedMeta;
 use darling::{Error, FromMeta as _};
 use proc_macro2::{Span, TokenStream};
-use quote::TokenStreamExt as _;
 use syn::ext::IdentExt as _;
 use syn::fold::Fold as _;
 use syn::spanned::Spanned as _;
@@ -185,23 +184,26 @@ fn to_command_parameter(p: &Parameter, args: &CommonArgs) -> TokenStream {
 
     let mut setter = quote::quote! {};
     if let Some(m) = &p.args.min {
-        setter.append_all(quote::quote_spanned! {m.span()=> .min_number_value(#m as f64) });
+        setter.extend(quote::quote_spanned! {m.span()=> .min_number_value(#m as f64) });
     }
     if let Some(m) = &p.args.max {
-        setter.append_all(quote::quote_spanned! {m.span()=> .max_number_value(#m as f64) });
+        setter.extend(quote::quote_spanned! {m.span()=> .max_number_value(#m as f64) });
     }
     if let Some(m) = &p.args.min_length {
-        setter.append_all(quote::quote_spanned! {m.span()=> .min_length(#m) });
+        setter.extend(quote::quote_spanned! {m.span()=> .min_length(#m) });
     }
     if let Some(m) = &p.args.max_length {
-        setter.append_all(quote::quote_spanned! {m.span()=> .max_length(#m) });
+        setter.extend(quote::quote_spanned! {m.span()=> .max_length(#m) });
     }
 
     let CommonArgs { crate_ } = args;
     quote::quote! {
-        #crate_::create_slash_argument!(#ty, #setter)
+        #crate_::model::Parameter::builder()
             .name(::std::borrow::Cow::Borrowed(#name))
             .description(::std::borrow::Cow::Borrowed(#description))
+            .required(<#ty as #crate_::private::SlashArgOption<'_>>::REQUIRED)
+            .choices(<<#ty as #crate_::private::SlashArgOption<'_>>::Required as #crate_::SlashArg<'_>>::choices)
+            .type_setter(#[allow(unnecessary_cast)] |c| <<#ty as #crate_::private::SlashArgOption<'_>>::Required as #crate_::SlashArg<'_>>::set_options(c) #setter)
             .autocomplete(#autocomplete)
             .build()
     }

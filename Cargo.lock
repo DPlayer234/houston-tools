@@ -1173,7 +1173,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd"
-version = "2.0.3"
+version = "2.0.4"
 dependencies = [
  "anyhow",
  "const-builder",
@@ -1187,7 +1187,7 @@ dependencies = [
 
 [[package]]
 name = "houston_cmd_macros"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",

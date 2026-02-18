@@ -9,7 +9,8 @@ use crate::args::SlashArg;
 use crate::context::Context;
 use crate::error::Error;
 
-/// Helper trait to handle [`Option`] parameters uniformly.
+/// Helper trait wrapping [`SlashArg`] to allow handling both required
+/// parameters and optional parameters via [`Option`].
 ///
 /// Not public API.
 pub trait SlashArgOption<'ctx>: Sized {
