@@ -10,7 +10,7 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-bitflags = { version = "2.10.0", features = ["serde"] }
+bitflags = { version = "2.11.0", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive"] }
 small-fixed-array = { version = "0.4.10", features = ["serde"] }
 thiserror = "2.0.12"

@@ -17,7 +17,7 @@ anyhow = "1.0.97"
 arc-swap = "1.8.0"
 arrayvec = "0.7.6"
 base64 = "0.22.1"
-bitflags = "2.10.0"
+bitflags = "2.11.0"
 bson = { version = "3.1.0", features = ["time-0_3", "serde", "serde_with-3"] }
 bytes = "1.11.0"
 const-builder = "0.1.4"
@@ -32,7 +32,7 @@ serde_json = "1.0.140"
 serde_with = { version = "3.16.0", features = ["std"], default-features = false }
 smallvec = { version = "1.15.0", features = ["const_generics", "const_new", "union", "serde", "write"] }
 thiserror = "2.0.12"
-time = { version = "0.3.46", features = ["serde", "formatting", "parsing"] }
+time = { version = "0.3.47", features = ["serde", "formatting", "parsing"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
 toml = "0.9.11"
 to-arraystring = "0.2.2"
