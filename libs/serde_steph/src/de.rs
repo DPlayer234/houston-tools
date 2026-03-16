@@ -75,6 +75,9 @@ impl<'de, R: Read<'de>> Deserializer<R> {
     /// You are most likely looking for [`Self::from_slice`] or
     /// [`Self::from_reader`] instead, or perhaps one of the standalone
     /// functions in this module are sufficient.
+    ///
+    /// This function is provided to allow custom optimized implementations for
+    /// byte sources that the deserialized value may be able to borrow from.
     pub fn new(reader: R) -> Self {
         Self { reader }
     }
@@ -147,20 +150,24 @@ impl<'de> Deserializer<SliceRead<'de>> {
     /// Manually deserialize an unprefixed variable-length sequence:
     ///
     /// ```
-    /// # use serde_steph::{Deserializer, Error};
-    /// # use serde_core::de::Deserialize;
-    /// # fn example() -> Result<Vec<u32>, Error> {
-    /// # let buf = [1u8, 2, 3, 4, 5];
+    /// use serde_steph::Deserializer;
+    /// use serde::de::Deserialize;
+    ///
+    /// # fn example(buf: &[u8]) -> serde_steph::Result<Vec<u32>> {
     /// // buf is some input slice
-    /// // out will be used to collect the data
+    /// # _ = stringify! {
+    /// let buf: &[u8] = ...;
+    /// # };
+    /// // `out` will be used to collect the data
     /// let mut out = Vec::new();
     /// let mut de = Deserializer::from_slice(&buf);
     /// while !de.remainder().is_empty() {
     ///     out.push(u32::deserialize(&mut de)?);
     /// }
-    /// # Ok(out)
+    /// Ok(out)
     /// # }
-    /// # assert_eq!(example().expect("must succeed"), vec![1u32, 2, 3, 4, 5]);
+    /// # let buf = [1u8, 2, 3, 4, 5];
+    /// # assert_eq!(example(&buf).expect("must succeed"), vec![1u32, 2, 3, 4, 5]);
     /// ```
     pub fn from_slice(buf: &'de [u8]) -> Self {
         Self::new(SliceRead::new(buf))
@@ -190,21 +197,34 @@ impl<R: io::Read> Deserializer<IoRead<R>> {
     /// Manually deserialize an unprefixed variable-length sequence:
     ///
     /// ```
-    /// # use serde_steph::{Deserializer, Error};
-    /// # use serde_core::de::Deserialize;
-    /// # fn example() -> Vec<u32> {
-    /// # let buf = [1u8, 2, 3, 4, 5];
-    /// # let mut reader = buf.as_slice();
-    /// // out will be used to collect the data
-    /// // this terminates on any error for simplicity
+    /// use std::io::{ErrorKind, Read};
+    /// use serde_steph::{Deserializer, Error};
+    /// use serde_core::de::Deserialize;
+    ///
+    /// # fn example(buf: &[u8]) -> serde_steph::Result<Vec<u32>> {
+    /// // the `Read` to consume
+    /// # _ = stringify! {
+    /// let mut reader = ...;
+    /// # };
+    /// # let mut reader = buf;
+    /// // `out` will be used to collect the data
     /// let mut out = Vec::new();
     /// let mut de = Deserializer::from_reader(&mut reader);
-    /// while let Ok(v) = u32::deserialize(&mut de) {
-    ///     out.push(v);
+    /// loop {
+    ///     match u32::deserialize(&mut de) {
+    ///         Ok(v) => out.push(v),
+    ///         // `UnexpectedEof` usually occurs when the reader is exhausted
+    ///         // when reading. this is good enough for u32, but complex data
+    ///         // may need additional handling, like tracking successful reads.
+    ///         Err(Error::Io(e)) if e.kind() == ErrorKind::UnexpectedEof => break,
+    ///         // fail on any other error kind
+    ///         Err(e) => return Err(e),
+    ///     }
     /// }
-    /// # out
+    /// Ok(out)
     /// # }
-    /// # assert_eq!(example(), vec![1u32, 2, 3, 4, 5]);
+    /// # let buf = [1u8, 2, 3, 4, 5];
+    /// # assert_eq!(example(&buf).expect("must succeed"), vec![1u32, 2, 3, 4, 5]);
     /// ```
     pub fn from_reader(reader: R) -> Self {
         Self::new(IoRead::new(reader))
