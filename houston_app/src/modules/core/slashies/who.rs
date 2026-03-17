@@ -49,7 +49,7 @@ async fn who_core(ctx: Context<'_>, user: SlashUser<'_>, ephemeral: Option<bool>
             let member_info = who_member_info(user.user, member, guild_id);
             let member_info = section(member_info, avatar);
 
-            components![user_info, CreateSeparator::new(true), member_info]
+            components![user_info, CreateSeparator::new().divider(true), member_info]
         },
     };
 

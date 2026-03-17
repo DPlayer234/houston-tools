@@ -44,7 +44,7 @@ impl<'v> View<'v> {
             ),
         ));
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for ship in page_iter {
             let emoji = super::hull_emoji(ship.base.hull_type, data);

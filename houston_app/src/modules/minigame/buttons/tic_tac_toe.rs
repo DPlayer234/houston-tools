@@ -112,7 +112,7 @@ impl View {
     {
         let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for y in 0..N {
             let mut row = Vec::with_capacity(N);

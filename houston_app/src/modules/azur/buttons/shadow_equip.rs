@@ -39,7 +39,7 @@ impl<'v> View<'v> {
             ship.name
         )));
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for mount in &ship.shadow_equip {
             if let Some(value) = format_weapons(&mount.weapons) {
@@ -51,7 +51,7 @@ impl<'v> View<'v> {
 
                 components.push(CreateTextDisplay::new(label));
                 components.push(CreateTextDisplay::new(value));
-                components.push(CreateSeparator::new(true));
+                components.push(CreateSeparator::new().divider(true));
             }
         }
 
@@ -60,7 +60,7 @@ impl<'v> View<'v> {
                 let label = format!("### `ASW:` {}", equip.name);
                 components.push(CreateTextDisplay::new(label));
                 components.push(CreateTextDisplay::new(value));
-                components.push(CreateSeparator::new(true));
+                components.push(CreateSeparator::new().divider(true));
             }
         }
 

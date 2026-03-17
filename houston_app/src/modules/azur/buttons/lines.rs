@@ -106,7 +106,7 @@ impl View<'_> {
             ));
         }
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         if ship.skins.len() > 1 {
             let options: Vec<_> = (0..25u8)

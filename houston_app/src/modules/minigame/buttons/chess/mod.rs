@@ -68,7 +68,7 @@ impl View {
     ) -> ComponentVec<CreateContainerComponent<'a>> {
         let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         let moves = match self.action {
             Action::Selected(pos) => self.board.get(pos).copied().flatten().map(|t| {
@@ -131,7 +131,7 @@ impl View {
     ) -> ComponentVec<CreateContainerComponent<'a>> {
         let mut components = ComponentVec::with_capacity(N + 2);
         components.push(CreateTextDisplay::new(label));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for y in 0..N_U8 {
             let mut row = Vec::with_capacity(N);

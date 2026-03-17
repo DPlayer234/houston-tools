@@ -97,23 +97,23 @@ impl View<'_> {
 
         components.push(self.get_header_field(data, ship, base_ship, thumbnail_key));
         components.extend(self.get_retro_state_row(base_ship));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         components.push(self.get_stats_field(ship));
         components.push(self.get_upgrade_row());
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         components.push(self.get_equip_field(azur, ship));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         if let Some(skills_field) = self.get_skills_field(azur, ship) {
             components.push(skills_field);
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
         }
 
         if let Some(fleet_tech_field) = self.get_fleet_tech_field(data, base_ship) {
             components.push(fleet_tech_field);
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
         }
 
         components.push(self.get_nav_row(azur, base_ship));

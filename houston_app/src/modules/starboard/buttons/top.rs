@@ -84,14 +84,14 @@ impl View {
         let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(label));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
         components.push(CreateTextDisplay::new(description));
 
         let pagination = ToPage::build_row(&mut self, |s| &mut s.page)
             .auto_page_count(page_count, has_more, MAX_PAGE);
 
         if let Some(nav) = pagination.end() {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(nav);
         }
 

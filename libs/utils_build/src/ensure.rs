@@ -47,4 +47,7 @@ macro_rules! none_or {
     };
 }
 
-pub(crate) use {none_or, ok_or, or, some_or};
+pub(crate) use none_or;
+pub(crate) use ok_or;
+pub(crate) use or;
+pub(crate) use some_or;

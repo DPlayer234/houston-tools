@@ -140,7 +140,7 @@ impl View {
             ));
         }
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
         components.push(shop_footer(perks, &wallet));
 
         let container = CreateContainer::new(components).accent_color(data.config().embed_color);
@@ -200,10 +200,10 @@ impl View {
         let components = components![
             CreateTextDisplay::new(format!("### {}", info.name)),
             CreateTextDisplay::new(info.description),
-            CreateSeparator::new(true),
+            CreateSeparator::new().divider(true),
             CreateTextDisplay::new(cost),
             CreateActionRow::buttons(vec![back, buy]),
-            CreateSeparator::new(true),
+            CreateSeparator::new().divider(true),
             shop_footer(perks, &wallet),
         ];
 
@@ -279,10 +279,10 @@ impl View {
         let components = components![
             CreateTextDisplay::new(format!("### {}", info.name)),
             CreateTextDisplay::new(info.description),
-            CreateSeparator::new(true),
+            CreateSeparator::new().divider(true),
             CreateTextDisplay::new(cost),
             CreateActionRow::buttons(buttons),
-            CreateSeparator::new(true),
+            CreateSeparator::new().divider(true),
             shop_footer(perks, &wallet),
         ];
 

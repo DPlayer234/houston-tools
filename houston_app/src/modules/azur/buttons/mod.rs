@@ -106,13 +106,14 @@ macro_rules! page_nav {
                 &mut s.page
             })
         {
-            $components.push(::serenity::builder::CreateSeparator::new(true));
+            $components.push(::serenity::builder::CreateSeparator::new().divider(true));
             $components.push(nav);
         }
     };
 }
 
-pub(crate) use {page_iter, page_nav};
+pub(crate) use page_iter;
+pub(crate) use page_nav;
 
 mod pagination_impl {
     use super::search::PAGE_SIZE;

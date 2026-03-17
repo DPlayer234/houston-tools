@@ -203,11 +203,11 @@ impl Command {
         let mut command = CreateCommand::new(self.data.name.clone()).nsfw(self.nsfw);
 
         if let Some(contexts) = &self.contexts {
-            command = command.contexts(contexts.to_vec());
+            command = command.contexts(contexts.clone());
         }
 
         if let Some(integration_types) = &self.integration_types {
-            command = command.integration_types(integration_types.to_vec());
+            command = command.integration_types(integration_types.clone());
         }
 
         if let Some(permissions) = self.default_member_permissions {

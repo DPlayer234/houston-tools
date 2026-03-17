@@ -42,7 +42,7 @@ impl<'v> View<'v> {
             ),
         ));
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for augment in page_iter {
             let view = super::augment::View::builder()

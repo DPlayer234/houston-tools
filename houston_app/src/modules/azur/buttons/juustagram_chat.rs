@@ -73,13 +73,13 @@ impl View<'_> {
 
         let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("### {}", chat.name)));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         // this may be janky, possibly rework the limit
         components.push(CreateTextDisplay::new(truncate(content, 3800)));
 
         if let Some(options) = selection {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
 
             for option in options {
                 let mut flags = <ArrayVec<u8, 64>>::new();
@@ -119,7 +119,7 @@ impl View<'_> {
         }
 
         if !nav_row.is_empty() {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateActionRow::buttons(nav_row));
         }
 

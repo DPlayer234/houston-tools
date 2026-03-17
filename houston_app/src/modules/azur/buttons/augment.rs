@@ -26,13 +26,13 @@ impl View<'_> {
         let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new(format!("### {}", augment.name)));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
         components.push(CreateTextDisplay::new(
             crate::fmt::azur::AugmentStats::new(augment).to_string(),
         ));
 
         if let Some(effect) = &augment.effect {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateTextDisplay::new(format!(
                 "### Effect\n{} **{}**",
                 effect.category.emoji(),
@@ -48,7 +48,7 @@ impl View<'_> {
                 writeln!(text, "{} **{}**", s.skill.category.emoji(), s.skill.name);
             }
 
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateTextDisplay::new(text));
         }
 

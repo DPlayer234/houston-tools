@@ -20,8 +20,9 @@ macro_rules! info {
     };
 }
 
+pub(crate) use action;
+pub(crate) use info;
 pub(crate) use write::ActionWrite;
-pub(crate) use {action, info};
 
 /// When false, uses simplified output.
 static USE_ANSI: AtomicBool = AtomicBool::new(false);

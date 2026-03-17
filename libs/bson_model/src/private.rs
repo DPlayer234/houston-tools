@@ -3,7 +3,9 @@
 use std::convert::Infallible;
 use std::marker::PhantomData;
 
-pub use {bson, serde, serde_with};
+pub use bson;
+pub use serde;
+pub use serde_with;
 
 /// Marker type, used to define an empty type with generic arguments.
 pub struct Never<T: ?Sized>(Infallible, PhantomData<T>);

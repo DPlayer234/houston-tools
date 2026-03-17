@@ -30,5 +30,5 @@ git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
 default-features = false
 features = [
-    "builder", "framework", "gateway", "model", "http", "utils", "rustls_backend"
+    "builder", "framework", "gateway", "model", "http", "utils", "native_tls_backend"
 ]

@@ -69,7 +69,7 @@ impl View<'_> {
                 .emoji(emoji::back())
                 .label("Back");
 
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateActionRow::buttons(vec![button]));
         }
 

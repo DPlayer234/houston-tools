@@ -154,7 +154,8 @@ macro_rules! components_array {
     };
 }
 
-pub(crate) use {components, components_array};
+pub(crate) use components;
+pub(crate) use components_array;
 
 mod impls {
     use super::IntoComponent;

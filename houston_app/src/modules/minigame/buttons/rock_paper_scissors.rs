@@ -103,7 +103,7 @@ impl View {
         let components = components![
             CreateContainer::new(components![
                 CreateTextDisplay::new(description),
-                CreateSeparator::new(true),
+                CreateSeparator::new().divider(true),
                 buttons,
             ])
             .accent_color(data.config().embed_color)

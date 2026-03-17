@@ -43,7 +43,7 @@ impl<'v> View<'v> {
             ),
         ));
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for equip in page_iter {
             let label = format!(

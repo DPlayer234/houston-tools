@@ -33,7 +33,7 @@ serde_with = { version = "3.16.0", features = ["std"], default-features = false 
 smallvec = { version = "1.15.0", features = ["const_generics", "const_new", "union", "serde", "write"] }
 thiserror = "2.0.12"
 time = { version = "0.3.47", features = ["serde", "formatting", "parsing"] }
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread"] }
 toml = "0.9.11"
 to-arraystring = "0.2.2"
 url = "2.5.4"
@@ -45,12 +45,14 @@ houston_btn.path = "../libs/houston_btn"
 houston_cmd.path = "../libs/houston_cmd"
 utils.path = "../libs/utils"
 
+openssl = { version = "0.10", optional = true }
+
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
 default-features = false
 features = [
-    "rustls_backend",
+    "native_tls_backend",
     "builder", "framework", "gateway", "model", "http", "utils"
 ]
 
@@ -59,7 +61,7 @@ version = "3.5.1"
 default-features = false
 features = [
     "compat-3-3-0", "bson-3",
-    "dns-resolver", "rustls-tls",
+    "dns-resolver", "openssl-tls",
 ]
 
 [dependencies.log4rs]
@@ -74,3 +76,6 @@ features = [
 
 [build-dependencies]
 utils_build.path = "../libs/utils_build"
+
+[features]
+openssl-vendored = ["openssl/vendored"]

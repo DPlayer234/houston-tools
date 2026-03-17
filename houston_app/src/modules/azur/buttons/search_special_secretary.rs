@@ -31,7 +31,7 @@ impl<'v> View<'v> {
         let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new("### Special Secretaries"));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for secretary in page_iter {
             let view_chat = super::special_secretary::View::builder()

@@ -44,7 +44,7 @@ impl View<'_> {
         iterator: impl Iterator<Item = &'a Skill>,
         components: &mut ComponentVec<CreateContainerComponent<'a>>,
     ) {
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for (index, skill) in (0..5u8).zip(iterator) {
             self.append_skill(components, index, skill);
@@ -83,7 +83,7 @@ impl View<'_> {
             }
         }
 
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
     }
 
     /// Modifies the create-reply with preresolved ship data.
@@ -129,7 +129,7 @@ impl View<'_> {
                     _ = skills.try_push(effect);
                 }
 
-                components.push(CreateSeparator::new(true));
+                components.push(CreateSeparator::new().divider(true));
                 components.push(CreateTextDisplay::new(format!(
                     "**\"{}\" Bonus Stats**\n{}",
                     augment.name,
@@ -223,7 +223,7 @@ impl View<'_> {
                 Cow::Borrowed(_) => content,
             };
 
-            components.push(CreateSeparator::new(false));
+            components.push(CreateSeparator::new());
             components.push(CreateTextDisplay::new(content));
         }
 
@@ -244,7 +244,7 @@ impl View<'_> {
             let weapon_name = buff.weapon.name.as_deref().unwrap_or("Special Weapon");
             let content = format!("### __{label}__ {weapon_name}\n{fmt}");
 
-            components.push(CreateSeparator::new(false));
+            components.push(CreateSeparator::new());
             components.push(CreateTextDisplay::new(content));
         }
     }

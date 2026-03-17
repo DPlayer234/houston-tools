@@ -32,7 +32,7 @@ impl View {
         let mut components = ComponentVec::new();
 
         components.push(CreateTextDisplay::new("### JUUS [Chats]"));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         for chat in page_iter {
             let label = match azur.game_data().ship_by_id(chat.group_id) {

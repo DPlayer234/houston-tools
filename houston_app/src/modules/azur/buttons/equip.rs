@@ -21,7 +21,7 @@ impl View<'_> {
     pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
         let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("## {}", equip.name)));
-        components.push(CreateSeparator::new(true));
+        components.push(CreateSeparator::new().divider(true));
 
         components.push(CreateTextDisplay::new(format!(
             "### {}\n{}",
@@ -30,7 +30,7 @@ impl View<'_> {
         )));
 
         if !equip.weapons.is_empty() {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
         }
 
         for weapon in &equip.weapons {
@@ -44,7 +44,7 @@ impl View<'_> {
         match inline_skill(equip) {
             InlineSkill::None => { /* nothing to display */ },
             InlineSkill::Yes(skill) => {
-                components.push(CreateSeparator::new(true));
+                components.push(CreateSeparator::new().divider(true));
                 components.push(CreateTextDisplay::new(format!(
                     "### {} {}",
                     skill.category.emoji(),
@@ -53,13 +53,13 @@ impl View<'_> {
                 components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
             },
             InlineSkill::No(skills) => {
-                components.push(CreateSeparator::new(true));
+                components.push(CreateSeparator::new().divider(true));
                 components.push(self.get_skills_field(skills));
             },
         }
 
         if !equip.hull_disallowed.is_empty() {
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateTextDisplay::new(format!(
                 "**Cannot be equipped by:**\n> {}",
                 Join::COMMA.display_as(&equip.hull_disallowed, |h| h.designation()),
@@ -71,7 +71,7 @@ impl View<'_> {
                 .emoji(emoji::back())
                 .label("Back");
 
-            components.push(CreateSeparator::new(true));
+            components.push(CreateSeparator::new().divider(true));
             components.push(CreateActionRow::buttons(vec![button]));
         }
 
