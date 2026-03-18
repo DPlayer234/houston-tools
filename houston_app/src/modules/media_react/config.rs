@@ -18,8 +18,7 @@ pub struct MediaReactChannel {
     pub with_threads: bool,
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(from = "MediaReactEntryDe")]
+#[derive(Debug)]
 pub struct MediaReactEntry {
     pub emoji: HEmoji,
     pub condition: MediaCheck,
@@ -47,54 +46,124 @@ impl Condition {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy, serde::Deserialize)]
-#[serde(from = "MediaCheckDe")]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct MediaCheck {
     pub normal: Condition,
     pub forward: Condition,
 }
 
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
-#[serde(untagged)]
-enum MediaCheckDe {
-    Specific {
-        #[serde(default)]
-        normal: Condition,
-        #[serde(default)]
-        forward: Condition,
-    },
-    Same(Condition),
-}
+mod serde_impl {
+    use std::fmt;
 
-impl From<MediaCheckDe> for MediaCheck {
-    fn from(value: MediaCheckDe) -> Self {
-        let (normal, forward) = match value {
-            MediaCheckDe::Specific { normal, forward } => (normal, forward),
-            MediaCheckDe::Same(condition) => (condition, condition),
-        };
+    use serde::Deserialize;
+    use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer, StrDeserializer};
+    use serde::de::{Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
-        Self { normal, forward }
+    use super::{Condition, MediaCheck, MediaReactEntry};
+    use crate::config::HEmoji;
+
+    impl<'de> Deserialize<'de> for MediaCheck {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            struct Basic {
+                normal: Condition,
+                forward: Condition,
+            }
+
+            fn into_real(Basic { normal, forward }: Basic) -> MediaCheck {
+                MediaCheck { normal, forward }
+            }
+
+            struct MediaCheckVisitor;
+            impl<'de> Visitor<'de> for MediaCheckVisitor {
+                type Value = MediaCheck;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("`content`, `never`, or `always` or a map")
+                }
+
+                fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: MapAccess<'de>,
+                {
+                    Basic::deserialize(MapAccessDeserializer::new(map)).map(into_real)
+                }
+
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    Basic::deserialize(SeqAccessDeserializer::new(seq)).map(into_real)
+                }
+
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    Condition::deserialize(StrDeserializer::new(v)).map(|c| MediaCheck {
+                        normal: c,
+                        forward: c,
+                    })
+                }
+            }
+
+            deserializer.deserialize_any(MediaCheckVisitor)
+        }
     }
-}
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(untagged)]
-enum MediaReactEntryDe {
-    Emoji(HEmoji),
-    Full {
-        emoji: HEmoji,
-        #[serde(default)]
-        condition: MediaCheck,
-    },
-}
+    impl<'de> Deserialize<'de> for MediaReactEntry {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            struct Full {
+                emoji: HEmoji,
+                #[serde(default)]
+                condition: MediaCheck,
+            }
 
-impl From<MediaReactEntryDe> for MediaReactEntry {
-    fn from(value: MediaReactEntryDe) -> Self {
-        let (emoji, condition) = match value {
-            MediaReactEntryDe::Emoji(emoji) => (emoji, MediaCheck::default()),
-            MediaReactEntryDe::Full { emoji, condition } => (emoji, condition),
-        };
+            fn into_real(Full { emoji, condition }: Full) -> MediaReactEntry {
+                MediaReactEntry { emoji, condition }
+            }
 
-        Self { emoji, condition }
+            struct MediaCheckVisitor;
+            impl<'de> Visitor<'de> for MediaCheckVisitor {
+                type Value = MediaReactEntry;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("an emoji string or a map")
+                }
+
+                fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: MapAccess<'de>,
+                {
+                    Full::deserialize(MapAccessDeserializer::new(map)).map(into_real)
+                }
+
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    Full::deserialize(SeqAccessDeserializer::new(seq)).map(into_real)
+                }
+
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    HEmoji::deserialize(StrDeserializer::new(v)).map(|emoji| MediaReactEntry {
+                        emoji,
+                        condition: MediaCheck::default(),
+                    })
+                }
+            }
+
+            deserializer.deserialize_any(MediaCheckVisitor)
+        }
     }
 }

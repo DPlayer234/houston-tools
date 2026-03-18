@@ -2,9 +2,8 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+use serde::de::Unexpected;
 use serenity::model::channel::ReactionType;
-use serenity::model::id::ParseIdError;
-use serenity::small_fixed_array::FixedString;
 
 use crate::helper::discord::emoji_equivalent;
 
@@ -47,20 +46,28 @@ impl fmt::Display for HEmoji {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("cannot be parsed as `HEmoji`")]
+pub struct ParseError(());
+
 impl FromStr for HEmoji {
-    type Err = ParseIdError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        fn map_parse<T>(_: T) -> ParseError {
+            ParseError(())
+        }
+
         let emoji = if let Some((name, id)) = s.split_once(':') {
-            let id = id.parse()?;
-            let name = Some(FixedString::from_str_trunc(name));
+            let id = id.parse().map_err(map_parse)?;
+            let name = Some(name.parse().map_err(map_parse)?);
             ReactionType::Custom {
                 animated: false,
                 id,
                 name,
             }
         } else {
-            ReactionType::Unicode(FixedString::from_str_trunc(s))
+            ReactionType::Unicode(s.parse().map_err(map_parse)?)
         };
 
         Ok(Self(emoji))
@@ -78,14 +85,16 @@ impl<'de> serde::Deserialize<'de> for HEmoji {
             type Value = HEmoji;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("string for emoji")
+                f.write_str("a string containing just a unicode emoji or `name:id`")
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
             {
-                v.parse().map_err(|_| E::custom("invalid emoji id"))
+                v.parse().map_err(|_| {
+                    E::invalid_value(Unexpected::Str(v), &"a unicode emoji or `name:id`")
+                })
             }
         }
 

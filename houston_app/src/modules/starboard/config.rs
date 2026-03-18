@@ -91,26 +91,50 @@ impl StarboardEntry {
 ///
 /// Also enforces having at least one emoji.
 mod multi_emojis {
-    use serde::de::{Deserialize as _, Deserializer, Error as _};
+    use std::fmt;
+
+    use serde::de::value::{SeqAccessDeserializer, StrDeserializer};
+    use serde::de::{Deserialize as _, Deserializer, Error, SeqAccess, Visitor};
     use serenity::small_fixed_array::FixedArray;
 
     use crate::config::HEmoji;
 
-    #[derive(serde::Deserialize)]
-    #[serde(untagged)]
-    enum HEmojiList {
-        Single(HEmoji),
-        Array(FixedArray<HEmoji>),
+    struct HEmojiListVisitor;
+    impl<'de> Visitor<'de> for HEmojiListVisitor {
+        type Value = FixedArray<HEmoji>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an emoji or a sequence of emojis")
+        }
+
+        fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let array = FixedArray::deserialize(SeqAccessDeserializer::new(seq))?;
+            if !array.is_empty() {
+                Ok(array)
+            } else {
+                Err(A::Error::custom("emoji list cannot be empty"))
+            }
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            HEmoji::deserialize(StrDeserializer::new(v)).map(|e| {
+                (Box::new([e]) as Box<[_]>)
+                    .try_into()
+                    .expect("single element should fit into `FixedArray`")
+            })
+        }
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<FixedArray<HEmoji>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        match HEmojiList::deserialize(deserializer)? {
-            HEmojiList::Single(emoji) => Ok(FixedArray::from_vec_trunc(vec![emoji])),
-            HEmojiList::Array(array) if !array.is_empty() => Ok(array),
-            _ => Err(D::Error::custom("emoji list cannot be empty")),
-        }
+        deserializer.deserialize_any(HEmojiListVisitor)
     }
 }
