@@ -13,9 +13,10 @@ pub struct SelectNav(u8);
 impl SelectNav {
     /// Create a new value.
     ///
-    /// The index needs to be unique for message.
-    pub const fn new(index: u8) -> Self {
-        Self(index)
+    /// The ID needs to be unique within the same message (to generate unique
+    /// custom IDs) but has no additional meaning.
+    pub const fn new(id: u8) -> Self {
+        Self(id)
     }
 }
 
@@ -32,7 +33,7 @@ impl ButtonReply for SelectNav {
 
             (action.invoke_button)(ctx, decoder).await
         } else {
-            anyhow::bail!("invalid SelectNav target component")
+            anyhow::bail!("`SelectNav` component should be a string select menu")
         }
     }
 }

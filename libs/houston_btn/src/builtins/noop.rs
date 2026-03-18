@@ -22,6 +22,6 @@ impl Noop {
 button_value!(Noop, u16::MAX as usize);
 impl ButtonReply for Noop {
     async fn reply(self, _ctx: ButtonContext<'_>) -> crate::Result {
-        anyhow::bail!("this button is not intended to be used");
+        anyhow::bail!("`Noop` components should be disabled");
     }
 }
