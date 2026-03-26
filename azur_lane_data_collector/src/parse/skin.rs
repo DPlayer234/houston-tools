@@ -3,40 +3,52 @@ use azur_lane::skin::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
-use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
+use crate::intl_util::{FixedArrayExt as _, IntoFixed as _, IterExt as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al};
 
 pub fn load_skin(set: &SkinSet, server: GameServer) -> LuaResult<Skin> {
     macro_rules! get {
-        ($key:literal) => {
-            set.template
+        ($template:expr, $key:literal) => {
+            $template
                 .get::<String>($key)
                 .with_context(context!("skin template {} for skin {}", $key, set.skin_id))?
                 .into_fixed()
         };
     }
 
+    // data loaded below
     let mut skin = Skin {
         skin_id: set.skin_id,
-        image_key: get!("painting"),
-        name: get!("name"),
-        description: get!("desc"),
-        words: vec![load_words(set, server)?].into_fixed(),
-        words_extra: FixedArray::new(), // loaded below
+        image_key: FixedString::from_static_trunc("<missing>"),
+        name: FixedString::from_static_trunc("<missing>"),
+        description: FixedString::from_static_trunc("<missing>"),
+        words: FixedArray::new(),
+        words_extra: FixedArray::new(),
     };
 
+    if let Some(template) = &set.template {
+        skin.image_key = get!(template, "painting");
+        skin.name = get!(template, "name");
+        skin.description = get!(template, "desc");
+    }
+
+    if let Some(words) = &set.words {
+        skin.words.push(load_words(set, words, server)?);
+    }
+
     if let Some(extra) = &set.words_extra {
-        skin.words_extra = vec![load_words_extra(set, extra, &skin.words[0], server)?].into_fixed();
+        skin.words_extra
+            .push(load_words_extra(set, extra, skin.words.first(), server)?);
     }
 
     Ok(skin)
 }
 
-fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<SkinWords> {
+fn load_words(set: &SkinSet, table: &LuaTable, server: GameServer) -> LuaResult<SkinWords> {
     macro_rules! get {
         ($src:literal) => {{
-            let text: String = set.words.get($src).with_context(context!(
+            let text: String = table.get($src).with_context(context!(
                 "skin word {} for skin {}",
                 $src,
                 set.skin_id
@@ -85,8 +97,7 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<SkinWords> {
     Ok(SkinWords {
         server,
         main_screen: to_main_screen(get!("main").as_deref()).collect_fixed_array(),
-        couple_encourage: set
-            .words
+        couple_encourage: table
             .get::<Vec<LuaTable>>("couple_encourage")
             .context("skin word couple_encourage")
             .into_iter()
@@ -101,7 +112,7 @@ fn load_words(set: &SkinSet, server: GameServer) -> LuaResult<SkinWords> {
 fn load_words_extra(
     set: &SkinSet,
     table: &LuaTable,
-    base: &SkinWords,
+    base: Option<&SkinWords>,
     server: GameServer,
 ) -> LuaResult<SkinWords> {
     macro_rules! get {
@@ -126,10 +137,14 @@ fn load_words_extra(
         };
     }
 
+    let main_screen_offset = base
+        .map(|b| b.main_screen.len().to_usize())
+        .unwrap_or_default();
+
     let main_screen = to_main_screen(get!("main").as_deref())
         .chain(to_main_screen(get!("main_extra").as_deref()).map(|line| {
             let index = line.index();
-            line.with_index(index + base.main_screen.len().to_usize())
+            line.with_index(index + main_screen_offset)
         }))
         .collect_fixed_array();
 

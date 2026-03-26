@@ -62,9 +62,9 @@ pub struct SkinSet {
     /// The skin ID.
     pub skin_id: u32,
     /// The `ship_skin_template` entry.
-    pub template: LuaTable,
+    pub template: Option<LuaTable>,
     /// The `ship_skin_words` entry.
-    pub words: LuaTable,
+    pub words: Option<LuaTable>,
     /// The `ship_skin_words_extra` entry.
     pub words_extra: Option<LuaTable>,
 }
