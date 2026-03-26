@@ -3,6 +3,7 @@ use utils::text::{DisplayExt as _, WriteStr as _};
 use utils::titlecase;
 
 use crate::fmt::discord::{TimeMentionable as _, escape_markdown, get_unique_username};
+use crate::helper::BranchOnce;
 use crate::helper::discord::guild_avatar_url;
 use crate::slashies::prelude::*;
 
@@ -264,19 +265,18 @@ fn write_permissions(f: &mut String, permissions: Permissions) {
 }
 
 fn write_flags<T: Flags + Copy>(f: &mut String, flags: T, names: &[(T, &str)]) {
-    let mut first = true;
+    let mut first = BranchOnce::new();
     for (flag, label) in names {
         if flags.contains(*flag) {
-            if !first {
+            if !first.enter() {
                 f.push_str(", ");
             }
 
             f.push_str(label);
-            first = false;
         }
     }
 
-    if first {
+    if first.enter() {
         f.push_str("<None?>");
     }
 }

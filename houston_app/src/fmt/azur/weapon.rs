@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter, Result};
 
 use azur_lane::equip::*;
 
+use crate::helper::BranchOnce;
+
 /// Implements [`Display`] to nicely format a weapon.
 #[must_use]
 pub struct Details<'a> {
@@ -152,7 +154,7 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Re
     write!(
         f,
         "{indent}**Dmg:** {:.1} @ {:.0}% {}\n\
-         {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}\n",
+         {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}",
         barrage.damage * barrage.coefficient,
         barrage.scaling * 100f64,
         barrage.scaling_stat.name(),
@@ -172,7 +174,12 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
         aircraft.dodge_limit,
     )?;
 
+    let mut first = BranchOnce::new();
     for weapon in &aircraft.weapons {
+        if !first.enter() {
+            writeln!(f)?;
+        }
+
         writeln!(
             f,
             "__**{}:**__",
@@ -189,7 +196,8 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
                 format_anti_air(barrage, f, PAD)?;
             },
             WeaponData::Aircraft(..) => {
-                f.write_str("<matryoshka aircraft>\n")?;
+                f.write_str(PAD)?;
+                f.write_str("<matryoshka aircraft>")?;
             },
         }
     }

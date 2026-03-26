@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::hash::Hash;
+use std::mem;
 
 pub mod bson;
 pub mod discord;
@@ -41,4 +42,25 @@ pub fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
     }
 
     false
+}
+
+/// Allows easily making sure to only enter a branch once.
+#[derive(Debug, Default)]
+pub struct BranchOnce {
+    entered: bool,
+}
+
+impl BranchOnce {
+    /// Creates a new un-entered [`BranchOnce`].
+    pub const fn new() -> Self {
+        Self { entered: false }
+    }
+
+    /// Tries to enter the branch.
+    ///
+    /// Returns `true` if this is the first time this method has been called on
+    /// this instance, otherwise `false`.
+    pub const fn enter(&mut self) -> bool {
+        !mem::replace(&mut self.entered, true)
+    }
 }

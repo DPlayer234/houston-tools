@@ -35,8 +35,8 @@ const fn default_embed_color() -> Color {
 pub struct HBotConfig {
     #[serde(default = "default_embed_color")]
     pub embed_color: Color,
-    pub azur: Option<crate::modules::azur::Config>,
     pub mongodb_uri: Option<FixedString>,
+    pub azur: Option<crate::modules::azur::Config>,
     #[serde(default)]
     pub media_react: crate::modules::media_react::Config,
     pub perks: Option<crate::modules::perks::Config>,
