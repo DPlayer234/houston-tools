@@ -125,8 +125,8 @@ fn find_sub_command_attr(vec: &mut Vec<Attribute>) -> Option<Attribute> {
     find_and_take(vec, |a| a.meta.path().is_ident("sub_command"))
 }
 
-fn find_and_take<T>(vec: &mut Vec<T>, mut f: impl FnMut(&T) -> bool) -> Option<T> {
-    let index = vec.iter().enumerate().find(move |(_, item)| f(item))?.0;
+fn find_and_take<T>(vec: &mut Vec<T>, f: impl FnMut(&T) -> bool) -> Option<T> {
+    let index = vec.iter().position(f)?;
     Some(vec.remove(index))
 }
 

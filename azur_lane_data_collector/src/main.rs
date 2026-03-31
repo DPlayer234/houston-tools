@@ -682,9 +682,7 @@ fn fix_up_retrofitted_data(ship: &mut Retrofit, set: &ShipSet<'_>) -> LuaResult<
     ship.base.skills.sort_by_key(|s| {
         buff_list_display
             .iter()
-            .enumerate()
-            .find(|i| *i.1 == s.buff_id)
-            .map(|i| i.0)
+            .position(|i| *i == s.buff_id)
             .unwrap_or_default()
     });
 

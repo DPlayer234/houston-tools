@@ -87,13 +87,12 @@ impl GuildState {
         self.messages.iter_mut().find(move |m| m.id == message_id)
     }
 
-    pub fn take_last<F>(&mut self, mut f: F) -> Option<SnipedMessage>
+    pub fn take_last<F>(&mut self, f: F) -> Option<SnipedMessage>
     where
         F: FnMut(&SnipedMessage) -> bool,
     {
         // find the last index of a message matching the predicate
-        let mut iter = self.messages.iter().enumerate();
-        let (index, _) = iter.rfind(move |(_, m)| f(m))?;
+        let index = self.messages.iter().rposition(f)?;
         self.messages.remove(index)
     }
 }
