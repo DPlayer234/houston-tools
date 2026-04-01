@@ -1,3 +1,5 @@
+//! Note: This module is imported via `#[path]` in a benchmark. Don't `use`
+//! other files from here!
 use std::str::Chars;
 
 /// Provides just the indices of [`char`]s in a string.
@@ -16,7 +18,7 @@ use std::str::Chars;
 #[derive(Debug)]
 pub struct Indices<'a> {
     iter: Chars<'a>,
-    offset: usize,
+    total_len: usize,
 }
 
 impl<'a> Indices<'a> {
@@ -24,8 +26,12 @@ impl<'a> Indices<'a> {
     pub fn new(str: &'a str) -> Self {
         Self {
             iter: str.chars(),
-            offset: 0,
+            total_len: str.len(),
         }
+    }
+
+    fn offset(&self) -> usize {
+        self.total_len - self.iter.as_str().len()
     }
 }
 
@@ -34,20 +40,14 @@ impl Iterator for Indices<'_> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let pre_len = self.iter.as_str().len();
         let c = self.iter.next()?;
-
-        self.offset += pre_len - self.iter.as_str().len();
-        Some(self.offset - c.len_utf8())
+        Some(self.offset() - c.len_utf8())
     }
 
     #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let pre_len = self.iter.as_str().len();
         let c = self.iter.nth(n)?;
-
-        self.offset += pre_len - self.iter.as_str().len();
-        Some(self.offset - c.len_utf8())
+        Some(self.offset() - c.len_utf8())
     }
 
     #[inline]
@@ -114,12 +114,12 @@ mod tests {
     #[test]
     fn count() {
         let s = "héllo😊";
-        assert_eq!(Indices::new(s).count(), s.chars().count());
+        assert_eq!(Indices::new(s).count(), s.char_indices().count());
     }
 
     #[test]
     fn size_hint() {
         let s = "héllo😊";
-        assert_eq!(Indices::new(s).size_hint(), s.chars().size_hint());
+        assert_eq!(Indices::new(s).size_hint(), s.char_indices().size_hint());
     }
 }

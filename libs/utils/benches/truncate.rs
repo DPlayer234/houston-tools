@@ -25,10 +25,10 @@ fn bench_char_indices(c: &mut Criterion) {
         move |b| b.iter(|| find_truncate_at(black_box(TEXT), black_box(len)))
     }
 
-    c.bench_function("char_indices_trunc_short", bench(5));
-    c.bench_function("char_indices_trunc_mid", bench(300));
-    c.bench_function("char_indices_trunc_long", bench(2000));
-    c.bench_function("char_indices_no_trunc", bench(2430));
+    c.bench_function("trunc_char_indices_short", bench(5));
+    c.bench_function("trunc_char_indices_mid", bench(300));
+    c.bench_function("trunc_char_indices_long", bench(2000));
+    c.bench_function("trunc_char_indices_none", bench(2430));
 }
 
 fn bench_indices(c: &mut Criterion) {
@@ -53,10 +53,10 @@ fn bench_indices(c: &mut Criterion) {
         move |b| b.iter(|| find_truncate_at(black_box(TEXT), black_box(len)))
     }
 
-    c.bench_function("indices_trunc_short", bench(5));
-    c.bench_function("indices_trunc_mid", bench(300));
-    c.bench_function("indices_trunc_long", bench(2000));
-    c.bench_function("indices_no_trunc", bench(2430));
+    c.bench_function("trunc_indices_short", bench(5));
+    c.bench_function("trunc_indices_mid", bench(300));
+    c.bench_function("trunc_indices_long", bench(2000));
+    c.bench_function("trunc_indices_none", bench(2430));
 }
 
 criterion_group!(benches, bench_char_indices, bench_indices);
