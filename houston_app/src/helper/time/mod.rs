@@ -87,6 +87,10 @@ pub fn parse_dhms_duration(v: &str) -> Option<Duration> {
     let (h, v) = v.split_once(':')?;
     let (m, s) = v.split_once(':')?;
 
+    if m.len() != 2 || s.len() != 2 {
+        return None;
+    }
+
     let (d, h) = match h.split_once('.') {
         Some((d, h)) => (d.parse().ok()?, h),
         None => (0i64, h),
@@ -222,19 +226,88 @@ mod tests {
     }
 
     #[test]
-    fn parse_serde_time_delta_hms() {
+    fn parse_duration_hms() {
         let input = "12:34:56";
         let parsed = parse_dhms_duration(input).expect("parse should succeed");
         assert_eq!(parsed, Duration::seconds(((12 * 60 + 34) * 60) + 56));
     }
 
     #[test]
-    fn parse_serde_time_delta_dhms() {
+    fn parse_duration_nhms() {
+        let input = "-12:34:56";
+        let parsed = parse_dhms_duration(input).expect("parse should succeed");
+        assert_eq!(parsed, -Duration::seconds(((12 * 60 + 34) * 60) + 56));
+    }
+
+    #[test]
+    fn parse_duration_dhms() {
         let input = "8.12:34:56";
         let parsed = parse_dhms_duration(input).expect("parse should succeed");
         assert_eq!(
             parsed,
             Duration::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)
+        );
+    }
+
+    #[test]
+    fn parse_duration_ndhms() {
+        let input = "-8.12:34:56";
+        let parsed = parse_dhms_duration(input).expect("parse should succeed");
+        assert_eq!(
+            parsed,
+            -Duration::seconds((((8 * 24 + 12) * 60 + 34) * 60) + 56)
+        );
+    }
+
+    #[test]
+    fn parse_duration_fail() {
+        assert!(parse_dhms_duration("22:44").is_none(), "missing component");
+        assert!(
+            parse_dhms_duration("22:00:60").is_none(),
+            "second out of range"
+        );
+        assert!(
+            parse_dhms_duration("22:60:00").is_none(),
+            "minute out of range"
+        );
+        assert!(
+            parse_dhms_duration("*22:00:00").is_none(),
+            "invalid character"
+        );
+        assert!(
+            parse_dhms_duration("22.00:00").is_none(),
+            "invalid character"
+        );
+        assert!(
+            parse_dhms_duration("22:00.00").is_none(),
+            "invalid character"
+        );
+        assert!(
+            parse_dhms_duration("22:00:00:00").is_none(),
+            "too many components"
+        );
+        assert!(
+            parse_dhms_duration("22:00:000").is_none(),
+            "seconds too wide"
+        );
+        assert!(
+            parse_dhms_duration("22:000:00").is_none(),
+            "minutes too wide"
+        );
+        assert!(parse_dhms_duration("22:00:0").is_none(), "seconds too thin");
+        assert!(parse_dhms_duration("22:0:00").is_none(), "minutes too thin");
+        assert!(
+            parse_dhms_duration("106751991167300.15:30:07").is_some()
+                && parse_dhms_duration("-106751991167300.15:30:07").is_some(),
+            "this should be in range"
+        );
+        assert!(
+            parse_dhms_duration("106751991167300.15:30:08").is_none(),
+            "overflow"
+        );
+        assert!(
+            parse_dhms_duration("-106751991167300.15:30:08").is_none(),
+            "underflow"
         );
     }
 }
