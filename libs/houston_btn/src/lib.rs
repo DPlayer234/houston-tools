@@ -112,8 +112,9 @@ use std::fmt;
 use anyhow::Context as _;
 use extract_map::{ExtractKey, ExtractMap};
 use serenity::futures::future::BoxFuture;
-use serenity::gateway::client::{Context, FullEvent};
+use serenity::gateway::client::Context;
 use serenity::model::application::{ComponentInteraction, Interaction, ModalInteraction};
+use serenity::model::event::FullEvent;
 
 use crate::context::ContextInner;
 pub use crate::context::{AnyContext, AnyInteraction, ButtonContext, ErrorContext, ModalContext};

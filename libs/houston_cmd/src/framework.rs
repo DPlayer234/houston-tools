@@ -2,10 +2,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serenity::builder::CreateInteractionResponse;
 use serenity::futures::future::always_ready;
-use serenity::gateway::client::{Context as SerenityContext, FullEvent};
+use serenity::gateway::client::Context as SerenityContext;
 use serenity::model::application::{
     CommandInteraction, CommandType, Interaction, ResolvedTarget, ResolvedValue,
 };
+use serenity::model::event::FullEvent;
 
 use crate::BoxFuture;
 use crate::args::{CommandOptionResolver, ResolvedOption};

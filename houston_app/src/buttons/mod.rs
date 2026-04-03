@@ -25,7 +25,7 @@ pub mod prelude {
     pub use crate::prelude::*;
 }
 
-crate::modules::impl_handler!(EventHandler, |t, ctx| match _ {
+impl_push_handler!(EventHandler, |t, ctx| match _ {
     FullEvent::InteractionCreate {
         interaction: Interaction::Component(interaction),
         ..

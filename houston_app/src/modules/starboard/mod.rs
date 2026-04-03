@@ -93,7 +93,7 @@ impl super::Module for Module {
     }
 }
 
-super::impl_handler!(Module, |_, ctx| match _ {
+impl_push_handler!(Module, |_, ctx| match _ {
     FullEvent::ReactionAdd { add_reaction, .. } => reaction_add(ctx, add_reaction),
     FullEvent::MessageDelete {
         channel_id,

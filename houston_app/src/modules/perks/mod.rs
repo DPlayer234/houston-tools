@@ -127,7 +127,7 @@ impl super::Module for Module {
     }
 }
 
-super::impl_handler!(Module, |_, ctx| match _ {
+impl_push_handler!(Module, |_, ctx| match _ {
     FullEvent::InteractionCreate { .. }
     | FullEvent::Message { .. }
     | FullEvent::ReactionAdd { .. } => check_perks(ctx),

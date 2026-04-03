@@ -126,36 +126,3 @@ pub trait Module: Sized {
         None
     }
 }
-
-/// Implements [`EventHandler`] in such a way that unmatched variants do not
-/// allocate a boxed future.
-macro_rules! impl_handler {
-    // the weird `match _ {}` part is intended so that the syntax is something
-    // that rustfmt can format. in a sense, it's just a nicety.
-    ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
-        impl $crate::helper::discord::events::PushEventHandler for $Type {
-            fn push_dispatch<'s, 'c, 'e, 'a>(
-                &'s self,
-                $ctx: &'c ::serenity::gateway::client::Context,
-                event: &'e ::serenity::gateway::client::FullEvent,
-                fut: &mut $crate::helper::futures::BoxedJoinFut<'a>,
-            )
-            where
-                's: 'a,
-                'c: 'a,
-                'e: 'a,
-            {
-                #[allow(clippy::let_underscore_untyped)]
-                let $this = self;
-                match event {
-                    $( $pat => fut.push($block), )*
-                    // users are allowed to exhaustively match
-                    #[allow(unreachable_patterns)]
-                    _ => {},
-                }
-            }
-        }
-    };
-}
-
-pub(crate) use impl_handler;

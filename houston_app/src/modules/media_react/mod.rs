@@ -49,7 +49,7 @@ impl super::Module for Module {
     }
 }
 
-super::impl_handler!(Module, |_, ctx| match _ {
+impl_push_handler!(Module, |_, ctx| match _ {
     FullEvent::Message { new_message, .. } => message(ctx, new_message),
 });
 

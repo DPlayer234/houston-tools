@@ -38,7 +38,7 @@ impl super::Module for Module {
     }
 }
 
-super::impl_handler!(Module, |_, ctx| match _ {
+impl_push_handler!(Module, |_, ctx| match _ {
     FullEvent::Ready { data_about_bot, .. } => ready(ctx, data_about_bot),
 });
 
