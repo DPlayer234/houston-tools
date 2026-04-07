@@ -12,7 +12,10 @@
         "Quiet",
         "Peppy",
         "Mild",
-        "Rebellious"
+        "Rebellious",
+        "Unknown",
+        "Shy",
+        "Outgoing"
     ],
     "hide_buff_main_gun_retriggers": {
         "1": 1,
