@@ -2,8 +2,9 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt;
-use std::sync::LazyLock;
+use std::path::Path;
+use std::sync::OnceLock;
+use std::{fmt, fs};
 
 use azur_lane::skill::*;
 use mlua::prelude::*;
@@ -23,10 +24,29 @@ pub struct Config {
     pub predefined_skills: HashMap<u32, Skill>,
 }
 
-/// The app config. Statically embed as JSON.
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("../assets/config.json")).expect("config must be valid")
-});
+/// Where the loaded app config is stored.
+static CONFIG: OnceLock<Config> = OnceLock::new();
+
+/// The app config. Statically embed as JSON, or loaded from a specified file.
+pub fn config() -> &'static Config {
+    #[cold]
+    fn lazy_config() -> Config {
+        serde_json::from_str(include_str!("../assets/config.json"))
+            .expect("embedded config should be valid")
+    }
+
+    CONFIG.get_or_init(lazy_config)
+}
+
+pub fn init_config_from(path: &Path) -> anyhow::Result<()> {
+    // load to string instead of incrementally because
+    // - this isn't perf sensitive
+    // - this means we don't need different reader types for this and the default
+    let content = fs::read_to_string(path)?;
+    let config = serde_json::from_str(&content)?;
+    CONFIG.set(config).expect("config must not be loaded yet");
+    Ok(())
+}
 
 /// A group of ships.
 #[derive(Debug)]
@@ -141,10 +161,8 @@ impl fmt::Display for DataError {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
-
     #[test]
     fn static_config() {
-        LazyLock::force(&super::CONFIG);
+        super::config();
     }
 }

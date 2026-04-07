@@ -5,7 +5,7 @@ use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
-mod ensure;
+pub mod ensure;
 
 /// Compiles Windows resources files and instructs Cargo to link them.
 ///

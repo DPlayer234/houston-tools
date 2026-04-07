@@ -85,6 +85,6 @@ where
     where
         S: serde::Serializer,
     {
-        serializer.collect_seq(source.iter().map(|item| SerializeAsWrap::<T, U>::new(item)))
+        serializer.collect_seq(source.iter().map(SerializeAsWrap::<T, U>::new))
     }
 }

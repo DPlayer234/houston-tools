@@ -33,6 +33,8 @@ impl<'a> CreateReply<'a> {
 
     /// Adds a new embed to the message.
     pub fn embed(mut self, embed: CreateEmbed<'a>) -> Self {
+        // almost always used with just one embed
+        self.embeds.reserve_exact(1);
         self.embeds.push(embed);
         self
     }

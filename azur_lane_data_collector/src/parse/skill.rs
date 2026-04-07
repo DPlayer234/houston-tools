@@ -7,7 +7,7 @@ use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString};
 
 use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
-use crate::{CONFIG, context, convert_al};
+use crate::{context, convert_al};
 
 /// Loads a skill from the Lua state.
 pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
@@ -38,7 +38,8 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         }
     }
 
-    if let Some(skill) = CONFIG.predefined_skills.get(&skill_id) {
+    let config = crate::model::config();
+    if let Some(skill) = config.predefined_skills.get(&skill_id) {
         let mut skill = skill.clone();
         skill.name = name.into_fixed();
         skill.description = desc.into_fixed();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Write as _;
 use std::mem::take;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use std::{fs, io};
 
 use azur_lane::equip::*;
@@ -60,6 +60,13 @@ struct Cli {
     /// to override the default.
     #[arg(long)]
     color: Option<bool>,
+
+    /// Override the embedded program configuration.
+    ///
+    /// If this isn't specified, the embedded JSON configuration is loaded
+    /// instead. Usually, this isn't needed.
+    #[arg(long)]
+    config: Option<PathBuf>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -70,6 +77,10 @@ fn main() -> anyhow::Result<()> {
         Some(git_hash) => log::info!("Azur Lane Data Collector [Commit: {git_hash}]"),
         None => log::info!("Azur Lane Data Collector [Unknown Commit]"),
     };
+
+    if let Some(path) = &cli.config {
+        model::init_config_from(path)?;
+    }
 
     let out_data = {
         anyhow::ensure!(
@@ -363,7 +374,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
         .bounded_total(total)
         .start();
 
-    let config = &*CONFIG;
+    let config = model::config();
     let make_ship_from_group = |group: ShipGroup| {
         let members: Vec<_> = group.members.into_iter().map(make_ship_set).try_collect()?;
 

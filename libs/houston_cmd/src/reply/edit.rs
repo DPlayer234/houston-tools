@@ -49,7 +49,10 @@ impl<'a> EditReply<'a> {
 
     /// Adds a new embed to the message.
     pub fn embed(mut self, embed: CreateEmbed<'a>) -> Self {
-        self.embeds.get_or_insert_default().push(embed);
+        let embeds = self.embeds.get_or_insert_default();
+        // almost always used with just one embed
+        embeds.reserve_exact(1);
+        embeds.push(embed);
         self
     }
 

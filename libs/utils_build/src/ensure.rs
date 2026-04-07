@@ -1,11 +1,13 @@
 //! Helper macro to check preconditions, printing compiler warnings on failure.
+pub use crate::{none_or, ok_or, or, some_or};
 
 /// Ensures that the condition is `true`, otherwise prints the
 /// specified warning and returns `()` from the current function.
+#[macro_export]
 macro_rules! or {
     ($cond:expr, $($t:tt)*) => {
-        if !$cond {
-            return println!("cargo::warning={}", format_args!($($t)*));
+        if let false = $cond {
+            return ::std::println!("cargo::warning={}", format_args!($($t)*));
         }
     };
 }
@@ -14,11 +16,12 @@ macro_rules! or {
 ///
 /// Otherwise, prints the specified warning and returns `()` from the current
 /// function.
+#[macro_export]
 macro_rules! ok_or {
     ($value:expr, $why:pat => $($t:tt)*) => {
         match $value {
-            Ok(v) => v,
-            Err($why) => return println!("cargo::warning={}", format_args!($($t)*)),
+            ::std::result::Result::Ok(v) => v,
+            ::std::result::Result::Err($why) => return ::std::println!("cargo::warning={}", format_args!($($t)*)),
         }
     };
 }
@@ -27,27 +30,23 @@ macro_rules! ok_or {
 ///
 /// Otherwise, prints the specified warning and returns `()` from the current
 /// function.
+#[macro_export]
 macro_rules! some_or {
     ($value:expr, $($t:tt)*) => {
         match $value {
-            Some(v) => v,
-            None => return println!("cargo::warning={}", format_args!($($t)*)),
+            ::std::option::Option::Some(v) => v,
+            ::std::option::Option::None => return ::std::println!("cargo::warning={}", format_args!($($t)*)),
         }
     };
 }
 
 /// Ensures that the value is [`None`], otherwise, prints the specified warning
 /// and returns `()` from the current function.
+#[macro_export]
 macro_rules! none_or {
     ($value:expr, $why:pat => $($t:tt)*) => {
-        match $value {
-            Some($why) => return println!("cargo::warning={}", format_args!($($t)*)),
-            None => (),
+        if let ::std::option::Option::Some($why) = $value {
+            return ::std::println!("cargo::warning={}", format_args!($($t)*));
         }
     };
 }
-
-pub(crate) use none_or;
-pub(crate) use ok_or;
-pub(crate) use or;
-pub(crate) use some_or;

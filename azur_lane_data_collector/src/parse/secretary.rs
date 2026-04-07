@@ -4,8 +4,8 @@ use mlua::prelude::*;
 use small_fixed_array::FixedString;
 
 use super::skin::to_main_screen;
+use crate::context;
 use crate::intl_util::{IntoFixed as _, IterExt as _};
-use crate::{CONFIG, context};
 
 pub fn load_special_secretary(
     lua: &Lua,
@@ -31,7 +31,7 @@ pub fn load_special_secretary(
         // otherwise, take them from the configuration list. i didn't figure out how the
         // game gets them -- if it does at all. there isn't really a need for the game
         // to have some way to map the type to a string name after all
-        CONFIG
+        crate::model::config()
             .special_secretary_kinds
             .get(data.get::<usize>("type")?)
             .cloned()

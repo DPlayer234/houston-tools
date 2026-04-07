@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
 
     // short async fn to reduce `tokio::main` scope
     #[tokio::main]
-    async fn inner() -> anyhow::Result<()> {
+    async fn inner() -> Result {
         // run the program and clean up
         let res = run().await;
         if let Err(why) = &res {

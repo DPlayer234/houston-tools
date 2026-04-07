@@ -16,6 +16,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
         };
     }
 
+    let config = crate::model::config();
     let attrs: LuaTable = read!(set.statistics, "attrs");
     let attrs_growth: LuaTable = read!(set.statistics, "attrs_growth");
 
@@ -44,7 +45,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
 
     let retriggers = hide_buff_list
         .iter()
-        .filter_map(|id| CONFIG.hide_buff_main_gun_retriggers.get(id))
+        .filter_map(|id| config.hide_buff_main_gun_retriggers.get(id))
         .copied()
         .max()
         .unwrap_or_default();
@@ -149,7 +150,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
     }
 
     for buff_id in &hide_buff_list {
-        if let Some(bonuses) = CONFIG.hide_buff_fixed_stats.get(buff_id) {
+        if let Some(bonuses) = config.hide_buff_fixed_stats.get(buff_id) {
             for (stat, amount) in bonuses {
                 crate::enhance::add_to_stats_fixed(&mut ship.stats, stat, *amount)?;
             }
