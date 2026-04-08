@@ -7,7 +7,7 @@ use crate::context;
 pub fn add_repair(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
     let effect: LuaTable = table.get("effect_attr")?;
 
-    let attr: String = effect.get(1).with_context(context!(
+    let attr: LuaBorrowedStr<'_> = effect.get(1).with_context(context!(
         "repair's effect_attr name for meta ship id {}",
         ship.group_id
     ))?;
@@ -24,7 +24,7 @@ pub fn add_repair(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
 pub fn add_repair_effect(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
     let effect_attr: Vec<LuaTable> = table.get("effect_attr")?;
     for effect in effect_attr {
-        let attr: String = effect.get(1).with_context(context!(
+        let attr: LuaBorrowedStr<'_> = effect.get(1).with_context(context!(
             "repair_effect's effect_attr name for meta ship id {}",
             ship.group_id
         ))?;

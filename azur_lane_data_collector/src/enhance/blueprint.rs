@@ -44,7 +44,7 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut BaseShip, table: &LuaTable) ->
 /// `effect_attr` adds a flat amount of base stats.
 fn add_effect_attr(ship: &mut BaseShip, effect_attr: LuaTable) -> LuaResult<()> {
     effect_attr.for_each(|_: u32, v: LuaTable| {
-        let attr: String = v.get(1).with_context(context!(
+        let attr: LuaBorrowedStr<'_> = v.get(1).with_context(context!(
             "effect_attr name for blueprint ship id {}",
             ship.group_id
         ))?;

@@ -85,7 +85,7 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
 
     // CMBK: validate only 1 value. currently this simply assumes length 0 or 1 and
     // just take the first item if non-empty
-    let specific_type: Vec<String> = read!(set.template, "specific_type");
+    let specific_type: Vec<LuaBorrowedStr<'_>> = read!(set.template, "specific_type");
 
     let mut ship = BaseShip {
         id: set.id,

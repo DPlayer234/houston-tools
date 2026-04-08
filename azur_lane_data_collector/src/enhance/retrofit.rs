@@ -1,5 +1,3 @@
-use std::borrow::Borrow as _;
-
 use azur_lane::ship::*;
 use mlua::prelude::*;
 
@@ -26,10 +24,10 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut Retrofit, retrofit: &RetrofitSet<'_>
         // where the nested map keys are the effect type and its value the amount.
         let effects: Vec<LuaTable> = transform.get("effect")?;
         for effect in effects {
-            effect.for_each(|k: String, v: f64| {
+            effect.for_each(|k: LuaBorrowedStr<'_>, v: f64| {
                 // Stats added by retrofits are NOT affected by affinity.
                 if super::add_to_stats_fixed(&mut ship.base.stats, &k, v).is_err() {
-                    match k.borrow() {
+                    match &*k {
                         "skill_id" =>
                         {
                             #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]

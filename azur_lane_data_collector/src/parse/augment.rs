@@ -21,7 +21,7 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
     /// Reads a [`azur_lane::ship::StatKind`] from the statistics.
     macro_rules! read_stat {
         ($field:expr) => {{
-            let temp: String = read!($field);
+            let temp: LuaBorrowedStr<'_> = read!($field);
             convert_al::to_stat_kind(&temp)
         }};
     }

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 use azur_lane::equip::*;
@@ -22,21 +23,16 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     let name: String = skill
         .get("name")
         .with_context(context!("name of skill with id {}", skill_id))?;
-    let mut desc: String = skill
+
+    let desc = skill
         .get("desc")
         .with_context(context!("desc of skill with id {}", skill_id))?;
-    let desc_add: Vec<Vec<Vec<String>>> = skill
+    let desc_add = skill
         .get("desc_add")
         .with_context(context!("desc_add of skill with id {}", skill_id))?;
 
-    for (slot, data_set) in desc_add.iter().enumerate() {
-        if let Some(last) = data_set.last()
-            && let Some(text) = last.first()
-        {
-            let placeholder = format!("${}", slot + 1);
-            desc = desc.replace(&placeholder, text);
-        }
-    }
+    let desc = resolve_skill_desc(desc, desc_add)
+        .with_context(context!("resolving desc of skill with id {}", skill_id))?;
 
     let config = crate::model::config();
     if let Some(skill) = config.predefined_skills.get(&skill_id) {
@@ -80,6 +76,29 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
         .into_iter()
         .map(|id| load_skill(lua, id))
         .collect()
+}
+
+fn resolve_skill_desc(desc: LuaBorrowedStr<'_>, desc_add: LuaTable) -> LuaResult<String> {
+    // `add` has nested structure where `add[slot][level]` is to a table where the
+    // first element is the replacement text
+
+    let placeholders = const { &["$1", "$2", "$3", "$4", "$5", "$6", "$7", "$8", "$9"] };
+
+    let mut desc = Cow::Borrowed(&*desc);
+    for (slot, data_set) in desc_add.sequence_values().enumerate() {
+        let data_set: LuaTable = data_set?;
+        if let Ok(last) = data_set.get::<LuaTable>(data_set.raw_len())
+            && let Ok(text) = last.get::<LuaBorrowedStr<'_>>(1)
+        {
+            let placeholder = placeholders
+                .get(slot)
+                .map(|s| Cow::Borrowed(*s))
+                .unwrap_or_else(|| format!("${}", slot + 1).into());
+            desc = desc.replace(&*placeholder, &text).into();
+        }
+    }
+
+    Ok(desc.into_owned())
 }
 
 struct SkillId(u32);
@@ -139,7 +158,7 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     macro_rules! stat_bonus {
         ($index:literal) => {{
             match statistics
-                .get::<Option<String>>(concat!("attribute_", $index))
+                .get::<Option<LuaBorrowedStr<'_>>>(concat!("attribute_", $index))
                 .with_context(context!(
                     "attribute_{} for equip with id {equip_id}",
                     $index
@@ -620,11 +639,11 @@ fn search_referenced_weapons_in_effect_entry(
     let mut attacks = Vec::new();
 
     for entry in effect_list {
-        let entry_type: String = entry
+        let entry_type: LuaBorrowedStr<'_> = entry
             .get("type")
             .with_context(context!("skill/buff effect_list entry type: {:#?}", entry))?;
 
-        match entry_type.as_str() {
+        match &*entry_type {
             "BattleBuffCastSkill" => {
                 let skill_id: u32 = get_arg(&entry, "skill_id")?;
                 if rwc.seen_skills.insert(skill_id) {
@@ -676,14 +695,16 @@ fn search_referenced_weapons_in_effect_entry(
             "BattleSkillFire" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
                 let target: LuaValue = entry.get("target_choise" /* sic */)?;
-                let target = match target {
-                    LuaValue::String(s) => s.to_str()?.to_owned(),
-                    LuaValue::Table(t) => t.get(1)?,
-                    _ => String::new(),
+                let target = match &target {
+                    LuaValue::String(s) => s.to_str().ok(),
+                    LuaValue::Table(t) => t.get(1).ok(),
+                    _ => None,
                 };
 
-                let target = convert_al::to_skill_target(&target);
-                if let Some(weapon) = load_weapon(sc.lua, weapon_id)? {
+                if let Some(target) = target
+                    && let Some(weapon) = load_weapon(sc.lua, weapon_id)?
+                {
+                    let target = convert_al::to_skill_target(&target);
                     attacks.push(SkillAttack { target, weapon });
                 }
             },
