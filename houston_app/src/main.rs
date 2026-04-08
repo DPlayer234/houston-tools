@@ -80,7 +80,7 @@ fn main() -> anyhow::Result<()> {
                 .raw_event_handler(Arc::new(CacheUpdateHandler))
                 .framework(Box::new(framework))
                 .event_handler(Arc::new(event_handler))
-                .data(Arc::clone(&bot_data))
+                .data(bot_data)
                 .await
                 .context("failed to init discord client")?;
 

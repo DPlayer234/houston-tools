@@ -125,12 +125,12 @@ impl Filtering<Ship> for (Filter<'_>, &GameData) {
 
         fn has_hull_type(ship: &Ship, hull_type: HullType) -> bool {
             let is_hull_type = move |r: &BaseShip| r.hull_type == hull_type;
-            is_hull_type(&ship.base) || ship.retrofits.iter().any(|r| is_hull_type(&r.base))
+            is_hull_type(&ship.base) || ship.retrofits.iter().any(move |r| is_hull_type(&r.base))
         }
 
         fn has_team_type(ship: &Ship, team_type: TeamType) -> bool {
             let is_team = move |r: &BaseShip| r.hull_type.team_type() == team_type;
-            is_team(&ship.base) || ship.retrofits.iter().any(|r| is_team(&r.base))
+            is_team(&ship.base) || ship.retrofits.iter().any(move |r| is_team(&r.base))
         }
 
         faction.is_none_or(|f| item.base.faction == f)
