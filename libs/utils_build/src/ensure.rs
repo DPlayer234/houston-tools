@@ -1,5 +1,5 @@
 //! Helper macro to check preconditions, printing compiler warnings on failure.
-pub use crate::{none_or, ok_or, or, some_or};
+pub use crate::{none_or, ok_or, or, print_err, some_or};
 
 /// Ensures that the condition is `true`, otherwise prints the
 /// specified warning and returns `()` from the current function.
@@ -50,3 +50,22 @@ macro_rules! none_or {
         }
     };
 }
+
+/// To be used by [`Result::map_err`].
+///
+/// Prints the provided message as a warning, then returns [`PrintErr`].
+///
+/// While the other functions in the [`ensure`](self) module are intended to be
+/// transparent to the caller, this can be used when you explicitly want to
+/// handle the failure case.
+#[macro_export]
+macro_rules! print_err {
+    ($($t:tt)*) => {{
+        ::std::println!("cargo::warning={}", format_args!($($t)*));
+        $crate::ensure::PrintErr
+    }};
+}
+
+/// Unit error type created by [`print_err`].
+#[derive(Debug, Clone, Copy)]
+pub struct PrintErr;

@@ -29,9 +29,16 @@ version = "4.6.0"
 features = ["std", "help", "usage", "error-context", "suggestions", "derive"]
 default-features = false
 
+[build-dependencies]
+utils_build.path = "../libs/utils_build"
+
+# important: both of these need to use the same lua version
+# the build script compiles and dumps lua_init, partly as a compile-time check,
+# partly so the binary doesn't need to compile the code itself
 [dependencies.mlua]
 version = "0.11.6"
 features = ["lua54", "vendored", "error-send", "serialize"]
 
-[build-dependencies]
-utils_build.path = "../libs/utils_build"
+[build-dependencies.mlua]
+version = "0.11.6"
+features = ["lua54", "vendored", "error-send", "serialize"]

@@ -191,16 +191,14 @@ fn load_definition(input: &str, server: GameServer) -> anyhow::Result<Definition
 }
 
 fn init_lua(input: &str) -> anyhow::Result<Lua> {
+    const CODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/compiled-lua_init.lua"));
+
     let action = log::action!("Initializing Lua for: `{input}`").start();
 
     let lua = Lua::new();
 
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
-    lua.load(include_str!("../assets/lua_init.lua"))
-        .set_name("main")
-        .set_mode(mlua::ChunkMode::Text)
-        .exec()?;
-
+    lua.load(CODE).set_mode(mlua::ChunkMode::Binary).exec()?;
     action.finish();
     Ok(lua)
 }
