@@ -390,7 +390,9 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
 
         let raw_retrofits = members.iter().filter(|t| t.id > raw_mlb.id);
 
-        let make_skin = |skin_id| -> LuaResult<SkinSet> {
+        let make_skin = |skin_id: LuaResult<u32>| -> LuaResult<SkinSet> {
+            let skin_id =
+                skin_id.with_context(context!("skin ids for ship with id {}", group.id))?;
             Ok(SkinSet {
                 skin_id,
                 template: ship_skin_template.get(skin_id).with_context(context!(
@@ -412,9 +414,9 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
         };
 
         let raw_skins: Vec<_> = ship_skin_template_get_id_list_by_ship_group
-            .get::<Vec<u32>>(group.id)
+            .get::<LuaTable>(group.id)
             .with_context(context!("skin ids for ship with id {}", group.id))?
-            .into_iter()
+            .sequence_values()
             .map(make_skin)
             .try_collect()?;
 

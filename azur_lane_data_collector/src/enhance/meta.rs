@@ -22,8 +22,9 @@ pub fn add_repair(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
 ///
 /// This refers to the x% complete milestones.
 pub fn add_repair_effect(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
-    let effect_attr: Vec<LuaTable> = table.get("effect_attr")?;
-    for effect in effect_attr {
+    let effect_attr: LuaTable = table.get("effect_attr")?;
+    for effect in effect_attr.sequence_values() {
+        let effect: LuaTable = effect?;
         let attr: LuaBorrowedStr<'_> = effect.get(1).with_context(context!(
             "repair_effect's effect_attr name for meta ship id {}",
             ship.group_id

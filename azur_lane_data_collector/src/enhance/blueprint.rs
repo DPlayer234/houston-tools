@@ -27,11 +27,11 @@ pub fn add_blueprint_effect(lua: &Lua, ship: &mut BaseShip, table: &LuaTable) ->
     }
 
     if let LuaValue::Table(effect_base) = table.get("effect_base")? {
-        replace_equip_slot_part(lua, ship, effect_base, |s| &mut s.mounts)?;
+        replace_equip_slot_part(ship, effect_base, |s| &mut s.mounts)?;
     }
 
     if let LuaValue::Table(effect_preload) = table.get("effect_preload")? {
-        replace_equip_slot_part(lua, ship, effect_preload, |s| &mut s.preload)?;
+        replace_equip_slot_part(ship, effect_preload, |s| &mut s.preload)?;
     }
 
     if let LuaValue::Table(equip_efficiency) = table.get("effect_equipment_proficiency")? {
@@ -71,14 +71,12 @@ fn replace_skill(lua: &Lua, ship: &mut BaseShip, effect: LuaTable) -> LuaResult<
 /// `effect_base` and `effect_preload` *replace* components of the ship's
 /// equipment slots.
 fn replace_equip_slot_part(
-    lua: &Lua,
     ship: &mut BaseShip,
     effect: LuaTable,
     select: impl Fn(&mut EquipWeaponMount) -> &mut u8,
 ) -> LuaResult<()> {
-    let effect_base: Vec<u8> = Vec::from_lua(LuaValue::Table(effect), lua)?;
-
-    for (index, &new) in effect_base.iter().enumerate() {
+    for (index, new) in effect.sequence_values().enumerate() {
+        let new = new?;
         if let Some(slot) = ship.equip_slots.get_mut(index)
             && let Some(mount) = &mut slot.mount
         {

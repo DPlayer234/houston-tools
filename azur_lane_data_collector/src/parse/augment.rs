@@ -1,7 +1,7 @@
 use azur_lane::equip::*;
 use mlua::prelude::*;
 
-use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, TryIterExt as _};
 use crate::model::*;
 use crate::{context, convert_al, parse};
 
@@ -36,10 +36,11 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
 
     // For unique augments, there is a list of skill upgrades.
     // In practice, this is never more than one.
-    let skill_upgrades: Vec<LuaTable> = read!("skill_upgrade");
+    let skill_upgrades: LuaTable = read!("skill_upgrade");
     let skill_upgrades = skill_upgrades
-        .into_iter()
+        .sequence_values()
         .map(|skill_upgrade| {
+            let skill_upgrade: LuaTable = skill_upgrade?;
             let original_id: u32 = skill_upgrade
                 .get(1)
                 .with_context(context!("skill_upgrade original id for augment {}", set.id))?;
@@ -64,15 +65,15 @@ pub fn load_augment(lua: &Lua, set: &AugmentSet) -> LuaResult<Augment> {
         // otherwise, look up the allowed types via `pg.spweapon_type[kind].ship_type`
         // `usability` seems to only exist as a helper for the gear hull type overview
         let kind: LuaValue = read!("type");
-        let ship_types: Vec<u32> = lua
+        let ship_types: LuaTable = lua
             .globals()
             .call_function("get_augment_ship_types", kind)?;
 
         AugmentUsability::HullTypes(
             ship_types
-                .into_iter()
-                .filter_map(convert_al::to_known_hull_type)
-                .collect_fixed_array(),
+                .sequence_values()
+                .filter_map(|num| num.map(convert_al::to_known_hull_type).transpose())
+                .try_collect_fixed_array()?,
         )
     };
 
