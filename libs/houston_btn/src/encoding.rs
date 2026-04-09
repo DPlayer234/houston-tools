@@ -63,6 +63,12 @@ pub fn decode_custom_id<'de>(buf: &'de mut StackBuf, id: &str) -> Result<Decoder
 }
 
 /// Writes the inner data for a button value.
+///
+/// # Notes
+///
+/// If serialization fails for any reason, this logs the error to the
+/// [registered logger](log). It is assumed that this should _rarely_ happen and
+/// simplifies usage of related methods like [`ButtonValue::to_custom_id`].
 pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) {
     use serde_steph::{Error, Result, to_writer};
 

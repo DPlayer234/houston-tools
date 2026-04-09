@@ -36,6 +36,9 @@ pub struct SnipedAttachment {
 }
 
 fn capture_attachments(attachments: &[Attachment]) -> FixedArray<SnipedAttachment, u8> {
+    // this doesn't keep the attachment "alive", as in the associated file is going
+    // to be deleted soon after its message, but it saves the bot from having to
+    // preemptively download every file
     let attachments = attachments
         .iter()
         .map(|a| SnipedAttachment {

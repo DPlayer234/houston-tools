@@ -33,6 +33,13 @@ macro_rules! to_slice {
 
 impl<'v> Nav<'v> {
     /// Converts this instance to a component custom ID.
+    ///
+    /// # Notes
+    ///
+    /// If serialization fails for any reason, this logs the error to the
+    /// [registered logger](log). It is assumed that this should _rarely_
+    /// happen and simplifies usage of related methods like
+    /// [`ButtonValue::to_custom_id`].
     #[must_use]
     pub fn to_custom_id(&self) -> String {
         let mut buf;

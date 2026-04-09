@@ -298,6 +298,12 @@ pub trait ButtonValue: Send + Sync {
     fn to_nav(&self) -> Nav<'_>;
 
     /// Converts this instance to a component custom ID.
+    ///
+    /// # Notes
+    ///
+    /// If serialization fails for any reason, this logs the error to the
+    /// [registered logger](log). It is assumed that this should _rarely_
+    /// happen and simplifies usage.
     #[must_use]
     fn to_custom_id(&self) -> String {
         self.to_nav().to_custom_id()
