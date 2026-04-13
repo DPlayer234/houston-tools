@@ -2,6 +2,7 @@ use bson_model::Filter;
 use utils::text::WriteStr as _;
 
 use crate::fmt::StringExt as _;
+use crate::helper::discord::is_user;
 use crate::modules::Module as _;
 use crate::modules::perks::DayOfYear;
 use crate::slashies::prelude::*;
@@ -137,6 +138,13 @@ async fn perks_collectible_info(
     member: SlashMember<'_>,
 ) -> Result<Option<String>> {
     use crate::modules::perks::{Item, model};
+
+    // bots can't get collectibles normally.
+    // while this applies to other things here, those don't show up unless the db is
+    // manually modified to insert the relevant data for the bot account.
+    if !is_user(member.user) {
+        return Ok(None);
+    }
 
     let data = ctx.data_ref();
     let perks = data.config().perks()?;
