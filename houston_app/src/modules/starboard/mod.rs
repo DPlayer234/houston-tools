@@ -612,11 +612,13 @@ fn board_message_filter(
         .into_document()
 }
 
-fn ok_forward_failed<T>(result: Result<T, serenity::Error>) -> Result<Option<T>, serenity::Error> {
-    use serenity::http::{HttpError, JsonErrorCode as J};
+fn ok_forward_failed(
+    result: Result<Message, serenity::Error>,
+) -> Result<Option<Message>, serenity::Error> {
+    use serenity::http::{HttpError, JsonErrorCode};
 
     if let Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(why))) = &result {
-        // technically, the errors would further contain a
+        // technically, the "Invalid form body" (50035) errors would further contain a
         // "FORWARD_CONTAINS_UNSUPPORTED_CONTENT" but i genuinely can't imagine which
         // other "Invalid Form Body" errors we could be getting here so this is probably
         // just fine. probably. discord is gonna prove me wrong in due time.
@@ -624,8 +626,21 @@ fn ok_forward_failed<T>(result: Result<T, serenity::Error>) -> Result<Option<T>,
         // attachments are larger than would be allowed to be attached to this message.
         if matches!(
             why.error.code,
-            J::InvalidFormBody | J::RequestEntityTooLarge
+            JsonErrorCode::InvalidFormBody | JsonErrorCode::RequestEntityTooLarge
         ) {
+            return Ok(None);
+        }
+
+        // forwarding also requires that the content can be read. this should only
+        // happen here in case the bot is missing the priviledged intent. note that said
+        // intent does _not_ have to be enabled via the gateway for this to work.
+        // CMBK: in case serenity adds this to the known error codes
+        if why.error.code == JsonErrorCode::Unknown(160014) {
+            log::warn!(
+                "Forwarding failed because the message's content cannot be read. \
+                 Make sure 'Message Content Intent' is enabled in the app's bot dashboard. \
+                 This application does not have to be restarted for this to take effect."
+            );
             return Ok(None);
         }
     }
