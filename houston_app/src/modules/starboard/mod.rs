@@ -7,6 +7,7 @@ use serenity::small_fixed_array::FixedString;
 use utils::text::WriteStr as _;
 
 use super::prelude::*;
+use crate::data::cache::Cache;
 use crate::fmt::discord::MessageLinkExt as _;
 use crate::fmt::replace_holes;
 use crate::helper::discord::emoji_equivalent;
@@ -27,11 +28,12 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        // `GUILDS` for cache, `GUILD_MESSAGE_REACTIONS` to listen for added reactions,
-        // and `GUILD_MESSAGES` to remove deleted messages from boards
-        GatewayIntents::GUILDS
-            | GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+        // `MESSAGE_CONTENT` isn't _required_. it is needed to actually _forward_ the
+        // messages, but even in that case it does not have be enabled for the gateway
+        // connection. a warning is printed in case it's not enabled in the dashboard.
+        Cache::INTENTS
+            | GatewayIntents::GUILD_MESSAGES // deleting from boards
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS // votes
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {

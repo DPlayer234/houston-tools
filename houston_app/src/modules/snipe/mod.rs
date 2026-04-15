@@ -16,8 +16,8 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        // `GUILD_MESSAGES` and `MESSAGE_CONTENT` so messages can be snapshotted
-        GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT
+        GatewayIntents::GUILD_MESSAGES // to be notified of new messages
+            | GatewayIntents::MESSAGE_CONTENT // to be able to snapshot the content
     }
 
     fn commands(&self, _config: &HBotConfig) -> impl IntoIterator<Item = Command> {

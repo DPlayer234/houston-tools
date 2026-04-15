@@ -1,5 +1,6 @@
 use super::prelude::*;
 use crate::config::HBotConfig;
+use crate::data::cache::Cache;
 use crate::fmt::discord::MessageLinkExt as _;
 use crate::helper::discord::is_user_message;
 use crate::helper::is_unique_set;
@@ -17,9 +18,9 @@ impl super::Module for Module {
     }
 
     fn intents(&self, _config: &HBotConfig) -> GatewayIntents {
-        // `GUILDS` for cache, `GUILD_MESSAGES` to know what to react to, and
-        // `MESSAGE_CONTENT` to check whether to react
-        GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT
+        Cache::INTENTS
+            | GatewayIntents::GUILD_MESSAGES // to be notified of new messages
+            | GatewayIntents::MESSAGE_CONTENT // to know whether to react
     }
 
     fn validate(&self, config: &HBotConfig) -> Result {

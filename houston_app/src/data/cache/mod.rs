@@ -27,6 +27,9 @@ utils::impl_debug!(struct Cache: { .. });
 
 /// API for accessing the cache.
 impl Cache {
+    /// Required intents for the cache to function.
+    pub const INTENTS: GatewayIntents = GatewayIntents::GUILDS;
+
     /// Gets the cached current bot user.
     pub fn current_user(&self) -> Result<Arc<CurrentUser>> {
         self.current_user
