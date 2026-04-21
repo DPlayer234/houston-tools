@@ -114,29 +114,29 @@ impl encode::Write for ConsoleWriter {
             self.write_all(RESET.as_bytes())?;
 
             if let Some(text) = style.text {
-                match text {
-                    Color::Black => self.write_all(BLACK.as_bytes()),
-                    Color::Red => self.write_all(RED.as_bytes()),
-                    Color::Green => self.write_all(GREEN.as_bytes()),
-                    Color::Yellow => self.write_all(YELLOW.as_bytes()),
-                    Color::Blue => self.write_all(BLUE.as_bytes()),
-                    Color::Magenta => self.write_all(MAGENTA.as_bytes()),
-                    Color::Cyan => self.write_all(CYAN.as_bytes()),
-                    Color::White => self.write_all(WHITE.as_bytes()),
-                }?;
+                self.write_all(match text {
+                    Color::Black => BLACK.as_bytes(),
+                    Color::Red => RED.as_bytes(),
+                    Color::Green => GREEN.as_bytes(),
+                    Color::Yellow => YELLOW.as_bytes(),
+                    Color::Blue => BLUE.as_bytes(),
+                    Color::Magenta => MAGENTA.as_bytes(),
+                    Color::Cyan => CYAN.as_bytes(),
+                    Color::White => WHITE.as_bytes(),
+                })?;
             }
 
             if let Some(background) = style.background {
-                match background {
-                    Color::Black => self.write_all(BLACK_BG.as_bytes()),
-                    Color::Red => self.write_all(RED_BG.as_bytes()),
-                    Color::Green => self.write_all(GREEN_BG.as_bytes()),
-                    Color::Yellow => self.write_all(YELLOW_BG.as_bytes()),
-                    Color::Blue => self.write_all(BLUE_BG.as_bytes()),
-                    Color::Magenta => self.write_all(MAGENTA_BG.as_bytes()),
-                    Color::Cyan => self.write_all(CYAN_BG.as_bytes()),
-                    Color::White => self.write_all(WHITE_BG.as_bytes()),
-                }?;
+                self.write_all(match background {
+                    Color::Black => BLACK_BG.as_bytes(),
+                    Color::Red => RED_BG.as_bytes(),
+                    Color::Green => GREEN_BG.as_bytes(),
+                    Color::Yellow => YELLOW_BG.as_bytes(),
+                    Color::Blue => BLUE_BG.as_bytes(),
+                    Color::Magenta => MAGENTA_BG.as_bytes(),
+                    Color::Cyan => CYAN_BG.as_bytes(),
+                    Color::White => WHITE_BG.as_bytes(),
+                })?;
             }
 
             if style.intense == Some(true) {

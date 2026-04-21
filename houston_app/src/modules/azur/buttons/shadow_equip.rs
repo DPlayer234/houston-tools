@@ -1,5 +1,6 @@
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use utils::iter::IteratorExt as _;
 use utils::text::WriteStr as _;
 
 use super::ship::View as ShipView;
@@ -41,10 +42,10 @@ impl<'v> View<'v> {
 
         components.push(CreateSeparator::new().divider(true));
 
-        for mount in &ship.shadow_equip {
+        for (mount, count) in ship.shadow_equip.iter().runs_by(super::shadow_equip_eq) {
             if let Some(value) = format_weapons(&mount.weapons) {
                 let label = format!(
-                    "### **`{: >3.0}%`** {}",
+                    "### **`{: >3.0}%`**`x{count}` {}",
                     mount.efficiency * 100f64,
                     mount.name
                 );

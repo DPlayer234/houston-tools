@@ -73,9 +73,7 @@ pub struct Ship {
     /// and main fleet states being considered different ones.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub retrofits: FixedArray<Retrofit>,
-    /// The ship's skins, including their default and all retrofit skins.
-    ///
-    /// This will be empty for nested retrofits. Access the base's skins.
+    /// The ship's skins, including their default and retrofit skins.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub skins: FixedArray<Skin>,
     /// The fleet tech bonuses for this ship.

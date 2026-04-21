@@ -2,6 +2,7 @@ use std::{fmt, iter};
 
 use azur_lane::equip::*;
 use azur_lane::ship::*;
+use utils::iter::IteratorExt as _;
 use utils::text::WriteStr as _;
 
 use super::AzurParseError;
@@ -300,21 +301,22 @@ impl View<'_> {
         azur: &'a LazyData,
         ship: &BaseShip,
     ) -> CreateContainerComponent<'a> {
+        let mut text = String::new();
+        text.push_str("### Equipment");
+
         let slots = ship
             .equip_slots
             .iter()
             .filter_map(|e| e.mount.as_ref().map(|m| (&e.allowed, m)));
 
-        let mut text = String::new();
-        text.push_str("### Equipment");
+        let map_allowed_display = |&kind| equip_slot_display(azur.wiki_urls(), kind);
 
         for (allowed, mount) in slots {
             if !text.is_empty() {
                 text.push('\n');
             }
 
-            let slots =
-                Join::SLASH.display_as(allowed, |&kind| equip_slot_display(azur.wiki_urls(), kind));
+            let slots = Join::SLASH.display_as(allowed, map_allowed_display);
 
             write!(text, "**`{: >3.0}%`**", mount.efficiency * 100f64);
 
@@ -335,14 +337,14 @@ impl View<'_> {
             }
         }
 
-        for mount in &ship.shadow_equip {
+        for (mount, count) in ship.shadow_equip.iter().runs_by(super::shadow_equip_eq) {
             if !text.is_empty() {
                 text.push('\n');
             }
 
             write!(
                 text,
-                "-# **`{: >3.0}%`** {}",
+                "-# **`{: >3.0}%`**`x{count}` {}",
                 mount.efficiency * 100f64,
                 mount.name
             );

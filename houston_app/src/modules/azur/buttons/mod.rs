@@ -6,7 +6,7 @@
 //!   possible -- pass the Config through as an additional parameter if needed
 //! - Builder-style methods >> [`Option`] parameter on `new` function
 
-use azur_lane::ship::HullType;
+use azur_lane::ship::{HullType, ShadowEquip};
 
 use crate::buttons::prelude::*;
 
@@ -58,7 +58,7 @@ fn get_thumbnail_filename(url: &str) -> Option<&str> {
     Some(name.split_once('.').map_or(name, |a| a.0))
 }
 
-pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
+fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
     let e = data.app_emojis();
     match hull_type {
         HullType::Unknown => e.fallback(),
@@ -82,6 +82,21 @@ pub fn hull_emoji(hull_type: HullType, data: &HBotData) -> &ReactionType {
         HullType::FrigateV => e.hull_ixv(),
         HullType::FrigateM => e.hull_ixm(),
     }
+}
+
+/// Checks partial equality for shadow equipment to simplify the display for
+/// certain sets of shadow equip. To be used with `runs_by`.
+///
+/// This is also why this uses double references: Iterator already yields `&T`
+/// but the adaptor then expects `&Item`, leading to `&&T`.
+fn shadow_equip_eq(a: &&ShadowEquip, b: &&ShadowEquip) -> bool {
+    use azur_lane::equip::Weapon;
+
+    let map_id = |w: &Weapon| w.weapon_id;
+    let a_weapons = a.weapons.iter().map(map_id);
+    let b_weapons = b.weapons.iter().map(map_id);
+
+    a_weapons.eq(b_weapons) && a.name == b.name
 }
 
 /// Returns an iterator for the elements on this page.

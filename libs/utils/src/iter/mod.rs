@@ -2,9 +2,11 @@
 
 mod collect_chunks;
 mod const_iter;
+mod runs;
 
 pub use collect_chunks::CollectChunks;
 pub use const_iter::ConstIter;
+pub use runs::{Runs, RunsBy};
 
 /// Iterates over chunks of values, each yielded as a [`Vec`].
 pub type VecChunks<I> = CollectChunks<I, Vec<<I as Iterator>::Item>>;
@@ -40,6 +42,35 @@ pub trait IteratorExt: Iterator {
         C: FromIterator<Self::Item>,
     {
         CollectChunks::new(self, chunk_size)
+    }
+
+    /// Iterates over runs of consecutive elements that are equal based on
+    /// [`PartialEq`].
+    ///
+    /// If the iterator is sorted and `Self::Item` is [`Eq`], the resulting
+    /// iterator returns only unique elements.
+    ///
+    /// This function is equivalent to
+    /// [`self.runs_by(PartialEq::eq)`](Self::runs_by).
+    fn runs<F>(self) -> Runs<Self>
+    where
+        Self: Sized,
+        Self::Item: PartialEq,
+    {
+        Runs::new(self)
+    }
+
+    /// Iterates over runs of consecutive elements that are equal based on the
+    /// provided equality function.
+    ///
+    /// If the iterator is sorted and the equality matches the contract for
+    /// [`Eq`], the resulting iterator returns only unique elements.
+    fn runs_by<F>(self, eq_by: F) -> RunsBy<Self, F>
+    where
+        Self: Sized,
+        F: Fn(&Self::Item, &Self::Item) -> bool,
+    {
+        RunsBy::new(self, eq_by)
     }
 }
 
