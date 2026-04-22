@@ -277,17 +277,15 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
         .with_context(context!("weapon type in weapon {weapon_id}"))?;
 
     let reload_max: f64 = weapon_data.get("reload_max")?;
-    let mut fixed_delay = weapon_data.get("auto_aftercast")?;
+    //let mut fixed_delay = weapon_data.get("auto_aftercast")?;
 
     let kind = convert_al::to_weapon_kind(weapon_type);
+    let fixed_delay = fixed_weapon_delay(kind);
+
     let data = match RoughWeaponType::from(weapon_type) {
         RoughWeaponType::Bullet => WeaponData::Bullets(get_barrage(lua, weapon_id, &weapon_data)?),
         RoughWeaponType::AntiAir => {
             let mut barrage = get_barrage(lua, weapon_id, &weapon_data)?;
-
-            if !matches!(kind, WeaponKind::AirToAir) {
-                fixed_delay = 0.8667;
-            }
 
             // It appears that AA barrage data indicates AA guns fire twice.
             // But this doesn't happen because AA guns work way differently.
@@ -366,6 +364,22 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
         kind,
         data,
     }))
+}
+
+fn fixed_weapon_delay(kind: WeaponKind) -> f64 {
+    match kind {
+        WeaponKind::SubGun
+        | WeaponKind::Torpedo
+        | WeaponKind::AutoMissile
+        | WeaponKind::InterceptAircraft => 0.25,
+        WeaponKind::MainGun
+        | WeaponKind::Bracketing
+        | WeaponKind::ManualTorpedo
+        | WeaponKind::StrikeAircraft => const { 1.0 / 30.0 },
+        WeaponKind::ManualMissile => 0.2,
+        WeaponKind::AntiAir | WeaponKind::AntiAirFuze => const { 23.0 / 30.0 },
+        _ => 0.0,
+    }
 }
 
 fn get_weapon_name(pg: &LuaTable, weapon_id: u32) -> LuaResult<Option<String>> {

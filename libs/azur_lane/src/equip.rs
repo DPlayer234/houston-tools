@@ -1,5 +1,7 @@
 //! Provides data structures for ship equipment.
 
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use small_fixed_array::{FixedArray, FixedString};
 
@@ -514,5 +516,18 @@ impl From<[f64; 3]> for ArmorModifiers {
 impl From<(f64, f64, f64)> for ArmorModifiers {
     fn from((l, m, h): (f64, f64, f64)) -> Self {
         Self(l, m, h)
+    }
+}
+
+/// Writes the modifiers in the format `LLL/MMM/HHH`.
+impl fmt::Display for ArmorModifiers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{: >3.0}/{: >3.0}/{: >3.0}",
+            self.0 * 100f64,
+            self.1 * 100f64,
+            self.2 * 100f64,
+        )
     }
 }

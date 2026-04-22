@@ -2,6 +2,7 @@ use arrayvec::ArrayVec;
 use azur_lane::equip::*;
 use azur_lane::ship::*;
 use azur_lane::skill::*;
+use smallvec::SmallVec;
 use utils::text::truncate;
 
 use super::AzurParseError;
@@ -308,10 +309,9 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
         buf.push_str("<recon only>");
     }
 
-    fn write_join_map<I, F>(buf: &mut String, join: &str, iter: I, mut f: F) -> bool
+    fn write_join_map<I, F>(buf: &mut String, join: &str, iter: &[I], mut f: F) -> bool
     where
-        I: IntoIterator,
-        F: FnMut(&mut String, I::Item) -> bool,
+        F: FnMut(&mut String, &I) -> bool,
     {
         let mut any = false;
         let mut last = false;
@@ -376,10 +376,14 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
         }
 
         fn match_key(a: &Bullet, b: &Bullet) -> bool {
-            a.kind == b.kind && a.ammo == b.ammo && a.modifiers == b.modifiers
+            a.kind == b.kind
+                && a.ammo == b.ammo
+                && a.modifiers == b.modifiers
+                && a.pierce == b.pierce
+                && a.flags == b.flags
         }
 
-        let mut sets: Vec<Value<'_>> = Vec::new();
+        let mut sets = <SmallVec<[Value<'_>; 8]>>::new();
         for bullet in &barrage.bullets {
             // find & modify, or insert
             match sets.iter_mut().find(|i| match_key(i.bullet, bullet)) {
@@ -391,13 +395,7 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
             }
         }
 
-        write_join_map(buf, "\n", sets, |buf, Value { amount, bullet }| {
-            let ArmorModifiers(l, m, h) = bullet.modifiers;
-            let shrapnel_mark = if bullet.kind == BulletKind::Shrapnel {
-                "*"
-            } else {
-                " "
-            };
+        write_join_map(buf, "\n", &sets, |buf, &Value { amount, bullet }| {
             write!(
                 buf,
                 // damage with coeff |
@@ -405,22 +403,22 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
                 // % of scaling stat |
                 // amount | totals
                 "`\
-                {: <5} |\
-                {: >3} x{: >6.1}{}|\
-                {: >5}: {: >3.0}/{: >3.0}/{: >3.0} |\
-                {: >4.0}% {: <3} | \
-                {}`",
-                target.map_or("", |t| t.short_name()),
-                amount,
-                barrage.damage * barrage.coefficient,
-                shrapnel_mark,
-                bullet.ammo.short_name(),
-                l * 100f64,
-                m * 100f64,
-                h * 100f64,
-                barrage.scaling * 100f64,
-                barrage.scaling_stat.name(),
-                get_bullet_flags(bullet),
+                {target: <5} |\
+                {amount: >3} x{damage: >6.1}{shrapnel_mark}|\
+                {ammo: >5}: {modifiers} |\
+                {scaling: >4.0}% {stat: <3} | \
+                {flags}`",
+                target = target.map_or("", |t| t.short_name()),
+                damage = barrage.damage * barrage.coefficient,
+                ammo = bullet.ammo.short_name(),
+                shrapnel_mark = match bullet.kind {
+                    BulletKind::Shrapnel => "*",
+                    _ => " ",
+                },
+                modifiers = bullet.modifiers,
+                scaling = barrage.scaling * 100f64,
+                stat = barrage.scaling_stat.name(),
+                flags = get_bullet_flags(bullet),
             );
             true
         })

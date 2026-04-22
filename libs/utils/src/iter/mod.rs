@@ -6,7 +6,7 @@ mod runs;
 
 pub use collect_chunks::CollectChunks;
 pub use const_iter::ConstIter;
-pub use runs::{Runs, RunsBy};
+pub use runs::{Runs, RunsBy, RunsByKey};
 
 /// Iterates over chunks of values, each yielded as a [`Vec`].
 pub type VecChunks<I> = CollectChunks<I, Vec<<I as Iterator>::Item>>;
@@ -44,11 +44,13 @@ pub trait IteratorExt: Iterator {
         CollectChunks::new(self, chunk_size)
     }
 
-    /// Iterates over runs of consecutive elements that are equal based on
+    /// Iterates over runs of equivalent consecutive elements, based on
     /// [`PartialEq`].
     ///
+    /// The resulting iterator will yield tuples of `(item, run_length)`.
+    ///
     /// If the iterator is sorted and `Self::Item` is [`Eq`], the resulting
-    /// iterator returns only unique elements.
+    /// iterator returns unique elements.
     ///
     /// This function is equivalent to
     /// [`self.runs_by(PartialEq::eq)`](Self::runs_by).
@@ -60,17 +62,32 @@ pub trait IteratorExt: Iterator {
         Runs::new(self)
     }
 
-    /// Iterates over runs of consecutive elements that are equal based on the
-    /// provided equality function.
+    /// Iterates over runs of equivalent consecutive elements, with equality
+    /// provided through an equality function.
     ///
-    /// If the iterator is sorted and the equality matches the contract for
-    /// [`Eq`], the resulting iterator returns only unique elements.
-    fn runs_by<F>(self, eq_by: F) -> RunsBy<Self, F>
+    /// The resulting iterator will yield tuples of `(item, run_length)`.
+    fn runs_by<F>(self, eq: F) -> RunsBy<Self, F>
     where
         Self: Sized,
         F: Fn(&Self::Item, &Self::Item) -> bool,
     {
-        RunsBy::new(self, eq_by)
+        RunsBy::new(self, eq)
+    }
+
+    /// Iterates over runs of equivalent consecutive elements, with equality
+    /// provided by comparing a key.
+    ///
+    /// The resulting iterator will yield tuples of `(item, run_length)`.
+    ///
+    /// This function is equivalent to
+    /// [`self.runs_by(|a, b| f(a) == f(b))`](Self::runs_by).
+    fn runs_by_key<F, K>(self, f: F) -> RunsByKey<Self, F>
+    where
+        Self: Sized,
+        F: Fn(&Self::Item) -> &K,
+        K: ?Sized,
+    {
+        RunsByKey::new(self, f)
     }
 }
 

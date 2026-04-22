@@ -20,14 +20,18 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
 
 /// Iterator for [`runs_by`](super::IteratorExt::runs_by).
-pub struct RunsBy<I: Iterator, F>(RunsInner<I, F>);
+pub struct RunsBy<I: Iterator, F>(RunsInner<I, EqFn<F>>);
 
 impl<I: Iterator, F> RunsBy<I, F> {
-    pub(crate) fn new(iter: I, pred: F) -> Self {
-        Self(RunsInner::new(iter, pred))
+    pub(crate) fn new(iter: I, eq: F) -> Self {
+        Self(RunsInner::new(iter, EqFn(eq)))
     }
 }
 
@@ -40,6 +44,36 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+/// Iterator for [`runs_by_key`](super::IteratorExt::runs_by_key).
+pub struct RunsByKey<I: Iterator, F>(RunsInner<I, KeyEqFn<F>>);
+
+impl<I: Iterator, F> RunsByKey<I, F> {
+    pub(crate) fn new(iter: I, f: F) -> Self {
+        Self(RunsInner::new(iter, KeyEqFn(f)))
+    }
+}
+
+impl<I, F, K> Iterator for RunsByKey<I, F>
+where
+    I: Iterator,
+    F: Fn(&I::Item) -> &K,
+    K: ?Sized + PartialEq,
+{
+    type Item = (I::Item, NonZero<usize>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
     }
 }
 
@@ -61,21 +95,33 @@ where
 }
 
 trait Predicate<T: ?Sized> {
-    fn eq_by(&self, a: &T, b: &T) -> bool;
-}
-
-impl<T, F: Fn(&T, &T) -> bool> Predicate<T> for F {
-    fn eq_by(&self, a: &T, b: &T) -> bool {
-        (self)(a, b)
-    }
+    fn eq(&self, a: &T, b: &T) -> bool;
 }
 
 #[derive(Debug, Clone, Copy)]
 struct ByPartialEq;
 
 impl<T: ?Sized + PartialEq> Predicate<T> for ByPartialEq {
-    fn eq_by(&self, a: &T, b: &T) -> bool {
+    fn eq(&self, a: &T, b: &T) -> bool {
         *a == *b
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct EqFn<F>(F);
+
+impl<T: ?Sized, F: Fn(&T, &T) -> bool> Predicate<T> for EqFn<F> {
+    fn eq(&self, a: &T, b: &T) -> bool {
+        (self.0)(a, b)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct KeyEqFn<F>(F);
+
+impl<T: ?Sized, K: ?Sized + PartialEq, F: Fn(&T) -> &K> Predicate<T> for KeyEqFn<F> {
+    fn eq(&self, a: &T, b: &T) -> bool {
+        *(self.0)(a) == *(self.0)(b)
     }
 }
 
@@ -89,8 +135,8 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.iter.next()?;
         let mut count = <NonZero<usize>>::MIN;
-        while self.iter.next_if(|n| self.pred.eq_by(n, &item)).is_some() {
-            count = count.checked_add(1)?;
+        while self.iter.next_if(|n| self.pred.eq(n, &item)).is_some() {
+            count = count.checked_add(1).expect("run length overflows usize");
         }
         Some((item, count))
     }
