@@ -208,15 +208,13 @@ ship_skin_words_key! {
     /// incomplete missions.
     mission_reminder,
     /// Voice line played in place of a main screen line when there are
-    /// complete but unclaimed
-    /// missions.
+    /// complete but unclaimed missions.
     mission_complete,
     /// Voice line played in place of a main screen line when there is unread
     /// mail.
     mail_reminder,
     /// Voice line played when the ship is the current secretary and the main
-    /// screen is viewed for
-    /// the first time since a battle.
+    /// screen is viewed for the first time since a battle.
     return_to_port,
     /// Voice line played in place of a main screen line when there are
     /// finished commissions.
@@ -224,8 +222,7 @@ ship_skin_words_key! {
     /// Voice line played when enhancing the ship.
     enhance,
     /// Voice line played at the start of a battle the ship is sortied in the
-    /// front of the vanguard
-    /// or as the flagship.
+    /// front of the vanguard or as the flagship.
     flagship_fight,
     /// Voice line played when the ship is the MVP in a victory.
     victory,
