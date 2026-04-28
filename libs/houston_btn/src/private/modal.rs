@@ -159,11 +159,7 @@ where
     if let LabelComponent::InputText(input) = &label.component
         && input.custom_id == key
     {
-        input
-            .value
-            .as_deref()
-            .map(|v| T::from_str(v).map_err(err))
-            .transpose()
+        T::from_str(&input.value).map(Some).map_err(err)
     } else {
         Err(E::INVALID)
     }
@@ -176,7 +172,7 @@ where
     if let LabelComponent::InputText(input) = &label.component
         && input.custom_id == key
     {
-        Ok(input.value.as_deref())
+        Ok(Some(&input.value))
     } else {
         Err(E::INVALID)
     }

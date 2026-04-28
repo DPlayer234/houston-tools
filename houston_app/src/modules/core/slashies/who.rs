@@ -177,7 +177,6 @@ fn write_public_flags(f: &mut String, public_flags: UserPublicFlags) {
         flag!(EARLY_VERIFIED_BOT_DEVELOPER),
         flag!(DISCORD_CERTIFIED_MODERATOR),
         flag!(BOT_HTTP_INTERACTIONS),
-        flag!(ACTIVE_DEVELOPER),
     ];
 
     write!(f, "**Public Flags:** `{:#x}`\n> -# ", public_flags.bits());
