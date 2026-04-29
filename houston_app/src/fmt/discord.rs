@@ -25,6 +25,7 @@ pub fn escape_markdown(input: &str) -> impl Display + '_ {
     })
 }
 
+/// Renders only a 7-digit suffix of the ID/integer.
 #[must_use]
 pub fn id_suffix(id: impl Into<u64>) -> impl Display {
     let id: u64 = id.into();
@@ -32,20 +33,21 @@ pub fn id_suffix(id: impl Into<u64>) -> impl Display {
     utils::format_owned!("..{id:07}")
 }
 
+/// Renders a friendly name for the channel an interaction was triggered in.
 #[must_use]
 pub fn interaction_location(
     guild_id: Option<GuildId>,
     channel: Option<&GenericInteractionChannel>,
 ) -> impl Display + '_ {
-    from_fn(move |f| {
-        match (
-            guild_id.map(id_suffix),
-            channel.and_then(|c| c.base().name.as_deref()),
-        ) {
-            (Some(guild_id), Some(channel)) => write!(f, "{guild_id} `{channel}`"),
-            (Some(guild_id), None) => write!(f, "{guild_id}"),
-            (None, _) => f.write_str("DM"),
-        }
+    from_fn(move |f| match guild_id {
+        Some(id) => {
+            let id = id_suffix(id);
+            match channel.and_then(|c| c.base().name.as_deref()) {
+                Some(channel) => write!(f, "{id} `{channel}`"),
+                None => id.fmt(f),
+            }
+        },
+        None => f.write_str("DM"),
     })
 }
 
@@ -53,40 +55,40 @@ pub fn interaction_location(
 #[allow(dead_code, reason = "include all supported formats upfront")]
 pub trait TimeMentionable {
     /// Formats a mention for a timestamp.
-    fn mention(&self, format: &'static str) -> TimeMention;
+    fn mention(&self, format: char) -> TimeMention;
 
     /// Formats a mention with the short time (t) format.
     fn short_time(&self) -> TimeMention {
-        self.mention("t")
+        self.mention('t')
     }
     /// Formats a mention with the long time (T) format.
     fn long_time(&self) -> TimeMention {
-        self.mention("T")
+        self.mention('T')
     }
     /// Formats a mention with the short date (d) format.
     fn short_date(&self) -> TimeMention {
-        self.mention("d")
+        self.mention('d')
     }
     /// Formats a mention with the long date (D) format.
     fn long_date(&self) -> TimeMention {
-        self.mention("D")
+        self.mention('D')
     }
     /// Formats a mention with the short date time (f) format.
     fn short_date_time(&self) -> TimeMention {
-        self.mention("f")
+        self.mention('f')
     }
     /// Formats a mention with the long date time (F) format.
     fn long_date_time(&self) -> TimeMention {
-        self.mention("F")
+        self.mention('F')
     }
     /// Formats a mention with the relative (R) format.
     fn relative(&self) -> TimeMention {
-        self.mention("R")
+        self.mention('R')
     }
 }
 
 impl TimeMentionable for OffsetDateTime {
-    fn mention(&self, format: &'static str) -> TimeMention {
+    fn mention(&self, format: char) -> TimeMention {
         TimeMention {
             timestamp: self.unix_timestamp(),
             format,
@@ -95,7 +97,7 @@ impl TimeMentionable for OffsetDateTime {
 }
 
 impl TimeMentionable for UtcDateTime {
-    fn mention(&self, format: &'static str) -> TimeMention {
+    fn mention(&self, format: char) -> TimeMention {
         TimeMention {
             timestamp: self.unix_timestamp(),
             format,
@@ -108,7 +110,7 @@ impl TimeMentionable for UtcDateTime {
 #[must_use]
 pub struct TimeMention {
     timestamp: i64,
-    format: &'static str,
+    format: char,
 }
 
 impl Display for TimeMention {

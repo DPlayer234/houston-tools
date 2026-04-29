@@ -1,7 +1,34 @@
-use std::iter::Peekable;
+use std::iter::{FusedIterator, Peekable};
 use std::num::NonZero;
 
-/// Iterator for [`runs`](super::IteratorExt::runs).
+macro_rules! delegate_iterator_inner {
+    ([$I:ident $(, $B:ident)*] $Ty:ty where $($bound:tt)*) => {
+        impl<$I $(, $B)*> Iterator for $Ty
+        where
+            $I: Iterator,
+            $($bound)*
+        {
+            type Item = (<$I>::Item, NonZero<usize>);
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.0.next()
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                self.0.size_hint()
+            }
+        }
+
+        impl<$I $(, $B)*> FusedIterator for $Ty
+        where
+            $I: FusedIterator,
+            $($bound)*
+        {
+        }
+    };
+}
+
+/// Iterator for [`IteratorExt::runs`](super::IteratorExt::runs).
 pub struct Runs<I: Iterator>(RunsInner<I, ByPartialEq>);
 
 impl<I: Iterator> Runs<I> {
@@ -10,23 +37,13 @@ impl<I: Iterator> Runs<I> {
     }
 }
 
-impl<I> Iterator for Runs<I>
-where
-    I: Iterator,
-    I::Item: PartialEq,
-{
-    type Item = (I::Item, NonZero<usize>);
+delegate_iterator_inner!(
+    [I] Runs<I>
+    where
+        I::Item: PartialEq,
+);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
-    }
-}
-
-/// Iterator for [`runs_by`](super::IteratorExt::runs_by).
+/// Iterator for [`IteratorExt::runs_by`](super::IteratorExt::runs_by).
 pub struct RunsBy<I: Iterator, F>(RunsInner<I, EqFn<F>>);
 
 impl<I: Iterator, F> RunsBy<I, F> {
@@ -35,23 +52,13 @@ impl<I: Iterator, F> RunsBy<I, F> {
     }
 }
 
-impl<I, F> Iterator for RunsBy<I, F>
-where
-    I: Iterator,
-    F: Fn(&I::Item, &I::Item) -> bool,
-{
-    type Item = (I::Item, NonZero<usize>);
+delegate_iterator_inner!(
+    [I, F] RunsBy<I, F>
+    where
+        F: Fn(&I::Item, &I::Item) -> bool,
+);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
-    }
-}
-
-/// Iterator for [`runs_by_key`](super::IteratorExt::runs_by_key).
+/// Iterator for [`IteratorExt::runs_by_key`](super::IteratorExt::runs_by_key).
 pub struct RunsByKey<I: Iterator, F>(RunsInner<I, KeyEqFn<F>>);
 
 impl<I: Iterator, F> RunsByKey<I, F> {
@@ -60,22 +67,12 @@ impl<I: Iterator, F> RunsByKey<I, F> {
     }
 }
 
-impl<I, F, K> Iterator for RunsByKey<I, F>
-where
-    I: Iterator,
-    F: Fn(&I::Item) -> &K,
-    K: ?Sized + PartialEq,
-{
-    type Item = (I::Item, NonZero<usize>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
-    }
-}
+delegate_iterator_inner!(
+    [I, F, K] RunsByKey<I, F>
+    where
+        F: Fn(&I::Item) -> &K,
+        K: ?Sized + PartialEq,
+);
 
 struct RunsInner<I: Iterator, P> {
     iter: Peekable<I>,
@@ -145,4 +142,11 @@ where
         let (min, max) = self.iter.size_hint();
         (min.min(1), max)
     }
+}
+
+impl<I, F> FusedIterator for RunsInner<I, F>
+where
+    I: FusedIterator,
+    F: Predicate<I::Item>,
+{
 }
