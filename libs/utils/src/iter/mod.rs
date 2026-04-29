@@ -33,6 +33,17 @@ pub trait IteratorExt: Iterator {
     /// as if calling [`Iterator::collect`] on sub-sections of the source
     /// iterator.
     ///
+    /// # Notes
+    ///
+    /// Much like [`Iterator::collect`], this supports a couple of unusual
+    /// operations, but also expects that [`C as FromIterator`][FromIterator]
+    /// __consumes the provided iterator completely__.
+    ///
+    /// Certain implementations, such as the ones for [`Option<_>`] and
+    /// [`Result<_, E>`], short-circuit for good reason. In case the provided
+    /// iterator is only partially consumed, the next yielded chunk will start
+    /// right after that point, but no other guarantees are made.
+    ///
     /// # Panics
     ///
     /// Panics if `chunk_size` is 0.
