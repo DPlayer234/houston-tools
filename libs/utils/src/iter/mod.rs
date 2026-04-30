@@ -36,13 +36,16 @@ pub trait IteratorExt: Iterator {
     /// # Notes
     ///
     /// Much like [`Iterator::collect`], this supports a couple of unusual
-    /// operations, but also expects that [`C as FromIterator`][FromIterator]
-    /// __consumes the provided iterator completely__.
+    /// operations, like collecting chunks of [`char`] into [`String`].
     ///
-    /// Certain implementations, such as the ones for [`Option<_>`] and
-    /// [`Result<_, E>`], short-circuit for good reason. In case the provided
-    /// iterator is only partially consumed, the next yielded chunk will start
-    /// right after that point, but no other guarantees are made.
+    /// [`DoubleEndedIterator`] attempts to be consistent with `last` and is
+    /// therefore only implemented for [`ExactSizeIterator`] and if `C` is
+    /// [`AsMut<[I::Item]>`][AsMut] due to implementation constraints.
+    ///
+    /// If [`C as FromIterator`][FromIterator] does not fully consume the
+    /// provided iterator, this function will drain the rest to ensure the
+    /// chunks are split as expected. This affects implementations such as
+    /// [`Option<C>`], which short-circuit.
     ///
     /// # Panics
     ///

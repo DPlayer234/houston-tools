@@ -22,6 +22,15 @@ impl<I: Iterator, C> CollectChunks<I, C> {
             chunk_marker: PhantomData,
         }
     }
+
+    fn tail_len(&self) -> NonZero<usize>
+    where
+        I: ExactSizeIterator,
+    {
+        // figure out how many elements are in the tail
+        // if len is wrong, this will just be buggy
+        NonZero::new(self.inner.len() % self.chunk_size).unwrap_or(self.chunk_size)
+    }
 }
 
 impl<I: Clone, C> Clone for CollectChunks<I, C> {
@@ -55,10 +64,17 @@ where
         if iter.peek().is_some() {
             // this figures out the correct capacity for the collection if the iterator
             // provides a useful size hint. take never consumes more than size elements.
-            Some(iter.take(self.chunk_size.get()).collect())
+            Some(drain(iter.take(self.chunk_size.get())))
         } else {
             None
         }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        if n != 0 {
+            self.inner.nth(n * self.chunk_size.get() - 1);
+        }
+        self.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -78,15 +94,12 @@ where
     C: FromIterator<I::Item> + AsMut<[I::Item]>,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        // figure out how many elements are in the tail
-        // if len is wrong, this will just be buggy
-        let tail = NonZero::new(self.inner.len() % self.chunk_size).unwrap_or(self.chunk_size);
-
+        let tail_len = self.tail_len();
         let mut iter = self.inner.by_ref().rev().peekable();
         if iter.peek().is_some() {
             // this figures out the correct capacity for the vec.
             // take never consumes more than `tail` elements.
-            let mut chunk: C = iter.take(tail.get()).collect();
+            let mut chunk: C = drain(iter.take(tail_len.get()));
             // reverse the chunk so the input order is retained
             // note: `rev` on `Take` drains the rest of the iterator so don't
             chunk.as_mut().reverse();
@@ -94,6 +107,15 @@ where
         } else {
             None
         }
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        if n != 0 {
+            let tail_len = self.tail_len();
+            self.inner
+                .nth_back(tail_len.get() + (n - 1) * self.chunk_size.get() - 1);
+        }
+        self.next_back()
     }
 }
 
@@ -112,8 +134,23 @@ where
 {
 }
 
+/// Helper to collect into a collection and then drain the iterator.
+#[inline]
+fn drain<I, C>(mut iter: I) -> C
+where
+    I: Iterator,
+    C: FromIterator<I::Item>,
+{
+    let chunk = iter.by_ref().collect();
+    // especially for `Take<I>` this optimizes better than a manual for-loop
+    iter.for_each(|_| {});
+    chunk
+}
+
 #[cfg(test)]
 mod tests {
+    use std::convert::identity;
+
     use crate::iter::IteratorExt as _;
 
     #[test]
@@ -173,5 +210,113 @@ mod tests {
     fn vec_chunks_zero() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         _ = data.into_iter().collect_chunks::<Vec<_>>(0);
+    }
+
+    #[test]
+    #[expect(clippy::iter_nth_zero)]
+    fn vec_chunks_nth() {
+        let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let chunks = || data.iter().copied().collect_chunks::<Vec<_>>(3);
+
+        assert_eq!(chunks().nth(0), Some(vec![1, 2, 3]));
+        assert_eq!(chunks().nth(1), Some(vec![4, 5, 6]));
+        assert_eq!(chunks().nth(2), Some(vec![7, 8, 9]));
+        assert_eq!(chunks().nth(3), Some(vec![10]));
+        assert_eq!(chunks().nth(4), None);
+    }
+
+    #[test]
+    fn vec_chunks_nth_back() {
+        let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let chunks = || data.iter().copied().collect_chunks::<Vec<_>>(3);
+
+        assert_eq!(chunks().nth_back(0), Some(vec![10]));
+        assert_eq!(chunks().nth_back(1), Some(vec![7, 8, 9]));
+        assert_eq!(chunks().nth_back(2), Some(vec![4, 5, 6]));
+        assert_eq!(chunks().nth_back(3), Some(vec![1, 2, 3]));
+        assert_eq!(chunks().nth_back(4), None);
+    }
+
+    #[test]
+    fn vec_chunks_nth_back_exact() {
+        let data = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let chunks = || data.iter().copied().collect_chunks::<Vec<_>>(3);
+
+        assert_eq!(chunks().nth_back(0), Some(vec![7, 8, 9]));
+        assert_eq!(chunks().nth_back(1), Some(vec![4, 5, 6]));
+        assert_eq!(chunks().nth_back(2), Some(vec![1, 2, 3]));
+        assert_eq!(chunks().nth_back(3), None);
+    }
+
+    #[test]
+    fn option_vec_chunks_some() {
+        let data = (1..=10).map(Some).collect::<Vec<_>>();
+        let mut chunks = data.into_iter().collect_chunks::<Option<Vec<_>>>(3);
+
+        assert_eq!(chunks.next(), Some(Some(vec![1, 2, 3])));
+        assert_eq!(chunks.next(), Some(Some(vec![4, 5, 6])));
+        assert_eq!(chunks.next(), Some(Some(vec![7, 8, 9])));
+        assert_eq!(chunks.next(), Some(Some(vec![10])));
+        assert_eq!(chunks.next(), None);
+    }
+
+    #[test]
+    fn option_vec_chunks_none() {
+        let data = vec![
+            Some(1),
+            Some(2),
+            None,
+            Some(4),
+            Some(5),
+            Some(6),
+            Some(7),
+            None,
+            Some(9),
+            Some(10),
+        ];
+        let mut chunks = data.into_iter().collect_chunks::<Option<Vec<_>>>(3);
+
+        assert_eq!(chunks.next(), Some(None));
+        assert_eq!(chunks.next(), Some(Some(vec![4, 5, 6])));
+        assert_eq!(chunks.next(), Some(None));
+        assert_eq!(chunks.next(), Some(Some(vec![10])));
+        assert_eq!(chunks.next(), None);
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct Interrupt<C>(C);
+
+    impl<A, C: FromIterator<A>> FromIterator<Option<A>> for Interrupt<C> {
+        fn from_iter<T: IntoIterator<Item = Option<A>>>(iter: T) -> Self {
+            Self(iter.into_iter().map_while(identity).collect())
+        }
+    }
+
+    // a more intentional example abusing the behavior
+    #[test]
+    fn interrupt_vec_chunks_none() {
+        let data = vec![
+            None,
+            None,
+            None,
+            Some(1),
+            Some(2),
+            None,
+            Some(4),
+            Some(5),
+            Some(6),
+            Some(7),
+            None,
+            Some(9),
+            Some(10),
+        ];
+        let mut chunks = data.into_iter().collect_chunks::<Interrupt<Vec<_>>>(3);
+
+        assert_eq!(chunks.next(), Some(Interrupt(vec![])));
+        assert_eq!(chunks.next(), Some(Interrupt(vec![1, 2])));
+        assert_eq!(chunks.next(), Some(Interrupt(vec![4, 5, 6])));
+        assert_eq!(chunks.next(), Some(Interrupt(vec![7])));
+        assert_eq!(chunks.next(), Some(Interrupt(vec![10])));
+        assert_eq!(chunks.next(), None);
     }
 }
