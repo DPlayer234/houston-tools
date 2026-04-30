@@ -410,7 +410,10 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
                 {flags}`",
                 target = target.map_or("", |t| t.short_name()),
                 damage = barrage.damage * barrage.coefficient,
-                ammo = bullet.ammo.short_name(),
+                ammo = match bullet.kind {
+                    BulletKind::Torpedo => "Tor.",
+                    _ => bullet.ammo.short_name(),
+                },
                 shrapnel_mark = match bullet.kind {
                     BulletKind::Shrapnel => "*",
                     _ => " ",
