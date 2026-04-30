@@ -92,53 +92,53 @@ confHX = { -- Immediately accessible
 }
 
 confNEO = {
-	__index = function(args, index)
-		local data
-		local name = rawget(args, "__name")
+    __index = function(args, index)
+        local data
+        local name = rawget(args, "__name")
         local sub = rawget(args, "__sub__") or { name }
-		local stream = rawget(args, "__stream__")
+        local stream = rawget(args, "__stream__")
 
-		for _index, sub_name in ipairs(sub) do
-			if stream and cs[sub_name][index] and not pg.base[sub_name][index] then
-				-- The sharecfgdata files are separate from the main game script.
-				-- In this case however, we just have them decompiled already, so just run them.
-				-- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
-				require("sharecfgdata." .. sub_name)
-			end
+        for _index, sub_name in ipairs(sub) do
+            if stream and cs[sub_name][index] and not pg.base[sub_name][index] then
+                -- The sharecfgdata files are separate from the main game script.
+                -- In this case however, we just have them decompiled already, so just run them.
+                -- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
+                require("sharecfgdata." .. sub_name)
+            end
 
-			data = pg.base[sub_name][index]
-			if data then
-				break
-			end
-		end
+            data = pg.base[sub_name][index]
+            if data then
+                break
+            end
+        end
 
         if not data then
             return nil
         end
 
-		local namecode = rawget(args, "__namecode__")
-		local base = rawget(data, "base") or nil
-		args[index] = setmetatable({}, {
-			__index = function (this, key)
-				local value = data[key]
-				if value == nil and base then
-					value = args[base][key]
-				end
+        local namecode = rawget(args, "__namecode__")
+        local base = rawget(data, "base") or nil
+        args[index] = setmetatable({}, {
+            __index = function (this, key)
+                local value = data[key]
+                if value == nil and base then
+                    value = args[base][key]
+                end
 
-				if type(value) == "string" then
-					if name == "equip_data_statistics" then
-						value = translate_equip_data_code(value)
-					end
+                if type(value) == "string" then
+                    if name == "equip_data_statistics" then
+                        value = translate_equip_data_code(value)
+                    end
 
-					if namecode then
-						value = HXSet.hxLan(value)
-					end
-				end
+                    if namecode then
+                        value = HXSet.hxLan(value)
+                    end
+                end
 
-				this[key] = value
-				return value
-			end
-		})
+                this[key] = value
+                return value
+            end
+        })
 
         return args[index]
     end
@@ -168,15 +168,15 @@ setmetatable(pg, {
     __index = function (self, index)
         if ShareCfg["ShareCfg." .. index] then
             require("sharecfg." .. index)
-		else
-			local part = 1
-			while ShareCfg["ShareCfg." .. index .. "_" .. part] do
-				require("ShareCfg." .. index .. "_" .. part)
-				part = part + 1
-			end
+        else
+            local part = 1
+            while ShareCfg["ShareCfg." .. index .. "_" .. part] do
+                require("ShareCfg." .. index .. "_" .. part)
+                part = part + 1
+            end
         end
-		
-		return rawget(self, index)
+
+        return rawget(self, index)
     end
 })
 

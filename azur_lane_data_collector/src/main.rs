@@ -59,6 +59,11 @@ struct Cli {
     /// to override the default.
     #[arg(long)]
     color: Option<bool>,
+
+    /// Hack to make incorrectly decompiled scripts work by rewriting them
+    /// before execution.
+    #[arg(long)]
+    fixjitdecompoutput: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -91,10 +96,10 @@ fn main() -> anyhow::Result<()> {
         // Expect at least 1 input
         let input = &cli.inputs[0];
         let server = guess_server(input).unwrap_or_default();
-        let mut out_data = load_definition(&cli.inputs[0], server)?;
+        let mut out_data = load_definition(input, server, cli.fixjitdecompoutput)?;
 
         for (server, input) in merge_inputs {
-            let next = load_definition(input, server)?;
+            let next = load_definition(input, server, cli.fixjitdecompoutput)?;
             merge_out_data(&mut out_data, next);
         }
 
@@ -159,7 +164,38 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_definition(input: &str, server: GameServer) -> anyhow::Result<DefinitionData> {
+fn fix_up_dir(input: &str) -> anyhow::Result<()> {
+    let input = Path::new(input);
+    let sub_dirs = ["sharecfg", "sharecfg_lua"];
+
+    let mut action = log::action!("Fixing up...").start();
+
+    for &sub in &sub_dirs {
+        let input = input.join(sub);
+        for entry in walkdir::WalkDir::new(input).into_iter().flatten() {
+            if entry.file_type().is_dir() {
+                continue;
+            }
+
+            let content = fs::read_to_string(entry.path())?;
+            let content = content
+                .replace("end)()\r\n", "end)();\r\n")
+                .replace("end)()\n", "end)();\n");
+            fs::write(entry.path(), content)?;
+        }
+
+        action.inc_amount();
+    }
+
+    action.finish();
+    Ok(())
+}
+
+fn load_definition(input: &str, server: GameServer, fix: bool) -> anyhow::Result<DefinitionData> {
+    if fix {
+        fix_up_dir(input)?;
+    }
+
     let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
