@@ -171,7 +171,7 @@ setmetatable(pg, {
         else
             local part = 1
             while ShareCfg["ShareCfg." .. index .. "_" .. part] do
-                require("ShareCfg." .. index .. "_" .. part)
+                require("sharecfg." .. index .. "_" .. part)
                 part = part + 1
             end
         end

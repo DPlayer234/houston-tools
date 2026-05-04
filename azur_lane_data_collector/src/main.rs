@@ -108,10 +108,10 @@ fn main() -> anyhow::Result<()> {
         // Expect at least 1 input
         let input = &cli.inputs[0];
         let server = guess_server(input).unwrap_or_default();
-        let mut out_data = load_definition(input, server, cli.fixjitdecompoutput)?;
+        let mut out_data = load_definition(input, server, &cli)?;
 
         for (server, input) in merge_inputs {
-            let next = load_definition(input, server, cli.fixjitdecompoutput)?;
+            let next = load_definition(input, server, &cli)?;
             merge_out_data(&mut out_data, next);
         }
 
@@ -203,8 +203,8 @@ fn fix_up_dir(input: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_definition(input: &str, server: GameServer, fix: bool) -> anyhow::Result<DefinitionData> {
-    if fix {
+fn load_definition(input: &str, server: GameServer, cli: &Cli) -> anyhow::Result<DefinitionData> {
+    if cli.fixjitdecompoutput {
         fix_up_dir(input)?;
     }
 
