@@ -48,9 +48,11 @@ impl<T> FixedArrayExt<T> for FixedArray<T> {
     }
 
     fn extend_from_array(&mut self, other: Self) {
-        let mut vec = take(self).into_vec();
         // `<Vec<T>>::extend(Vec<T>)` uses specialization
-        vec.extend(other.into_vec());
+        let mut vec = take(self).into_vec();
+        let other = other.into_vec();
+        vec.reserve_exact(other.len());
+        vec.extend(other);
         *self = vec.into_fixed();
     }
 }
