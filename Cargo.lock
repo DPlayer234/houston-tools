@@ -173,6 +173,7 @@ dependencies = [
  "unity_read",
  "utils",
  "utils_build",
+ "walkdir",
 ]
 
 [[package]]
