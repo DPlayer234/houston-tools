@@ -71,7 +71,7 @@ struct Cli {
     /// Hack to make incorrectly decompiled scripts work by rewriting them
     /// before execution.
     #[arg(long)]
-    fixjitdecompoutput: bool,
+    hackfix: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -176,39 +176,8 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn fix_up_dir(input: &str) -> anyhow::Result<()> {
-    let input = Path::new(input);
-    let sub_dirs = ["sharecfg", "sharecfg_lua"];
-
-    let mut action = log::action!("Fixing up...").start();
-
-    for &sub in &sub_dirs {
-        let input = input.join(sub);
-        for entry in walkdir::WalkDir::new(input).into_iter().flatten() {
-            if entry.file_type().is_dir() {
-                continue;
-            }
-
-            let content = fs::read_to_string(entry.path())?;
-            let content = content
-                .replace("end)()\r\n", "end)();\r\n")
-                .replace("end)()\n", "end)();\n");
-            fs::write(entry.path(), content)?;
-        }
-
-        action.inc_amount();
-    }
-
-    action.finish();
-    Ok(())
-}
-
 fn load_definition(input: &str, server: GameServer, cli: &Cli) -> anyhow::Result<DefinitionData> {
-    if cli.fixjitdecompoutput {
-        fix_up_dir(input)?;
-    }
-
-    let lua = init_lua(input)?;
+    let lua = init_lua(input, cli)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
     let ships = load_ships(&lua, &pg, server)?;
@@ -226,7 +195,7 @@ fn load_definition(input: &str, server: GameServer, cli: &Cli) -> anyhow::Result
     })
 }
 
-fn init_lua(input: &str) -> anyhow::Result<Lua> {
+fn init_lua(input: &str, cli: &Cli) -> anyhow::Result<Lua> {
     const CODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/compiled-lua_init.lua"));
 
     let action = log::action!("Initializing Lua for: `{input}`").start();
@@ -234,9 +203,45 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     let lua = Lua::new();
 
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
+
+    if cli.hackfix {
+        let hackfix = lua.create_function(lua_hackfix)?;
+        lua.globals().set("AZUR_LANE_HACKFIX", hackfix)?;
+    }
+
     lua.load(CODE).set_mode(mlua::ChunkMode::Binary).exec()?;
     action.finish();
     Ok(lua)
+}
+
+fn lua_hackfix(lua: &Lua, (path,): (LuaString,)) -> LuaResult<LuaValue> {
+    let path = path.to_str()?.replace('.', "/");
+    let base: LuaString = lua.globals().get("AZUR_LANE_DATA_PATH")?;
+
+    let mut full_path = Path::new(&*base.to_str()?).join(path);
+    full_path.add_extension("lua");
+
+    let mut content = fs::read_to_string(full_path)?;
+
+    // the JIT decompiler sometimes emits IIFEs directly followed by another but
+    // that's not the correct behavior, this hacks around that by inserting
+    // semicolons between them
+    if content.contains("end)()\r\n(") {
+        content = content.replace("end)()\r\n(", "end)();\r\n(")
+    }
+    if content.contains("end)()\n(") {
+        content = content.replace("end)()\n(", "end)();\n(");
+    }
+
+    let value = lua.load(content).set_mode(mlua::ChunkMode::Text).eval()?;
+
+    // put the value in the loaded table so future `require` calls see it
+    lua.globals()
+        .get::<LuaTable>("package")?
+        .get::<LuaTable>("loaded")?
+        .set(base, &value)?;
+
+    Ok(value)
 }
 
 fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<FixedArray<Ship>> {

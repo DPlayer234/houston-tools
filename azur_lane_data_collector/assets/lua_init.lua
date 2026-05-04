@@ -1,6 +1,26 @@
 -- Set up loader to support paths relative to working dir
 package.path = AZUR_LANE_DATA_PATH .. "/?.lua"
 
+-- Set up hack fix for incorrect Lua code
+if AZUR_LANE_HACKFIX then
+    local original_require = require
+    require = function(name)
+        local o_ok, o_result = pcall(original_require, name)
+        if o_ok then
+            return o_result
+        end
+
+        local f_ok, f_result = pcall(AZUR_LANE_HACKFIX, name)
+        if f_ok then
+            return f_result
+        end
+
+        -- don't mask either error and combine them
+        -- even if awkwardly, but better than missing reporting
+        error(tostring(o_result) .. " + " .. tostring(f_result))
+    end
+end
+
 -- Set up data loading like AL does. Mostly.
 pg = {}
 ys = {}
