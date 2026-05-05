@@ -825,12 +825,14 @@ fn merge_attacks(attacks: &mut Vec<SkillAttack>) {
 
 /// Calls our `require_buff` Lua helper to get buff data.
 fn require_buff_data(lua: &Lua, buff_id: u32) -> LuaResult<LuaTable> {
-    lua.globals().call_function("require_buff", buff_id)
+    lua.globals()
+        .call_function("require", format!("gamecfg.buff.buff_{buff_id}"))
 }
 
 /// Calls our `require_skill` Lua helper to get skill data.
 fn require_skill_data(lua: &Lua, skill_id: u32) -> LuaResult<LuaTable> {
-    lua.globals().call_function("require_skill", skill_id)
+    lua.globals()
+        .call_function("require", format!("gamecfg.skill.skill_{skill_id}"))
 }
 
 pub struct WEquipLoad {

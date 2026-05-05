@@ -111,18 +111,21 @@ confHX = { -- Immediately accessible
     __index = lazy_load(0, true)
 }
 
-confNEO = {
+confNEO = { -- New unified format
     __index = function(args, index)
         local data
         local name = rawget(args, "__name")
+        -- source table may be split into multiple parts
+        -- this lists the names of all the parts (or is absent)
         local sub = rawget(args, "__sub__") or { name }
+        -- flag telling it to stream from sharecfgdata
         local stream = rawget(args, "__stream__")
 
         for _index, sub_name in ipairs(sub) do
             if stream and cs[sub_name][index] and not pg.base[sub_name][index] then
                 -- The sharecfgdata files are separate from the main game script.
                 -- In this case however, we just have them decompiled already, so just run them.
-                -- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
+                -- LuaHelper.SetConfVal(name, cs[sub_name][index][1], cs[sub_name][index][2])
                 require("sharecfgdata." .. sub_name)
             end
 
@@ -189,6 +192,7 @@ setmetatable(pg, {
         if ShareCfg["ShareCfg." .. index] then
             require("sharecfg." .. index)
         else
+            -- neo format may split the source tables too
             local part = 1
             while ShareCfg["ShareCfg." .. index .. "_" .. part] do
                 require("sharecfg." .. index .. "_" .. part)
@@ -207,15 +211,6 @@ local function _map(tbl, func)
         new_tbl[k] = func(v)
     end
     return new_tbl
-end
-
--- Used by our code to load a buff/skill.
-function require_buff(id)
-    return require("gamecfg.buff.buff_" .. id)
-end
-
-function require_skill(id)
-    return require("gamecfg.skill.skill_" .. id)
 end
 
 -- Helper for augment parsing
