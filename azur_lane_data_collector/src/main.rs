@@ -207,8 +207,8 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     Ok(lua)
 }
 
-fn lua_hackfix(lua: &Lua, (path,): (LuaBorrowedStr<'_>,)) -> LuaResult<LuaValue> {
-    let path = path.replace('.', "/");
+fn lua_hackfix(lua: &Lua, (source_path,): (LuaBorrowedStr<'_>,)) -> LuaResult<LuaValue> {
+    let path = source_path.replace('.', "/");
     let base: LuaBorrowedStr<'_> = lua.globals().get("AZUR_LANE_DATA_PATH")?;
 
     let mut full_path = Path::new(&*base).join(path);
@@ -226,7 +226,11 @@ fn lua_hackfix(lua: &Lua, (path,): (LuaBorrowedStr<'_>,)) -> LuaResult<LuaValue>
         content = content.replace("end)()\n(", "end)();\n(");
     }
 
-    let value = lua.load(content).set_mode(mlua::ChunkMode::Text).eval()?;
+    // pass the source path to emulate what `require` does
+    let value = lua
+        .load(content)
+        .set_mode(mlua::ChunkMode::Text)
+        .call(source_path)?;
 
     // put the value in the loaded table so future `require` calls see it
     lua.globals()
