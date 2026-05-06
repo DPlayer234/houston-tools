@@ -67,11 +67,6 @@ struct Cli {
     /// instead. Usually, this isn't needed.
     #[arg(long)]
     config: Option<PathBuf>,
-
-    /// Hack to make incorrectly decompiled scripts work by rewriting them
-    /// before execution.
-    #[arg(long)]
-    hackfix: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -108,10 +103,10 @@ fn main() -> anyhow::Result<()> {
         // Expect at least 1 input
         let input = &cli.inputs[0];
         let server = guess_server(input).unwrap_or_default();
-        let mut out_data = load_definition(input, server, &cli)?;
+        let mut out_data = load_definition(input, server)?;
 
         for (server, input) in merge_inputs {
-            let next = load_definition(input, server, &cli)?;
+            let next = load_definition(input, server)?;
             merge_out_data(&mut out_data, next);
         }
 
@@ -176,8 +171,8 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_definition(input: &str, server: GameServer, cli: &Cli) -> anyhow::Result<DefinitionData> {
-    let lua = init_lua(input, cli)?;
+fn load_definition(input: &str, server: GameServer) -> anyhow::Result<DefinitionData> {
+    let lua = init_lua(input)?;
     let pg: LuaTable = lua.globals().get("pg").context("global pg")?;
 
     let ships = load_ships(&lua, &pg, server)?;
@@ -195,7 +190,7 @@ fn load_definition(input: &str, server: GameServer, cli: &Cli) -> anyhow::Result
     })
 }
 
-fn init_lua(input: &str, cli: &Cli) -> anyhow::Result<Lua> {
+fn init_lua(input: &str) -> anyhow::Result<Lua> {
     const CODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/compiled-lua_init.lua"));
 
     let action = log::action!("Initializing Lua for: `{input}`").start();
@@ -204,21 +199,19 @@ fn init_lua(input: &str, cli: &Cli) -> anyhow::Result<Lua> {
 
     lua.globals().raw_set("AZUR_LANE_DATA_PATH", input)?;
 
-    if cli.hackfix {
-        let hackfix = lua.create_function(lua_hackfix)?;
-        lua.globals().set("AZUR_LANE_HACKFIX", hackfix)?;
-    }
+    let hackfix = lua.create_function(lua_hackfix)?;
+    lua.globals().set("AZUR_LANE_HACKFIX", hackfix)?;
 
     lua.load(CODE).set_mode(mlua::ChunkMode::Binary).exec()?;
     action.finish();
     Ok(lua)
 }
 
-fn lua_hackfix(lua: &Lua, (path,): (LuaString,)) -> LuaResult<LuaValue> {
-    let path = path.to_str()?.replace('.', "/");
-    let base: LuaString = lua.globals().get("AZUR_LANE_DATA_PATH")?;
+fn lua_hackfix(lua: &Lua, (path,): (LuaBorrowedStr<'_>,)) -> LuaResult<LuaValue> {
+    let path = path.replace('.', "/");
+    let base: LuaBorrowedStr<'_> = lua.globals().get("AZUR_LANE_DATA_PATH")?;
 
-    let mut full_path = Path::new(&*base.to_str()?).join(path);
+    let mut full_path = Path::new(&*base).join(path);
     full_path.add_extension("lua");
 
     let mut content = fs::read_to_string(full_path)?;

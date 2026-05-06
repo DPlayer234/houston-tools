@@ -42,6 +42,30 @@ local function translate_equip_data_code(text)
     end)
 end
 
+-- 0 => loaded fully
+-- 1 => load partial
+local sharecfgdata_state = {}
+local function load_sharecfgdata(sub_name, index)
+    local state = sharecfgdata_state[sub_name]
+    if state == 0 then
+        return
+    end
+
+    if state ~= 1 then
+        local ok = pcall(require, "sharecfgdata." .. sub_name)
+        if ok then
+            sharecfgdata_state[sub_name] = 0
+            return
+        end
+    end
+
+    sharecfgdata_state[sub_name] = 1
+
+    local path = AZUR_LANE_DATA_PATH .. "/sharecfgdata/" .. sub_name .. "/" .. index .. ".l"
+    local file = assert(loadfile(path))
+    file()
+end
+
 local function lazy_load(mode, allow_name_code)
     return function(args, index)
         local name = args.__name;
@@ -50,7 +74,7 @@ local function lazy_load(mode, allow_name_code)
             -- The sharecfgdata files are separate from the main game script.
             -- In this case however, we just have them decompiled already, so just run them.
             -- LuaHelper.SetConfVal(name, cs[name][index][1], cs[name][index][2])
-            require("sharecfgdata." .. name)
+            load_sharecfgdata(name, index)
         end
 
         if mode == 2 and cs[name].indexs[index] then
@@ -126,7 +150,7 @@ confNEO = { -- New unified format
                 -- The sharecfgdata files are separate from the main game script.
                 -- In this case however, we just have them decompiled already, so just run them.
                 -- LuaHelper.SetConfVal(name, cs[sub_name][index][1], cs[sub_name][index][2])
-                require("sharecfgdata." .. sub_name)
+                load_sharecfgdata(sub_name, index)
             end
 
             data = pg.base[sub_name][index]
