@@ -61,7 +61,7 @@ local function load_sharecfgdata(sub_name, index)
 
     sharecfgdata_state[sub_name] = 1
 
-    local path = AZUR_LANE_DATA_PATH .. "/sharecfgdata/" .. sub_name .. "/" .. index .. ".l"
+    local path = AZUR_LANE_DATA_PATH .. "/sharecfgdata/" .. sub_name .. "/" .. index .. ".lua"
     local file = assert(loadfile(path))
     file()
 end
