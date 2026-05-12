@@ -37,8 +37,13 @@ utils_build.path = "../libs/utils_build"
 # partly so the binary doesn't need to compile the code itself
 [dependencies.mlua]
 version = "0.11.6"
-features = ["lua54", "vendored", "error-send", "serialize"]
+features = ["vendored", "error-send", "serialize"]
 
 [build-dependencies.mlua]
 version = "0.11.6"
-features = ["lua54", "vendored", "error-send", "serialize"]
+features = ["vendored", "error-send", "serialize"]
+
+[features]
+default = ["lua54"]
+lua54 = ["mlua/lua54"]
+luajit = ["mlua/luajit"]

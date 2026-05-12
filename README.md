@@ -531,20 +531,11 @@ Install the stable Rust toolchain if you haven't already, then invoke cargo for 
 cargo build --release
 ```
 
-Alternatively, you can run the executables directly as:
+Alternatively, you can run the debug executables directly as:
 ```
 cargo run --bin houston_app
 cargo run --bin azur_lane_data_collector -- --inputs ...
 ```
-
-## Release Options
-
-As present in this repository, the release builds specify some additional options:
-
-- [Fat LTO is enabled.](https://doc.rust-lang.org/rustc/codegen-options/index.html#lto) Compilation may be slow, but the output should be better.
-- [Panics will abort](https://doc.rust-lang.org/rustc/codegen-options/index.html#panic) rather than unwind.
-
-Edit the workspace's Cargo.toml if you prefer other behavior.
 
 # License
 
