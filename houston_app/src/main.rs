@@ -1,6 +1,3 @@
-#[cfg(feature = "openssl-vendored")]
-use openssl as _;
-
 mod build;
 mod buttons;
 mod config;

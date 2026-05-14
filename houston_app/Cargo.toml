@@ -52,7 +52,7 @@ git = "https://github.com/serenity-rs/serenity.git"
 branch = "next"
 default-features = false
 features = [
-    "native_tls_backend",
+    "rustls_backend",
     "builder", "framework", "gateway", "model", "http", "utils"
 ]
 
@@ -61,7 +61,7 @@ version = "3.6.0"
 default-features = false
 features = [
     "compat-3-3-0", "bson-3",
-    "dns-resolver", "openssl-tls",
+    "dns-resolver", "rustls-tls-aws-lc",
 ]
 
 [dependencies.log4rs]
@@ -76,6 +76,3 @@ features = [
 
 [build-dependencies]
 utils_build.path = "../libs/utils_build"
-
-[features]
-openssl-vendored = ["openssl/vendored"]
