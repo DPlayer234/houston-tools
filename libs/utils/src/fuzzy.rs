@@ -67,19 +67,17 @@ type MatchIndex = u16;
 
 // amount of MatchIndex values that can be stored within a SmallVec without
 // increasing its size.
-#[cfg(target_pointer_width = "64")]
-const MATCH_INLINE: usize = 4;
-#[cfg(not(target_pointer_width = "64"))]
-const MATCH_INLINE: usize = 2;
+const MATCH_INLINE: usize = 2 * size_of::<usize>() / size_of::<MatchIndex>();
 
 // this type should be `3 * size_of::<usize>()` in inline size
 type MatchVec = SmallVec<[MatchIndex; MATCH_INLINE]>;
 
 #[inline(always)]
 const fn to_usize(index: MatchIndex) -> usize {
+    #[expect(clippy::cast_possible_truncation)]
     const {
         assert!(
-            size_of::<MatchIndex>() <= size_of::<usize>(),
+            MatchIndex::MAX as usize as MatchIndex == MatchIndex::MAX,
             "MatchIndex as usize cast must be lossless"
         );
     }

@@ -21,7 +21,7 @@ bitflags = "2.11.0"
 bson = { version = "3.1.0", features = ["time-0_3", "serde", "serde_with-3"] }
 bytes = "1.11.0"
 const-builder = "0.1.4"
-dashmap = "6.1.0"
+dashmap = "6.2.1"
 extract_map = "0.3.1"
 indexmap = { version = "2.14.0", features = ["serde"] }
 log = "0.4.27"
@@ -44,8 +44,6 @@ bson_model.path = "../libs/bson_model"
 houston_btn.path = "../libs/houston_btn"
 houston_cmd.path = "../libs/houston_cmd"
 utils.path = "../libs/utils"
-
-openssl = { version = "0.10", optional = true }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity.git"
