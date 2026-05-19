@@ -1,5 +1,5 @@
 use std::fmt;
-use std::marker::PhantomData;
+use std::mem::MaybeUninit;
 
 use serde::de::{Deserialize, Deserializer, Error};
 use serde::ser::{Serialize, Serializer};
@@ -18,19 +18,6 @@ enum NavInner<'v> {
     Value(&'v dyn SerializeCustomIdToStackBuf),
 }
 
-macro_rules! to_slice {
-    ($c:expr => $buf:ident) => {
-        match $c.0 {
-            NavInner::Slice(slice) => slice,
-            NavInner::Value(data) => {
-                $buf = encoding::StackBuf::new();
-                data.write_inner_data(&mut $buf);
-                &$buf
-            },
-        }
-    };
-}
-
 impl<'v> Nav<'v> {
     /// Converts this instance to a component custom ID.
     ///
@@ -42,9 +29,7 @@ impl<'v> Nav<'v> {
     /// [`ButtonValue::to_custom_id`].
     #[must_use]
     pub fn to_custom_id(&self) -> String {
-        let mut buf;
-        let slice = to_slice!(*self => buf);
-        encoding::encode_custom_id(slice)
+        encoding::encode_custom_id(self.to_slice(&mut MaybeUninit::uninit()))
     }
 
     /// Creates a [`Nav`] from a byte slice of serialized data.
@@ -61,6 +46,23 @@ impl<'v> Nav<'v> {
     {
         Self(NavInner::Value(args))
     }
+
+    /// Provides a byte slice representation.
+    ///
+    /// If already holding a slice, returns that. Otherwise, initializes the
+    /// buffer into the provided memory, writes the value, and returns a slice
+    /// to the buffer.
+    fn to_slice<'a>(&'a self, buf: &'a mut MaybeUninit<encoding::StackBuf>) -> &'a [u8] {
+        match self.0 {
+            NavInner::Slice(slice) => slice,
+            NavInner::Value(data) => {
+                // note: no need to drop the buffer
+                let buf = buf.write(encoding::StackBuf::new());
+                data.write_inner_data(buf);
+                buf
+            },
+        }
+    }
 }
 
 impl Serialize for Nav<'_> {
@@ -68,9 +70,7 @@ impl Serialize for Nav<'_> {
     where
         S: Serializer,
     {
-        let mut buf;
-        let slice = to_slice!(*self => buf);
-        serializer.serialize_bytes(slice)
+        serializer.serialize_bytes(self.to_slice(&mut MaybeUninit::uninit()))
     }
 }
 
@@ -79,9 +79,9 @@ impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
     where
         D: Deserializer<'de>,
     {
-        struct Visitor<'de>(PhantomData<Nav<'de>>);
+        struct Visitor;
 
-        impl<'de> serde::de::Visitor<'de> for Visitor<'de> {
+        impl<'de> serde::de::Visitor<'de> for Visitor {
             type Value = Nav<'de>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -96,7 +96,7 @@ impl<'v, 'de: 'v> Deserialize<'de> for Nav<'v> {
             }
         }
 
-        deserializer.deserialize_bytes(Visitor(PhantomData))
+        deserializer.deserialize_bytes(Visitor)
     }
 }
 
