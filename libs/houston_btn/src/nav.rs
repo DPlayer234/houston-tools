@@ -15,7 +15,7 @@ pub struct Nav<'v>(NavInner<'v>);
 #[derive(Clone, Copy)]
 enum NavInner<'v> {
     Slice(&'v [u8]),
-    Value(&'v dyn SerializeCustomIdToStackBuf),
+    Value(&'v dyn NavButtonValue),
 }
 
 impl<'v> Nav<'v> {
@@ -57,9 +57,7 @@ impl<'v> Nav<'v> {
             NavInner::Slice(slice) => slice,
             NavInner::Value(data) => {
                 // note: no need to drop the buffer
-                let buf = buf.write(encoding::StackBuf::new());
-                data.write_inner_data(buf);
-                buf
+                encoding::write_or_log(buf.write(encoding::StackBuf::new()), data)
             },
         }
     }
@@ -123,17 +121,6 @@ impl fmt::Debug for Nav<'_> {
     }
 }
 
-/// Provides a dyn-compatible wrapper trait for serializing arbitrary structs
-/// into the encoding format.
-trait SerializeCustomIdToStackBuf: fmt::Debug + Send + Sync {
-    fn write_inner_data(&self, buf: &mut encoding::StackBuf);
-}
-
-impl<T> SerializeCustomIdToStackBuf for T
-where
-    T: ButtonValue + Serialize + fmt::Debug,
-{
-    fn write_inner_data(&self, buf: &mut encoding::StackBuf) {
-        encoding::write_inner_data(buf, self);
-    }
-}
+/// Encodable [`ButtonValue`] + [`fmt::Debug`].
+trait NavButtonValue: encoding::ButtonValueEncode + fmt::Debug {}
+impl<T> NavButtonValue for T where T: encoding::ButtonValueEncode + fmt::Debug {}

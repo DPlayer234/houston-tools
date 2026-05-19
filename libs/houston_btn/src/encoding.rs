@@ -62,29 +62,72 @@ pub fn decode_custom_id<'de>(buf: &'de mut StackBuf, id: &str) -> Result<Decoder
     Ok(Decoder(Deserializer::from_slice(buf)))
 }
 
-/// Writes the inner data for a button value.
+/// Identical in function to [`write_or_log`].
+#[deprecated = "use write_or_log"]
+pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) {
+    write_or_log(buf, action);
+}
+
+/// Writes the data for a button value and returns the written part of the
+/// slice.
+///
+/// The return value is equivalent to derefing `buf` afterwards.
 ///
 /// # Notes
 ///
 /// If serialization fails for any reason, this logs the error to the
 /// [registered logger](log). It is assumed that this should _rarely_ happen and
 /// simplifies usage of related methods like [`ButtonValue::to_custom_id`].
-pub fn write_inner_data<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) {
-    use serde_steph::{Error, Result, to_writer};
+pub fn write_or_log<'b>(buf: &'b mut StackBuf, action: &dyn ButtonValueEncode) -> &'b [u8] {
+    use serde_steph::{Error, Result};
 
     #[inline]
-    fn inner<T: ButtonValue + Serialize>(buf: &mut StackBuf, action: &T) -> Result<()> {
-        to_writer(&mut *buf, const { &T::ACTION.key })?;
-        to_writer(buf, action)
+    fn inner(buf: &mut StackBuf, action: &dyn ButtonValueEncode) -> Result<()> {
+        serde_steph::to_writer(&mut *buf, &action.action_key())?;
+        action.append_serialize(buf)
     }
 
     #[cold]
     #[inline(never)]
-    fn log_error(why: Error, key: usize) {
-        log::error!("Error serializing `{key}`: {why}");
+    fn log_error(why: Error, action: &dyn ButtonValueEncode) {
+        log::error!("Error serializing `{}`: {why}", action.action_key());
     }
 
     if let Err(why) = inner(buf, action) {
-        log_error(why, const { T::ACTION.key });
+        log_error(why, action);
+    }
+
+    buf
+}
+
+/// Private/sealed interface.
+mod private {
+    /// Private parts of the interface for [`super::ButtonValueEncode`].
+    ///
+    /// Also serves to seal said trait.
+    // `Send + Sync` is implied by `ButtonValue` anyways
+    pub trait ButtonValueEncode: Send + Sync {
+        fn action_key(&self) -> usize;
+        fn append_serialize(&self, buf: &mut super::StackBuf) -> serde_steph::Result<()>;
+    }
+}
+
+/// Provides a dyn-compatible interface to encode [`ButtonValue`].
+///
+/// This trait is only meant to be used with [`write_or_log`].
+pub trait ButtonValueEncode: private::ButtonValueEncode {}
+
+impl<T> ButtonValueEncode for T where T: ButtonValue + Serialize {}
+
+impl<T> private::ButtonValueEncode for T
+where
+    T: ButtonValue + Serialize,
+{
+    fn action_key(&self) -> usize {
+        const { T::ACTION.key }
+    }
+
+    fn append_serialize(&self, buf: &mut StackBuf) -> serde_steph::Result<()> {
+        serde_steph::to_writer(buf, self)
     }
 }
