@@ -165,6 +165,7 @@ pub fn to_stat_kind(stat: &str) -> StatKind {
         "luck" => StatKind::LCK,
         "antisub" => StatKind::ASW,
         "oxy_max" => StatKind::OXY,
+        "raid_distance" => StatKind::RaidDistance,
         _ => StatKind::Unknown,
     }
 }

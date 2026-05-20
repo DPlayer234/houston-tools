@@ -63,9 +63,10 @@ impl View<'_> {
         let style = if selected { "__" } else { "" };
 
         let label = format!(
-            "### {style}{}{style} {}",
+            "### {style}{}{style} {}\n-# **Buff ID:** `{}`",
             skill.category.emoji(),
-            skill.name
+            skill.name,
+            skill.buff_id
         );
 
         components.push(CreateTextDisplay::new(label));
@@ -213,10 +214,10 @@ impl View<'_> {
     ) {
         if !skill.barrages.is_empty() {
             let mut content = String::new();
-            content.push_str("### __Barrage__\n");
+            content.push_str("### __Barrages__\n");
 
             get_skills_extra_summary(&mut content, skill);
-            let content = match truncate(&content, 1024) {
+            let content = match truncate(&content, 1000) {
                 Cow::Owned(trunc) => {
                     log::warn!("Barrage data too long:\n{content}");
                     trunc
@@ -224,7 +225,7 @@ impl View<'_> {
                 Cow::Borrowed(_) => content,
             };
 
-            components.push(CreateSeparator::new());
+            components.push(CreateSeparator::new().divider(false));
             components.push(CreateTextDisplay::new(content));
         }
 
@@ -245,7 +246,7 @@ impl View<'_> {
             let weapon_name = buff.weapon.name.as_deref().unwrap_or("Special Weapon");
             let content = format!("### __{label}__ {weapon_name}\n{fmt}");
 
-            components.push(CreateSeparator::new());
+            components.push(CreateSeparator::new().divider(false));
             components.push(CreateTextDisplay::new(content));
         }
     }
@@ -300,7 +301,7 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
 
     let any = try_write_or_undo(buf, |buf| {
         buf.push_str("__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n");
-        write_join_map(buf, "\n\n", &skill.barrages, write_skill_barrage_summary)
+        write_join_map(buf, "\n", &skill.barrages, write_skill_barrage_summary)
     });
 
     if !any {
@@ -342,9 +343,15 @@ fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
     }
 
     fn write_skill_barrage_summary(buf: &mut String, barrage: &SkillBarrage) -> bool {
-        try_write_or_undo(buf, |buf| {
+        let any = try_write_or_undo(buf, |buf| {
             write_join_map(buf, "\n", &barrage.attacks, write_skill_attack_summary)
-        })
+        });
+
+        if any {
+            write!(buf, "\n-# **Skill ID:** `{}`", barrage.skill_id);
+        }
+
+        any
     }
 
     fn write_skill_attack_summary(buf: &mut String, attack: &SkillAttack) -> bool {

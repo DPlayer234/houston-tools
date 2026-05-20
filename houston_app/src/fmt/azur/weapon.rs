@@ -2,8 +2,6 @@ use std::fmt::{Display, Formatter, Result};
 
 use azur_lane::equip::*;
 
-use crate::helper::BranchOnce;
-
 /// Implements [`Display`] to nicely format a weapon.
 #[must_use]
 pub struct Details<'a> {
@@ -56,7 +54,9 @@ impl Display for Details<'_> {
             WeaponData::Bullets(barrage) => format_barrage(barrage, f, ""),
             WeaponData::Aircraft(aircraft) => format_aircraft(aircraft, f),
             WeaponData::AntiAir(barrage) => format_anti_air(barrage, f, ""),
-        }
+        }?;
+
+        write!(f, "-# **Weapon ID:** `{}`", weapon.weapon_id)
     }
 }
 
@@ -130,7 +130,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Res
     }
 
     // ammo type & mods
-    write!(
+    writeln!(
         f,
         "{indent}**{}:** {:.0}/{:.0}/{:.0}",
         bullet.ammo.name(),
@@ -141,7 +141,7 @@ fn format_barrage(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Res
 
     // hits both surface and subs
     if bullet.flags.dive_filter().is_empty() {
-        write!(f, "\n{indent}-# *Hits Submarines*")?;
+        writeln!(f, "{indent}-# *Hits Submarines*")?;
     }
 
     Ok(())
@@ -151,7 +151,7 @@ fn format_anti_air(barrage: &Barrage, f: &mut Formatter<'_>, indent: &str) -> Re
     // damage
     // ammo type & mods
     // range | angle
-    write!(
+    writeln!(
         f,
         "{indent}**Dmg:** {:.1} @ {:.0}% {}\n\
          {indent}**Range:** {:.1} \u{2E31} **Angle:** {:.1}",
@@ -174,12 +174,7 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
         aircraft.dodge_limit,
     )?;
 
-    let mut first = BranchOnce::new();
     for weapon in &aircraft.weapons {
-        if !first.enter() {
-            writeln!(f)?;
-        }
-
         writeln!(
             f,
             "__**{}:**__",
@@ -197,7 +192,7 @@ fn format_aircraft(aircraft: &Aircraft, f: &mut Formatter<'_>) -> Result {
             },
             WeaponData::Aircraft(..) => {
                 f.write_str(PAD)?;
-                f.write_str("<matryoshka aircraft>")?;
+                f.write_str("<matryoshka aircraft>\n")?;
             },
         }
     }

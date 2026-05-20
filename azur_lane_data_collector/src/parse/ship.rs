@@ -110,9 +110,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
             spd: attrs.get(10)?,
             lck: attrs.get(11)?,
             cost: read!(set.template, "oil_at_end"),
-            oxy: read!(set.statistics, "oxy_max"),
-            amo: read!(set.statistics, "ammo"),
         },
+        submarine_stats: None,
         default_skin_id: read!(set.statistics, "skin_id"),
         equip_slots: vec![
             make_equip_slot!("equip_1", 1),
@@ -147,6 +146,12 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
     if ship.hull_type.team_type() == TeamType::Submarine {
         // I can't explain it but submarine fleet ship costs seem to be 1 too high
         ship.stats.cost -= 1;
+        ship.submarine_stats = Some(Box::new(SubmarineStatBlock {
+            amo: read!(set.statistics, "ammo"),
+            oxy: read!(set.statistics, "oxy_max"),
+            raid_distance: read!(set.statistics, "raid_distance"),
+            attack_duration: read!(set.statistics, "attack_duration"),
+        }));
     }
 
     for buff_id in &hide_buff_list {

@@ -254,28 +254,37 @@ impl View<'_> {
         let armor_name = stats.armor.name();
         let armor_pad = 8usize.saturating_sub(armor_name.len());
 
-        let content = if ship.hull_type.team_type() != TeamType::Submarine {
-            calc_all!(asw);
-            format!(
-                "### Stats\n\
-                 **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
-                 **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
-                 **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
-                 **`ASW:`**`{asw: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
-                 **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`",
-                "",
-            )
-        } else {
-            let ShipStatBlock { oxy, amo, .. } = *stats;
-            format!(
-                "### Stats\n\
-                 **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
-                 **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
-                 **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
-                 **`OXY:`**`{oxy: >4}` \u{2E31} **`AMO:`**`{amo: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
-                 **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`",
-                "",
-            )
+        let content = match &ship.submarine_stats {
+            None => {
+                calc_all!(asw);
+                format!(
+                    "### Stats\n\
+                    **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                    **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
+                    **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
+                    **`ASW:`**`{asw: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
+                    **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`",
+                    "",
+                )
+            },
+            Some(submarine_stats) => {
+                let SubmarineStatBlock {
+                    oxy,
+                    amo,
+                    raid_distance,
+                    attack_duration,
+                } = **submarine_stats;
+                format!(
+                    "### Stats\n\
+                    **`HP:`**`{hp: >5}` \u{2E31} **`{armor_name}`**`{: <armor_pad$}` \u{2E31} **`RLD:`**`{rld: >4}`\n\
+                    **`FP:`**`{fp: >5}` \u{2E31} **`TRP:`**`{trp: >4}` \u{2E31} **`EVA:`**`{eva: >4}`\n\
+                    **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
+                    **`OXY:`**`{oxy: >4}` \u{2E31} **`AMO:`**`{amo: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
+                    **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`\n\
+                    -# **`RDis`:**`{raid_distance: >3}` \u{2E31} **`ADur:`**`{attack_duration: >3}`",
+                    "",
+                )
+            },
         };
 
         CreateTextDisplay::new(content).into_component()

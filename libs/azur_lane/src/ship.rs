@@ -37,6 +37,9 @@ pub struct BaseShip {
     pub enhance_kind: EnhanceKind,
     /// The ship's stats.
     pub stats: ShipStatBlock,
+    /// Submarine-specific stats, if this is a submarine.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub submarine_stats: Option<Box<SubmarineStatBlock>>,
     /// The ID of the default skin.
     /// Retrofits will have the retrofit skin set as the default.
     ///
@@ -104,8 +107,15 @@ pub struct ShipStatBlock {
     pub spd: f64,
     pub lck: f64,
     pub cost: u32,
-    pub oxy: u32,
+}
+
+/// Provides stat block information for submarine specific stats.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmarineStatBlock {
     pub amo: u32,
+    pub oxy: f64,
+    pub raid_distance: f64,
+    pub attack_duration: f64,
 }
 
 /// Represents a single ship stat. Its value can be calculated on demand.
@@ -243,6 +253,7 @@ define_data_enum! {
         LCK("LCK"),
         OXY("OXY"),
         Armor("Armor"),
+        RaidDistance("RDis"),
         #[serde(other)]
         Unknown("???"),
     }

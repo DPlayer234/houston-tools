@@ -20,7 +20,10 @@ impl View<'_> {
     /// Modifies the create-reply with a preresolved equipment.
     pub fn create_with_equip(self, equip: &Equip) -> CreateReply<'_> {
         let mut components = ComponentVec::new();
-        components.push(CreateTextDisplay::new(format!("## {}", equip.name)));
+        components.push(CreateTextDisplay::new(format!(
+            "## {}\n-# **ID:** `{}`",
+            equip.name, equip.equip_id
+        )));
         components.push(CreateSeparator::new().divider(true));
 
         components.push(CreateTextDisplay::new(format!(
