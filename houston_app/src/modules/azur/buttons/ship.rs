@@ -281,7 +281,7 @@ impl View<'_> {
                     **`AA:`**`{aa: >5}` \u{2E31} **`AVI:`**`{avi: >4}` \u{2E31} **`ACC:`**`{acc: >4}`\n\
                     **`OXY:`**`{oxy: >4}` \u{2E31} **`AMO:`**`{amo: >4}` \u{2E31} **`SPD:`**`{spd: >4}`\n\
                     **`LCK:`**`{lck: >4}` \u{2E31} **`Cost:`**`{cost: >3}`\n\
-                    -# **`RDis`:**`{raid_distance: >3}` \u{2E31} **`ADur:`**`{attack_duration: >3}`",
+                    -# **`R.Dist:`**`{raid_distance: >3}` \u{2E31} **`S.Dur:`**`{attack_duration: >4}`",
                     "",
                 )
             },

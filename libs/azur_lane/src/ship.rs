@@ -253,7 +253,7 @@ define_data_enum! {
         LCK("LCK"),
         OXY("OXY"),
         Armor("Armor"),
-        RaidDistance("RDis"),
+        RaidDistance("R.Dist"),
         #[serde(other)]
         Unknown("???"),
     }

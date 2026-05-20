@@ -45,7 +45,7 @@ where
 {
     fn write_stat((kind, amount): (StatKind, f64), f: &mut Formatter<'_>) -> Result {
         let name = kind.name();
-        let len = 7 - name.len();
+        let len = 7usize.saturating_sub(name.len());
         write!(f, "**`{name}:`**`{amount: >len$}`")
     }
 
