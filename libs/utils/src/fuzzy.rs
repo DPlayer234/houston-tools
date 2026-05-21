@@ -221,14 +221,39 @@ struct Storage<const MAX: usize = 4> {
 impl<const MAX: usize> Storage<MAX> {
     /// Get the indices for a specific segment.
     fn get(&self, segment: &Segment<MAX>) -> Option<&[MatchIndex]> {
-        // SAFETY: type invariant ensure that this memory is a pointer into `_block`
-        self.map.get(segment).map(|x| unsafe { x.0.as_ref() })
+        self.map.get(segment).map(|x| {
+            // SAFETY: type invariant ensures that this memory is a pointer into `_block`
+            unsafe { x.as_ptr().as_ref() }
+        })
     }
 }
 
-/// [`Send`] + [`Sync`] range pointer.
+/// Compacted [`Send`] + [`Sync`] range pointer for [`MatchIndex`].
 #[derive(Debug, Clone, Copy)]
-struct StorageRange(NonNull<[MatchIndex]>);
+#[repr(Rust, packed(2))]
+struct StorageRange {
+    base: NonNull<MatchIndex>,
+    len: MatchIndex,
+}
+
+impl StorageRange {
+    /// Creates a new storage range from a raw pointer.
+    ///
+    /// This assumes the range's len <= `MatchIndex::MAX`. If it is larger, it
+    /// may return a truncated range.
+    fn new(range: NonNull<[MatchIndex]>) -> Self {
+        Self {
+            base: range.cast(),
+            #[expect(clippy::cast_possible_truncation)]
+            len: range.len() as MatchIndex,
+        }
+    }
+
+    /// Converts this storage range back to a pointer.
+    fn as_ptr(self) -> NonNull<[MatchIndex]> {
+        NonNull::slice_from_raw_parts(self.base, to_usize(self.len))
+    }
+}
 
 // SAFETY: logically treated as a `&[MatchIndex]` which is `Send + Sync`
 unsafe impl Send for StorageRange {}
@@ -356,7 +381,7 @@ impl<T, const MIN: usize, const MAX: usize> SearchBuilder<T, MIN, MAX> {
             .map(move |(k, i)| {
                 let range = NonNull::from_ref(&block_ref[offset..][..i.len()]);
                 offset += i.len();
-                (*k, StorageRange(range))
+                (*k, StorageRange::new(range))
             })
             .collect();
 
@@ -371,7 +396,14 @@ impl<T, const MIN: usize, const MAX: usize> SearchBuilder<T, MIN, MAX> {
     #[inline]
     unsafe fn add_segments_of(&mut self, index: MatchIndex, norm: &[u16], size: usize) {
         for segment in iter_segments(norm, size) {
-            self.match_map.entry(segment).or_default().push(index);
+            let vec = self.match_map.entry(segment).or_default();
+
+            // avoid duplicate inserts. checking the last item is sufficient because we
+            // don't expect multiple calls of `add_segments_of` with the same `index` and
+            // `segment` combination.
+            if vec.last() != Some(&index) {
+                vec.push(index);
+            }
         }
     }
 }
