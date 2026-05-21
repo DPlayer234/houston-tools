@@ -47,7 +47,7 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::mem::take;
-use std::ptr;
+use std::ptr::{self, NonNull};
 use std::vec::IntoIter as VecIntoIter;
 
 use smallvec::SmallVec;
@@ -97,12 +97,12 @@ const fn to_usize(index: MatchIndex) -> usize {
 /// The `MIN` and `MAX` generic parameters can be used to customize the fragment
 /// splitting.
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct Search<T, const MIN: usize = 2, const MAX: usize = 4> {
     min_match_score: f64,
-
-    // Safety invariant: Every value in the vectors within `match_map`
-    // _must_ be a valid index into `values`. Unsafe code may rely on this.
-    match_map: HashMap<Segment<MAX>, MatchVec>,
+    // Safety invariant: Every value in its `_block` _must_ be a valid index into `values`.
+    // Unsafe code may indirectly rely on this.
+    storage: Storage<MAX>,
     values: Vec<ValueMetadata<T>>,
 }
 
@@ -120,74 +120,9 @@ struct ValueMetadata<T> {
 }
 
 impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
-    /// Creates a new empty search instance.
-    #[must_use]
-    pub fn new() -> Self {
-        const {
-            assert!(MIN <= MAX, "MIN must be <= MAX");
-            assert!(MIN > 0, "MIN must be > 0");
-            assert!(MAX < to_usize(MatchIndex::MAX), "MAX must be < u32::MAX");
-        }
-
-        Self {
-            min_match_score: 0.5,
-            match_map: HashMap::new(),
-            values: Vec::new(),
-        }
-    }
-
-    /// Changes the minimum matching score for returned values.
-    /// The default is `0.5`.
-    ///
-    /// Check [`Match::score`] for more details.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided score is less than `0.0` or greater than `1.0`.
-    #[must_use]
-    pub fn with_min_match_score(mut self, score: f64) -> Self {
-        assert!(
-            (0.0..=1.0).contains(&score),
-            "score must be within 0.0..=1.0, but was {score}"
-        );
-
-        self.min_match_score = score;
-        self
-    }
-
-    /// Inserts a new value with associated data.
-    ///
-    /// The return is the entry's index. This index is also returned on a search
-    /// [`Match`] and can be used in place of associated data if you wish to
-    /// store the data elsewhere.
-    ///
-    /// The indices are created ascendingly, with `0` being the first item.
-    /// The second item would be `1`, the third `2`, and so on.
-    pub fn insert(&mut self, value: &str, data: T) -> usize {
-        let norm = norm_str(value);
-        let index: MatchIndex = self
-            .values
-            .len()
-            .try_into()
-            .expect("cannot add more than u32::MAX elements to Search");
-
-        // add the data first so safety invariants aren't violated if a panic occurs.
-        self.values.push(ValueMetadata {
-            len: norm.len().try_into().unwrap_or(MatchIndex::MAX),
-            userdata: data,
-        });
-
-        if norm.len() >= MIN {
-            let upper = MAX.min(norm.len()).strict_add(1);
-            for s in (MIN..upper).rev() {
-                // SAFETY: index is a valid index into values
-                unsafe {
-                    self.add_segments_of(index, &norm, s);
-                }
-            }
-        }
-
-        to_usize(index)
+    /// Creates a new builder.
+    pub fn builder() -> SearchBuilder<T, MIN, MAX> {
+        SearchBuilder::new()
     }
 
     /// Searches for a given text.
@@ -217,28 +152,6 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         MatchIter::default()
     }
 
-    /// Shrinks the internal capacity as much as possible.
-    pub fn shrink_to_fit(&mut self) {
-        self.match_map.shrink_to_fit();
-        for value in self.match_map.values_mut() {
-            value.shrink_to_fit();
-        }
-
-        self.values.shrink_to_fit();
-    }
-
-    /// Adds the segments of the `norm` slice to [`Self::match_map`].
-    ///
-    /// # Safety
-    ///
-    /// `index as usize` must be a valid index into [`Self::values`].
-    #[inline]
-    unsafe fn add_segments_of(&mut self, index: MatchIndex, norm: &[u16], size: usize) {
-        for segment in iter_segments(norm, size) {
-            self.match_map.entry(segment).or_default().push(index);
-        }
-    }
-
     fn find_with_segment_size<'st>(
         &'st self,
         norm: &[u16],
@@ -250,7 +163,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
         let total = segments.len();
 
         for segment in segments {
-            let Some(match_entry) = self.match_map.get(&segment) else {
+            let Some(match_entry) = self.storage.get(&segment) else {
                 continue;
             };
 
@@ -296,7 +209,174 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
     }
 }
 
-impl<T, const MIN: usize, const MAX: usize> Default for Search<T, MIN, MAX> {
+/// Provides the lookup storage for a [`Search`].
+#[derive(Debug, Clone)]
+#[must_use]
+struct Storage<const MAX: usize = 4> {
+    // Holds pointers into `_block`. It is okay to drop `_block` first.
+    map: HashMap<Segment<MAX>, StorageRange>,
+    _block: Box<[MatchIndex]>,
+}
+
+impl<const MAX: usize> Storage<MAX> {
+    /// Get the indices for a specific segment.
+    fn get(&self, segment: &Segment<MAX>) -> Option<&[MatchIndex]> {
+        // SAFETY: type invariant ensure that this memory is a pointer into `_block`
+        self.map.get(segment).map(|x| unsafe { x.0.as_ref() })
+    }
+}
+
+/// [`Send`] + [`Sync`] range pointer.
+#[derive(Debug, Clone, Copy)]
+struct StorageRange(NonNull<[MatchIndex]>);
+
+// SAFETY: logically treated as a `&[MatchIndex]` which is `Send + Sync`
+unsafe impl Send for StorageRange {}
+unsafe impl Sync for StorageRange {}
+
+/// The builder type for a corresponding [`Search<T, MIN, MAX>`].
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct SearchBuilder<T, const MIN: usize = 2, const MAX: usize = 4> {
+    min_match_score: f64,
+    // Safety invariant: Every value in the vectors within `match_map`
+    // _must_ be a valid index into `values`. Unsafe code may rely on this.
+    match_map: HashMap<Segment<MAX>, MatchVec>,
+    values: Vec<ValueMetadata<T>>,
+}
+
+impl<T, const MIN: usize, const MAX: usize> SearchBuilder<T, MIN, MAX> {
+    /// Creates a new empty search instance.
+    pub fn new() -> Self {
+        const {
+            assert!(MIN <= MAX, "MIN must be <= MAX");
+            assert!(MIN > 0, "MIN must be > 0");
+            assert!(MAX < to_usize(MatchIndex::MAX), "MAX must be < u32::MAX");
+        }
+
+        Self {
+            min_match_score: 0.5,
+            match_map: HashMap::new(),
+            values: Vec::new(),
+        }
+    }
+
+    /// Changes the minimum matching score for returned values.
+    /// The default is `0.5`.
+    ///
+    /// Check [`Match::score`] for more details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided score is less than `0.0` or greater than `1.0`.
+    pub fn min_match_score(&mut self, score: f64) {
+        assert!(
+            (0.0..=1.0).contains(&score),
+            "score must be within 0.0..=1.0, but was {score}"
+        );
+
+        self.min_match_score = score;
+    }
+
+    /// Inserts a new value with associated data.
+    ///
+    /// The return is the entry's index. This index is also returned on a search
+    /// [`Match`] and can be used in place of associated data if you wish to
+    /// store the data elsewhere.
+    ///
+    /// The indices are created ascendingly, with `0` being the first item.
+    /// The second item would be `1`, the third `2`, and so on.
+    pub fn insert(&mut self, value: &str, data: T) -> usize {
+        let norm = norm_str(value);
+        let index: MatchIndex = self
+            .values
+            .len()
+            .try_into()
+            .expect("cannot add more than u32::MAX elements to Search");
+
+        // add the data first so safety invariants aren't violated if a panic occurs.
+        self.values.push(ValueMetadata {
+            len: norm.len().try_into().unwrap_or(MatchIndex::MAX),
+            userdata: data,
+        });
+
+        if norm.len() >= MIN {
+            let upper = MAX.min(norm.len()).strict_add(1);
+            for s in (MIN..upper).rev() {
+                // SAFETY: index is a valid index into values
+                unsafe {
+                    self.add_segments_of(index, &norm, s);
+                }
+            }
+        }
+
+        to_usize(index)
+    }
+
+    /// Finalizes the builder and returns a usable [`Search`].
+    pub fn build(mut self) -> Search<T, MIN, MAX> {
+        let storage = self.build_storage();
+        self.values.shrink_to_fit();
+        Search {
+            min_match_score: self.min_match_score,
+            storage,
+            values: self.values,
+        }
+    }
+
+    /// Same as [`Self::build`], but allows retaining the builder for future use
+    /// by cloning the values.
+    ///
+    /// This is functionally identical to `self.clone().build()`, but requires
+    /// less cloning.
+    pub fn build_cloned(&self) -> Search<T, MIN, MAX>
+    where
+        T: Clone,
+    {
+        let storage = self.build_storage();
+        Search {
+            min_match_score: self.min_match_score,
+            storage,
+            values: self.values.clone(),
+        }
+    }
+
+    /// Builds the storage. This can be done without cloning.
+    ///
+    /// Shared code for [`Self::build`] and [`Self::build_cloned`].
+    fn build_storage(&self) -> Storage<MAX> {
+        let match_map = &self.match_map;
+
+        let block: Box<[_]> = match_map.values().flatten().copied().collect();
+
+        let mut offset = 0usize;
+        let block_ref = &block;
+        let map: HashMap<_, _> = match_map
+            .iter()
+            .map(move |(k, i)| {
+                let range = NonNull::from_ref(&block_ref[offset..][..i.len()]);
+                offset += i.len();
+                (*k, StorageRange(range))
+            })
+            .collect();
+
+        Storage { map, _block: block }
+    }
+
+    /// Adds the segments of the `norm` slice to [`Self::match_map`].
+    ///
+    /// # Safety
+    ///
+    /// `index as usize` must be a valid index into [`Self::values`].
+    #[inline]
+    unsafe fn add_segments_of(&mut self, index: MatchIndex, norm: &[u16], size: usize) {
+        for segment in iter_segments(norm, size) {
+            self.match_map.entry(segment).or_default().push(index);
+        }
+    }
+}
+
+impl<T, const MIN: usize, const MAX: usize> Default for SearchBuilder<T, MIN, MAX> {
     fn default() -> Self {
         Self::new()
     }
@@ -585,12 +665,13 @@ mod tests {
     #[test]
     fn search() {
         let search = {
-            let mut search = TSearch::new().with_min_match_score(0.2);
+            let mut search = TSearch::builder();
+            search.min_match_score(0.2);
             search.insert("Hello World!", 1u8);
             search.insert("Hello There.", 2);
             search.insert("World Welcome", 3);
             search.insert("Nonmatch", 4);
-            search
+            search.build()
         };
 
         assert_eq!(&sorted_data(search.search("ello")), &[1, 2]);
@@ -608,12 +689,13 @@ mod tests {
     #[test]
     fn search_order() {
         let search = {
-            let mut search = TSearch::new().with_min_match_score(0.0);
+            let mut search = TSearch::builder();
+            search.min_match_score(0.0);
             search.insert("Houston II", 4);
             search.insert("Ho", 1u8);
             search.insert("Houston", 3);
             search.insert("Hous", 2);
-            search
+            search.build()
         };
 
         // 1 isn't matched because the 4-segment check already succeeds

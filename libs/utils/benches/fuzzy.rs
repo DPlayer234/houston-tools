@@ -67,14 +67,13 @@ fn nonsense_block() -> String {
 }
 
 fn create_search(names: &[&str]) -> Search<()> {
-    let mut search = Search::<()>::new();
+    let mut search = Search::builder();
 
     for n in names {
         search.insert(n, ());
     }
 
-    search.shrink_to_fit();
-    search
+    search.build()
 }
 
 criterion_group!(benches, bench_search);

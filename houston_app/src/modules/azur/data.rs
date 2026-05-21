@@ -14,6 +14,7 @@ use lru::LruCache;
 use serenity::small_fixed_array::TruncatingInto as _;
 use smallvec::{SmallVec, smallvec};
 use utils::fuzzy::{Match, MatchIter, Search};
+use utils::text::WriteStr as _;
 
 type IndexVec = SmallVec<[usize; 2]>;
 
@@ -86,34 +87,27 @@ impl GameData {
         };
 
         let ships = data.ships.into_boxed_slice();
-        let equips = data.equips.into_boxed_slice();
+        let mut equips = data.equips.into_boxed_slice();
         let augments = data.augments.into_boxed_slice();
         let juustagram_chats = data.juustagram_chats.into_boxed_slice();
-        let special_secretaries = data.special_secretaries.into_boxed_slice();
+        let mut special_secretaries = data.special_secretaries.into_boxed_slice();
 
-        let mut this = Self {
-            data_path,
-            // pre-allocate maps with appropriate capacities
-            ship_id_to_index: HashMap::with_capacity(ships.len()),
-            equip_id_to_index: HashMap::with_capacity(equips.len()),
-            augment_id_to_index: HashMap::with_capacity(augments.len()),
-            ship_id_to_augment_indices: HashMap::new(),
-            juustagram_chat_id_to_index: HashMap::with_capacity(juustagram_chats.len()),
-            ship_id_to_juustagram_chat_indices: HashMap::new(),
-            special_secretary_id_to_index: HashMap::with_capacity(special_secretaries.len()),
-            // move in vecs
-            ships,
-            equips,
-            augments,
-            juustagram_chats,
-            special_secretaries,
-            // default the rest of the fields
-            ship_simsearch: Search::new(),
-            equip_simsearch: Search::new(),
-            augment_simsearch: Search::new(),
-            special_secretary_simsearch: Search::new(),
-            chibi_sprite_cache: Mutex::new(LruCache::new(CHIBI_SPRITE_CAP)),
-        };
+        // pre-allocate maps with appropriate capacities
+        let mut ship_id_to_index = HashMap::with_capacity(ships.len());
+        let mut equip_id_to_index = HashMap::with_capacity(equips.len());
+        let mut augment_id_to_index = HashMap::with_capacity(augments.len());
+        let mut ship_id_to_augment_indices = HashMap::new();
+        let mut juustagram_chat_id_to_index = HashMap::with_capacity(juustagram_chats.len());
+        let mut ship_id_to_juustagram_chat_indices = HashMap::new();
+        let mut special_secretary_id_to_index = HashMap::with_capacity(special_secretaries.len());
+
+        let mut ship_simsearch = Search::builder();
+        let mut equip_simsearch = Search::builder();
+        let mut augment_simsearch = Search::builder();
+        let mut special_secretary_simsearch = Search::builder();
+
+        // reused buffer for some temporary string formatting
+        let mut format_buf = String::new();
 
         // we trim away "hull_disallowed" equip values that never matter in practice to
         // give nicer outputs otherwise we'd have outputs that state that dive
@@ -128,11 +122,11 @@ impl GameData {
             }
         }
 
-        for (index, data) in this.ships.iter().enumerate() {
+        for (index, data) in ships.iter().enumerate() {
             verify_ship(data);
 
-            this.ship_id_to_index.insert(data.base.group_id, index);
-            this.ship_simsearch.insert(&data.base.name, ());
+            ship_id_to_index.insert(data.base.group_id, index);
+            ship_simsearch.insert(&data.base.name, ());
 
             // collect known "equip & hull" pairs
             insert_equip_exist(&mut actual_equip_exist, &data.base);
@@ -141,19 +135,21 @@ impl GameData {
             }
         }
 
-        for (index, data) in this.equips.iter_mut().enumerate() {
-            this.equip_id_to_index.insert(data.equip_id, index);
-            this.equip_simsearch.insert(
-                &format!(
-                    "{} {} {} {} {}",
-                    data.name,
-                    data.faction.name(),
-                    data.faction.prefix().unwrap_or("EX"),
-                    data.kind.name(),
-                    data.rarity.name()
-                ),
-                (),
+        for (index, data) in equips.iter_mut().enumerate() {
+            equip_id_to_index.insert(data.equip_id, index);
+
+            format_buf.clear();
+            write!(
+                format_buf,
+                "{} {} {} {} {}",
+                data.name,
+                data.faction.name(),
+                data.faction.prefix().unwrap_or("EX"),
+                data.kind.name(),
+                data.rarity.name()
             );
+
+            equip_simsearch.insert(&format_buf, ());
 
             // trim away irrelevant disallowed hulls
             let mut hull_disallowed = take(&mut data.hull_disallowed).into_vec();
@@ -161,42 +157,61 @@ impl GameData {
             data.hull_disallowed = hull_disallowed.trunc_into();
         }
 
-        for (index, data) in this.augments.iter().enumerate() {
-            this.augment_id_to_index.insert(data.augment_id, index);
-            this.augment_simsearch.insert(&data.name, ());
+        for (index, data) in augments.iter().enumerate() {
+            augment_id_to_index.insert(data.augment_id, index);
+            augment_simsearch.insert(&data.name, ());
 
             if let Some(ship_id) = data.usability.unique_ship_id() {
-                this.ship_id_to_augment_indices
+                ship_id_to_augment_indices
                     .entry(ship_id)
-                    .and_modify(|v| v.push(index))
+                    .and_modify(|v: &mut IndexVec| v.push(index))
                     .or_insert_with(|| smallvec![index]);
             }
         }
 
-        for (index, data) in this.juustagram_chats.iter().enumerate() {
-            this.juustagram_chat_id_to_index.insert(data.chat_id, index);
-            this.ship_id_to_juustagram_chat_indices
+        for (index, data) in juustagram_chats.iter().enumerate() {
+            juustagram_chat_id_to_index.insert(data.chat_id, index);
+            ship_id_to_juustagram_chat_indices
                 .entry(data.group_id)
-                .and_modify(|v| v.push(index))
+                .and_modify(|v: &mut IndexVec| v.push(index))
                 .or_insert_with(|| smallvec![index]);
         }
 
-        for (index, data) in this.special_secretaries.iter_mut().enumerate() {
+        for (index, data) in special_secretaries.iter_mut().enumerate() {
             data.name = format!("{} ({})", data.name, data.kind).trunc_into();
-            this.special_secretary_id_to_index.insert(data.id, index);
-            this.special_secretary_simsearch.insert(&data.name, ());
+            special_secretary_id_to_index.insert(data.id, index);
+            special_secretary_simsearch.insert(&data.name, ());
         }
 
         // these are probably the wrong size
-        this.ship_id_to_augment_indices.shrink_to_fit();
-        this.ship_id_to_juustagram_chat_indices.shrink_to_fit();
+        ship_id_to_augment_indices.shrink_to_fit();
+        ship_id_to_juustagram_chat_indices.shrink_to_fit();
 
-        // these are probably also the wrong size, in several ways
-        this.ship_simsearch.shrink_to_fit();
-        this.equip_simsearch.shrink_to_fit();
-        this.augment_simsearch.shrink_to_fit();
-        this.special_secretary_simsearch.shrink_to_fit();
-        Ok(this)
+        let ship_simsearch = ship_simsearch.build();
+        let equip_simsearch = equip_simsearch.build();
+        let augment_simsearch = augment_simsearch.build();
+        let special_secretary_simsearch = special_secretary_simsearch.build();
+
+        Ok(Self {
+            data_path,
+            ships,
+            equips,
+            augments,
+            juustagram_chats,
+            special_secretaries,
+            ship_id_to_index,
+            ship_simsearch,
+            equip_id_to_index,
+            equip_simsearch,
+            augment_id_to_index,
+            augment_simsearch,
+            ship_id_to_augment_indices,
+            juustagram_chat_id_to_index,
+            ship_id_to_juustagram_chat_indices,
+            special_secretary_id_to_index,
+            special_secretary_simsearch,
+            chibi_sprite_cache: Mutex::new(LruCache::new(CHIBI_SPRITE_CAP)),
+        })
     }
 
     /// Gets all known ships.

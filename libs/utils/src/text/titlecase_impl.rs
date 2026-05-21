@@ -117,11 +117,4 @@ macro_rules! titlecase {
             ))
         }
     };
-    (b: $input:expr) => {
-        const {
-            #[deprecated = "`titlecase!(b: ..)` should be replaced with `titlecase_u8!(..)`"]
-            const __TITLECASE_B_DEPRECATED: &[u8] = $crate::titlecase_u8!($input);
-            __TITLECASE_B_DEPRECATED
-        }
-    };
 }
