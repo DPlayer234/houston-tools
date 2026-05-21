@@ -47,8 +47,8 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::mem::take;
-use std::ptr::{self, NonNull};
 use std::vec::IntoIter as VecIntoIter;
+use std::{ptr, slice};
 
 use smallvec::SmallVec;
 
@@ -213,51 +213,35 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 #[derive(Debug, Clone)]
 #[must_use]
 struct Storage<const MAX: usize = 4> {
-    // Holds pointers into `_block`. It is okay to drop `_block` first.
-    map: HashMap<Segment<MAX>, StorageRange>,
-    _block: Box<[MatchIndex]>,
+    // safety invariant: every value here must be a valid range into `block`
+    map: HashMap<Segment<MAX>, BlockRange>,
+    block: Box<[MatchIndex]>,
 }
 
 impl<const MAX: usize> Storage<MAX> {
     /// Get the indices for a specific segment.
     fn get(&self, segment: &Segment<MAX>) -> Option<&[MatchIndex]> {
-        self.map.get(segment).map(|x| {
-            // SAFETY: type invariant ensures that this memory is a pointer into `_block`
-            unsafe { x.as_ptr().as_ref() }
-        })
-    }
-}
+        let BlockRange { offset, len } = *self.map.get(segment)?;
+        debug_assert!(
+            offset + to_usize(len) <= self.block.len(),
+            "BlockRange must be in bounds for the block"
+        );
 
-/// Compacted [`Send`] + [`Sync`] range pointer for [`MatchIndex`].
-#[derive(Debug, Clone, Copy)]
-#[repr(Rust, packed(2))]
-struct StorageRange {
-    base: NonNull<MatchIndex>,
-    len: MatchIndex,
-}
-
-impl StorageRange {
-    /// Creates a new storage range from a raw pointer.
-    ///
-    /// This assumes the range's len <= `MatchIndex::MAX`. If it is larger, it
-    /// may return a truncated range.
-    fn new(range: NonNull<[MatchIndex]>) -> Self {
-        Self {
-            base: range.cast(),
-            #[expect(clippy::cast_possible_truncation)]
-            len: range.len() as MatchIndex,
+        // SAFETY: type invariant requires that the range is valid and in-bounds
+        unsafe {
+            let base = self.block.as_ptr().add(offset);
+            Some(slice::from_raw_parts(base, to_usize(len)))
         }
     }
-
-    /// Converts this storage range back to a pointer.
-    fn as_ptr(self) -> NonNull<[MatchIndex]> {
-        NonNull::slice_from_raw_parts(self.base, to_usize(self.len))
-    }
 }
 
-// SAFETY: logically treated as a `&[MatchIndex]` which is `Send + Sync`
-unsafe impl Send for StorageRange {}
-unsafe impl Sync for StorageRange {}
+/// Compacted range into the memory block.
+#[derive(Debug, Clone, Copy)]
+#[repr(Rust, packed(2))]
+struct BlockRange {
+    offset: usize,
+    len: MatchIndex,
+}
 
 /// The builder type for a corresponding [`Search<T, MIN, MAX>`].
 #[derive(Debug, Clone)]
@@ -372,20 +356,56 @@ impl<T, const MIN: usize, const MAX: usize> SearchBuilder<T, MIN, MAX> {
     fn build_storage(&self) -> Storage<MAX> {
         let match_map = &self.match_map;
 
-        let block: Box<[_]> = match_map.values().flatten().copied().collect();
+        let mut sorted: Vec<_> = match_map.iter().collect();
+        sorted.sort_unstable_by_key(|&(_, x)| (Reverse(x.len()), x));
 
-        let mut offset = 0usize;
-        let block_ref = &block;
-        let map: HashMap<_, _> = match_map
-            .iter()
-            .map(move |(k, i)| {
-                let range = NonNull::from_ref(&block_ref[offset..][..i.len()]);
-                offset += i.len();
-                (*k, StorageRange::new(range))
-            })
-            .collect();
+        // note: we don't have empty needles here
+        fn find_subslice(haystack: &[MatchIndex], needle: &[MatchIndex]) -> Option<usize> {
+            // splitting on the first element in each window allows skipping a more
+            // expensive call for the rest of the slice. with the structure of the input
+            // data, the first element matching is "rare", so this provides a significant
+            // speed-up in release builds.
+            haystack
+                .windows(needle.len())
+                .position(|x| x[0] == needle[0] && x[1..] == needle[1..])
+        }
 
-        Storage { map, _block: block }
+        // the goal is to reuse as many "same" regions in the `block` as possible, which
+        // is... uh... somewhat expensive. but saves memory in the end.
+        let mut map = HashMap::new();
+        let mut block = Vec::new();
+
+        // equal "values" are sorted next to each other
+        let mut last_offset = 0usize;
+        let mut last_value: &[MatchIndex] = &[];
+
+        #[expect(clippy::cast_possible_truncation)]
+        for &(key, value) in &sorted {
+            let offset = if &**value == last_value {
+                last_offset
+            } else if let Some(offset) = find_subslice(&block, value) {
+                offset
+            } else {
+                let offset = block.len();
+                block.extend(value);
+                offset
+            };
+
+            debug_assert!(
+                MatchIndex::try_from(value.len()).is_ok(),
+                "`MatchVec::len` cannot overflow `MatchIndex`"
+            );
+            let range = BlockRange {
+                offset,
+                len: value.len() as MatchIndex,
+            };
+
+            map.insert(*key, range);
+            (last_value, last_offset) = (value, offset);
+        }
+
+        let block = block.into_boxed_slice();
+        Storage { map, block }
     }
 
     /// Adds the segments of the `norm` slice to [`Self::match_map`].
