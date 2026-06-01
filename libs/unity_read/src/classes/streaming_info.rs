@@ -18,9 +18,9 @@ define_unity_class! {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Offset(pub u64);
 
-impl UnityClass for Offset {
+impl<'r> UnityClass<'r> for Offset {
     fn parse_tree(
-        r: &mut Cursor<&[u8]>,
+        r: &mut Cursor<&'r [u8]>,
         is_big_endian: bool,
         root: &TypeTreeNode,
         tree: &[TypeTreeNode],

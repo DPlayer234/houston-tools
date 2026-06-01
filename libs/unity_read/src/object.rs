@@ -25,7 +25,7 @@ pub struct ObjectRef<'a> {
     pub(crate) object: ObjectInfo,
 }
 
-impl ObjectRef<'_> {
+impl<'a> ObjectRef<'a> {
     /// Gets the object's path ID.
     pub fn path_id(&self) -> i64 {
         self.object.path_id
@@ -46,7 +46,7 @@ impl ObjectRef<'_> {
     /// # Errors
     ///
     /// Returns [`Err`] if the object points to data out of bounds.
-    pub fn data(&self) -> crate::Result<&[u8]> {
+    pub fn data(&self) -> crate::Result<&'a [u8]> {
         let offset = usize::from_int(self.object.start + self.file.data_offset)?;
         let size = usize::from_int(self.object.size)?;
 
@@ -66,7 +66,7 @@ impl ObjectRef<'_> {
     /// # Errors
     ///
     /// Returns [`Err`] if this object cannot be parsed as `T`.
-    pub fn try_into_class<T: UnityClass>(&self) -> crate::Result<T> {
+    pub fn try_into_class<T: UnityClass<'a>>(&self) -> crate::Result<T> {
         T::try_from_obj(self)
     }
 }
