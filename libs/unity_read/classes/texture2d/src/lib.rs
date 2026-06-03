@@ -1,13 +1,12 @@
-#[cfg(feature = "texture-decode")]
+//! Defines [`Texture2D`] Unity class and image decoding.
+#![allow(clippy::upper_case_acronyms)]
+
 use image::RgbaImage;
 use num_enum::FromPrimitive;
-
-use super::StreamingInfo;
-#[cfg(feature = "texture-decode")]
-use crate::FromInt as _;
-use crate::define_unity_class;
-use crate::error::Error;
-use crate::unity_fs::UnityFsFile;
+use unity_read::classes::StreamingInfo;
+use unity_read::error::Error;
+use unity_read::unity_fs::UnityFsFile;
+use unity_read::{FromInt as _, define_unity_class};
 
 define_unity_class! {
     /// Data for Unity's `Texture2D` class.
@@ -24,7 +23,6 @@ define_unity_class! {
 /// Loaded data for a [`Texture2D`].
 #[derive(Debug, Clone)]
 pub struct Texture2DData<'t> {
-    #[cfg(feature = "texture-decode")]
     texture: &'t Texture2D,
     data: &'t [u8],
 }
@@ -43,9 +41,8 @@ impl Texture2D {
     pub fn read_data<'t, 'fs: 't>(
         &'t self,
         fs: &'fs UnityFsFile<'fs>,
-    ) -> crate::Result<Texture2DData<'t>> {
+    ) -> unity_read::Result<Texture2DData<'t>> {
         Ok(Texture2DData {
-            #[cfg(feature = "texture-decode")]
             texture: self,
             data: self
                 .stream_data
@@ -58,10 +55,9 @@ impl Texture2D {
     ///
     /// If `stream_data` is set, this function returns an [`Err`].
     #[doc(hidden)]
-    pub fn as_data(&self) -> crate::Result<Texture2DData<'_>> {
+    pub fn as_data(&self) -> unity_read::Result<Texture2DData<'_>> {
         if self.stream_data.is_empty() {
             Ok(Texture2DData {
-                #[cfg(feature = "texture-decode")]
                 texture: self,
                 data: &self.image_data,
             })
@@ -86,8 +82,7 @@ impl Texture2DData<'_> {
     ///
     /// Returns [`Err`] if the image cannot be decoded or is in an unsupported
     /// format.
-    #[cfg(feature = "texture-decode")]
-    pub fn decode(&self) -> crate::Result<RgbaImage> {
+    pub fn decode(&self) -> unity_read::Result<RgbaImage> {
         use TextureFormat::*;
         use texture2ddecoder::*;
 
@@ -116,19 +111,17 @@ impl Texture2DData<'_> {
     }
 
     #[expect(clippy::type_complexity)]
-    #[cfg(feature = "texture-decode")]
     fn decode_with(
         &self,
         args: decode::Args,
         decoder: fn(&[u8], usize, usize, &mut [u32]) -> Result<(), &'static str>,
-    ) -> crate::Result<RgbaImage> {
+    ) -> unity_read::Result<RgbaImage> {
         args.decode_with(|args, buf| {
             decoder(self.data, args.width, args.height, buf).map_err(Error::InvalidData)
         })
     }
 }
 
-#[cfg(feature = "texture-decode")]
 mod decode {
     use super::*;
 
@@ -142,7 +135,7 @@ mod decode {
     impl Args {
         /// Creates a new [`Args`], validating the width, height, and total
         /// size.
-        pub fn new(width: u32, height: u32) -> crate::Result<Self> {
+        pub fn new(width: u32, height: u32) -> unity_read::Result<Self> {
             let width = usize::from_int(width)?;
             let height = usize::from_int(height)?;
             let size = width
@@ -159,7 +152,7 @@ mod decode {
         }
 
         /// Decodes the image with a given decoder function.
-        pub fn decode_with<F>(self, decode: F) -> crate::Result<RgbaImage>
+        pub fn decode_with<F>(self, decode: F) -> unity_read::Result<RgbaImage>
         where
             F: FnOnce(&Self, &mut [u32]) -> Result<(), Error>,
         {

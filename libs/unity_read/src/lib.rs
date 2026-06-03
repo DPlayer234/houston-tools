@@ -70,7 +70,8 @@ where
 }
 
 /// Internal int-to-int conversion.
-trait FromInt<T>: Sized {
+#[doc(hidden)]
+pub trait FromInt<T>: Sized {
     fn from_int(value: T) -> Result<Self>;
 }
 

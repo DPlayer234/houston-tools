@@ -2,8 +2,9 @@ use std::fs;
 use std::io::Cursor;
 
 use image::{ImageFormat, imageops};
-use unity_read::classes::{ClassID, Texture2D};
+use unity_read::classes::ClassID;
 use unity_read::unity_fs::{UnityFsData, UnityFsFile};
+use unity_read_texture2d::Texture2D;
 
 use crate::log::Action;
 

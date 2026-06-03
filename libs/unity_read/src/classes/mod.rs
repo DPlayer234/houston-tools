@@ -9,17 +9,13 @@ use crate::{BinReadEndian as _, FromInt as _, SeekRead as _};
 
 mod asset_bundle;
 mod class_id;
-mod mesh;
 mod streaming_info;
 mod text_asset;
-mod texture2d;
 
 pub use asset_bundle::*;
 pub use class_id::*;
-pub use mesh::*;
 pub use streaming_info::*;
 pub use text_asset::*;
-pub use texture2d::*;
 
 /// Trait that allows reading Unity object data in a structured form.
 pub trait UnityClass<'r>: Sized {

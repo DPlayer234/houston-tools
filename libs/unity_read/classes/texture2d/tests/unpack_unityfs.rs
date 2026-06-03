@@ -1,8 +1,9 @@
 #![allow(unused_crate_dependencies)]
 use std::io::Cursor;
 
-use unity_read::classes::{ClassID, Texture2D, TextureFormat};
+use unity_read::classes::ClassID;
 use unity_read::unity_fs::{UnityFsData, UnityFsFile};
+use unity_read_texture2d::{Texture2D, TextureFormat};
 
 const WIDTH: i32 = 144;
 const HEIGHT: i32 = 152;

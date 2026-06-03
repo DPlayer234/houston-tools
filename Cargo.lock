@@ -193,6 +193,7 @@ dependencies = [
  "serde_json",
  "small-fixed-array",
  "unity_read",
+ "unity_read_texture2d",
  "utils",
  "utils_build",
 ]
@@ -3701,16 +3702,32 @@ version = "6.0.0"
 dependencies = [
  "anyhow",
  "binrw",
- "bytemuck",
- "half",
- "image",
  "lz4",
  "lzma-rs",
  "modular-bitfield",
  "num_enum",
  "once_cell",
- "texture2ddecoder",
  "thiserror",
+]
+
+[[package]]
+name = "unity_read_mesh"
+version = "6.0.0"
+dependencies = [
+ "binrw",
+ "half",
+ "unity_read",
+]
+
+[[package]]
+name = "unity_read_texture2d"
+version = "6.0.0"
+dependencies = [
+ "bytemuck",
+ "image",
+ "num_enum",
+ "texture2ddecoder",
+ "unity_read",
 ]
 
 [[package]]

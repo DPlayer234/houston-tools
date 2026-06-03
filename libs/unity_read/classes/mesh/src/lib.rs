@@ -1,13 +1,14 @@
+//! Defines the [`Mesh`] Unity class.
+
 use std::io::{Cursor, Read, Seek};
 use std::mem::swap;
 
 use binrw::{BinRead, BinResult, Endian};
 use half::f16;
-
-use super::StreamingInfo;
-use crate::error::Error;
-use crate::unity_fs::UnityFsFile;
-use crate::{FromInt as _, define_unity_class};
+use unity_read::classes::StreamingInfo;
+use unity_read::error::Error;
+use unity_read::unity_fs::UnityFsFile;
+use unity_read::{FromInt as _, define_unity_class};
 
 define_unity_class! {
     pub class Mesh = "Mesh" {
@@ -104,7 +105,7 @@ impl Mesh {
     pub fn read_vertex_data<'t, 'fs: 't>(
         &'t self,
         fs: &'fs UnityFsFile<'fs>,
-    ) -> crate::Result<MeshVertexData<'t>> {
+    ) -> unity_read::Result<MeshVertexData<'t>> {
         Ok(MeshVertexData {
             mesh: self,
             data: self
@@ -121,7 +122,7 @@ impl MeshVertexData<'_> {
     /// # Errors
     ///
     /// Returns [`Err`] if the mesh data is invalid or unsupported.
-    pub fn resolve_meshes(&self) -> crate::Result<Vec<ResolvedMesh>> {
+    pub fn resolve_meshes(&self) -> unity_read::Result<Vec<ResolvedMesh>> {
         // Would you believe me if this handles barely anything a mesh can store?
         let (index_size, index_buffer) = self.load_index_buffer()?;
         let streams = self.load_streams()?;
@@ -247,7 +248,7 @@ impl MeshVertexData<'_> {
         fn read_f32_vector<const N: usize>(
             cursor: &mut Cursor<&[u8]>,
             t: u8,
-        ) -> crate::Result<[f32; N]> {
+        ) -> unity_read::Result<[f32; N]> {
             match t {
                 0 => read_vector_of::<f32, N>(cursor),
                 1 => read_vector_of::<ReadF16, N>(cursor).map(NormFloat::to_f32_array),
@@ -261,7 +262,9 @@ impl MeshVertexData<'_> {
             }
         }
 
-        fn read_vector_of<T, const N: usize>(cursor: &mut Cursor<&[u8]>) -> crate::Result<[T; N]>
+        fn read_vector_of<T, const N: usize>(
+            cursor: &mut Cursor<&[u8]>,
+        ) -> unity_read::Result<[T; N]>
         where
             T: Copy + Default + BinRead,
             for<'a> T::Args<'a>: Default,
@@ -275,7 +278,7 @@ impl MeshVertexData<'_> {
         }
     }
 
-    fn load_index_buffer(&self) -> crate::Result<(u32, Vec<u32>)> {
+    fn load_index_buffer(&self) -> unity_read::Result<(u32, Vec<u32>)> {
         macro_rules! map_buffer {
             ($Ty:ty) => {{
                 const N: usize = size_of::<$Ty>();
@@ -298,7 +301,7 @@ impl MeshVertexData<'_> {
         }
     }
 
-    fn load_streams(&self) -> crate::Result<Vec<StreamInfo>> {
+    fn load_streams(&self) -> unity_read::Result<Vec<StreamInfo>> {
         let data_size = u32::from_int(self.data.len())?;
         let vertex_data = &self.mesh.vertex_data;
 

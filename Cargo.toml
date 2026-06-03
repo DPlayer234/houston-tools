@@ -11,6 +11,7 @@ members = [
     "libs/houston_cmd/macros",
     "libs/serde_steph",
     "libs/unity_read",
+    "libs/unity_read/classes/*",
     "libs/utils",
     "libs/utils_build",
 ]
