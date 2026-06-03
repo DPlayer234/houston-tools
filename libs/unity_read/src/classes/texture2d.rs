@@ -1,10 +1,13 @@
+#[cfg(feature = "texture-decode")]
 use image::RgbaImage;
 use num_enum::FromPrimitive;
 
 use super::StreamingInfo;
+#[cfg(feature = "texture-decode")]
+use crate::FromInt as _;
+use crate::define_unity_class;
 use crate::error::Error;
 use crate::unity_fs::UnityFsFile;
-use crate::{FromInt as _, define_unity_class};
 
 define_unity_class! {
     /// Data for Unity's `Texture2D` class.
@@ -21,6 +24,7 @@ define_unity_class! {
 /// Loaded data for a [`Texture2D`].
 #[derive(Debug, Clone)]
 pub struct Texture2DData<'t> {
+    #[cfg(feature = "texture-decode")]
     texture: &'t Texture2D,
     data: &'t [u8],
 }
@@ -41,6 +45,7 @@ impl Texture2D {
         fs: &'fs UnityFsFile<'fs>,
     ) -> crate::Result<Texture2DData<'t>> {
         Ok(Texture2DData {
+            #[cfg(feature = "texture-decode")]
             texture: self,
             data: self
                 .stream_data
@@ -56,6 +61,7 @@ impl Texture2D {
     pub fn as_data(&self) -> crate::Result<Texture2DData<'_>> {
         if self.stream_data.is_empty() {
             Ok(Texture2DData {
+                #[cfg(feature = "texture-decode")]
                 texture: self,
                 data: &self.image_data,
             })
@@ -80,6 +86,7 @@ impl Texture2DData<'_> {
     ///
     /// Returns [`Err`] if the image cannot be decoded or is in an unsupported
     /// format.
+    #[cfg(feature = "texture-decode")]
     pub fn decode(&self) -> crate::Result<RgbaImage> {
         use TextureFormat::*;
         use texture2ddecoder::*;
@@ -87,7 +94,7 @@ impl Texture2DData<'_> {
         let width = u32::from_int(self.texture.width)?;
         let height = u32::from_int(self.texture.height)?;
 
-        let args = Args::new(width, height)?;
+        let args = decode::Args::new(width, height)?;
         match self.texture.format() {
             RGBA32 => {
                 // this matches the Rgba<u8> layout
@@ -109,9 +116,10 @@ impl Texture2DData<'_> {
     }
 
     #[expect(clippy::type_complexity)]
+    #[cfg(feature = "texture-decode")]
     fn decode_with(
         &self,
-        args: Args,
+        args: decode::Args,
         decoder: fn(&[u8], usize, usize, &mut [u32]) -> Result<(), &'static str>,
     ) -> crate::Result<RgbaImage> {
         args.decode_with(|args, buf| {
@@ -120,83 +128,89 @@ impl Texture2DData<'_> {
     }
 }
 
-/// Stores validated image arguments.
-struct Args {
-    width: usize,
-    height: usize,
-    size: usize,
-}
+#[cfg(feature = "texture-decode")]
+mod decode {
+    use super::*;
 
-impl Args {
-    /// Creates a new [`Args`], validating the width, height, and total size.
-    fn new(width: u32, height: u32) -> crate::Result<Self> {
-        let width = usize::from_int(width)?;
-        let height = usize::from_int(height)?;
-        let size = width
-            .checked_mul(height)
-            .and_then(|s| s.checked_mul(size_of::<u32>()))
-            .filter(|s| isize::try_from(*s).is_ok())
-            .ok_or(Error::InvalidData("image size overflows address space"))?;
-
-        Ok(Self {
-            width,
-            height,
-            size,
-        })
+    /// Stores validated image arguments.
+    pub struct Args {
+        pub width: usize,
+        pub height: usize,
+        pub size: usize,
     }
 
-    /// Decodes the image with a given decoder function.
-    fn decode_with<F>(self, decode: F) -> crate::Result<RgbaImage>
-    where
-        F: FnOnce(&Self, &mut [u32]) -> Result<(), Error>,
-    {
-        // allocate buffer as Vec<u8> since that's the final data type needed
-        // the size has been multiplied by 4 already to match the pixel width
-        let mut buffer = vec![0u8; self.size];
-        let mut buffer_u32 = None;
+    impl Args {
+        /// Creates a new [`Args`], validating the width, height, and total
+        /// size.
+        pub fn new(width: u32, height: u32) -> crate::Result<Self> {
+            let width = usize::from_int(width)?;
+            let height = usize::from_int(height)?;
+            let size = width
+                .checked_mul(height)
+                .and_then(|s| s.checked_mul(size_of::<u32>()))
+                .filter(|s| isize::try_from(*s).is_ok())
+                .ok_or(Error::InvalidData("image size overflows address space"))?;
 
-        // cast the vec's slice to u32.
-        // while this can't fail for the obvious reason (this size of a multiple of 4),
-        // it could fail because the allocation isn't sufficiently aligned.
-        // no system allocator (at least on expected platforms) actually allocates
-        // with an alignment of less than 8, but we may as well handle it.
-        // to do that, we allocate a new buffer of u32s and copy it back later.
-        let slice_u32 = match bytemuck::try_cast_slice_mut::<u8, u32>(&mut buffer) {
-            Ok(b) => b,
-            _ => buffer_u32.insert(vec![0u32; buffer.len() / size_of::<u32>()]),
-        };
+            Ok(Self {
+                width,
+                height,
+                size,
+            })
+        }
 
-        decode(&self, slice_u32)?;
+        /// Decodes the image with a given decoder function.
+        pub fn decode_with<F>(self, decode: F) -> crate::Result<RgbaImage>
+        where
+            F: FnOnce(&Self, &mut [u32]) -> Result<(), Error>,
+        {
+            // allocate buffer as Vec<u8> since that's the final data type needed
+            // the size has been multiplied by 4 already to match the pixel width
+            let mut buffer = vec![0u8; self.size];
+            let mut buffer_u32 = None;
 
-        // fix the color output to match RGBA32, so `[R, G, B, A]` bytes.
-        //
-        // `texture2ddecoder` has somewhat weird "endianness" for the output.
-        // technically, it claims to output BGRA, however this is actually loaded as a
-        // little-endian byte array into a native u32 via `u32::from_le_bytes`. the
-        // result is that the _numeric value_ is endian independent and always has the
-        // form of `0xAARRGGBB`, but the byte-wise result differs between architectures,
-        // and that's what we actually care about.
-        for px in slice_u32 {
-            if cfg!(target_endian = "little") {
-                // for little-endian, the bytes are `[B, G, R, A]`, so, we need to swap the
-                // green and red channels.
-                *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
-            } else {
-                // for big-endian, the bytes are `[A, R, G, B]`. a rotate-left by 1 byte happens
-                // to put the bytes into the correct spots.
-                *px = px.rotate_left(8);
+            // cast the vec's slice to u32.
+            // while this can't fail for the obvious reason (this size of a multiple of 4),
+            // it could fail because the allocation isn't sufficiently aligned.
+            // no system allocator (at least on expected platforms) actually allocates
+            // with an alignment of less than 8, but we may as well handle it.
+            // to do that, we allocate a new buffer of u32s and copy it back later.
+            let slice_u32 = match bytemuck::try_cast_slice_mut::<u8, u32>(&mut buffer) {
+                Ok(b) => b,
+                _ => buffer_u32.insert(vec![0u32; buffer.len() / size_of::<u32>()]),
+            };
+
+            decode(&self, slice_u32)?;
+
+            // fix the color output to match RGBA32, so `[R, G, B, A]` bytes.
+            //
+            // `texture2ddecoder` has somewhat weird "endianness" for the output.
+            // technically, it claims to output BGRA, however this is actually loaded as a
+            // little-endian byte array into a native u32 via `u32::from_le_bytes`. the
+            // result is that the _numeric value_ is endian independent and always has the
+            // form of `0xAARRGGBB`, but the byte-wise result differs between architectures,
+            // and that's what we actually care about.
+            for px in slice_u32 {
+                if cfg!(target_endian = "little") {
+                    // for little-endian, the bytes are `[B, G, R, A]`, so, we need to swap the
+                    // green and red channels.
+                    *px = (*px & 0xFF00_FF00) | ((*px & 0xFF_0000) >> 16) | ((*px & 0xFF) << 16);
+                } else {
+                    // for big-endian, the bytes are `[A, R, G, B]`. a rotate-left by 1 byte happens
+                    // to put the bytes into the correct spots.
+                    *px = px.rotate_left(8);
+                }
             }
-        }
 
-        if let Some(buffer_u32) = buffer_u32 {
-            buffer.copy_from_slice(bytemuck::cast_slice::<u32, u8>(&buffer_u32));
-        }
+            if let Some(buffer_u32) = buffer_u32 {
+                buffer.copy_from_slice(bytemuck::cast_slice::<u32, u8>(&buffer_u32));
+            }
 
-        // truncation is fine -- source values were u32 already
-        #[expect(clippy::cast_possible_truncation)]
-        let image = RgbaImage::from_raw(self.width as u32, self.height as u32, buffer)
-            .expect("buffer should be allocated with the correct size");
-        Ok(image)
+            // truncation is fine -- source values were u32 already
+            #[expect(clippy::cast_possible_truncation)]
+            let image = RgbaImage::from_raw(self.width as u32, self.height as u32, buffer)
+                .expect("buffer should be allocated with the correct size");
+            Ok(image)
+        }
     }
 }
 

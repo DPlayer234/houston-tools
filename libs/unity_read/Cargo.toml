@@ -12,13 +12,21 @@ workspace = true
 [dependencies]
 anyhow = "1.0.97"
 binrw = "0.15.1"
-bytemuck = "1.23.0"
+bytemuck = { version = "1.23.0", optional = true }
 half = "2.6.0"
-image = { version = "0.25.10", default-features = false }
+image = { version = "0.25.10", default-features = false, optional = true }
 modular-bitfield = "0.13.0"
 num_enum = "0.7.5"
 lz4 = "1.28.1"
 lzma-rs = "0.3.0"
 once_cell = { version = "1.21.3", default-features = false }
-texture2ddecoder = "0.1.2"
+texture2ddecoder = { version = "0.1.2", optional = true }
 thiserror = "2.0.12"
+
+[features]
+texture-decode = ["dep:bytemuck", "dep:image", "dep:texture2ddecoder"]
+
+[[test]]
+name = "unpack-unityfs"
+path = "tests/unpack_unityfs.rs"
+required-features = ["texture-decode"]

@@ -22,6 +22,7 @@ small-fixed-array = { version = "0.4.10", features = ["serde"] }
 
 azur_lane.path = "../libs/azur_lane"
 unity_read.path = "../libs/unity_read"
+unity_read.features = ["texture-decode"]
 utils.path = "../libs/utils"
 
 [dependencies.clap]
