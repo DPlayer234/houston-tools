@@ -70,8 +70,8 @@ impl<I: Iterator, F> RunsByKey<I, F> {
 delegate_iterator_inner!(
     [I, F, K] RunsByKey<I, F>
     where
-        F: Fn(&I::Item) -> &K,
-        K: ?Sized + PartialEq,
+        F: Fn(&I::Item) -> K,
+        K: PartialEq,
 );
 
 struct RunsInner<I: Iterator, P> {
@@ -116,9 +116,9 @@ impl<T: ?Sized, F: Fn(&T, &T) -> bool> Predicate<T> for EqFn<F> {
 #[derive(Debug, Clone, Copy)]
 struct KeyEqFn<F>(F);
 
-impl<T: ?Sized, K: ?Sized + PartialEq, F: Fn(&T) -> &K> Predicate<T> for KeyEqFn<F> {
+impl<T: ?Sized, K: PartialEq, F: Fn(&T) -> K> Predicate<T> for KeyEqFn<F> {
     fn eq(&self, a: &T, b: &T) -> bool {
-        *(self.0)(a) == *(self.0)(b)
+        (self.0)(a) == (self.0)(b)
     }
 }
 

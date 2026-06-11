@@ -10,7 +10,7 @@ pub struct CollectChunks<I, C> {
     // there.
     inner: Fuse<I>,
     chunk_size: NonZero<usize>,
-    chunk_marker: PhantomData<C>,
+    collection_ty: PhantomData<C>,
 }
 
 impl<I: Iterator, C> CollectChunks<I, C> {
@@ -19,7 +19,7 @@ impl<I: Iterator, C> CollectChunks<I, C> {
         Self {
             inner: iter.fuse(),
             chunk_size,
-            chunk_marker: PhantomData,
+            collection_ty: PhantomData,
         }
     }
 
@@ -47,7 +47,7 @@ impl<I: fmt::Debug, C> fmt::Debug for CollectChunks<I, C> {
         f.debug_struct("CollectChunks")
             .field("chunk_size", &self.chunk_size)
             .field("inner", &self.inner)
-            .field("collection_ty", &self.chunk_marker)
+            .field("collection_ty", &self.collection_ty)
             .finish()
     }
 }
@@ -143,7 +143,7 @@ where
 {
     let chunk = iter.by_ref().collect();
     // especially for `Take<I>` this optimizes better than a manual for-loop
-    iter.for_each(|_| {});
+    iter.for_each(drop);
     chunk
 }
 

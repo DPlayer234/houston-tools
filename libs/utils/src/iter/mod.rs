@@ -40,7 +40,9 @@ pub trait IteratorExt: Iterator {
     ///
     /// [`DoubleEndedIterator`] attempts to be consistent with `last` and is
     /// therefore only implemented for [`ExactSizeIterator`] and if `C` is
-    /// [`AsMut<[I::Item]>`][AsMut] due to implementation constraints.
+    /// [`AsMut<[I::Item]>`][AsMut] due to implementation constraints. An
+    /// incorrectly implemented [`ExactSizeIterator`] implementation for `Self`
+    /// may lead to buggy iteration-from-back behavior.
     ///
     /// If [`C as FromIterator`][FromIterator] does not fully consume the
     /// provided iterator, this function will drain the rest to ensure the
@@ -98,8 +100,8 @@ pub trait IteratorExt: Iterator {
     fn runs_by_key<F, K>(self, f: F) -> RunsByKey<Self, F>
     where
         Self: Sized,
-        F: Fn(&Self::Item) -> &K,
-        K: ?Sized,
+        F: Fn(&Self::Item) -> K,
+        K: PartialEq,
     {
         RunsByKey::new(self, f)
     }
