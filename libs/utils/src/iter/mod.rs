@@ -70,7 +70,7 @@ pub trait IteratorExt: Iterator {
     ///
     /// This function is equivalent to
     /// [`self.runs_by(PartialEq::eq)`](Self::runs_by).
-    fn runs<F>(self) -> Runs<Self>
+    fn runs(self) -> Runs<Self>
     where
         Self: Sized,
         Self::Item: PartialEq,
@@ -105,6 +105,111 @@ pub trait IteratorExt: Iterator {
     {
         RunsByKey::new(self, f)
     }
+
+    /// Returns the single item in the iterator.
+    ///
+    /// Returns `None` if the iterator is empty or has more than one item.
+    ///
+    /// # Notes
+    ///
+    /// This may advance the iterator either once or twice. It attempts to use
+    /// the [`Iterator::size_hint`] to avoid yielding a second item, but
+    /// imprecise hints may not allow deriving whether the iterator is empty
+    /// after the first item.
+    fn single(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        let result = self.next()?;
+        match self.size_hint() {
+            // iterator reports that it yields a maximum of 0 more elements, so it is empty now and
+            // the item we already got is the single item that we should be returning here.
+            (_, Some(0)) => Some(result),
+            // iterator reports it yields at least 1 more element, so it can't be empty.
+            (1.., _) => None,
+            // other size hints, i.e. `(0, any)`, don't provide the enough info. get another item.
+            _ => match self.next() {
+                None => Some(result),
+                Some(_) => None,
+            },
+        }
+    }
 }
 
 impl<I: ?Sized> IteratorExt for I where I: Iterator {}
+
+#[cfg(test)]
+mod tests {
+    use super::IteratorExt as _;
+
+    /// Iterator adapter that suppresses optimization opportunities.
+    struct Unknown<I>(I);
+
+    impl<I: Iterator> Iterator for Unknown<I> {
+        type Item = I::Item;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.0.next()
+        }
+    }
+
+    #[test]
+    fn single_success_size_hint() {
+        let iter = { &[42] }.iter();
+        assert_eq!(iter.single(), Some(&42));
+    }
+
+    #[test]
+    fn single_fail_empty_size_hint() {
+        let iter = { &[] }.iter();
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_fail_too_long1_size_hint() {
+        let iter = { &[1, 2] }.iter();
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_fail_too_long2_size_hint() {
+        let iter = { &[1, 2, 3] }.iter();
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_success() {
+        let iter = Unknown({ &[42] }.iter());
+        assert_eq!(iter.single(), Some(&42));
+    }
+
+    #[test]
+    fn single_fail_empty() {
+        let iter = Unknown({ &[] }.iter());
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_fail_too_long1() {
+        let iter = Unknown({ &[1, 2] }.iter());
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_fail_too_long2() {
+        let iter = Unknown({ &[1, 2, 3] }.iter());
+        assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_fail_infinite() {
+        let iter = std::iter::repeat(99);
+        assert_eq!(iter.single(), None::<i32>);
+    }
+
+    #[test]
+    fn single_fail_infinite_unknown() {
+        let iter = Unknown(std::iter::repeat(99));
+        assert_eq!(iter.single(), None::<i32>);
+    }
+}
