@@ -1,3 +1,5 @@
+use utils::iter::IteratorExt as _;
+
 use super::{Player, PlayerState};
 use crate::buttons::prelude::*;
 use crate::helper::discord::unicode_emoji;
@@ -54,46 +56,32 @@ impl View {
     }
 
     fn winner(&self) -> Option<(Player, WinLine)> {
-        fn counts(iter: impl IntoIterator<Item = Option<Player>>) -> (usize, usize) {
-            let mut counts = (0, 0);
-            for item in iter {
-                match item {
-                    Some(Player::P1) => counts.0 += 1,
-                    Some(Player::P2) => counts.1 += 1,
-                    None => {},
-                }
-            }
-
-            counts
+        fn line_wins(iter: impl IntoIterator<Item = Option<Player>>) -> Option<Player> {
+            iter.into_iter().runs().single()?.0
         }
 
         macro_rules! check {
-            ($e:expr, $l:expr) => {
-                match $e {
-                    (N, _) => return Some((Player::P1, $l)),
-                    (_, N) => return Some((Player::P2, $l)),
-                    _ => {},
+            ($iter:expr, $line:expr) => {
+                if let Some(v) = line_wins($iter) {
+                    return Some((v, $line));
                 }
             };
         }
 
         // by column
         for x in 0..N {
-            check!(counts(self.board[x]), WinLine::Column(x));
+            check!(self.board[x], WinLine::Column(x));
         }
 
         // by row
         for y in 0..N {
-            check!(counts(self.board.iter().map(|r| r[y])), WinLine::Row(y));
+            check!(self.board.iter().map(|r| r[y]), WinLine::Row(y));
         }
 
         // diagonals
+        check!((0..N).map(|n| self.board[n][n]), WinLine::DiagTopLeft);
         check!(
-            counts((0..N).map(|n| self.board[n][n])),
-            WinLine::DiagTopLeft
-        );
-        check!(
-            counts((0..N).map(|n| self.board[n][N - n - 1])),
+            (0..N).map(|n| self.board[n][N - n - 1]),
             WinLine::DiagTopRight
         );
 
