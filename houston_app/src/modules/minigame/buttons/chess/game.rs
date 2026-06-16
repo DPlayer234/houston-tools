@@ -74,22 +74,36 @@ impl<T> Grid<T> {
             .get_mut(usize::from(pos.y))
     }
 
-    fn iter_grid(&self) -> impl Iterator<Item = (Pos, &T)> + use<'_, T> {
-        (0u8..).zip(&self.array).flat_map(|(x, row)| {
-            (0u8..)
-                .zip(row)
-                .map(move |(y, tile)| (Pos::new(x, y), tile))
-        })
+    fn must_get(&self, pos: Pos) -> &T {
+        self.get(pos).expect("pos should be within grid range")
+    }
+
+    fn must_get_mut(&mut self, pos: Pos) -> &mut T {
+        self.get_mut(pos).expect("pos should be within grid range")
+    }
+
+    #[expect(clippy::cast_possible_truncation)]
+    fn iter_grid(&self) -> impl Iterator<Item = (Pos, &T)> {
+        // enumerate is smaller than zip with Range<..>
+        self.array
+            .as_flattened()
+            .iter()
+            .enumerate()
+            .map(|(index, tile)| {
+                let x = (index / N) as u8;
+                let y = (index % N) as u8;
+                (Pos::new(x, y), tile)
+            })
     }
 }
 
 impl Grid<bool> {
-    fn iter_true(&self) -> impl Iterator<Item = Pos> + use<'_> {
+    fn iter_true(&self) -> impl Iterator<Item = Pos> {
         self.iter_grid().filter(|t| *t.1).map(|t| t.0)
     }
 
     fn flag_tile(&mut self, pos: Pos) {
-        *self.get_mut(pos).expect("pos should be within grid range") = true;
+        *self.must_get_mut(pos) = true;
     }
 }
 
@@ -385,42 +399,33 @@ impl Board {
         assert!(self.get(king_at).is_some(), "invalid king_at pos");
 
         let opponent = player.next();
-        for (pos, piece) in self.iter_pieces(opponent) {
+        self.iter_pieces(opponent).any(move |(pos, piece)| {
             let targets = piece.get_move().target_mask(self, pos, opponent);
-            if *targets.get(king_at).expect("must be in range") {
-                return true;
-            }
-        }
-
-        false
+            *targets.must_get(king_at)
+        })
     }
 
     pub fn is_player_in_checkmate(&self, player: Player, king_at: Pos) -> bool {
-        for (src, piece) in self.iter_pieces(player) {
+        // this checks that every possible move would leave them in check
+        self.iter_pieces(player).all(move |(src, piece)| {
             let mask = piece.get_move().target_mask(self, src, player);
-            for dst in mask.iter_true() {
+            mask.iter_true().all(move |dst| {
                 let mut new_board = *self;
 
-                let tile = new_board.get_mut(src).expect("must be in range").take();
-                *new_board.get_mut(dst).expect("must be in range") = tile;
+                let tile = new_board.must_get_mut(src).take();
+                *new_board.must_get_mut(dst) = tile;
 
                 // for a king move we obviously have to check differently
                 let king_at = if piece == Piece::King { dst } else { king_at };
-                if !new_board.is_player_in_check(player, king_at) {
-                    return false;
-                }
-            }
-        }
-
-        true
+                new_board.is_player_in_check(player, king_at)
+            })
+        })
     }
 
-    fn iter_pieces(&self, player: Player) -> impl Iterator<Item = (Pos, Piece)> + use<'_> {
-        (0u8..).zip(&self.array).flat_map(move |(x, row)| {
-            (0u8..).zip(row).filter_map(move |(y, tile)| match tile {
-                Some(t) if t.player == player => Some((Pos::new(x, y), t.piece)),
-                _ => None,
-            })
+    pub fn iter_pieces(&self, player: Player) -> impl Iterator<Item = (Pos, Piece)> {
+        self.iter_grid().filter_map(move |(pos, tile)| match tile {
+            Some(t) if t.player == player => Some((pos, t.piece)),
+            _ => None,
         })
     }
 

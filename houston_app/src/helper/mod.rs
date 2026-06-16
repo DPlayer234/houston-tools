@@ -9,15 +9,8 @@ pub mod index_extract_map;
 pub mod time;
 
 pub fn is_unique_set<T: Hash + Eq>(iter: impl IntoIterator<Item = T>) -> bool {
-    let mut known = HashSet::new();
-
-    for item in iter {
-        if !known.insert(item) {
-            return false;
-        }
-    }
-
-    true
+    let mut seen = HashSet::new();
+    iter.into_iter().all(|item| seen.insert(item))
 }
 
 /// Checks whether the `haystack` contains the `needle` with ASCII

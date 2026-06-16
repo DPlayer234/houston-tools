@@ -63,19 +63,12 @@ pub trait IterExt: Iterator + Sized {
     }
 
     #[expect(clippy::wrong_self_convention)]
-    fn is_unique(self) -> bool
+    fn is_unique(mut self) -> bool
     where
         Self::Item: Hash + Eq,
     {
         let mut set = HashSet::new();
-
-        for item in self {
-            if !set.insert(item) {
-                return false;
-            }
-        }
-
-        true
+        self.all(|x| set.insert(x))
     }
 }
 

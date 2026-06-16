@@ -53,8 +53,8 @@ impl super::Module for Module {
         anyhow::ensure!(
             config
                 .starboard
-                .iter()
-                .all(|(_, c)| is_unique_set(c.boards.values().flat_map(|b| &b.emojis))),
+                .values()
+                .all(|c| is_unique_set(c.boards.values().flat_map(|b| &b.emojis))),
             "starboard emojis must be unique within each guild"
         );
 

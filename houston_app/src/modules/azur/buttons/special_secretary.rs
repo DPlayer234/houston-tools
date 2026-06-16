@@ -151,14 +151,14 @@ macro_rules! impl_view_part_fn {
             }
             ViewPart::Chime1 => {
                 if let Some(chime) = &$words.chime {
-                    for (index, opt) in (0..12u8).zip(chime.iter()) {
+                    for (index, opt) in (0..12u8).zip(&chime[..12]) {
                         $add!(chime index, opt);
                     }
                 }
             }
             ViewPart::Chime2 => {
                 if let Some(chime) = &$words.chime {
-                    for (index, opt) in (0..24u8).zip(chime.iter()).skip(12) {
+                    for (index, opt) in (12u8..).zip(&chime[12..]) {
                         $add!(chime index, opt);
                     }
                 }
