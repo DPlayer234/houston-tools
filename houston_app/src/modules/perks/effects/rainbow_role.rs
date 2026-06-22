@@ -28,6 +28,7 @@ impl Shape for RainbowRole {
             .await
             .context("could not add rainbow role")?;
 
+        clear_has_any_rainbow_role(role).await;
         Ok(())
     }
 
@@ -44,6 +45,7 @@ impl Shape for RainbowRole {
                 )
                 .await;
 
+            clear_has_any_rainbow_role(role).await;
             super::ok_allowed_discord_error(result).context("could not remove rainbow role")?;
         }
 
@@ -51,6 +53,7 @@ impl Shape for RainbowRole {
     }
 
     async fn update(&self, ctx: &Context, _now: UtcDateTime) -> Result {
+        // in seconds; 36 loops per day
         const LOOP_TIME: i64 = 2400;
 
         let Ok(rainbow) = get_config(ctx) else {
@@ -77,7 +80,7 @@ impl Shape for RainbowRole {
         let color = hsv_to_color(h, s, v);
 
         for (&guild, entry) in &rainbow.guilds {
-            if has_any_rainbow_role(ctx, guild).await? {
+            if has_any_rainbow_role(ctx, guild, entry).await? {
                 let edit = EditRole::new()
                     .colour(color)
                     .audit_log_reason("rainbow role cycle");
@@ -122,8 +125,21 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry, NoRain
         .ok_or(NoRainbowRole)
 }
 
-async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> {
-    let db = ctx.data_ref::<HContextData>().database()?;
+async fn has_any_rainbow_role(
+    ctx: &Context,
+    guild_id: GuildId,
+    entry: &RainbowRoleEntry,
+) -> Result<bool> {
+    // check cache first.
+    // keep the lock for this entire task to ensure temporal consistency of the
+    // cache when it's reset while this check is running but don't block.
+    let mut guard = entry.any_enabled.try_lock().ok();
+    if let Some(Some(exists)) = guard.as_deref_mut() {
+        return Ok(*exists);
+    }
+
+    let data = ctx.data_ref::<HContextData>();
+    let db = data.database()?;
 
     let filter = ActivePerk::filter()
         .guild(guild_id)
@@ -136,16 +152,28 @@ async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> 
         .context("failed to check whether a rainbow role is active")?
         .is_some();
 
+    // if we got the cache lock, update the value
+    if let Some(mut guard) = guard {
+        log::trace!("Caching whether a rainbow role is active in {guild_id}: {exists:?}");
+        *guard = Some(exists);
+    }
+
     Ok(exists)
+}
+
+// we don't set it to the caller's state because technically it could change the
+// state again between when the caller changes the state and when this function
+// runs.
+async fn clear_has_any_rainbow_role(entry: &RainbowRoleEntry) {
+    // actually blocking to get the lock is necessary for the cache to stay
+    // consistent and there shouldn't be much concurrency on this anyways.
+    *entry.any_enabled.lock().await = None;
 }
 
 #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 fn rgb(r: f32, g: f32, b: f32) -> Color {
-    Color::from_rgb(
-        (r * 255.0).clamp(0.0, 255.0) as u8,
-        (g * 255.0).clamp(0.0, 255.0) as u8,
-        (b * 255.0).clamp(0.0, 255.0) as u8,
-    )
+    // `float as int` cast saturates
+    Color::from_rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
 }
 
 fn hsv_to_color(mut h: f32, s: f32, v: f32) -> Color {

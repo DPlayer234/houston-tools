@@ -85,6 +85,10 @@ pub struct RainbowConfig {
 #[derive(Debug, serde::Deserialize)]
 pub struct RainbowRoleEntry {
     pub role: RoleId,
+
+    /// Field to cache whether this guild has ane enabled rainbow role perk.
+    #[serde(skip)]
+    pub any_enabled: Mutex<Option<bool>>,
 }
 
 fsd!(default_pushpin_name = "Pushpin");
