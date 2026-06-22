@@ -24,7 +24,7 @@ pub async fn upload(
         .description(description);
 
     if attachment.dimensions().is_some() {
-        embed = embed.thumbnail(attachment.proxy_url.as_str());
+        embed = embed.thumbnail(attachment.proxy_url.as_str(), None);
     }
 
     let buttons = [CreateButton::new_link(attachment.url.as_str()).label("Download")];

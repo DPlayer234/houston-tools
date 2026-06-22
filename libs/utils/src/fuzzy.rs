@@ -87,8 +87,11 @@ const fn to_usize(index: MatchIndex) -> usize {
 
 /// Provides a fuzzy text searcher.
 ///
-/// [`Search::insert`] new elements with associated, then [`Search::search`] for
-/// the data by the key.
+/// To create new instances, use [`Search::builder`], call
+/// [`SearchBuilder::insert`] for all elements that you need and finalize it
+/// with [`SearchBuilder::build`].
+///
+/// Then you can [`Search::search`] for the data by the keys.
 ///
 /// The `T` generic parameter defines the associated data to store.
 /// You can use `()` (unit) to not store data and instead always just use
@@ -447,8 +450,8 @@ pub struct Match<'st, T> {
 
     /// The search entry's index.
     ///
-    /// This index is returned by [`Search::insert`] and represents the insert
-    /// position.
+    /// This index is returned by [`SearchBuilder::insert`] and represents the
+    /// insert position.
     pub index: usize,
 
     /// The associated data.

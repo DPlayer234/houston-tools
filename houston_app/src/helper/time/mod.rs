@@ -2,7 +2,7 @@
 
 use std::sync::OnceLock;
 
-use time::format_description::StaticFormatDescription;
+use time::format_description::FormatDescriptionV3;
 use time::macros::format_description;
 use time::{Duration, UtcDateTime};
 
@@ -35,7 +35,7 @@ pub fn get_startup_time() -> UtcDateTime {
 
 /// Tries to parse a date time from some default formats.
 pub fn parse_date_time(s: &str) -> Option<UtcDateTime> {
-    UtcDateTime::parse(s, FORMAT).ok()
+    UtcDateTime::parse(s, &FORMAT).ok()
 }
 
 /// This format has 3 distinct sections:
@@ -43,8 +43,8 @@ pub fn parse_date_time(s: &str) -> Option<UtcDateTime> {
 /// - Date & Year: "Y-M-D", "M/D/Y", "D.M.Y", or "Month D, Y"
 /// - Time: "hh:mm\[:ss\] AM/PM" or "HH:mm\[:ss\]"
 /// - UTC-Offset (optional): "+H:mm", "+HHMM", or "+HH"
-const FORMAT: StaticFormatDescription = format_description!(
-    version = 2,
+const FORMAT: FormatDescriptionV3<'_> = format_description!(
+    version = 3,
     "[first \
      [[year]-[month]-[day]]\
      [[month]/[day]/[year]]\
@@ -72,7 +72,7 @@ const FORMAT: StaticFormatDescription = format_description!(
 /// specified, days are considered to be exactly 24 hours. The string may be
 /// prefixed with `-` for negative durations.
 pub fn parse_dhms_duration(v: &str) -> Option<Duration> {
-    use time::convert::{Day, Hour, Minute, Second};
+    use time::unit::{Day, Hour, Minute, Second};
 
     let v = v.trim();
     let (v, neg) = match v.strip_prefix('-') {

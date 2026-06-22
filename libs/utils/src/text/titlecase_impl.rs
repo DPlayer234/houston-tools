@@ -92,7 +92,7 @@ macro_rules! titlecase_u8 {
 /// Transforms a const [`&str`](str) in `SNAKE_CASE` format into titlecase
 /// version (i.e. `Snake Case`). The resulting value is still const.
 ///
-/// For `&[u8]`, use [`titlecase_u8`](crate::titlecase_u8) instead.
+/// For `&[u8]`, use [`titlecase_u8`] instead.
 ///
 /// # Examples
 ///

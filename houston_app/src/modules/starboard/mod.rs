@@ -636,8 +636,7 @@ fn ok_forward_failed(
         // forwarding also requires that the content can be read. this should only
         // happen here in case the bot is missing the priviledged intent. note that said
         // intent does _not_ have to be enabled via the gateway for this to work.
-        // CMBK: in case serenity adds this to the known error codes
-        if why.error.code == JsonErrorCode::Unknown(160014) {
+        if why.error.code == JsonErrorCode::CannotForwardUnreadableMessage {
             log::warn!(
                 "Forwarding failed because the message's content cannot be read. \
                  Make sure 'Message Content Intent' is enabled in the app's bot dashboard. \

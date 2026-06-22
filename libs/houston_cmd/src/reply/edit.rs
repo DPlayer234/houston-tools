@@ -180,9 +180,10 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
 // This may be incomplete in other ways, but is sufficient for houston-app
 // purposes.
 
-/// This type replicates logic that is performed by [`EditAttachments`].
-/// However i want to avoid cloning the data here, and we can't use that
-/// type directly since we need to access the internal data anyways.
+/// This type replicates logic that is performed by
+/// [`EditAttachments`](serenity::builder::EditAttachments). However i want to
+/// avoid cloning the data here, and we can't use that type directly since we
+/// need to access the internal data anyways.
 #[derive(Debug, Default, Clone)]
 struct InEditAttachments<'a> {
     vec: Vec<Attachment<'a>>,
