@@ -1,7 +1,7 @@
 //! Main access into Unity FS archives.
 
 use std::borrow::Cow;
-use std::cell::Cell;
+use std::cell::{Cell, OnceCell};
 use std::fmt;
 use std::io::{Cursor, SeekFrom};
 
@@ -102,10 +102,8 @@ struct Node {
 
     /// Stores the uncompressed bytes for this node.
     /// This is initialized lazily when [`UnityFsNode::read_raw`] is called.
-    // CMBK: replace with `std::cell::OnceCell` when its `get_or_try_init`
-    // is stabilized which is probably in approximately Never™️.
     #[br(ignore)]
-    uncompressed_cache: once_cell::unsync::OnceCell<Vec<u8>>,
+    uncompressed_cache: OnceCell<Vec<u8>>,
 }
 
 // some weird lint issue related to the bitfield emit's `new` function and
@@ -320,10 +318,14 @@ impl<'a> UnityFsNode<'a> {
     /// Returns [`Err`] if an I/O error occurs or the data cannot be
     /// decompressed or is compressed in an unsupported format.
     pub fn read_raw(&self) -> crate::Result<&'a [u8]> {
-        self.node
-            .uncompressed_cache
-            .get_or_try_init(|| self.decompress())
-            .map(Vec::as_slice)
+        let cache = &self.node.uncompressed_cache;
+        if let Some(known) = cache.get() {
+            return Ok(known);
+        }
+
+        let new = self.decompress()?;
+        assert!(cache.set(new).is_ok(), "reentrant read_raw");
+        Ok(cache.get().expect("must be init here"))
     }
 
     /// Reads the data for this node.

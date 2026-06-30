@@ -16,5 +16,4 @@ modular-bitfield = "0.13.0"
 num_enum = "0.7.5"
 lz4 = "1.28.1"
 lzma-rs = "0.3.0"
-once_cell = { version = "1.21.3", default-features = false }
 thiserror = "2.0.12"

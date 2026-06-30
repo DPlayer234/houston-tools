@@ -3635,7 +3635,6 @@ dependencies = [
  "lzma-rs",
  "modular-bitfield",
  "num_enum",
- "once_cell",
  "thiserror",
 ]
 

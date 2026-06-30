@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 
 use serenity::gateway::client::Context;
 
@@ -129,8 +129,8 @@ async fn load_emojis(ctx: &Context) -> Result<Vec<Emoji>> {
 
 #[cold]
 fn fallback_emoji() -> &'static ReactionType {
-    static FALLBACK_EMOJI: LazyLock<ReactionType> = LazyLock::new(|| unicode_emoji("❔"));
-    &FALLBACK_EMOJI
+    static FALLBACK_EMOJI: OnceLock<ReactionType> = OnceLock::new();
+    FALLBACK_EMOJI.get_or_init(|| unicode_emoji("❔"))
 }
 
 #[cold]
