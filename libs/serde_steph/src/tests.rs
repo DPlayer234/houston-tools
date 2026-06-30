@@ -2,7 +2,7 @@
 // additionally checks that types that should have the same binary
 // representation actually do
 use std::borrow::Cow;
-use std::fmt;
+use std::{assert_matches, fmt};
 
 use serde::{Deserialize, Serialize};
 
@@ -176,11 +176,9 @@ fn round_trip_addition() {
 
 #[test]
 fn error_eof() {
-    assert!(
-        matches!(
-            from_slice::<Vec<u8>>(&[5, 1, 2, 3, 4]),
-            Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
-        ),
+    assert_matches!(
+        from_slice::<Vec<u8>>(&[5, 1, 2, 3, 4]),
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof,
         "expected eof error"
     );
 }
@@ -205,10 +203,7 @@ fn from_slice_excess() {
     let slice = *b"\x03abcd";
     let res = from_slice::<String>(&slice).expect_err("must be excess");
 
-    assert!(
-        matches!(res, Error::TrailingBytes),
-        "must be trailing bytes error"
-    );
+    assert_matches!(res, Error::TrailingBytes, "must be trailing bytes error");
 }
 
 #[test]
@@ -295,11 +290,11 @@ fn round_trip_io_read() {
     assert_eq!(from_reader, source);
 
     assert_eq!(from_slice.int, 0x780);
-    assert!(matches!(from_slice.cow, Cow::Borrowed(b"abcde")));
+    assert_matches!(from_slice.cow, Cow::Borrowed(b"abcde"));
     assert_eq!(from_slice.vec, b"ABCDEFG");
 
     assert_eq!(from_reader.int, 0x780);
-    assert!(matches!(from_reader.cow, Cow::Owned(_)));
+    assert_matches!(from_reader.cow, Cow::Owned(_));
     assert_eq!(*from_reader.cow, *b"abcde");
     assert_eq!(from_reader.vec, b"ABCDEFG");
 }
@@ -315,16 +310,11 @@ fn de_faulty_seq_visitor() {
     let map = Deserializer::from_slice(&[3, 1, 2, 3, 4, 5, 6]).deserialize_map(Faulty);
     let tuple = Deserializer::from_slice(&[1, 2, 3]).deserialize_tuple(3, Faulty);
 
-    assert!(
-        matches!(seq, Err(Error::ShortSeqRead)),
-        "seq length must be wrong"
-    );
-    assert!(
-        matches!(map, Err(Error::ShortSeqRead)),
-        "map length must be wrong"
-    );
-    assert!(
-        matches!(tuple, Err(Error::ShortSeqRead)),
+    assert_matches!(seq, Err(Error::ShortSeqRead), "seq length must be wrong");
+    assert_matches!(map, Err(Error::ShortSeqRead), "map length must be wrong");
+    assert_matches!(
+        tuple,
+        Err(Error::ShortSeqRead),
         "tuple length must be wrong"
     );
 
@@ -372,28 +362,18 @@ fn ser_faulty_len() {
     let struct_short = to_writer(buf.as_mut_slice(), &Struct(2, 3));
     let struct_long = to_writer(buf.as_mut_slice(), &Struct(3, 2));
 
-    assert!(
-        matches!(seq_short, Err(Error::LengthIncorrect)),
-        "seq is too short"
-    );
-    assert!(
-        matches!(seq_long, Err(Error::LengthIncorrect)),
-        "seq is too long"
-    );
-    assert!(
-        matches!(map_short, Err(Error::LengthIncorrect)),
-        "map is too short"
-    );
-    assert!(
-        matches!(map_long, Err(Error::LengthIncorrect)),
-        "map is too long"
-    );
-    assert!(
-        matches!(struct_short, Err(Error::LengthIncorrect)),
+    assert_matches!(seq_short, Err(Error::LengthIncorrect), "seq is too short");
+    assert_matches!(seq_long, Err(Error::LengthIncorrect), "seq is too long");
+    assert_matches!(map_short, Err(Error::LengthIncorrect), "map is too short");
+    assert_matches!(map_long, Err(Error::LengthIncorrect), "map is too long");
+    assert_matches!(
+        struct_short,
+        Err(Error::LengthIncorrect),
         "struct is too short"
     );
-    assert!(
-        matches!(struct_long, Err(Error::LengthIncorrect)),
+    assert_matches!(
+        struct_long,
+        Err(Error::LengthIncorrect),
         "struct is too long"
     );
 

@@ -1,4 +1,5 @@
 #![expect(unused_crate_dependencies)]
+use std::assert_matches;
 use std::borrow::Cow;
 
 use houston_cmd::model::*;
@@ -18,27 +19,25 @@ fn minimal_top_level() {
     }
 
     let command = just_a_command();
-    assert!(
-        matches!(
-            command,
-            Command {
-                contexts: None,
-                integration_types: None,
-                default_member_permissions: None,
-                nsfw: false,
-                data: CommandOption {
-                    name: Cow::Borrowed("just_a_command"),
-                    description: Cow::Borrowed("Just a command."),
-                    data: CommandOptionData::Command(SubCommandData {
-                        parameters: Cow::Borrowed([]),
-                        invoke: Invoke::ChatInput(_),
-                        ..
-                    }),
+    assert_matches!(
+        command,
+        Command {
+            contexts: None,
+            integration_types: None,
+            default_member_permissions: None,
+            nsfw: false,
+            data: CommandOption {
+                name: Cow::Borrowed("just_a_command"),
+                description: Cow::Borrowed("Just a command."),
+                data: CommandOptionData::Command(SubCommandData {
+                    parameters: Cow::Borrowed([]),
+                    invoke: Invoke::ChatInput(_),
                     ..
-                },
+                }),
                 ..
-            }
-        ),
+            },
+            ..
+        },
         "{command:?}"
     );
 }
@@ -76,45 +75,43 @@ fn maximal_top_level() {
 
     const PERMISSIONS: Permissions = Permissions::SEND_MESSAGES.union(Permissions::VIEW_CHANNEL);
     let command = just_a_command();
-    assert!(
-        matches!(
-            command,
-            Command {
-                contexts: Some(Cow::Borrowed([InteractionContext::Guild])),
-                integration_types: Some(Cow::Borrowed([
-                    InstallationContext::User,
-                    InstallationContext::Guild
-                ])),
-                default_member_permissions: Some(PERMISSIONS),
-                nsfw: true,
-                data: CommandOption {
-                    name: Cow::Borrowed("just-a-command"),
-                    description: Cow::Borrowed("Just a command."),
-                    data: CommandOptionData::Command(SubCommandData {
-                        invoke: Invoke::ChatInput(_),
-                        parameters: Cow::Borrowed([
-                            Parameter {
-                                name: Cow::Borrowed("count"),
-                                description: Cow::Borrowed("How much."),
-                                required: true,
-                                autocomplete: Some(_),
-                                ..
-                            },
-                            Parameter {
-                                name: Cow::Borrowed("extra"),
-                                description: Cow::Borrowed("Extras?"),
-                                required: false,
-                                autocomplete: None,
-                                ..
-                            }
-                        ]),
-                        ..
-                    }),
+    assert_matches!(
+        command,
+        Command {
+            contexts: Some(Cow::Borrowed([InteractionContext::Guild])),
+            integration_types: Some(Cow::Borrowed([
+                InstallationContext::User,
+                InstallationContext::Guild
+            ])),
+            default_member_permissions: Some(PERMISSIONS),
+            nsfw: true,
+            data: CommandOption {
+                name: Cow::Borrowed("just-a-command"),
+                description: Cow::Borrowed("Just a command."),
+                data: CommandOptionData::Command(SubCommandData {
+                    invoke: Invoke::ChatInput(_),
+                    parameters: Cow::Borrowed([
+                        Parameter {
+                            name: Cow::Borrowed("count"),
+                            description: Cow::Borrowed("How much."),
+                            required: true,
+                            autocomplete: Some(_),
+                            ..
+                        },
+                        Parameter {
+                            name: Cow::Borrowed("extra"),
+                            description: Cow::Borrowed("Extras?"),
+                            required: false,
+                            autocomplete: None,
+                            ..
+                        }
+                    ]),
                     ..
-                },
+                }),
                 ..
-            }
-        ),
+            },
+            ..
+        },
         "{command:?}"
     );
 }

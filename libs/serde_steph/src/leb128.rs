@@ -211,6 +211,8 @@ impl_signed_leb!(
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use super::{read, write};
     use crate::error::Error;
     use crate::read::SliceRead;
@@ -313,27 +315,25 @@ mod tests {
 
     #[test]
     fn overflow_too_long() {
-        assert!(matches!(
+        assert_matches!(
             read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x80])),
             Err(Error::IntegerOverflow)
-        ));
+        );
     }
 
     #[test]
     fn overflow_too_large() {
-        assert!(matches!(
+        assert_matches!(
             read::<u16, _>(SliceRead::new(&[0x80, 0x80, 0x04])),
             Err(Error::IntegerOverflow)
-        ));
+        );
     }
 
     #[test]
     fn end_of_file_after_continuation() {
-        assert!(
-            matches!(
-                read::<u16, _>(SliceRead::new(&[0x80, 0x80])),
-                Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof
-            ),
+        assert_matches!(
+            read::<u16, _>(SliceRead::new(&[0x80, 0x80])),
+            Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof,
             "expected eof error"
         );
     }

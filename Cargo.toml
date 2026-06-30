@@ -18,7 +18,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.96"
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"

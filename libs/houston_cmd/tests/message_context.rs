@@ -1,4 +1,5 @@
 #![expect(unused_crate_dependencies)]
+use std::assert_matches;
 use std::borrow::Cow;
 
 use houston_cmd::model::*;
@@ -15,27 +16,25 @@ fn minimal_message_context() {
     }
 
     let command = just_a_command();
-    assert!(
-        matches!(
-            command,
-            Command {
-                contexts: None,
-                integration_types: None,
-                default_member_permissions: None,
-                nsfw: false,
-                data: CommandOption {
-                    name: Cow::Borrowed("Just a command"),
-                    description: Cow::Borrowed(""),
-                    data: CommandOptionData::Command(SubCommandData {
-                        invoke: Invoke::Message(_),
-                        parameters: Cow::Borrowed([]),
-                        ..
-                    }),
+    assert_matches!(
+        command,
+        Command {
+            contexts: None,
+            integration_types: None,
+            default_member_permissions: None,
+            nsfw: false,
+            data: CommandOption {
+                name: Cow::Borrowed("Just a command"),
+                description: Cow::Borrowed(""),
+                data: CommandOptionData::Command(SubCommandData {
+                    invoke: Invoke::Message(_),
+                    parameters: Cow::Borrowed([]),
                     ..
-                },
+                }),
                 ..
-            }
-        ),
+            },
+            ..
+        },
         "{command:?}"
     );
 }
@@ -57,30 +56,28 @@ fn maximal_message_context() {
 
     const PERMISSIONS: Permissions = Permissions::SEND_MESSAGES.union(Permissions::VIEW_CHANNEL);
     let command = just_a_command();
-    assert!(
-        matches!(
-            command,
-            Command {
-                contexts: Some(Cow::Borrowed([InteractionContext::Guild])),
-                integration_types: Some(Cow::Borrowed([
-                    InstallationContext::User,
-                    InstallationContext::Guild
-                ])),
-                default_member_permissions: Some(PERMISSIONS),
-                nsfw: true,
-                data: CommandOption {
-                    name: Cow::Borrowed("Just a command"),
-                    description: Cow::Borrowed(""),
-                    data: CommandOptionData::Command(SubCommandData {
-                        invoke: Invoke::Message(_),
-                        parameters: Cow::Borrowed([]),
-                        ..
-                    }),
+    assert_matches!(
+        command,
+        Command {
+            contexts: Some(Cow::Borrowed([InteractionContext::Guild])),
+            integration_types: Some(Cow::Borrowed([
+                InstallationContext::User,
+                InstallationContext::Guild
+            ])),
+            default_member_permissions: Some(PERMISSIONS),
+            nsfw: true,
+            data: CommandOption {
+                name: Cow::Borrowed("Just a command"),
+                description: Cow::Borrowed(""),
+                data: CommandOptionData::Command(SubCommandData {
+                    invoke: Invoke::Message(_),
+                    parameters: Cow::Borrowed([]),
                     ..
-                },
+                }),
                 ..
-            }
-        ),
+            },
+            ..
+        },
         "{command:?}"
     );
 }

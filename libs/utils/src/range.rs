@@ -250,6 +250,8 @@ impl_range!(RangeIsize, isize);
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     macro_rules! impl_test {
         ($fn:ident, $Type:ident) => {
             #[test]
@@ -261,22 +263,16 @@ mod tests {
                 let too_low = <$Type<1, 10>>::new(0, 8);
                 let too_high = <$Type<1, 10>>::new(2, 11);
 
-                assert!(matches!(valid.map($Type::tuple), Ok((4, 6))));
-                assert!(matches!(
-                    inverse,
-                    Err(OutOfRange::LowAboveHigh { low: 5, high: 4 })
-                ));
-                assert!(matches!(
-                    too_low,
-                    Err(OutOfRange::BelowMin { actual: 0, min: 1 })
-                ));
-                assert!(matches!(
+                assert_matches!(valid.map($Type::tuple), Ok((4, 6)));
+                assert_matches!(inverse, Err(OutOfRange::LowAboveHigh { low: 5, high: 4 }));
+                assert_matches!(too_low, Err(OutOfRange::BelowMin { actual: 0, min: 1 }));
+                assert_matches!(
                     too_high,
                     Err(OutOfRange::AboveMax {
                         actual: 11,
                         max: 10
                     })
-                ));
+                );
             }
         };
     }
@@ -295,11 +291,11 @@ mod tests {
                 let high_only = <$Type<1, 10>>::from_str("..6");
                 let all = <$Type<1, 10>>::from_str("..");
 
-                assert!(matches!(valid.map($Type::tuple), Ok((4, 6))));
-                assert!(matches!(single.map($Type::tuple), Ok((5, 5))));
-                assert!(matches!(low_only.map($Type::tuple), Ok((4, 10))));
-                assert!(matches!(high_only.map($Type::tuple), Ok((1, 6))));
-                assert!(matches!(all.map($Type::tuple), Ok((1, 10))));
+                assert_matches!(valid.map($Type::tuple), Ok((4, 6)));
+                assert_matches!(single.map($Type::tuple), Ok((5, 5)));
+                assert_matches!(low_only.map($Type::tuple), Ok((4, 10)));
+                assert_matches!(high_only.map($Type::tuple), Ok((1, 6)));
+                assert_matches!(all.map($Type::tuple), Ok((1, 10)));
             }
         };
     }
