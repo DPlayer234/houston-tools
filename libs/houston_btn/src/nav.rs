@@ -102,10 +102,17 @@ struct Hex<'a>(&'a [u8]);
 
 impl fmt::Debug for Hex<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, &b) in self.0.iter().enumerate() {
-            if i & 3 == 0 && i != 0 {
+        let mut bytes = self.0;
+        while let Some((&chunk, rest)) = bytes.split_first_chunk() {
+            write!(f, "{:08x}", u32::from_be_bytes(chunk))?;
+            if !rest.is_empty() {
                 f.write_str("-")?;
             }
+
+            bytes = rest;
+        }
+
+        for &b in bytes {
             write!(f, "{b:02x}")?;
         }
         Ok(())
@@ -124,3 +131,30 @@ impl fmt::Debug for Nav<'_> {
 /// Encodable [`ButtonValue`] + [`fmt::Debug`].
 trait NavButtonValue: encoding::ButtonValueEncode + fmt::Debug {}
 impl<T> NavButtonValue for T where T: encoding::ButtonValueEncode + fmt::Debug {}
+
+#[cfg(test)]
+mod tests {
+    use super::Hex;
+
+    fn to_hex(b: &[u8]) -> String {
+        format!("{:?}", Hex(b))
+    }
+
+    #[test]
+    fn hex_str() {
+        assert_eq!(
+            to_hex(&[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0]),
+            "12345678-9abcdef0"
+        );
+        assert_eq!(to_hex(&[0x12, 0x34, 0x56, 0x78, 0x9A]), "12345678-9a");
+        assert_eq!(to_hex(&[0, 0, 0, 0, 0]), "00000000-00");
+        assert_eq!(to_hex(&[0, 0, 0, 0]), "00000000");
+        assert_eq!(to_hex(&[0, 0, 0]), "000000");
+        assert_eq!(
+            to_hex(&[
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+            ]),
+            "01020304-05060708-090a0b0c-0d0e0f10-1112"
+        );
+    }
+}
