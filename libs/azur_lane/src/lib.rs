@@ -90,6 +90,7 @@ define_data_enum! {
         VichyaDominion("Vichya Dominion", Some("MNF")),
         IrisOrthodoxy("Iris Orthodoxy", Some("NF")),
         KingdomOfTulipa("Kingdom of Tulipa", Some("HNLMS")),
+        LigaDePedreria("Liga de Pedrería", Some("LDP")),
         Tempesta("Tempesta", Some("MOT")),
         Meta("META", Some("META")),
         Siren("Siren", None),
@@ -108,6 +109,7 @@ define_data_enum! {
         CollabAtelierYumia("Atelier Yumia", None),
         CollabDanmachi("Danmachi", None),
         CollabDateALive("Date A Live", None),
+        CollabNier("NieR", None),
         #[serde(other)]
         Unknown("Unknown", None),
     }

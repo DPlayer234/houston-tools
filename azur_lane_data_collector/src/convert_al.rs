@@ -23,6 +23,7 @@ pub fn to_faction(num: u32) -> Faction {
         9 => Faction::VichyaDominion,
         10 => Faction::IrisOrthodoxy,
         11 => Faction::KingdomOfTulipa,
+        12 => Faction::LigaDePedreria,
         96 => Faction::Tempesta,
         97 => Faction::Meta,
         99 => Faction::Siren,
@@ -41,6 +42,7 @@ pub fn to_faction(num: u32) -> Faction {
         113 => Faction::CollabAtelierYumia,
         114 => Faction::CollabDanmachi,
         115 => Faction::CollabDateALive,
+        116 => Faction::CollabNier,
         _ => Faction::Unknown,
     }
 }
