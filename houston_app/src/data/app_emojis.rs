@@ -31,17 +31,17 @@ macro_rules! generate {
             pub async fn load_and_update(config: &HBotConfig, ctx: &Context) -> Result<HAppEmojiStore> {
                 let emojis = load_emojis(ctx).await.context("failed to load app emojis")?;
 
-                struct Temp {
-                    $($key: Option<ReactionType>,)*
+                struct Temp<'a> {
+                    $($key: Option<&'a Emoji>,)*
                 }
 
                 let mut exist = Temp {
                     $($key: None,)*
                 };
 
-                for emoji in emojis {
+                for emoji in &emojis {
                     match emoji.name.as_str() {
-                        $($name => exist.$key = Some(emoji.into()),)*
+                        $($name => exist.$key = Some(emoji),)*
                         _ => (),
                     }
                 }
@@ -49,7 +49,7 @@ macro_rules! generate {
                 Ok(Self {
                     $(
                         $key: match exist.$key {
-                            Some(e) => staticify_emoji_name(e, $name),
+                            Some(e) => to_static_emoji(e, $name),
                             $( None if !$condition(config) => fallback_emoji().clone(), )?
                             None => update_emoji(ctx, $name, include_bytes!(concat!("../../assets/emojis/", $path))).await?,
                         },
@@ -69,17 +69,15 @@ impl<'a> HAppEmojis<'a> {
     }
 }
 
-fn staticify_emoji_name(mut emoji: ReactionType, static_name: &'static str) -> ReactionType {
+fn to_static_emoji(emoji: &Emoji, static_name: &'static str) -> ReactionType {
     use serenity::small_fixed_array::FixedString;
 
-    if let ReactionType::Custom { name, .. } = &mut emoji {
-        assert_eq!(name.as_deref(), Some(static_name), "must equal static name");
-        *name = Some(FixedString::from_static_trunc(static_name));
-    } else {
-        panic!("unsupported application emoji type")
-    };
-
-    emoji
+    assert_eq!(&*emoji.name, static_name, "must equal static name");
+    ReactionType::Custom {
+        animated: emoji.animated(),
+        id: emoji.id,
+        name: Some(FixedString::from_static_trunc(static_name)),
+    }
 }
 
 fn azur(config: &HBotConfig) -> bool {
@@ -144,7 +142,7 @@ async fn update_emoji(
     let data_uri = DataUri::from_base64(data_uri)?;
 
     let emoji = ctx.create_application_emoji(name, data_uri).await?;
-    let emoji = staticify_emoji_name(emoji.into(), name);
+    let emoji = to_static_emoji(&emoji, name);
 
     log::info!("Added Application Emoji: {emoji}");
     Ok(emoji)
