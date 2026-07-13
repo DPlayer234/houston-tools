@@ -24,7 +24,7 @@ impl HEmoji {
 
 impl PartialEq for HEmoji {
     fn eq(&self, other: &Self) -> bool {
-        self.equivalent_to(&other.0)
+        self.equivalent_to(other.as_emoji())
     }
 }
 
@@ -32,7 +32,7 @@ impl Eq for HEmoji {}
 
 impl Hash for HEmoji {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match &self.0 {
+        match self.as_emoji() {
             ReactionType::Custom { id, .. } => id.hash(state),
             ReactionType::Unicode(name) => name.hash(state),
             _ => unreachable!(),
@@ -42,7 +42,7 @@ impl Hash for HEmoji {
 
 impl fmt::Display for HEmoji {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        fmt::Display::fmt(self.as_emoji(), f)
     }
 }
 
@@ -59,12 +59,10 @@ impl FromStr for HEmoji {
         }
 
         let emoji = if let Some((name, id)) = s.split_once(':') {
-            let id = id.parse().map_err(map_parse)?;
-            let name = Some(name.parse().map_err(map_parse)?);
             ReactionType::Custom {
                 animated: false,
-                id,
-                name,
+                id: id.parse().map_err(map_parse)?,
+                name: Some(name.parse().map_err(map_parse)?),
             }
         } else {
             ReactionType::Unicode(s.parse().map_err(map_parse)?)

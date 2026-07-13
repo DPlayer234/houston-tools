@@ -24,8 +24,10 @@ impl View<'_> {
         augment: &'a Augment,
     ) -> CreateReply<'a> {
         let mut components = ComponentVec::new();
-
-        components.push(CreateTextDisplay::new(format!("### {}", augment.name)));
+        components.push(CreateTextDisplay::new(format!(
+            "## {}\n-# **ID:** `{}`",
+            augment.name, augment.augment_id
+        )));
         components.push(CreateSeparator::new().divider(true));
         components.push(CreateTextDisplay::new(
             crate::fmt::azur::AugmentStats::new(augment).to_string(),
