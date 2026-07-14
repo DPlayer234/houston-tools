@@ -102,13 +102,24 @@ impl<'v> Filter<'v> {
 }
 
 impl Filtering<Augment> for (Filter<'_>, &GameData) {
-    fn is_match(&self, item: &Augment) -> bool {
-        let (filter, azur) = *self;
+    fn is_all(&self) -> bool {
         let Filter {
+            name: _,
             rarity,
             unique_ship_id,
             hull_type,
-            ..
+        } = self.0;
+
+        rarity.is_none() && unique_ship_id.is_none() && hull_type.is_none()
+    }
+
+    fn is_match(&self, item: &Augment) -> bool {
+        let (filter, azur) = *self;
+        let Filter {
+            name: _,
+            rarity,
+            unique_ship_id,
+            hull_type,
         } = filter;
 
         fn match_hull_type(azur: &GameData, item: &Augment, hull_type: HullType) -> bool {

@@ -110,12 +110,23 @@ impl<'v> Filter<'v> {
 }
 
 impl Filtering<Equip> for Filter<'_> {
-    fn is_match(&self, item: &Equip) -> bool {
+    fn is_all(&self) -> bool {
         let Filter {
+            name: _,
             faction,
             kind,
             rarity,
-            ..
+        } = *self;
+
+        faction.is_none() && kind.is_none() && rarity.is_none()
+    }
+
+    fn is_match(&self, item: &Equip) -> bool {
+        let Filter {
+            name: _,
+            faction,
+            kind,
+            rarity,
         } = *self;
 
         faction.is_none_or(|f| item.faction == f)

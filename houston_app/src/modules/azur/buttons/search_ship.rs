@@ -107,6 +107,23 @@ impl<'v> Filter<'v> {
 }
 
 impl Filtering<Ship> for (Filter<'_>, &GameData) {
+    fn is_all(&self) -> bool {
+        let Filter {
+            name: _,
+            faction,
+            hull_type,
+            team_type,
+            rarity,
+            has_augment,
+        } = self.0;
+
+        faction.is_none()
+            && hull_type.is_none()
+            && team_type.is_none()
+            && rarity.is_none()
+            && has_augment.is_none()
+    }
+
     fn is_match(&self, item: &Ship) -> bool {
         let (filter, azur) = *self;
         let Filter {

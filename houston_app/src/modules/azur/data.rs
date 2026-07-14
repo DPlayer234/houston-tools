@@ -12,11 +12,9 @@ use azur_lane::ship::*;
 use bytes::Bytes;
 use lru::LruCache;
 use serenity::small_fixed_array::TruncatingInto as _;
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 use utils::fuzzy::{Match, MatchIter, Search};
 use utils::text::WriteStr as _;
-
-type IndexVec = SmallVec<[usize; 2]>;
 
 // use Bytes to avoid copying the data redundantly
 type LruBytes = LruCache<Box<str>, Option<Bytes>>;
@@ -42,9 +40,11 @@ pub struct GameData {
     equip_simsearch: Search<()>,
     augment_id_to_index: HashMap<u32, usize>,
     augment_simsearch: Search<()>,
-    ship_id_to_augment_indices: HashMap<u32, IndexVec>,
+    // reserving space for 2 doesn't need extra memory over 1
+    ship_id_to_augment_indices: HashMap<u32, SmallVec<[usize; 2]>>,
     juustagram_chat_id_to_index: HashMap<u32, usize>,
-    ship_id_to_juustagram_chat_indices: HashMap<u32, IndexVec>,
+    // usually 3 per ship, if any
+    ship_id_to_juustagram_chat_indices: HashMap<u32, SmallVec<[usize; 3]>>,
     special_secretary_id_to_index: HashMap<u32, usize>,
     special_secretary_simsearch: Search<()>,
 
@@ -96,9 +96,9 @@ impl GameData {
         let mut ship_id_to_index = HashMap::with_capacity(ships.len());
         let mut equip_id_to_index = HashMap::with_capacity(equips.len());
         let mut augment_id_to_index = HashMap::with_capacity(augments.len());
-        let mut ship_id_to_augment_indices = HashMap::new();
+        let mut ship_id_to_augment_indices = <HashMap<u32, SmallVec<_>>>::new();
         let mut juustagram_chat_id_to_index = HashMap::with_capacity(juustagram_chats.len());
-        let mut ship_id_to_juustagram_chat_indices = HashMap::new();
+        let mut ship_id_to_juustagram_chat_indices = <HashMap<u32, SmallVec<_>>>::new();
         let mut special_secretary_id_to_index = HashMap::with_capacity(special_secretaries.len());
 
         let mut ship_simsearch = Search::builder();
@@ -164,8 +164,8 @@ impl GameData {
             if let Some(ship_id) = data.usability.unique_ship_id() {
                 ship_id_to_augment_indices
                     .entry(ship_id)
-                    .and_modify(|v: &mut IndexVec| v.push(index))
-                    .or_insert_with(|| smallvec![index]);
+                    .or_default()
+                    .push(index);
             }
         }
 
@@ -173,8 +173,8 @@ impl GameData {
             juustagram_chat_id_to_index.insert(data.chat_id, index);
             ship_id_to_juustagram_chat_indices
                 .entry(data.group_id)
-                .and_modify(|v: &mut IndexVec| v.push(index))
-                .or_insert_with(|| smallvec![index]);
+                .or_default()
+                .push(index);
         }
 
         for (index, data) in special_secretaries.iter_mut().enumerate() {
@@ -278,7 +278,9 @@ impl GameData {
     /// Gets unique augments by their associated ship ID.
     pub fn augments_by_ship_id(&self, ship_id: u32) -> ByLookupIter<'_, Augment> {
         ByLookupIter::new(
-            self.ship_id_to_augment_indices.get(&ship_id),
+            self.ship_id_to_augment_indices
+                .get(&ship_id)
+                .map_or(&[], SmallVec::as_slice),
             &self.augments,
         )
     }
@@ -292,7 +294,9 @@ impl GameData {
     /// Gets all Juustagram chats by their associated ship ID.
     pub fn juustagram_chats_by_ship_id(&self, ship_id: u32) -> ByLookupIter<'_, Chat> {
         ByLookupIter::new(
-            self.ship_id_to_juustagram_chat_indices.get(&ship_id),
+            self.ship_id_to_juustagram_chat_indices
+                .get(&ship_id)
+                .map_or(&[], SmallVec::as_slice),
             &self.juustagram_chats,
         )
     }
@@ -462,10 +466,8 @@ pub struct ByLookupIter<'a, T> {
 }
 
 impl<'a, T> ByLookupIter<'a, T> {
-    pub fn new(lookup: Option<&'a IndexVec>, items: &'a [T]) -> Self {
-        let inner = lookup
-            .map_or_else(<&[usize]>::default, IndexVec::as_slice)
-            .iter();
+    pub fn new(lookup: &'a [usize], items: &'a [T]) -> Self {
+        let inner = lookup.iter();
         Self { inner, items }
     }
 }

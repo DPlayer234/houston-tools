@@ -174,6 +174,10 @@ mod search {
     }
 
     pub trait Filtering<T> {
+        /// Whether this filter will return `true` for any item.
+        fn is_all(&self) -> bool;
+
+        /// Whether the item is a match for this filter.
         fn is_match(&self, item: &T) -> bool;
     }
 
@@ -204,8 +208,19 @@ mod search {
 
         pub fn at_page(mut self, page: u16) -> Self {
             let mut skip = PAGE_SIZE * usize::from(page);
-            while skip > 0 && self.next().is_some() {
-                skip -= 1;
+            if self.filter.is_all() {
+                if skip > 0 {
+                    skip -= 1;
+                    match &mut self.inner {
+                        Inner::Slice(it) => it.nth(skip),
+                        Inner::ByPrefix(it) => it.nth(skip),
+                        Inner::ByLookup(it) => it.nth(skip),
+                    };
+                }
+            } else {
+                while skip > 0 && self.next().is_some() {
+                    skip -= 1;
+                }
             }
 
             self
@@ -266,6 +281,10 @@ mod search {
 
     pub struct All;
     impl<T> Filtering<T> for All {
+        fn is_all(&self) -> bool {
+            true
+        }
+
         fn is_match(&self, _item: &T) -> bool {
             true
         }
