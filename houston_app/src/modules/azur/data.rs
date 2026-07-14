@@ -11,7 +11,6 @@ use azur_lane::secretary::*;
 use azur_lane::ship::*;
 use bytes::Bytes;
 use lru::LruCache;
-use serenity::small_fixed_array::TruncatingInto as _;
 use smallvec::SmallVec;
 use utils::fuzzy::{Match, MatchIter, Search};
 use utils::text::WriteStr as _;
@@ -88,7 +87,7 @@ impl GameData {
 
         let ships = data.ships.into_boxed_slice();
         let mut equips = data.equips.into_boxed_slice();
-        let augments = data.augments.into_boxed_slice();
+        let mut augments = data.augments.into_boxed_slice();
         let juustagram_chats = data.juustagram_chats.into_boxed_slice();
         let mut special_secretaries = data.special_secretaries.into_boxed_slice();
 
@@ -154,19 +153,21 @@ impl GameData {
             // trim away irrelevant disallowed hulls
             let mut hull_disallowed = take(&mut data.hull_disallowed).into_vec();
             hull_disallowed.retain(|h| actual_equip_exist.contains(&(data.kind, *h)));
-            data.hull_disallowed = hull_disallowed.trunc_into();
+            data.hull_disallowed = hull_disallowed.try_into()?;
         }
 
-        for (index, data) in augments.iter().enumerate() {
-            augment_id_to_index.insert(data.augment_id, index);
-            augment_simsearch.insert(&data.name, ());
-
+        for (index, data) in augments.iter_mut().enumerate() {
             if let Some(ship_id) = data.usability.unique_ship_id() {
                 ship_id_to_augment_indices
                     .entry(ship_id)
                     .or_default()
                     .push(index);
+            } else {
+                data.name = format!("{} ({})", data.name, data.rarity.name()).try_into()?;
             }
+
+            augment_id_to_index.insert(data.augment_id, index);
+            augment_simsearch.insert(&data.name, ());
         }
 
         for (index, data) in juustagram_chats.iter().enumerate() {
@@ -178,7 +179,7 @@ impl GameData {
         }
 
         for (index, data) in special_secretaries.iter_mut().enumerate() {
-            data.name = format!("{} ({})", data.name, data.kind).trunc_into();
+            data.name = format!("{} ({})", data.name, data.kind).try_into()?;
             special_secretary_id_to_index.insert(data.id, index);
             special_secretary_simsearch.insert(&data.name, ());
         }
