@@ -72,7 +72,10 @@ impl View<'_> {
         components.push(CreateTextDisplay::new(label));
         components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
 
-        if !skill.barrages.is_empty() || !skill.new_weapons.is_empty() {
+        if !skill.barrages.is_empty()
+            || !skill.new_weapons.is_empty()
+            || !skill.cross_fleet_barrages.is_empty()
+        {
             if selected {
                 self.append_barrage_info(skill, components);
             } else {
@@ -212,11 +215,11 @@ impl View<'_> {
         skill: &'a Skill,
         components: &mut ComponentVec<CreateContainerComponent<'a>>,
     ) {
-        if !skill.barrages.is_empty() {
+        let append_barrages = |components: &mut ComponentVec<_>, header, barrages| {
             let mut content = String::new();
-            content.push_str("### __Barrages__\n");
+            content.push_str(header);
 
-            get_skills_extra_summary(&mut content, skill);
+            get_skills_extra_summary(&mut content, barrages);
             let content = match truncate(&content, 1000) {
                 Cow::Owned(trunc) => {
                     log::warn!("Barrage data too long:\n{content}");
@@ -227,6 +230,10 @@ impl View<'_> {
 
             components.push(CreateSeparator::new().divider(false));
             components.push(CreateTextDisplay::new(content));
+        };
+
+        if !skill.barrages.is_empty() {
+            append_barrages(components, "### __Barrages__\n", &skill.barrages);
         }
 
         for buff in &skill.new_weapons {
@@ -248,6 +255,14 @@ impl View<'_> {
 
             components.push(CreateSeparator::new().divider(false));
             components.push(CreateTextDisplay::new(content));
+        }
+
+        if !skill.cross_fleet_barrages.is_empty() {
+            append_barrages(
+                components,
+                "### __Cross-Fleet Barrages__\n",
+                &skill.cross_fleet_barrages,
+            );
         }
     }
 }
@@ -296,12 +311,12 @@ impl ButtonReply for View<'_> {
 }
 
 /// Constructs skill barrage display data.
-fn get_skills_extra_summary(buf: &mut String, skill: &Skill) {
+fn get_skills_extra_summary(buf: &mut String, barrages: &[SkillBarrage]) {
     use utils::text::{InlineStr, WriteStr as _};
 
     let any = try_write_or_undo(buf, |buf| {
         buf.push_str("__`Trgt. | Dmg.       | Ammo:  L / M / H  | Scaling  | Fl.`__\n");
-        write_join_map(buf, "\n", &skill.barrages, write_skill_barrage_summary)
+        write_join_map(buf, "\n", barrages, write_skill_barrage_summary)
     });
 
     if !any {

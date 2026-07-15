@@ -26,6 +26,9 @@ pub struct Skill {
     /// Weapons this skill may add to the ship.
     #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
     pub new_weapons: FixedArray<BuffWeapon>,
+    /// Barrages this skill can fire _for other fleets_.
+    #[serde(default, skip_serializing_if = "FixedArray::is_empty")]
+    pub cross_fleet_barrages: FixedArray<SkillBarrage>,
 }
 
 /// Represents a skill barrage.

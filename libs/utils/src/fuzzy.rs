@@ -60,10 +60,10 @@ use crate::private::ptr::RawRef;
 // for 32- or 16-bit systems, allocating the values Vec is guaranteed to panic
 // before then. for 64-bit systems, this panic would occur at over 16 GB
 // of allocated memory, and will likely run into an OOM.
-#[cfg(not(target_pointer_width = "16"))]
-type MatchIndex = u32;
-#[cfg(target_pointer_width = "16")]
-type MatchIndex = u16;
+cfg_select! {
+    target_pointer_width = "16" => { type MatchIndex = u16; }
+    _ => { type MatchIndex = u32; }
+}
 
 // amount of MatchIndex values that can be stored within a SmallVec without
 // increasing its size.

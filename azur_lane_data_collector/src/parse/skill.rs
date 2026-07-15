@@ -16,23 +16,29 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     let skill_data_template: LuaTable = pg
         .get("skill_data_template")
         .context("global pg.skill_data_template")?;
+    let skill_benefit_template: LuaTable = pg
+        .get("skill_benefit_template")
+        .context("global pg.skill_benefit_template")?;
 
     let skill: LuaTable = skill_data_template
         .get(skill_id)
-        .with_context(context!("skill with id {}", skill_id))?;
+        .with_context(context!("skill with id {skill_id}"))?;
     let name: String = skill
         .get("name")
-        .with_context(context!("name of skill with id {}", skill_id))?;
+        .with_context(context!("name of skill with id {skill_id}"))?;
+    let max_level: u32 = skill
+        .get("max_level")
+        .with_context(context!("max_level of skill with id {skill_id}"))?;
 
     let desc = skill
         .get("desc")
-        .with_context(context!("desc of skill with id {}", skill_id))?;
+        .with_context(context!("desc of skill with id {skill_id}"))?;
     let desc_add = skill
         .get("desc_add")
-        .with_context(context!("desc_add of skill with id {}", skill_id))?;
+        .with_context(context!("desc_add of skill with id {skill_id}"))?;
 
     let desc = resolve_skill_desc(desc, desc_add)
-        .with_context(context!("resolving desc of skill with id {}", skill_id))?;
+        .with_context(context!("resolving desc of skill with id {skill_id}"))?;
 
     let config = crate::model::config();
     if let Some(skill) = config.predefined_skills.get(&skill_id) {
@@ -56,9 +62,38 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
             lua,
             skill: &buff,
             skill_id,
+            max_level,
             quota: 1,
         },
     )?;
+
+    let benefit_id = skill_id * 100 + max_level;
+    let benefit: Option<LuaTable> = skill_benefit_template
+        .get(benefit_id)
+        .with_context(context!("skill benefit with id {benefit_id}"))?;
+
+    let mut cross_context = ReferencedWeaponsContext::default();
+    // only consider `BENEFIT_AID` benefits
+    if let Some(benefit) = benefit
+        && matches!(benefit.get("type"), Ok(5u32))
+    {
+        let benefit_skill_ids: Vec<u32> = benefit
+            .get("effect")
+            .with_context(context!("effect of skill benefit with id {benefit_id}"))?;
+        for benefit_skill_id in benefit_skill_ids {
+            let buff = require_buff_data(lua, benefit_skill_id)?;
+            search_referenced_weapons(
+                &mut cross_context,
+                SkillContext {
+                    lua,
+                    skill: &buff,
+                    skill_id,
+                    max_level,
+                    quota: 1,
+                },
+            )?;
+        }
+    }
 
     Ok(Skill {
         buff_id: skill_id,
@@ -67,6 +102,7 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         description: desc.into_fixed(),
         barrages: context.barrages.into_fixed(),
         new_weapons: context.new_weapons.into_fixed(),
+        cross_fleet_barrages: cross_context.barrages.into_fixed(),
     })
 }
 
@@ -90,11 +126,10 @@ fn resolve_skill_desc(desc: LuaBorrowedStr<'_>, desc_add: LuaTable) -> LuaResult
         if let Ok(last) = data_set.get::<LuaTable>(data_set.raw_len())
             && let Ok(text) = last.get::<LuaBorrowedStr<'_>>(1)
         {
-            let placeholder = placeholders
-                .get(slot)
-                .map(|s| Cow::Borrowed(*s))
-                .unwrap_or_else(|| format!("${}", slot + 1).into());
-            desc = desc.replace(&*placeholder, &text).into();
+            desc = Cow::Owned(match placeholders.get(slot) {
+                Some(placeholder) => desc.replace(*placeholder, &text),
+                None => desc.replace(&*format!("${}", slot + 1), &text),
+            });
         }
     }
 
@@ -610,19 +645,18 @@ fn search_referenced_weapons(
     rwc: &mut ReferencedWeaponsContext,
     sc: SkillContext<'_>,
 ) -> LuaResult<()> {
-    let len = sc.skill.len()?;
-    if len != 0 {
-        let level_entry: LuaTable = sc
+    let max_level = sc.max_level;
+    if max_level > 1
+        && let Some(level_entry) = sc
             .skill
-            .get(len)
-            .with_context(context!("level entry {len} of skill/buff"))?;
-        let effect_list: Option<Vec<LuaTable>> = level_entry
-            .get("effect_list")
-            .with_context(context!("effect_list of skill/buff level entry {len}"))?;
-        if let Some(effect_list) = effect_list {
-            search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
-            return Ok(());
-        }
+            .get::<Option<LuaTable>>(max_level)
+            .with_context(context!("level entry {max_level} of skill/buff"))?
+        && let Some(effect_list) = level_entry.get("effect_list").with_context(context!(
+            "effect_list of level entry {max_level} of skill/buff"
+        ))?
+    {
+        search_referenced_weapons_in_effect_entry(rwc, sc, effect_list)?;
+        return Ok(());
     }
 
     let effect_list: Option<Vec<LuaTable>> = sc
@@ -706,7 +740,7 @@ fn search_referenced_weapons_in_effect_entry(
                     search_referenced_weapons(rwc, sc)?;
                 }
             },
-            "BattleSkillFire" => {
+            "BattleSkillFire" | "BattleSkillFireSupport" => {
                 let weapon_id: u32 = get_arg(&entry, "weapon_id")?;
                 let target: LuaValue = entry.get("target_choise" /* sic */)?;
                 let target = match &target {
@@ -853,6 +887,7 @@ struct SkillContext<'a> {
     lua: &'a Lua,
     skill: &'a LuaTable,
     skill_id: u32,
+    max_level: u32,
     quota: u32,
 }
 
