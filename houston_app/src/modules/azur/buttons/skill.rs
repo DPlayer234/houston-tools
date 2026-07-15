@@ -330,14 +330,14 @@ fn get_skills_extra_summary(buf: &mut String, barrages: &[SkillBarrage]) {
         F: FnMut(&mut String, &I) -> bool,
     {
         let mut any = false;
-        let mut last = false;
 
         for item in iter {
-            if last {
-                buf.push_str(join);
-            }
-
-            last = f(buf, item);
+            let last = try_write_or_undo(buf, |buf| {
+                if any {
+                    buf.push_str(join);
+                }
+                f(buf, item)
+            });
             any |= last;
         }
 
