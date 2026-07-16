@@ -325,23 +325,18 @@ fn get_skills_extra_summary(buf: &mut String, barrages: &[SkillBarrage]) {
         buf.push_str("<recon only>");
     }
 
-    fn write_join_map<I, F>(buf: &mut String, join: &str, iter: &[I], mut f: F) -> bool
+    fn write_join_map<I, F>(buf: &mut String, join: &str, items: &[I], mut f: F) -> bool
     where
         F: FnMut(&mut String, &I) -> bool,
     {
-        let mut any = false;
-
-        for item in iter {
-            let last = try_write_or_undo(buf, |buf| {
+        items.iter().fold(false, |any, item| {
+            any | try_write_or_undo(buf, |buf| {
                 if any {
                     buf.push_str(join);
                 }
                 f(buf, item)
-            });
-            any |= last;
-        }
-
-        any
+            })
+        })
     }
 
     fn try_write_or_undo<F>(buf: &mut String, f: F) -> bool
