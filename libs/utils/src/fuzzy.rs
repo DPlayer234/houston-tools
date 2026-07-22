@@ -720,6 +720,10 @@ mod tests {
 
     type TSearch = Search<u8>;
 
+    fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
+        v.map(|p| *p.data).collect()
+    }
+
     #[test]
     fn search() {
         let search = {
@@ -738,7 +742,7 @@ mod tests {
         assert_eq!(&sorted_data(search.search("non")), &[4]);
 
         fn sorted_data(v: MatchIter<'_, u8>) -> Vec<u8> {
-            let mut v: Vec<u8> = v.map(|p| *p.data).collect();
+            let mut v = just_data(v);
             v.sort_unstable();
             v
         }
@@ -759,10 +763,50 @@ mod tests {
         // 1 isn't matched because the 4-segment check already succeeds
         assert_eq!(&just_data(search.search("Hous")), &[2, 3, 4]);
         assert_eq!(&just_data(search.search("Houston")), &[3, 4, 2]);
+    }
 
-        fn just_data(v: MatchIter<'_, u8>) -> Vec<u8> {
-            v.map(|p| *p.data).collect()
-        }
+    #[test]
+    fn search_varied() {
+        let search = {
+            let mut search = TSearch::builder();
+            search.min_match_score(0.5);
+            search.insert("Alpha-1 Beta", 1u8);
+            search.insert("alpha 1 beta", 2);
+            search.insert("ALPHA(1)BETA!", 3);
+            search.insert("Gamma 2", 4);
+            search.insert("Alpha-2", 5);
+            search.build()
+        };
+
+        assert_eq!(&just_data(search.search("alpha 1 beta")), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn search_empty() {
+        let search = {
+            let mut search = TSearch::builder();
+            search.insert("hello", 1u8);
+            search.insert("world", 2);
+            search.build()
+        };
+
+        assert!(just_data(search.search("a")).is_empty());
+        assert!(just_data(search.search("")).is_empty());
+        assert!(just_data(search.search(" ")).is_empty());
+    }
+
+    #[test]
+    fn search_exact_only() {
+        let search = {
+            let mut search = TSearch::builder();
+            search.min_match_score(1.0);
+            search.insert("abc", 1u8);
+            search.insert("abd", 2);
+            search.insert("xyz", 3);
+            search.build()
+        };
+
+        assert_eq!(&just_data(search.search("abc")), &[1]);
     }
 
     #[test]
