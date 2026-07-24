@@ -1,8 +1,10 @@
 use std::borrow::Cow;
+use std::mem::take;
 
 use serde::Serialize;
 use serenity::builder::{
-    CreateAllowedMentions, CreateAttachment, CreateComponent, CreateEmbed, EditInteractionResponse,
+    AttachmentData, CreateAllowedMentions, CreateAttachment, CreateComponent, CreateEmbed,
+    EditAttachments, EditInteractionResponse,
 };
 use serenity::model::channel::{Message, MessageFlags};
 use serenity::model::id::{AttachmentId, InteractionId, MessageId};
@@ -16,7 +18,8 @@ use super::CreateReply;
 pub struct EditReply<'a> {
     content: Option<Cow<'a, str>>,
     embeds: Option<Vec<CreateEmbed<'a>>>,
-    attachments: Option<InEditAttachments<'a>>,
+    edit_attachments: Option<EditAttachments<'a>>,
+    attachment_data: Vec<AttachmentData<'a>>,
     components: Option<Cow<'a, [CreateComponent<'a>]>>,
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
     flags: Option<MessageFlags>,
@@ -35,7 +38,8 @@ impl<'a> EditReply<'a> {
             content: Some(Cow::Borrowed("")),
             embeds: Some(Vec::new()),
             components: Some(Cow::Borrowed(&[])),
-            attachments: Some(InEditAttachments::default()),
+            edit_attachments: Some(EditAttachments::new()),
+            attachment_data: Vec::new(),
             allowed_mentions: None,
             flags: None,
         }
@@ -71,28 +75,33 @@ impl<'a> EditReply<'a> {
     }
 
     /// Add a new attachment.
-    pub fn new_attachment(self, attachment: CreateAttachment<'a>) -> Self {
-        self.attachment(Attachment::New(attachment))
+    pub fn new_attachment(mut self, attachment: CreateAttachment<'a>) -> Self {
+        // don't like this clone, but we can't get the data otherwise, should also be
+        // cheap enough since it at worst clones the description redundantly
+        self.attachment_data.push(attachment.clone().into());
+        self.edit_attachments = Some(
+            self.edit_attachments
+                .take()
+                .unwrap_or_default()
+                .add(attachment),
+        );
+        self
     }
 
     /// Keeps an existing attachment with the given ID.
-    pub fn keep_existing_attachment(self, attachment_id: AttachmentId) -> Self {
-        self.attachment(Attachment::Existing(ExistingAttachment {
-            id: attachment_id,
-        }))
+    pub fn keep_existing_attachment(mut self, attachment_id: AttachmentId) -> Self {
+        self.edit_attachments = Some(
+            self.edit_attachments
+                .take()
+                .unwrap_or_default()
+                .keep(attachment_id),
+        );
+        self
     }
 
     /// Removes all attachments already present.
     pub fn clear_attachments(mut self) -> Self {
-        self.attachments.get_or_insert_default();
-        self
-    }
-
-    fn attachment(mut self, attachment: Attachment<'a>) -> Self {
-        self.attachments
-            .get_or_insert_default()
-            .vec
-            .push(attachment);
+        self.edit_attachments.get_or_insert_default();
         self
     }
 
@@ -107,7 +116,8 @@ impl<'a> EditReply<'a> {
         let Self {
             content,
             embeds,
-            attachments,
+            edit_attachments: attachments,
+            attachment_data: _,
             components,
             allowed_mentions,
             flags,
@@ -130,14 +140,8 @@ impl<'a> EditReply<'a> {
         if let Some(flags) = flags {
             builder = builder.flags(flags);
         }
-
         if let Some(attachments) = attachments {
-            for attachment in attachments.vec {
-                match attachment {
-                    Attachment::New(att) => builder = builder.new_attachment(att),
-                    Attachment::Existing(att) => builder = builder.keep_existing_attachment(att.id),
-                }
-            }
+            builder = builder.attachments(attachments);
         }
 
         builder
@@ -160,92 +164,24 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
             flags,
         } = value;
 
-        let attachments = attachments.into_iter().map(Attachment::New).collect();
+        let mut edit_attachments = Some(EditAttachments::new());
+        let attachment_data = attachments
+            .into_iter()
+            .inspect(|a| {
+                edit_attachments = Some(edit_attachments.take().unwrap_or_default().add(a.clone()));
+            })
+            .map(AttachmentData::from)
+            .collect();
 
         Self {
             content: Some(content),
             embeds: Some(embeds),
-            attachments: Some(InEditAttachments { vec: attachments }),
+            edit_attachments,
+            attachment_data,
             components: Some(components),
             allowed_mentions,
             flags: Some(flags),
         }
-    }
-}
-
-// CMBK:
-// Custom support for complete interaction message edit.
-// Serenity currently doesn't support a couple things when editing interaction
-// responses and follow-ups, most notable keeping existing attachments.
-// This may be incomplete in other ways, but is sufficient for houston-app
-// purposes.
-
-/// This type replicates logic that is performed by
-/// [`EditAttachments`](serenity::builder::EditAttachments). However i want to
-/// avoid cloning the data here, and we can't use that type directly since we
-/// need to access the internal data anyways.
-#[derive(Debug, Default, Clone)]
-struct InEditAttachments<'a> {
-    vec: Vec<Attachment<'a>>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct ExistingAttachment {
-    id: AttachmentId,
-}
-
-#[derive(Debug, Clone)]
-enum Attachment<'a> {
-    New(CreateAttachment<'a>),
-    Existing(ExistingAttachment),
-}
-
-impl<'a> InEditAttachments<'a> {
-    fn get_files(&self) -> Vec<CreateAttachment<'a>> {
-        self.vec
-            .iter()
-            .filter_map(|e| match e {
-                Attachment::New(attachment) => Some(attachment.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-}
-
-impl Serialize for InEditAttachments<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeSeq as _;
-
-        #[derive(Debug, Clone, Serialize)]
-        struct NewAttachment<'a> {
-            id: u64,
-            filename: &'a str,
-            description: Option<&'a str>,
-        }
-
-        let mut id = 0;
-        let mut seq = serializer.serialize_seq(Some(self.vec.len()))?;
-        for attachment in &self.vec {
-            match attachment {
-                Attachment::New(new_attachment) => {
-                    let attachment = NewAttachment {
-                        id,
-                        filename: &new_attachment.filename,
-                        description: new_attachment.description.as_deref(),
-                    };
-                    id += 1;
-                    seq.serialize_element(&attachment)?;
-                },
-                Attachment::Existing(existing_attachment) => {
-                    seq.serialize_element(existing_attachment)?;
-                },
-            }
-        }
-
-        seq.end()
     }
 }
 
@@ -257,7 +193,7 @@ struct EditData<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     embeds: Option<Vec<CreateEmbed<'a>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    attachments: Option<InEditAttachments<'a>>,
+    attachments: Option<EditAttachments<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     components: Option<Cow<'a, [CreateComponent<'a>]>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -266,21 +202,14 @@ struct EditData<'a> {
     flags: Option<MessageFlags>,
 }
 
-impl<'a> EditData<'a> {
-    fn attachments(&self) -> Vec<CreateAttachment<'a>> {
-        self.attachments
-            .as_ref()
-            .map_or_else(Vec::new, InEditAttachments::get_files)
-    }
-}
-
 // internal workarounds for things not directly supported in serenity
 impl<'a> EditReply<'a> {
     fn into_payload(self) -> EditData<'a> {
         let Self {
             content,
             embeds,
-            attachments,
+            edit_attachments: attachments,
+            attachment_data: _,
             components,
             allowed_mentions,
             flags,
@@ -306,7 +235,7 @@ impl<'a> EditReply<'a> {
     /// [`create_interaction_response`]: serenity::http::Http::create_interaction_response
     #[doc(hidden)]
     pub async fn execute_as_response(
-        self,
+        mut self,
         http: &serenity::http::Http,
         interaction_id: InteractionId,
         interaction_token: &str,
@@ -317,12 +246,11 @@ impl<'a> EditReply<'a> {
             data: EditData<'a>,
         }
 
+        let files = take(&mut self.attachment_data);
         let payload = Payload {
             r#type: 7, // UPDATE_MESSAGE
             data: self.into_payload(),
         };
-
-        let files = payload.data.attachments();
 
         http.create_interaction_response(interaction_id, interaction_token, &payload, files)
             .await
@@ -338,13 +266,13 @@ impl<'a> EditReply<'a> {
     /// [`edit_followup_message`]: serenity::http::Http::edit_followup_message
     #[doc(hidden)]
     pub async fn execute_as_followup_edit(
-        self,
+        mut self,
         http: &serenity::http::Http,
         interaction_token: &str,
         message_id: MessageId,
     ) -> serenity::Result<Message> {
+        let files = take(&mut self.attachment_data);
         let payload = self.into_payload();
-        let files = payload.attachments();
 
         http.edit_followup_message(interaction_token, message_id, &payload, files)
             .await

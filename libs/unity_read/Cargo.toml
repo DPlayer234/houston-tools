@@ -11,7 +11,7 @@ workspace = true
 
 [dependencies]
 anyhow = "1.0.97"
-binrw = "0.15.1"
+binrw = "0.15.2"
 modular-bitfield = "0.13.0"
 num_enum = "0.7.5"
 lz4 = "1.28.1"
