@@ -37,11 +37,11 @@ utils_build.path = "../libs/utils_build"
 # the build script compiles and dumps lua_init, partly as a compile-time check,
 # partly so the binary doesn't need to compile the code itself
 [dependencies.mlua]
-version = "0.11.6"
+version = "0.12.0"
 features = ["vendored", "error-send", "serialize"]
 
 [build-dependencies.mlua]
-version = "0.11.6"
+version = "0.12.0"
 features = ["vendored", "error-send", "serialize"]
 
 [features]

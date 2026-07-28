@@ -1,7 +1,7 @@
 # Houston Tools Library Crates
 
 Versioned via semver, so you _could_ depend on them.
-Except `azur_lane`, `bson_model`, and `houston_cmd`. I consider these to be somewhat internal so these _may_ be a bit funky in terms of versioning.
+Except `azur_lane`, `bson_model`, `houston_btn`, and `houston_cmd`. I consider these to be somewhat internal so these _may_ be a bit funky in terms of versioning.
 
 Do however note that versions are only incremented when there's changes after a "release".
 Additionally, I don't version them with MSRV changes since those happen on the workspace level and I can't be bothered. I do expect the latest Rust version most of the time.
@@ -15,6 +15,10 @@ Partial data model for Azur Lane game data. This is essentially the data the Azu
 ## `bson_model`
 
 Provides a typed interface to create filters, updates, and sorts for MongoDB BSON documents via a derive macro.
+
+## `houston_btn`
+
+Custom serenity button-menu framework.
 
 ## `houston_cmd`
 

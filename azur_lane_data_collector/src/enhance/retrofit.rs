@@ -39,7 +39,7 @@ pub fn apply_retrofit(lua: &Lua, ship: &mut Retrofit, retrofit: &RetrofitSet<'_>
     Ok(())
 }
 
-fn add_effect(lua: &Lua, ship: &mut Retrofit, k: LuaBorrowedStr<'_>, v: f64) -> LuaResult<()> {
+fn add_effect(lua: &Lua, ship: &mut Retrofit, k: LuaBorrowedStr, v: f64) -> LuaResult<()> {
     // Stats added by retrofits are NOT affected by affinity.
     if super::add_to_stats_fixed(&mut ship.base.stats, &k, v).is_err() {
         match &*k {

@@ -114,7 +114,7 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
         .collect()
 }
 
-fn resolve_skill_desc(desc: LuaBorrowedStr<'_>, desc_add: LuaTable) -> LuaResult<String> {
+fn resolve_skill_desc(desc: LuaBorrowedStr, desc_add: LuaTable) -> LuaResult<String> {
     // `add` has nested structure where `add[slot][level]` is to a table where the
     // first element is the replacement text
 
@@ -124,7 +124,7 @@ fn resolve_skill_desc(desc: LuaBorrowedStr<'_>, desc_add: LuaTable) -> LuaResult
     for (slot, data_set) in desc_add.sequence_values().enumerate() {
         let data_set: LuaTable = data_set?;
         if let Ok(last) = data_set.get::<LuaTable>(data_set.raw_len())
-            && let Ok(text) = last.get::<LuaBorrowedStr<'_>>(1)
+            && let Ok(text) = last.get::<LuaBorrowedStr>(1)
         {
             desc = Cow::Owned(match placeholders.get(slot) {
                 Some(placeholder) => desc.replace(*placeholder, &text),
@@ -193,7 +193,7 @@ pub fn load_equip(lua: &Lua, equip_id: u32) -> LuaResult<Equip> {
     macro_rules! stat_bonus {
         ($index:literal) => {{
             match statistics
-                .get::<Option<LuaBorrowedStr<'_>>>(concat!("attribute_", $index))
+                .get::<Option<LuaBorrowedStr>>(concat!("attribute_", $index))
                 .with_context(context!(
                     "attribute_{} for equip with id {equip_id}",
                     $index
@@ -687,7 +687,7 @@ fn search_referenced_weapons_in_effect_entry(
     let mut attacks = Vec::new();
 
     for entry in effect_list {
-        let entry_type: LuaBorrowedStr<'_> = entry
+        let entry_type: LuaBorrowedStr = entry
             .get("type")
             .with_context(context!("skill/buff effect_list entry type: {:#?}", entry))?;
 

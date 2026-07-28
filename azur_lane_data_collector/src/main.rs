@@ -202,14 +202,14 @@ fn init_lua(input: &str) -> anyhow::Result<Lua> {
     let hackfix = lua.create_function(lua_hackfix)?;
     lua.globals().set("AZUR_LANE_HACKFIX", hackfix)?;
 
-    lua.load(CODE).set_mode(mlua::ChunkMode::Binary).exec()?;
+    lua.load(CODE).set_mode(LuaChunkMode::Binary).exec()?;
     action.finish();
     Ok(lua)
 }
 
-fn lua_hackfix(lua: &Lua, (source_path,): (LuaBorrowedStr<'_>,)) -> LuaResult<LuaValue> {
+fn lua_hackfix(lua: &Lua, (source_path,): (LuaBorrowedStr,)) -> LuaResult<LuaValue> {
     let path = source_path.replace('.', "/");
-    let base: LuaBorrowedStr<'_> = lua.globals().get("AZUR_LANE_DATA_PATH")?;
+    let base: LuaBorrowedStr = lua.globals().get("AZUR_LANE_DATA_PATH")?;
 
     let mut full_path = Path::new(&*base).join(path);
     full_path.add_extension("lua");
@@ -229,7 +229,7 @@ fn lua_hackfix(lua: &Lua, (source_path,): (LuaBorrowedStr<'_>,)) -> LuaResult<Lu
     // pass the source path to emulate what `require` does
     let value = lua
         .load(content)
-        .set_mode(mlua::ChunkMode::Text)
+        .set_mode(LuaChunkMode::Text)
         .call(source_path)?;
 
     // put the value in the loaded table so future `require` calls see it

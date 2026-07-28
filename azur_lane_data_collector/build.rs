@@ -26,7 +26,7 @@ fn precompile_lua_init() -> Result<(), ensure::PrintErr> {
     let func = lua
         .load(content)
         .set_name("main")
-        .set_mode(mlua::ChunkMode::Text)
+        .set_mode(LuaChunkMode::Text)
         .into_function()
         .map_err(|why| ensure::print_err!("cannot compile lua_init: {why}"))?;
 
