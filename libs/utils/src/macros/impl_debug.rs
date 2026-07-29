@@ -42,7 +42,7 @@
 /// utils::impl_debug!(for[T: Send + Debug] struct Sender<T>: { buf });
 /// ```
 ///
-/// Enums are also supported. You will need to list every variant:
+/// Enums are also supported. You must list every variant:
 ///
 /// ```no_run
 /// enum Status {
@@ -78,6 +78,10 @@
 /// ```
 #[macro_export]
 macro_rules! impl_debug {
+    // general note: while the pattern would already be binding field references, we
+    // still need to prefix another reference layer in every field call so unsized fields
+    // (i.e. `str` or `[T]`) can be converted to a `&dyn Debug` value
+
     // handling for "struct bodies", i.e. differentiating between struct/tuple/unit syntax
     (@bodystart $f:expr, $name:expr, { $($body:tt)* }) => {
         $crate::impl_debug!(@struct ($f.debug_struct($name)) $($body)*)
@@ -163,4 +167,31 @@ macro_rules! impl_debug {
             }
         }
     };
+}
+
+// some cases that aren't already in the doc tests
+#[cfg(test)]
+#[expect(dead_code)]
+mod tests {
+    struct AllowUnsizedTail {
+        prefix: u32,
+        tail: [u32],
+    }
+
+    impl_debug!(struct AllowUnsizedTail: { prefix, tail });
+
+    struct AllowUnsizedTailRename {
+        prefix: u32,
+        tail: [u32],
+    }
+
+    impl_debug!(struct AllowUnsizedTailRename: { prefix: p, tail: t });
+
+    struct AllowUnsizedTailTuple(u32, str);
+
+    impl_debug!(struct AllowUnsizedTailTuple: (u, s));
+
+    struct AllowUnsizedTailTupleRename(u32, str);
+
+    impl_debug!(struct AllowUnsizedTailTupleRename: { 0: a, 1: b });
 }
