@@ -132,10 +132,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
             .map(|(index, equip)| {
                 Ok::<_, LuaError>(ShadowEquip {
                     name: equip.name,
-                    efficiency: {
-                        let e: Option<f64> = equipment_proficiency.get(4 + index)?;
-                        e.unwrap_or(1f64)
-                    },
+                    efficiency: equipment_proficiency
+                        .get::<Option<f64>>(4 + index)?
+                        .unwrap_or(1f64),
                     weapons: equip.weapons,
                 })
             })

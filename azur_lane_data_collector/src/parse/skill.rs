@@ -450,14 +450,8 @@ fn get_barrage(lua: &Lua, weapon_id: u32, weapon_data: &LuaTable) -> LuaResult<B
 
     Ok(Barrage {
         damage: weapon_data.get("damage")?,
-        coefficient: {
-            let raw: f64 = weapon_data.get("corrected")?;
-            raw * 0.01
-        },
-        scaling: {
-            let raw: f64 = weapon_data.get("attack_attribute_ratio")?;
-            raw * 0.01
-        },
+        coefficient: weapon_data.get::<f64>("corrected")? * 0.01,
+        scaling: weapon_data.get::<f64>("attack_attribute_ratio")? * 0.01,
         scaling_stat: convert_al::weapon_attack_attr_to_stat_kind(
             weapon_data.get("attack_attribute")?,
         ),
