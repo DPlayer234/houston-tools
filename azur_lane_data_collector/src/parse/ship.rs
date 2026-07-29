@@ -87,6 +87,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
     // just take the first item if non-empty
     let specific_type: Vec<LuaBorrowedStr> = read!(set.template, "specific_type");
 
+    let oil_at_start: u32 = read!(set.template, "oil_at_start");
+    let oil_at_end: u32 = read!(set.template, "oil_at_end");
+
     let mut ship = BaseShip {
         id: set.id,
         group_id: read!(set.template, "group_type"),
@@ -109,7 +112,9 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
             asw: get_stat!(12),
             spd: attrs.get(10)?,
             lck: attrs.get(11)?,
-            cost: read!(set.template, "oil_at_end"),
+            // this is the formula near level 100 in practice
+            #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+            cost: oil_at_start + (f64::from(oil_at_end) * 0.995) as u32,
         },
         submarine_stats: None,
         default_skin_id: read!(set.statistics, "skin_id"),
@@ -144,8 +149,8 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
     };
 
     if ship.hull_type.team_type() == TeamType::Submarine {
-        // I can't explain it but submarine fleet ship costs seem to be 1 too high
-        ship.stats.cost -= 1;
+        // submarines' oil at start cost is fixed at 0
+        ship.stats.cost -= oil_at_start;
         ship.submarine_stats = Some(Box::new(SubmarineStatBlock {
             amo: read!(set.statistics, "ammo"),
             oxy: read!(set.statistics, "oxy_max"),
