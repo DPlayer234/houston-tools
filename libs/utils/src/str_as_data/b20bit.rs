@@ -211,11 +211,11 @@ pub fn decode<W: io::Write>(mut writer: W, input: &str) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum SkipLast {
-    Zero,
-    One,
-    Two,
+    Zero = 0,
+    One = 1,
+    Two = 2,
 }
 
 /// Tries to strip an input, returning `skip_last` and the stripped input.
@@ -225,30 +225,25 @@ enum SkipLast {
 /// Returns [`Err`] if the start or end marker is incorrect, or the prefix
 /// cannot possibly match the data length.
 fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
-    // strip the end marker
-    let s = s.strip_suffix('&').ok_or(Error::PrefixSuffix)?;
+    let [p @ b'A'..=b'C', s @ .., b'&'] = s.as_bytes() else {
+        return Err(Error::PrefixSuffix);
+    };
 
-    if let Some(s) = s.strip_prefix('A') {
-        return Ok((SkipLast::Zero, s));
+    let skip = match *p {
+        b'A' => SkipLast::Zero,
+        b'B' => SkipLast::One,
+        b'C' => SkipLast::Two,
+        _ => unreachable!(),
+    };
+
+    if skip != SkipLast::Zero && s.is_empty() {
+        return Err(Error::LenMismatch);
     }
 
-    if let Some(s) = s.strip_prefix('B') {
-        if s.is_empty() {
-            return Err(Error::LenMismatch);
-        }
-
-        return Ok((SkipLast::One, s));
-    }
-
-    if let Some(s) = s.strip_prefix('C') {
-        if s.is_empty() {
-            return Err(Error::LenMismatch);
-        }
-
-        return Ok((SkipLast::Two, s));
-    }
-
-    Err(Error::PrefixSuffix)
+    // SAFETY: `s` is derived from a `str`. removing ASCII characters must not
+    // invalidate leave the rest of the `str` as valid utf-8
+    let s = unsafe { str::from_utf8_unchecked(s) };
+    Ok((skip, s))
 }
 
 /// Packs a 16-bit prefix and 4-bit suffix into a 20-bit code.

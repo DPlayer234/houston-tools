@@ -10,6 +10,7 @@ fn round_trip_b256() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "too slow to run under miri")]
 fn round_trip_b65536() {
     let data: Vec<u8> = IntoIterator::into_iter(0..u16::MAX)
         .flat_map(|u| u.to_le_bytes())
@@ -51,6 +52,7 @@ fn invalid_len_b65536_fails() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "too slow to run under miri")]
 fn round_trip_b20bit() {
     fn b20bit_range() -> impl IntoIterator<Item = u64> {
         0..=0xFFFFFu64
@@ -74,6 +76,7 @@ fn round_trip_b20bit() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "too slow to run under miri")]
 fn round_trip_b20bit_all_chars() {
     use std::iter::once;
 
@@ -122,6 +125,13 @@ fn invalid_len_b20bit_fails() {
     b20bit::from_str("A\0&").expect_err("odd count with zero trim");
     b20bit::from_str("B&").expect_err("odd count with empty str");
     b20bit::from_str("C&").expect_err("odd count with empty str");
+}
+
+#[test]
+fn invalid_prefix_b20bit_fails() {
+    b20bit::from_str("D\0&").expect_err("must start with A, B, or C");
+    b20bit::from_str("\u{1000}\0&").expect_err("must start with A, B, or C");
+    b20bit::from_str("A\u{1000}").expect_err("must end with &");
 }
 
 fn round_trip_core<E: fmt::Debug>(
