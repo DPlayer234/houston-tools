@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use darling::{Error, FromMeta as _};
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned as _;
-use syn::{FnArg, ItemFn, Type, TypeInfer};
+use syn::{FnArg, ItemFn, Token, Type, TypeInfer};
 
 use crate::args::{CommonArgs, ContextCommandArgs};
 use crate::shared_command::to_command_shared;
@@ -40,6 +40,13 @@ pub fn entry_point(args: TokenStream, item: TokenStream) -> darling::Result<Toke
         command_option,
         args.main,
     ))
+}
+
+fn type_infer<'a>() -> Cow<'a, Type> {
+    Cow::Owned(Type::Infer(TypeInfer {
+        attrs: Vec::new(),
+        underscore_token: <Token![_]>::default(),
+    }))
 }
 
 fn to_command_option_command(
@@ -79,21 +86,17 @@ fn to_command_option_command(
         (None, _, _) => {
             let err = Error::custom("expected context parameter");
             acc.push(err.with_span(&func.sig));
-            Cow::Owned(Type::Infer(TypeInfer {
-                underscore_token: Default::default(),
-            }))
+            type_infer()
         },
         (_, None, _) | (_, _, Some(_)) => {
             let err = Error::custom("expected exacty 1 command argument");
             acc.push(err.with_span(&func.sig));
-            Cow::Owned(Type::Infer(TypeInfer {
-                underscore_token: Default::default(),
-            }))
+            type_infer()
         },
         (_, Some(FnArg::Receiver(receiver)), _) => {
             let err = Error::custom("invalid self argument");
             acc.push(err.with_span(&receiver));
-            Cow::Borrowed(&*receiver.ty)
+            type_infer()
         },
         (_, Some(FnArg::Typed(x)), _) => Cow::Borrowed(&*x.ty),
     };
