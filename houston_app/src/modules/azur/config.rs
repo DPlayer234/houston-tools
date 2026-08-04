@@ -5,11 +5,25 @@ use anyhow::Context as _;
 use azur_lane::ship::Ship;
 use serenity::small_fixed_array::FixedString;
 use utils::join;
+use utils::text::WriteStr as _;
 
 use super::GameData;
 
 fn default_early_load() -> bool {
     true
+}
+
+fn format_ship_url(format: &str, ship: &Ship) -> String {
+    crate::fmt::replace_holes(format, |out, n| match n {
+        "name" => write!(
+            out,
+            "{}",
+            urlencoding::Encoded::new(ship.base.name.as_str())
+        ),
+        "group" => write!(out, "{}", ship.group_id),
+        "index" => write!(out, "{}", ship.index),
+        _ => out.push(char::REPLACEMENT_CHARACTER),
+    })
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -19,6 +33,7 @@ pub struct Config {
     pub early_load: bool,
     #[serde(default)]
     wiki_urls: Arc<WikiUrls>,
+    tier_list: Option<Arc<TierList>>,
 
     /// Stores the lazy-loaded data.
     ///
@@ -53,6 +68,7 @@ impl Config {
         Some(Box::new(LazyData {
             game_data: self.load_game_data()?,
             wiki_urls: Arc::clone(&self.wiki_urls),
+            tier_list: self.tier_list.clone(),
         }))
     }
 
@@ -104,7 +120,7 @@ impl Default for WikiUrls {
 
         const BASE: &str = "https://azurlane.koumakan.jp/wiki/";
         Self {
-            ship_base: fs!(BASE),
+            ship_base: fs!(BASE, "{name}"),
             ship_list: fs!(BASE, "List_of_Ships"),
             equipment_list: fs!(BASE, "Equipment_List"),
             dd_gun_list: fs!(BASE, "List_of_Destroyer_Guns"),
@@ -129,12 +145,20 @@ impl Default for WikiUrls {
 }
 
 impl WikiUrls {
-    pub fn ship(&self, base_ship: &Ship) -> String {
-        format!(
-            "{}{}",
-            self.ship_base,
-            urlencoding::Encoded::new(base_ship.base.name.as_str())
-        )
+    pub fn ship(&self, ship: &Ship) -> String {
+        format_ship_url(&self.ship_base, ship)
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TierList {
+    pub label: FixedString<u8>,
+    pub url: FixedString<u16>,
+}
+
+impl TierList {
+    pub fn url(&self, ship: &Ship) -> String {
+        format_ship_url(&self.url, ship)
     }
 }
 
@@ -144,6 +168,7 @@ pub struct LazyData {
     // if `Config` were to get more fields that need to be shared here, adjust `Config` to `Arc` a
     // bundle of those fields and clone said `Arc` instead of one per field
     wiki_urls: Arc<WikiUrls>,
+    tier_list: Option<Arc<TierList>>,
     // this is actually all that's lazy-loaded currently
     game_data: GameData,
 }
@@ -152,6 +177,11 @@ impl LazyData {
     /// Gets a reference to the wiki URLs.
     pub fn wiki_urls(&self) -> &WikiUrls {
         &self.wiki_urls
+    }
+
+    /// Gets a reference to the tier list info.
+    pub fn tier_list(&self) -> Option<&TierList> {
+        self.tier_list.as_deref()
     }
 
     /// Gets a reference to the game data.

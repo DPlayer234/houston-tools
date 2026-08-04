@@ -50,7 +50,7 @@ impl<'v> View<'v> {
             let emoji = super::hull_emoji(ship.base.hull_type, data);
 
             let view = super::ship::View::builder()
-                .ship_id(ship.base.group_id)
+                .ship_id(ship.group_id)
                 .back(self.to_nav())
                 .build();
 
@@ -136,7 +136,7 @@ impl Filtering<Ship> for (Filter<'_>, &GameData) {
         } = filter;
 
         fn match_has_augment(azur: &GameData, item: &Ship, has_augment: bool) -> bool {
-            let any = azur.augments_by_ship_id(item.base.group_id).next();
+            let any = azur.augments_by_ship_id(item.group_id).next();
             any.is_some() == has_augment
         }
 

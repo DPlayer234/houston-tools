@@ -251,6 +251,12 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
     let ship_data_statistics: LuaTable = pg
         .get("ship_data_statistics")
         .context("global pg.ship_data_statistics")?;
+    let ship_data_group: LuaTable = pg
+        .get("ship_data_group")
+        .context("global pg.ship_data_group")?;
+    let ship_data_group_get_id_list_by_group_type: LuaTable = ship_data_group
+        .get("get_id_list_by_group_type")
+        .context("global pg.get_id_list_by_group_type")?;
 
     // Normal enhancement data (may be present even if not used for that ship):
     let ship_data_strengthen: LuaTable = pg
@@ -317,16 +323,20 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
         let template: LuaTable = ship_data_template
             .get(id)
             .with_context(context!("ship_data_template with id {id}"))?;
-        let group_id: u32 = template
+        let group_type: u32 = template
             .get("group_type")
             .with_context(context!("group_type of ship_data_template with id {id}"))?;
+        let [code]: [u32; 1] = ship_data_group_get_id_list_by_group_type
+            .get(group_type)
+            .with_context(context!("code for ship_data_group from {group_type}"))?;
 
         groups
-            .entry(group_id)
+            .entry(group_type)
             .or_insert_with(|| {
                 action.inc_amount();
                 ShipGroup {
-                    id: group_id,
+                    code,
+                    id: group_type,
                     members: Vec::new(),
                 }
             })
@@ -457,7 +467,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
             .try_collect()?;
 
         let mut base = parse::ship::load_ship_data(lua, raw_mlb)?;
-        if let Some(name_override) = config.name_overrides.get(&base.group_id) {
+        if let Some(name_override) = config.name_overrides.get(&group.id) {
             base.name = FixedString::from_str_trunc(name_override);
         }
 
@@ -490,6 +500,8 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
 
         action.inc_amount();
         Ok::<_, LuaError>(Ship {
+            index: group.code,
+            group_id: group.id,
             base,
             retrofits,
             skins,
@@ -504,7 +516,7 @@ fn load_ships(lua: &Lua, pg: &LuaTable, server: GameServer) -> anyhow::Result<Fi
 
     action.finish();
 
-    ships.sort_unstable_by_key(|t| t.base.group_id);
+    ships.sort_unstable_by_key(|t| t.group_id);
     Ok(ships)
 }
 
@@ -747,8 +759,8 @@ fn merge_out_data(main: &mut DefinitionData, next: DefinitionData) {
         };
     }
 
-    eq!(ship_eq, Ship, base.group_id);
-    eq!(retrofit_eq, Retrofit, base.default_skin_id);
+    eq!(ship_eq, Ship, group_id);
+    eq!(retrofit_eq, Retrofit, base.id);
     eq!(skin_eq, Skin, skin_id);
     eq!(augment_eq, Augment, augment_id);
     eq!(equip_eq, Equip, equip_id);

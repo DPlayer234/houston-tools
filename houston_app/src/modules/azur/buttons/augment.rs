@@ -87,7 +87,7 @@ impl View<'_> {
             AugmentUsability::UniqueShipId(ship_id) => {
                 if let Some(ship) = azur.game_data().ship_by_id(*ship_id) {
                     let view = super::ship::View::builder()
-                        .ship_id(ship.base.group_id)
+                        .ship_id(ship.group_id)
                         .back(self.to_nav())
                         .build();
 

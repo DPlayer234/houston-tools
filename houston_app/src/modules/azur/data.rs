@@ -124,7 +124,7 @@ impl GameData {
         for (index, data) in ships.iter().enumerate() {
             verify_ship(data);
 
-            ship_id_to_index.insert(data.base.group_id, index);
+            ship_id_to_index.insert(data.group_id, index);
             ship_simsearch.insert(&data.base.name, ());
 
             // collect known "equip & hull" pairs

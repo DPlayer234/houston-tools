@@ -46,7 +46,7 @@ fn add_effect_attr(ship: &mut BaseShip, effect_attr: LuaTable) -> LuaResult<()> 
     effect_attr.for_each(|_: u32, v: LuaTable| {
         let attr: LuaBorrowedStr = v.get(1).with_context(context!(
             "effect_attr name for blueprint ship id {}",
-            ship.group_id
+            ship.id
         ))?;
         let value: f64 = v.get(2)?;
 

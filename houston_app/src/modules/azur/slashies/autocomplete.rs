@@ -22,7 +22,7 @@ macro_rules! make_autocomplete {
     };
 }
 
-make_autocomplete!(ship_name, ships_by_prefix, e, e.base.group_id, &e.base.name);
+make_autocomplete!(ship_name, ships_by_prefix, e, e.group_id, &e.base.name);
 make_autocomplete!(equip_name, equips_by_prefix, e, e.equip_id, &e.name);
 make_autocomplete!(augment_name, augments_by_prefix, e, e.augment_id, &e.name);
 make_autocomplete!(
@@ -43,16 +43,13 @@ pub async fn ship_name_juustagram_chats<'a>(
             .ships_by_prefix(partial)
             .filter(|s| {
                 azur.game_data()
-                    .juustagram_chats_by_ship_id(s.base.group_id)
+                    .juustagram_chats_by_ship_id(s.group_id)
                     .next()
                     .is_some()
             })
             .take(25)
             .map(|e| {
-                AutocompleteChoice::new(
-                    &e.base.name,
-                    Cow::Owned(format!("/id:{}", e.base.group_id)),
-                )
+                AutocompleteChoice::new(&e.base.name, Cow::Owned(format!("/id:{}", e.group_id)))
             })
             .collect();
 

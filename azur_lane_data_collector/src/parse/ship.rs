@@ -92,7 +92,6 @@ pub fn load_ship_data(lua: &Lua, set: &ShipSet<'_>) -> LuaResult<BaseShip> {
 
     let mut ship = BaseShip {
         id: set.id,
-        group_id: read!(set.template, "group_type"),
         name: name.into_fixed(),
         rarity: convert_al::to_rarity(read!(set.statistics, "rarity")),
         faction: convert_al::to_faction(read!(set.statistics, "nationality")),

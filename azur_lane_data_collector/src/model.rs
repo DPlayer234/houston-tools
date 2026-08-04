@@ -51,6 +51,8 @@ pub fn init_config_from(path: &Path) -> anyhow::Result<()> {
 /// A group of ships.
 #[derive(Debug)]
 pub struct ShipGroup {
+    /// The index for the ship group.
+    pub code: u32,
     /// The ID of the group, aka `group_type`.
     pub id: u32,
     /// The IDs of the members.

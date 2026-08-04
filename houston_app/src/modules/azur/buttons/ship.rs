@@ -107,7 +107,7 @@ impl View<'_> {
         components.push(self.get_equip_field(azur, ship));
         components.push(CreateSeparator::new().divider(true));
 
-        if let Some(skills_field) = self.get_skills_field(azur, ship) {
+        if let Some(skills_field) = self.get_skills_field(azur, ship, base_ship) {
             components.push(skills_field);
             components.push(CreateSeparator::new().divider(true));
         }
@@ -127,6 +127,15 @@ impl View<'_> {
         azur: &'a LazyData,
         base_ship: &'a Ship,
     ) -> CreateContainerComponent<'a> {
+        let mut buttons = Vec::with_capacity(4);
+
+        if let Some(back) = &self.back {
+            let back_button = CreateButton::new(back.to_custom_id())
+                .emoji(emoji::back())
+                .label("Back");
+            buttons.push(back_button);
+        }
+
         let view_lines = super::lines::View::builder()
             .ship_id(self.ship_id)
             .back(self.to_nav())
@@ -135,22 +144,15 @@ impl View<'_> {
         let lines_button = CreateButton::new(view_lines.to_custom_id())
             .label("Lines")
             .style(ButtonStyle::Secondary);
+        buttons.push(lines_button);
 
         let wiki_url = azur.wiki_urls().ship(base_ship);
-        let wiki_button = CreateButton::new_link(wiki_url)
-            .label("Wiki")
-            .style(ButtonStyle::Secondary);
+        buttons.push(CreateButton::new_link(wiki_url).label("Wiki"));
 
-        let buttons = match &self.back {
-            Some(back) => vec![
-                CreateButton::new(back.to_custom_id())
-                    .emoji(emoji::back())
-                    .label("Back"),
-                lines_button,
-                wiki_button,
-            ],
-            None => vec![lines_button, wiki_button],
-        };
+        if let Some(tier_list) = azur.tier_list() {
+            let url = tier_list.url(base_ship);
+            buttons.push(CreateButton::new_link(url).label(&tier_list.label))
+        }
 
         CreateActionRow::buttons(buttons).into_component()
     }
@@ -387,6 +389,7 @@ impl View<'_> {
         &self,
         azur: &'a LazyData,
         ship: &BaseShip,
+        base_ship: &Ship,
     ) -> Option<CreateContainerComponent<'a>> {
         if ship.skills.is_empty() {
             return None;
@@ -407,7 +410,7 @@ impl View<'_> {
             writeln!(text, "> {}", bonus.description());
         }
 
-        let augments = azur.game_data().augments_by_ship_id(ship.group_id);
+        let augments = azur.game_data().augments_by_ship_id(base_ship.group_id);
         for augment in augments {
             writeln!(text, "-# UA: **{}**", augment.name);
         }

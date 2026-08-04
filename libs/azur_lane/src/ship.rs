@@ -18,8 +18,6 @@ pub struct BaseShip {
     /// The ship ID for either the max limit break version or the retrofit,
     /// depending on which you're checking.
     pub id: u32,
-    /// The group ID. This is the same for the base and its retrofits.
-    pub group_id: u32,
     /// The ship's display name.
     pub name: FixedString,
     /// The ship's rarity.
@@ -68,6 +66,10 @@ pub struct BaseShip {
 /// Provides data for a single ship.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ship {
+    /// The index for the ship group.
+    pub index: u32,
+    /// The ship's group ID.
+    pub group_id: u32,
     /// The base data.
     pub base: BaseShip,
     /// Available retrofits for this ship in their maxed-out state.

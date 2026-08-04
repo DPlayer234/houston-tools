@@ -9,7 +9,7 @@ pub fn add_repair(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()> {
 
     let attr: LuaBorrowedStr = effect.get(1).with_context(context!(
         "repair's effect_attr name for meta ship id {}",
-        ship.group_id
+        ship.id
     ))?;
     let value: f64 = effect.get(2)?;
 
@@ -27,7 +27,7 @@ pub fn add_repair_effect(ship: &mut BaseShip, table: &LuaTable) -> LuaResult<()>
         let effect: LuaTable = effect?;
         let attr: LuaBorrowedStr = effect.get(1).with_context(context!(
             "repair_effect's effect_attr name for meta ship id {}",
-            ship.group_id
+            ship.id
         ))?;
         let value: f64 = effect.get(2)?;
 

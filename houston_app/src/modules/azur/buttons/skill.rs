@@ -92,7 +92,12 @@ impl View<'_> {
     }
 
     /// Modifies the create-reply with preresolved ship data.
-    fn edit_with_ship<'a>(mut self, azur: &'a LazyData, ship: &'a BaseShip) -> EditReply<'a> {
+    fn edit_with_ship<'a>(
+        mut self,
+        azur: &'a LazyData,
+        ship: &'a BaseShip,
+        base_ship: &Ship,
+    ) -> EditReply<'a> {
         let mut skills: ArrayVec<&Skill, 5> = ship.skills.iter().take(4).collect();
 
         let mut components = ComponentVec::new();
@@ -107,7 +112,7 @@ impl View<'_> {
 
         let mut nav = vec![nav];
 
-        let augments = azur.game_data().augments_by_ship_id(ship.group_id);
+        let augments = azur.game_data().augments_by_ship_id(base_ship.group_id);
         if augments.len() != 0 {
             nav.push(self.button_with_augment(None).label("Default"));
         }
@@ -285,7 +290,7 @@ impl ButtonReply for View<'_> {
                     .map(|r| &r.base)
                     .unwrap_or(&base_ship.base);
 
-                self.edit_with_ship(azur, ship)
+                self.edit_with_ship(azur, ship, base_ship)
             },
             ViewSource::Augment(augment_id) => {
                 let augment = azur
