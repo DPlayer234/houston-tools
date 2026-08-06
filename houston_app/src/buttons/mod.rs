@@ -160,6 +160,6 @@ pub trait ContextExt<'a> {
 
 impl<'a, I: ?Sized + AnyInteraction> ContextExt<'a> for AnyContext<'a, I> {
     fn data_ref(self) -> &'a HBotData {
-        self.serenity.data_ref::<HContextData>()
+        self.serenity().data_ref::<HContextData>()
     }
 }

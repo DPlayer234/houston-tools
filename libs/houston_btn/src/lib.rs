@@ -154,6 +154,7 @@ pub trait Hooks: Send + Sync + 'static {
 }
 
 /// Event handler for custom button menus.
+#[must_use]
 pub struct EventHandler {
     actions: ExtractMap<usize, ButtonAction>,
     hooks: Option<Box<dyn Hooks>>,
@@ -185,15 +186,14 @@ impl EventHandler {
         })
     }
 
-    fn action(&self, key: usize) -> Result<&ButtonAction> {
-        self.actions.get(&key).context("unknown button action")
-    }
-
     /// Sets the hooks to call.
-    #[must_use]
     pub fn hooks(mut self, handler: Box<dyn Hooks>) -> Self {
         self.hooks = Some(handler);
         self
+    }
+
+    fn action(&self, key: usize) -> Result<&ButtonAction> {
+        self.actions.get(&key).context("unknown button action")
     }
 
     /// Dispatches the event to the correct handler.
@@ -221,15 +221,14 @@ impl EventHandler {
 
     /// Dispatches component interactions.
     pub async fn dispatch_component(&self, ctx: &Context, interaction: &ComponentInteraction) {
-        let inner = ContextInner::new(self);
-        if let Err(err) = Self::handle_component(ctx, interaction, &inner).await {
-            Self::handle_dispatch_error(ctx, interaction, &inner, err).await
+        let inner = ContextInner::new(self, ctx);
+        if let Err(err) = Self::handle_component(interaction, &inner).await {
+            Self::handle_dispatch_error(interaction, &inner, err).await
         }
     }
 
     /// Handles the component interaction dispatch.
     async fn handle_component(
-        ctx: &Context,
         interaction: &ComponentInteraction,
         inner: &ContextInner<'_>,
     ) -> Result {
@@ -238,42 +237,37 @@ impl EventHandler {
         let key = decoder.read_key()?;
         let action = inner.state.action(key)?;
 
-        let ctx = ButtonContext::new(ctx, interaction, inner);
+        let ctx = ButtonContext::new(interaction, inner);
         (action.invoke_button)(ctx, decoder).await
     }
 
     /// Dispatches modal interactions.
     pub async fn dispatch_modal(&self, ctx: &Context, interaction: &ModalInteraction) {
-        let inner = ContextInner::new(self);
-        if let Err(err) = Self::handle_modal(ctx, interaction, &inner).await {
-            Self::handle_dispatch_error(ctx, interaction, &inner, err).await
+        let inner = ContextInner::new(self, ctx);
+        if let Err(err) = Self::handle_modal(interaction, &inner).await {
+            Self::handle_dispatch_error(interaction, &inner, err).await
         }
     }
 
     /// Handles the modal interaction dispatch.
-    async fn handle_modal(
-        ctx: &Context,
-        interaction: &ModalInteraction,
-        inner: &ContextInner<'_>,
-    ) -> Result {
+    async fn handle_modal(interaction: &ModalInteraction, inner: &ContextInner<'_>) -> Result {
         let mut buf = encoding::StackBuf::new();
         let mut decoder = encoding::decode_custom_id(&mut buf, &interaction.data.custom_id)?;
         let key = decoder.read_key()?;
         let action = inner.state.action(key)?;
 
-        let ctx = ModalContext::new(ctx, interaction, inner);
+        let ctx = ModalContext::new(interaction, inner);
         (action.invoke_modal)(ctx, decoder).await
     }
 
     #[cold]
     async fn handle_dispatch_error(
-        ctx: &Context,
         interaction: &dyn AnyInteraction,
         inner: &ContextInner<'_>,
         err: anyhow::Error,
     ) {
         if let Some(hooks) = inner.state.hooks.as_deref() {
-            let ctx = ErrorContext::new(ctx, interaction, inner);
+            let ctx = ErrorContext::new(interaction, inner);
             hooks.handle_error(ctx, err).await;
         } else {
             log::error!("Dispatching event failed: {err:?}");

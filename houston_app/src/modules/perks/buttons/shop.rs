@@ -379,12 +379,12 @@ impl View {
 button_value!(View, 10);
 impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let guild_id = ctx.interaction.guild_id.context("requires guild")?;
-        let user_id = ctx.interaction.user.id;
+        let guild_id = ctx.guild_id().context("requires guild")?;
+        let user_id = ctx.user().id;
 
         ctx.acknowledge().await?;
 
-        let reply = self.create_reply(ctx.serenity, guild_id, user_id).await?;
+        let reply = self.create_reply(ctx.serenity(), guild_id, user_id).await?;
         ctx.edit(reply.into()).await?;
         Ok(())
     }

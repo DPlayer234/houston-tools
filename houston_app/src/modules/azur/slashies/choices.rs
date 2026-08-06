@@ -24,7 +24,7 @@ macro_rules! make_autocomplete_choice {
                 .zip(<$Type>::ALL)
                 .filter(|(_, t)| contains_ignore_ascii_case(t.name(), partial))
                 .take(25)
-                .map(|(i, t)| AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i)))
+                .map(|(i, t)| AutocompleteChoice::new(t.name(), i))
                 .collect();
 
             CreateAutocompleteResponse::new().set_choices(choices)
@@ -149,7 +149,7 @@ pub async fn hull_or_team_type<'a>(
     let choices: Vec<_> = all
         .filter(|(_, t)| contains_ignore_ascii_case(t.name(), partial))
         .take(25)
-        .map(|(i, t)| AutocompleteChoice::new(t.name(), AutocompleteValue::Integer(i)))
+        .map(|(i, t)| AutocompleteChoice::new(t.name(), i))
         .collect();
 
     CreateAutocompleteResponse::new().set_choices(choices)

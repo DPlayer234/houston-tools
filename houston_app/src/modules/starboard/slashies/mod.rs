@@ -95,10 +95,7 @@ async fn autocomplete_board<'a>(
             .filter(|board| contains_ignore_ascii_case(&board.name, partial))
             // map it to an autocomplete choice with the board id as the value
             .map(|board| {
-                AutocompleteChoice::new(
-                    board.name.as_str(),
-                    AutocompleteValue::Integer(board.id.get().cast_unsigned()),
-                )
+                AutocompleteChoice::new(board.name.as_str(), board.id.get().cast_unsigned())
             })
             .collect();
 

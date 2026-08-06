@@ -97,7 +97,7 @@ async fn autocomplete_role<'a>(
         let choices: Vec<_> = (0u64..)
             .zip(guild_config.groups.iter().flat_map(|g| &g.roles))
             .filter(|(_, r)| contains_ignore_ascii_case(&r.name, partial))
-            .map(|(index, r)| AutocompleteChoice::new(&r.name, AutocompleteValue::Integer(index)))
+            .map(|(index, r)| AutocompleteChoice::new(&r.name, index))
             .collect();
 
         CreateAutocompleteResponse::new().set_choices(choices)

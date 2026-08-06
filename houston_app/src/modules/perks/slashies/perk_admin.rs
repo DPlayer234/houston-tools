@@ -54,7 +54,7 @@ mod root {
         let guild_id = ctx.require_guild_id()?;
         let perks = data.config().perks()?;
         let db = data.database()?;
-        let args = Args::new(ctx.serenity, guild_id, member.user.id);
+        let args = Args::new(ctx.serenity(), guild_id, member.user.id);
 
         let until = UtcDateTime::now()
             .checked_add(duration)
@@ -95,7 +95,7 @@ mod root {
         let guild_id = ctx.require_guild_id()?;
         let perks = data.config().perks()?;
         let db = data.database()?;
-        let args = Args::new(ctx.serenity, guild_id, member.user.id);
+        let args = Args::new(ctx.serenity(), guild_id, member.user.id);
 
         ctx.defer_as(Ephemeral).await?;
         perk.disable(args).await?;

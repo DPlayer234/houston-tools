@@ -20,8 +20,6 @@ const SENT: usize = 2;
 /// The context for a command invocation.
 #[derive(Clone, Copy)]
 pub struct Context<'a> {
-    /// The serenity context that triggered this command.
-    pub serenity: &'a SerenityContext,
     /// The command interaction that this context corresponds to.
     pub interaction: &'a CommandInteraction,
     /// Additional internal state.
@@ -32,7 +30,8 @@ impl fmt::Debug for Context<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
             .field("interaction", self.interaction)
-            .field("inner", self.inner)
+            .field("reply_state", &self.inner.reply_state)
+            .field("options", &self.inner.options)
             .finish_non_exhaustive()
     }
 }
@@ -42,41 +41,39 @@ impl fmt::Debug for Context<'_> {
 /// Present to avoid bloating the inline-size of the context struct. Plus, the
 /// `reply_state` field needs to be held by reference anyways, so the only extra
 /// indirection caused by this is for `options`.
-#[derive(Debug)]
 pub struct ContextInner<'a> {
+    pub serenity: &'a SerenityContext,
     pub reply_state: AtomicUsize,
     pub options: Box<[ResolvedOption<'a>]>,
 }
 
 impl<'a> ContextInner<'a> {
-    pub fn with_options(options: Box<[ResolvedOption<'a>]>) -> Self {
+    pub fn with_options(serenity: &'a SerenityContext, options: Box<[ResolvedOption<'a>]>) -> Self {
         Self {
+            serenity,
             reply_state: AtomicUsize::new(UNSENT),
             options,
         }
     }
 
-    pub fn empty() -> Self {
-        Self::with_options(Box::default())
+    pub fn empty(serenity: &'a SerenityContext) -> Self {
+        Self::with_options(serenity, Box::default())
     }
 }
 
 impl<'a> Context<'a> {
-    pub(crate) fn new(
-        serenity: &'a SerenityContext,
-        interaction: &'a CommandInteraction,
-        inner: &'a ContextInner<'a>,
-    ) -> Self {
-        Self {
-            serenity,
-            interaction,
-            inner,
-        }
+    pub(crate) fn new(interaction: &'a CommandInteraction, inner: &'a ContextInner<'a>) -> Self {
+        Self { interaction, inner }
+    }
+
+    /// The serenity context that triggered this command.
+    pub fn serenity(&self) -> &'a SerenityContext {
+        self.inner.serenity
     }
 
     /// Gets the HTTP client.
     pub fn http(self) -> &'a Http {
-        &self.serenity.http
+        &self.inner.serenity.http
     }
 
     /// Gets the invoking user.
@@ -92,6 +89,7 @@ impl<'a> Context<'a> {
     }
 
     /// Gets the ID of the channel the command was invoked in.
+    // CMBK: replace with channel when it's correctly non-optional
     pub fn channel_id(self) -> GenericChannelId {
         self.interaction.channel_id
     }

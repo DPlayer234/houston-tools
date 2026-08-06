@@ -10,7 +10,7 @@ pub async fn shop(ctx: Context<'_>) -> Result {
     ctx.defer_as(Ephemeral).await?;
 
     let reply = View::new()
-        .create_reply(ctx.serenity, guild_id, ctx.user().id)
+        .create_reply(ctx.serenity(), guild_id, ctx.user().id)
         .await?;
 
     ctx.send(reply).await?;

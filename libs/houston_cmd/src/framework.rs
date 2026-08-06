@@ -138,15 +138,15 @@ impl Framework {
         let (command, options) = match self.find_command(interaction) {
             Ok(r) => r,
             Err(why) => {
-                let ctx_inner = ContextInner::empty();
-                let ctx = Context::new(ctx, interaction, &ctx_inner);
+                let ctx_inner = ContextInner::empty(ctx);
+                let ctx = Context::new(interaction, &ctx_inner);
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
             },
         };
 
-        let ctx_inner = ContextInner::with_options(options);
-        let ctx = Context::new(ctx, interaction, &ctx_inner);
+        let ctx_inner = ContextInner::with_options(ctx, options);
+        let ctx = Context::new(interaction, &ctx_inner);
         if let Err(why) = self.run_command_or(ctx, command).await {
             self.handle_error(why).await;
         }
@@ -156,15 +156,15 @@ impl Framework {
         let (command, options) = match self.find_command(interaction) {
             Ok(r) => r,
             Err(why) => {
-                let ctx_inner = ContextInner::empty();
-                let ctx = Context::new(ctx, interaction, &ctx_inner);
+                let ctx_inner = ContextInner::empty(ctx);
+                let ctx = Context::new(interaction, &ctx_inner);
                 self.handle_error(Error::structure_mismatch(ctx, why)).await;
                 return;
             },
         };
 
-        let ctx_inner = ContextInner::with_options(options);
-        let ctx = Context::new(ctx, interaction, &ctx_inner);
+        let ctx_inner = ContextInner::with_options(ctx, options);
+        let ctx = Context::new(interaction, &ctx_inner);
         if let Err(why) = self.run_autocomplete_or(ctx, command).await {
             self.handle_error(why).await;
         }

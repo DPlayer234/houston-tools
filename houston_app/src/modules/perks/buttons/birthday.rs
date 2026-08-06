@@ -22,7 +22,7 @@ impl Set {
 button_value!(Set, 15);
 impl ButtonReply for Set {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let user_id = ctx.interaction.user.id;
+        let user_id = ctx.user().id;
 
         ctx.acknowledge().await?;
 

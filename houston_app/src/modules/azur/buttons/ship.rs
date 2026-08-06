@@ -398,7 +398,6 @@ impl View<'_> {
         // There isn't any way a unique augment can do anything if there are no skills
         // so we still skip the field if there are no skills but there is an augment.
         // ... Not that there are any ships without skills to begin with.
-        // CMBK: do we need this at all?
         let mut text = String::new();
         text.push_str("### Skills\n");
 

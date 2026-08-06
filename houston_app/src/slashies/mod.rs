@@ -105,7 +105,7 @@ impl<'a> ContextExt<'a> for Context<'a> {
     }
 
     fn data_ref(self) -> &'a HBotData {
-        self.serenity.data_ref::<HContextData>()
+        self.serenity().data_ref::<HContextData>()
     }
 
     fn require_guild_id(self) -> Result<GuildId> {

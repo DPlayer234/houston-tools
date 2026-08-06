@@ -222,9 +222,7 @@ async fn autocomplete_region<'a>(
             .filter(|(_, region)| contains_ignore_ascii_case(&region.name, partial))
             .take(25)
             // map it to an autocomplete choice with the region index as the value
-            .map(|(index, region)| {
-                AutocompleteChoice::new(&region.name, AutocompleteValue::Integer(index))
-            })
+            .map(|(index, region)| AutocompleteChoice::new(&region.name, index))
             .collect();
 
         CreateAutocompleteResponse::new().set_choices(regions)

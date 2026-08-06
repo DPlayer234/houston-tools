@@ -7,7 +7,8 @@ use serenity::gateway::client::Context;
 use serenity::http::Http;
 use serenity::model::application::{ComponentInteraction, ModalInteraction};
 use serenity::model::channel::GenericInteractionChannel;
-use serenity::model::id::{GuildId, InteractionId, MessageId};
+use serenity::model::guild::Member;
+use serenity::model::id::{GenericChannelId, GuildId, InteractionId, MessageId};
 use serenity::model::user::User;
 
 use crate::Result;
@@ -18,13 +19,15 @@ const SENT: usize = 2;
 
 pub struct ContextInner<'a> {
     pub state: &'a crate::EventHandler,
+    pub serenity: &'a Context,
     pub reply_state: AtomicUsize,
 }
 
 impl<'a> ContextInner<'a> {
-    pub fn new(state: &'a crate::EventHandler) -> Self {
+    pub fn new(state: &'a crate::EventHandler, serenity: &'a Context) -> Self {
         Self {
             state,
+            serenity,
             reply_state: AtomicUsize::new(UNSENT),
         }
     }
@@ -32,8 +35,6 @@ impl<'a> ContextInner<'a> {
 
 /// Execution context for [`ButtonReply`](super::ButtonReply).
 pub struct AnyContext<'a, I: ?Sized> {
-    /// The serenity context that triggered this interaction.
-    pub serenity: &'a Context,
     /// The source interaction that this context corresponds to.
     pub interaction: &'a I,
     pub(super) inner: &'a ContextInner<'a>,
@@ -43,6 +44,7 @@ impl<I: fmt::Debug> fmt::Debug for AnyContext<'_, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AnyContext")
             .field("interaction", self.interaction)
+            .field("reply_state", &self.inner.reply_state)
             .finish_non_exhaustive()
     }
 }
@@ -64,16 +66,8 @@ pub type ModalContext<'a> = AnyContext<'a, ModalInteraction>;
 pub type ErrorContext<'a> = AnyContext<'a, dyn AnyInteraction + 'a>;
 
 impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
-    pub(crate) fn new(
-        serenity: &'a Context,
-        interaction: &'a I,
-        inner: &'a ContextInner<'a>,
-    ) -> Self {
-        Self {
-            serenity,
-            interaction,
-            inner,
-        }
+    pub(crate) fn new(interaction: &'a I, inner: &'a ContextInner<'a>) -> Self {
+        Self { interaction, inner }
     }
 
     #[inline]
@@ -90,9 +84,37 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
         ReplyHandle::new(self.http(), self.interaction.token(), target)
     }
 
+    /// The serenity context that triggered this interaction.
+    pub fn serenity(&self) -> &'a Context {
+        self.inner.serenity
+    }
+
     /// Gets the HTTP client.
     pub fn http(&self) -> &'a Http {
-        &self.serenity.http
+        &self.inner.serenity.http
+    }
+
+    /// Gets the invoking user.
+    pub fn user(self) -> &'a User {
+        self.interaction.user()
+    }
+
+    /// Gets the invoking member.
+    ///
+    /// This is only present if invoked in guilds.
+    pub fn member(self) -> Option<&'a Member> {
+        self.interaction.member()
+    }
+
+    /// Gets the ID of the channel the command was invoked in.
+    // CMBK: replace with channel when it's correctly non-optional
+    pub fn channel_id(self) -> GenericChannelId {
+        self.interaction.channel_id()
+    }
+
+    /// Gets the ID of the guild the command was invoked in.
+    pub fn guild_id(self) -> Option<GuildId> {
+        self.interaction.guild_id()
     }
 
     /// Acknowledges the interaction, expecting a later [`Self::edit`].
@@ -241,10 +263,14 @@ pub trait AnyInteraction: Send + Sync + Sealed {
     fn token(&self) -> &str;
     /// Gets the guild ID for the interaction.
     fn guild_id(&self) -> Option<GuildId>;
+    /// Gets the channel ID for the interaction.
+    fn channel_id(&self) -> GenericChannelId;
     /// Gets the channel for the interaction.
     fn channel(&self) -> Option<&GenericInteractionChannel>;
     /// Gets the user that triggered the interaction.
     fn user(&self) -> &User;
+    /// Gets the member that triggered the interaction.
+    fn member(&self) -> Option<&Member>;
 }
 
 macro_rules! interaction_impl {
@@ -263,12 +289,20 @@ macro_rules! interaction_impl {
                 self.guild_id
             }
 
+            fn channel_id(&self) -> GenericChannelId {
+                self.channel_id
+            }
+
             fn channel(&self) -> Option<&GenericInteractionChannel> {
                 self.channel.as_ref()
             }
 
             fn user(&self) -> &User {
                 &self.user
+            }
+
+            fn member(&self) -> Option<&Member> {
+                self.member.as_ref()
             }
         }
     )* };
