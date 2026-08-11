@@ -5,8 +5,9 @@ use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMess
 use serenity::gateway::client::Context as SerenityContext;
 use serenity::http::Http;
 use serenity::model::application::{CommandInteraction, ResolvedValue};
+use serenity::model::channel::GenericInteractionChannel;
 use serenity::model::guild::Member;
-use serenity::model::id::{GenericChannelId, GuildId};
+use serenity::model::id::GuildId;
 use serenity::model::user::User;
 
 use crate::ReplyHandle;
@@ -88,10 +89,9 @@ impl<'a> Context<'a> {
         self.interaction.member.as_deref()
     }
 
-    /// Gets the ID of the channel the command was invoked in.
-    // CMBK: replace with channel when it's correctly non-optional
-    pub fn channel_id(self) -> GenericChannelId {
-        self.interaction.channel_id
+    /// Gets the channel the command was invoked in.
+    pub fn channel(self) -> &'a GenericInteractionChannel {
+        &self.interaction.channel
     }
 
     /// Gets the ID of the guild the command was invoked in.

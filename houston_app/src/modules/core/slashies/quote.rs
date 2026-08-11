@@ -14,7 +14,7 @@ pub async fn quote(ctx: Context<'_>, message: &Message) -> Result {
     // seemingly not always correctly set for messages received in interactions
     let content = format!(
         "-# Quote: {t:x}\n```\n{t}\n```",
-        t = QuoteTarget::new(message, ctx.channel_id(), ctx.guild_id())
+        t = QuoteTarget::new(message, ctx.channel().id(), ctx.guild_id())
     );
 
     let embed = CreateEmbed::new()

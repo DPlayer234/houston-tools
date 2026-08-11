@@ -37,12 +37,12 @@ pub fn id_suffix(id: impl Into<u64>) -> impl Display {
 #[must_use]
 pub fn interaction_location(
     guild_id: Option<GuildId>,
-    channel: Option<&GenericInteractionChannel>,
+    channel: &GenericInteractionChannel,
 ) -> impl Display + '_ {
     from_fn(move |f| match guild_id {
         Some(id) => {
             let id = id_suffix(id);
-            match channel.and_then(|c| c.base().name.as_deref()) {
+            match &channel.base().name {
                 Some(channel) => write!(f, "{id} `{channel}`"),
                 None => id.fmt(f),
             }

@@ -8,7 +8,7 @@ use serenity::http::Http;
 use serenity::model::application::{ComponentInteraction, ModalInteraction};
 use serenity::model::channel::GenericInteractionChannel;
 use serenity::model::guild::Member;
-use serenity::model::id::{GenericChannelId, GuildId, InteractionId, MessageId};
+use serenity::model::id::{GuildId, InteractionId, MessageId};
 use serenity::model::user::User;
 
 use crate::Result;
@@ -106,10 +106,9 @@ impl<'a, I: ?Sized + AnyInteraction> AnyContext<'a, I> {
         self.interaction.member()
     }
 
-    /// Gets the ID of the channel the command was invoked in.
-    // CMBK: replace with channel when it's correctly non-optional
-    pub fn channel_id(self) -> GenericChannelId {
-        self.interaction.channel_id()
+    /// Gets the channel the command was invoked in.
+    pub fn channel(self) -> &'a GenericInteractionChannel {
+        self.interaction.channel()
     }
 
     /// Gets the ID of the guild the command was invoked in.
@@ -263,10 +262,8 @@ pub trait AnyInteraction: Send + Sync + Sealed {
     fn token(&self) -> &str;
     /// Gets the guild ID for the interaction.
     fn guild_id(&self) -> Option<GuildId>;
-    /// Gets the channel ID for the interaction.
-    fn channel_id(&self) -> GenericChannelId;
     /// Gets the channel for the interaction.
-    fn channel(&self) -> Option<&GenericInteractionChannel>;
+    fn channel(&self) -> &GenericInteractionChannel;
     /// Gets the user that triggered the interaction.
     fn user(&self) -> &User;
     /// Gets the member that triggered the interaction.
@@ -289,12 +286,8 @@ macro_rules! interaction_impl {
                 self.guild_id
             }
 
-            fn channel_id(&self) -> GenericChannelId {
-                self.channel_id
-            }
-
-            fn channel(&self) -> Option<&GenericInteractionChannel> {
-                self.channel.as_ref()
+            fn channel(&self) -> &GenericInteractionChannel {
+                &self.channel
             }
 
             fn user(&self) -> &User {
@@ -302,7 +295,7 @@ macro_rules! interaction_impl {
             }
 
             fn member(&self) -> Option<&Member> {
-                self.member.as_ref()
+                self.member.as_deref()
             }
         }
     )* };

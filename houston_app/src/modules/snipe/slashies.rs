@@ -20,7 +20,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
         ))?;
 
     let message = {
-        let channel_id = ctx.channel_id();
+        let channel_id = ctx.channel().id();
         let min_timestamp = UtcDateTime::now()
             .checked_sub(snipe.max_age)
             .unwrap_or(UtcDateTime::MIN);
@@ -63,7 +63,7 @@ pub async fn snipe(ctx: Context<'_>) -> Result {
     } else {
         let content = format!(
             "No messages to snipe in {} right now.",
-            ctx.channel_id().mention()
+            ctx.channel().id().mention()
         );
 
         let embed = CreateEmbed::new()

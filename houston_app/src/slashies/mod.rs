@@ -23,7 +23,7 @@ pub mod prelude {
 pub fn pre_command(ctx: Context<'_>) -> BoxFuture<'_, ()> {
     log::info!(
         "{}, {}: {}",
-        interaction_location(ctx.guild_id(), ctx.interaction.channel.as_ref()),
+        interaction_location(ctx.guild_id(), &ctx.interaction.channel),
         ctx.user().name,
         DisplayCommand::new(&ctx.interaction.data, ctx.options()),
     );
