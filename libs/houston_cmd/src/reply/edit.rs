@@ -18,7 +18,7 @@ use super::CreateReply;
 pub struct EditReply<'a> {
     content: Option<Cow<'a, str>>,
     embeds: Option<Vec<CreateEmbed<'a>>>,
-    edit_attachments: Option<EditAttachments<'a>>,
+    attachments: Option<EditAttachments<'a>>,
     attachment_data: Vec<AttachmentData<'a>>,
     components: Option<Cow<'a, [CreateComponent<'a>]>>,
     allowed_mentions: Option<CreateAllowedMentions<'a>>,
@@ -38,7 +38,7 @@ impl<'a> EditReply<'a> {
             content: Some(Cow::Borrowed("")),
             embeds: Some(Vec::new()),
             components: Some(Cow::Borrowed(&[])),
-            edit_attachments: Some(EditAttachments::new()),
+            attachments: Some(EditAttachments::new()),
             attachment_data: Vec::new(),
             allowed_mentions: None,
             flags: None,
@@ -79,19 +79,14 @@ impl<'a> EditReply<'a> {
         // don't like this clone, but we can't get the data otherwise, should also be
         // cheap enough since it at worst clones the description redundantly
         self.attachment_data.push(attachment.clone().into());
-        self.edit_attachments = Some(
-            self.edit_attachments
-                .take()
-                .unwrap_or_default()
-                .add(attachment),
-        );
+        self.attachments = Some(self.attachments.take().unwrap_or_default().add(attachment));
         self
     }
 
     /// Keeps an existing attachment with the given ID.
     pub fn keep_existing_attachment(mut self, attachment_id: AttachmentId) -> Self {
-        self.edit_attachments = Some(
-            self.edit_attachments
+        self.attachments = Some(
+            self.attachments
                 .take()
                 .unwrap_or_default()
                 .keep(attachment_id),
@@ -101,7 +96,7 @@ impl<'a> EditReply<'a> {
 
     /// Removes all attachments already present.
     pub fn clear_attachments(mut self) -> Self {
-        self.edit_attachments.get_or_insert_default();
+        self.attachments.get_or_insert_default();
         self
     }
 
@@ -116,7 +111,7 @@ impl<'a> EditReply<'a> {
         let Self {
             content,
             embeds,
-            edit_attachments: attachments,
+            attachments,
             attachment_data: _,
             components,
             allowed_mentions,
@@ -176,7 +171,7 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
         Self {
             content: Some(content),
             embeds: Some(embeds),
-            edit_attachments,
+            attachments: edit_attachments,
             attachment_data,
             components: Some(components),
             allowed_mentions,
@@ -185,9 +180,11 @@ impl<'a> From<CreateReply<'a>> for EditReply<'a> {
     }
 }
 
-/// Essentially just [`EditReply`] but with serialization support.
+/// `#[serde(remote)]` implementation for [`EditReply`], to prevent
+/// [`EditReply`]'s [`Serialize`] logic from becoming part of the public API.
 #[derive(Serialize)]
-struct EditData<'a> {
+#[serde(remote = "EditReply")]
+struct SerializeEditReply<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -203,28 +200,7 @@ struct EditData<'a> {
 }
 
 // internal workarounds for things not directly supported in serenity
-impl<'a> EditReply<'a> {
-    fn into_payload(self) -> EditData<'a> {
-        let Self {
-            content,
-            embeds,
-            edit_attachments: attachments,
-            attachment_data: _,
-            components,
-            allowed_mentions,
-            flags,
-        } = self;
-
-        EditData {
-            content,
-            embeds,
-            attachments,
-            components,
-            allowed_mentions,
-            flags,
-        }
-    }
-
+impl EditReply<'_> {
     /// Invokes [`create_interaction_response`] with the correct information for
     /// an edit. This works around [`CreateInteractionResponse::UpdateMessage`]
     /// not supporting keeping existing attachments.
@@ -241,15 +217,16 @@ impl<'a> EditReply<'a> {
         interaction_token: &str,
     ) -> serenity::Result<()> {
         #[derive(Serialize)]
-        struct Payload<'a> {
+        struct Payload<'a, 'b> {
             r#type: u8,
-            data: EditData<'a>,
+            #[serde(with = "SerializeEditReply")]
+            data: &'a EditReply<'b>,
         }
 
         let files = take(&mut self.attachment_data);
         let payload = Payload {
             r#type: 7, // UPDATE_MESSAGE
-            data: self.into_payload(),
+            data: &self,
         };
 
         http.create_interaction_response(interaction_id, interaction_token, &payload, files)
@@ -271,8 +248,12 @@ impl<'a> EditReply<'a> {
         interaction_token: &str,
         message_id: MessageId,
     ) -> serenity::Result<Message> {
+        #[derive(Serialize)]
+        #[serde(transparent)]
+        struct Payload<'a, 'b>(#[serde(with = "SerializeEditReply")] &'a EditReply<'b>);
+
         let files = take(&mut self.attachment_data);
-        let payload = self.into_payload();
+        let payload = Payload(&self);
 
         http.edit_followup_message(interaction_token, message_id, &payload, files)
             .await
