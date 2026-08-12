@@ -5,7 +5,7 @@ use crate::helper::contains_ignore_ascii_case;
 use crate::slashies::prelude::*;
 
 /// Add or remove a free role.
-#[chat_command(name = "self-role", contexts = "Guild", integration_types = "Guild")]
+#[chat_command(name = "self-role", contexts(Guild), integration_types(Guild))]
 pub async fn self_role(
     ctx: Context<'_>,
     /// The role to add/remove.

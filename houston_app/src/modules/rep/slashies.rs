@@ -25,13 +25,13 @@ use crate::slashies::prelude::*;
 const TOO_LONG: Duration = Duration::from_millis(1500);
 
 /// Gives a reputation point to another server member.
-#[context_command(user, name = "Rep+", contexts = "Guild", integration_types = "Guild")]
+#[context_command(user, name = "Rep+", contexts(Guild), integration_types(Guild))]
 pub async fn rep_context(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     rep_core(ctx, member).await
 }
 
 /// Gives a reputation point to another server member.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub async fn rep(
     ctx: Context<'_>,
     /// The server member to rep.

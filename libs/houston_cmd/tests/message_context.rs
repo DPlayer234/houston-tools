@@ -44,9 +44,9 @@ fn maximal_message_context() {
     #[context_command(
         message,
         name = "Just a command",
-        contexts = "Guild",
-        integration_types = "User | Guild",
-        default_member_permissions = "SEND_MESSAGES | VIEW_CHANNEL",
+        contexts(Guild),
+        integration_types(User, Guild),
+        default_member_permissions(SEND_MESSAGES, VIEW_CHANNEL),
         nsfw = true,
         crate = "houston_cmd"
     )]

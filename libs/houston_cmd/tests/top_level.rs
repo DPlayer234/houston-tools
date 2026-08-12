@@ -54,9 +54,9 @@ fn maximal_top_level() {
     /// Just a command.
     #[chat_command(
         name = "just-a-command",
-        contexts = "Guild",
-        integration_types = "User | Guild",
-        default_member_permissions = "SEND_MESSAGES | VIEW_CHANNEL",
+        contexts(Guild),
+        integration_types(User, Guild),
+        default_member_permissions(SEND_MESSAGES, VIEW_CHANNEL),
         nsfw = true,
         crate = "houston_cmd"
     )]

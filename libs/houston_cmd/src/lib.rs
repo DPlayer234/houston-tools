@@ -65,8 +65,8 @@
 //! # use serenity::all::PartialMember;
 //! /// Admin commands.
 //! #[chat_command(
-//!     contexts = "Guild",
-//!     integration_types = "Guild",
+//!     contexts(Guild),
+//!     integration_types(Guild),
 //! )]
 //! mod admin {
 //!     /// Bans a server member.
@@ -113,8 +113,8 @@
 //! # use serenity::all::PartialMember;
 //! /// Admin commands.
 //! #[chat_command(
-//!     contexts = "Guild",
-//!     integration_types = "Guild",
+//!     contexts(Guild),
+//!     integration_types(Guild),
 //! )]
 //! mod admin {
 //!     // any valid use syntax is allowed, except glob imports and renamed imports

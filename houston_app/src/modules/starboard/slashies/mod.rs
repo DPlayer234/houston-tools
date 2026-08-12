@@ -5,7 +5,7 @@ use crate::slashies::prelude::*;
 mod overview;
 
 /// Access starboard info.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub mod starboard {
     /// Shows a board's top users.
     #[sub_command]

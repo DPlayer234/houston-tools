@@ -7,8 +7,8 @@ use crate::slashies::prelude::*;
 #[context_command(
     message,
     name = "Get as Quote",
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
+    contexts(Guild, BotDm, PrivateChannel),
+    integration_types(Guild, User)
 )]
 pub async fn quote(ctx: Context<'_>, message: &Message) -> Result {
     // seemingly not always correctly set for messages received in interactions

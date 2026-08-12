@@ -8,11 +8,7 @@ use crate::modules::Module as _;
 use crate::slashies::prelude::*;
 
 /// Shows information about the current bot session.
-#[chat_command(
-    name = "bot-stats",
-    contexts = "BotDm",
-    integration_types = "Guild | User"
-)]
+#[chat_command(name = "bot-stats", contexts(BotDm), integration_types(Guild, User))]
 pub async fn bot_stats(ctx: Context<'_>) -> Result {
     use crate::build::{GIT_HASH, VERSION};
 

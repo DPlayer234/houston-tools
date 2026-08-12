@@ -26,9 +26,9 @@ pub fn perk_admin(perks: &Config) -> Command {
 /// Managed active perks.
 #[chat_command(
     name = "perk-admin",
-    default_member_permissions = "MANAGE_GUILD",
-    contexts = "Guild",
-    integration_types = "Guild"
+    default_member_permissions(MANAGE_GUILD),
+    contexts(Guild),
+    integration_types(Guild)
 )]
 mod root {
     use time::UtcDateTime;

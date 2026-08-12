@@ -6,8 +6,8 @@ use crate::slashies::prelude::*;
 #[context_command(
     message,
     name = "[pin/overridden]",
-    contexts = "Guild",
-    integration_types = "Guild"
+    contexts(Guild),
+    integration_types(Guild)
 )]
 pub async fn pushpin_pin(ctx: Context<'_>, message: &Message) -> Result {
     let data = ctx.data_ref();
@@ -67,8 +67,8 @@ pub async fn pushpin_pin(ctx: Context<'_>, message: &Message) -> Result {
 #[context_command(
     message,
     name = "[unpin/overridden]",
-    contexts = "Guild",
-    integration_types = "Guild"
+    contexts(Guild),
+    integration_types(Guild)
 )]
 pub async fn pushpin_unpin(ctx: Context<'_>, message: &Message) -> Result {
     let data = ctx.data_ref();

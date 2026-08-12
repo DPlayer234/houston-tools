@@ -6,7 +6,7 @@ use crate::slashies::prelude::*;
 
 // Note: The description is set by the loading code.
 /// Edit your unique role.
-#[chat_command(name = "role-edit", contexts = "Guild", integration_types = "Guild")]
+#[chat_command(name = "role-edit", contexts(Guild), integration_types(Guild))]
 pub async fn role_edit(
     ctx: Context<'_>,
     /// The new role name.

@@ -9,7 +9,7 @@ use crate::modules::perks::model::*;
 use crate::slashies::prelude::*;
 
 /// Manage your birthday.
-#[chat_command(contexts = "Guild | BotDm", integration_types = "Guild")]
+#[chat_command(contexts(Guild, BotDm), integration_types(Guild))]
 pub mod birthday {
     /// Add your birthday.
     #[sub_command]

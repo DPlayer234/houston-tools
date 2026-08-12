@@ -80,8 +80,8 @@
 //!
 //! /// Posts the example button.
 //! #[chat_command(
-//!     contexts = "Guild | BotDm | PrivateChannel",
-//!     integration_types = "Guild | User"
+//!     contexts(Guild, BotDm, PrivateChannel),
+//!     integration_types(Guild, User)
 //! )]
 //! async fn my_command(
 //!     ctx: Context<'_>,

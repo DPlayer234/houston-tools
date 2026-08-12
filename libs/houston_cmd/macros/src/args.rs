@@ -1,6 +1,5 @@
 use darling::util::SpannedValue;
-use syn::punctuated::Punctuated;
-use syn::{Ident, Lit, LitInt, Path, Token};
+use syn::{Ident, Lit, LitInt, Path};
 
 #[derive(Debug, darling::FromMeta)]
 pub struct ChatCommandArgs {
@@ -22,9 +21,9 @@ pub struct ContextCommandArgs {
 
 #[derive(Debug, darling::FromMeta)]
 pub struct AnyCommandArgs {
-    pub default_member_permissions: Option<Punctuated<Ident, Token![|]>>,
-    pub contexts: Option<Punctuated<Ident, Token![|]>>,
-    pub integration_types: Option<Punctuated<Ident, Token![|]>>,
+    pub default_member_permissions: Option<Vec<Ident>>,
+    pub contexts: Option<Vec<Ident>>,
+    pub integration_types: Option<Vec<Ident>>,
     #[darling(default)]
     pub nsfw: bool,
     #[darling(flatten)]

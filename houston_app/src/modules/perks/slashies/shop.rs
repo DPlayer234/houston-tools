@@ -1,7 +1,7 @@
 use crate::slashies::prelude::*;
 
 /// View the server shop.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub async fn shop(ctx: Context<'_>) -> Result {
     use crate::modules::perks::buttons::shop::View;
 

@@ -12,10 +12,7 @@ mod find;
 use choices::{Ch, EAugmentRarity, EEquipRarity, EShipRarity, HullOrTeam};
 
 /// Information about mobile game Azur Lane.
-#[chat_command(
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub mod azur {
     /// Shows information about a ship.
     #[sub_command]

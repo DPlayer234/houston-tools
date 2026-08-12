@@ -1,10 +1,7 @@
 use crate::slashies::prelude::*;
 
 /// Play games.
-#[chat_command(
-    contexts = "Guild | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, PrivateChannel), integration_types(Guild, User))]
 pub mod minigame {
     /// Play tic-tac-toe with someone else.
     #[sub_command(name = "tic-tac-toe")]

@@ -4,10 +4,7 @@ use crate::slashies::prelude::*;
 
 /// Uploads a file to an ephemeral message. Allows sharing if you are logged
 /// into multiple devices.
-#[chat_command(
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub async fn upload(
     ctx: Context<'_>,
     /// The file to upload.

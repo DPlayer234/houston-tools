@@ -11,18 +11,15 @@ use crate::slashies::prelude::*;
 #[context_command(
     user,
     name = "User Info",
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
+    contexts(Guild, BotDm, PrivateChannel),
+    integration_types(Guild, User)
 )]
 pub async fn who_context(ctx: Context<'_>, user: SlashUser<'_>) -> Result {
     who_core(ctx, user, None).await
 }
 
 /// Returns basic information about the provided user.
-#[chat_command(
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub async fn who(
     ctx: Context<'_>,
     /// The user to get info about.

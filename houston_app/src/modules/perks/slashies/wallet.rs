@@ -6,7 +6,7 @@ use crate::modules::perks::model::Wallet;
 use crate::slashies::prelude::*;
 
 /// View your server wallet.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub async fn wallet(
     ctx: Context<'_>,
     /// Whether to show the response only to yourself.

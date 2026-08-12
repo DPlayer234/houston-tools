@@ -6,7 +6,7 @@ use crate::modules::core::buttons::Delete;
 use crate::slashies::prelude::*;
 
 /// "Snipes" and reveals the most recent, deleted message in this channel.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub async fn snipe(ctx: Context<'_>) -> Result {
     let data = ctx.data_ref();
     let guild_id = ctx.require_guild_id()?;

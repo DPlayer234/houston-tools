@@ -11,15 +11,15 @@ use crate::slashies::prelude::*;
 #[context_command(
     user,
     name = "Server Profile",
-    contexts = "Guild",
-    integration_types = "Guild"
+    contexts(Guild),
+    integration_types(Guild)
 )]
 pub async fn profile_context(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     profile_core(ctx, member, None).await
 }
 
 /// View a member's server profile.
-#[chat_command(contexts = "Guild", integration_types = "Guild")]
+#[chat_command(contexts(Guild), integration_types(Guild))]
 pub async fn profile<'ctx>(
     ctx: Context<'ctx>,
     /// The member to view the profile of.

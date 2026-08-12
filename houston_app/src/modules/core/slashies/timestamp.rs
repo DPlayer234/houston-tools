@@ -6,10 +6,7 @@ use crate::helper::time::{parse_date_time, parse_dhms_duration};
 use crate::slashies::prelude::*;
 
 /// Provides methods for localized timestamps.
-#[chat_command(
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub mod timestamp {
     use time::UtcDateTime;
 

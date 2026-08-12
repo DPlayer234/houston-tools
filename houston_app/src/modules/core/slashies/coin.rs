@@ -3,10 +3,7 @@ use rand::prelude::*;
 use crate::slashies::prelude::*;
 
 /// Flips a coin.
-#[chat_command(
-    contexts = "Guild | BotDm | PrivateChannel",
-    integration_types = "Guild | User"
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub async fn coin(
     ctx: Context<'_>,
     /// Whether to show the response only to yourself.
