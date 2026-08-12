@@ -18,7 +18,7 @@ impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
                 member,
                 guild_id: ctx.guild_id(),
             }),
-            _ => Err(Error::structure_mismatch(*ctx, "expected User")),
+            _ => Err(Error::structure_mismatch("expected User")),
         }
     }
 
@@ -63,7 +63,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
         }
 
         // this is functionally unreachable
-        Err(Error::structure_mismatch(*ctx, "expected Member"))
+        Err(Error::structure_mismatch("expected Member"))
     }
 
     fn set_options(options: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
@@ -77,7 +77,7 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         user: &'ctx User,
         member: Option<&'ctx PartialMember>,
     ) -> Result<Self, Error<'ctx>> {
-        let member = member.ok_or_else(|| Error::arg_invalid(*ctx, "unknown server member"))?;
+        let member = member.ok_or_else(|| Error::arg_invalid("unknown server member"))?;
         Ok(Self {
             user,
             member: Partial::Partial(member),

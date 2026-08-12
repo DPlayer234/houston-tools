@@ -92,7 +92,7 @@ pub fn to_command_option_command(
 
                         match #func_ident (ctx, #(#param_idents),*) #maybe_await {
                             ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
-                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(ctx, e)),
+                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(e)),
                         }
                     }))
                 })

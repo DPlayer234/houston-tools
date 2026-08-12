@@ -79,13 +79,13 @@ impl<'ctx, T> SlashArg<'ctx> for T
 where
     T: ChoiceArg,
 {
-    fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
+    fn extract(_ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
             ResolvedValue::Integer(index) => usize::try_from(index)
                 .ok()
                 .and_then(Self::from_index)
-                .ok_or_else(|| Error::structure_mismatch(*ctx, "invalid choice index")),
-            _ => Err(Error::structure_mismatch(*ctx, "expected integer")),
+                .ok_or_else(|| Error::structure_mismatch("invalid choice index")),
+            _ => Err(Error::structure_mismatch("expected integer")),
         }
     }
 

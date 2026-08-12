@@ -1,4 +1,4 @@
-use houston_cmd::{BoxFuture, Context};
+use houston_cmd::{BoxFuture, Context, Error as CmdError};
 
 use crate::data::IntoEphemeral;
 use crate::fmt::discord::{DisplayCommand, interaction_location};
@@ -32,14 +32,14 @@ pub fn pre_command(ctx: Context<'_>) -> BoxFuture<'_, ()> {
 }
 
 /// Command execution error handler.
-pub fn error_handler(error: houston_cmd::Error<'_>) -> BoxFuture<'_, ()> {
+pub fn error_handler<'ctx>(ctx: Context<'ctx>, error: CmdError<'ctx>) -> BoxFuture<'ctx, ()> {
     return match error {
-        houston_cmd::Error::Command { error, ctx } => command_error(ctx, error),
-        houston_cmd::Error::ArgInvalid { message, ctx } => {
+        CmdError::Command { error } => command_error(ctx, error),
+        CmdError::ArgInvalid { message } => {
             let msg = format!("Argument invalid: {message}");
             Box::pin(context_error(ctx, msg.into()))
         },
-        houston_cmd::Error::ArgParse { error, input, ctx } => {
+        CmdError::ArgParse { error, input } => {
             let msg = format!("Argument invalid: {error}\nCaused by input: '{input}'");
             Box::pin(context_error(ctx, msg.into()))
         },

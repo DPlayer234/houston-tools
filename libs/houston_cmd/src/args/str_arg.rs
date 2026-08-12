@@ -21,12 +21,12 @@ where
     T: FromStr + 'ctx,
     T::Err: Into<anyhow::Error>,
 {
-    fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
+    fn extract(_ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
             ResolvedValue::String(value) => T::from_str(value)
                 .map(FromStrArg)
-                .map_err(|e| Error::arg_parse(*ctx, value, e)),
-            _ => Err(Error::structure_mismatch(*ctx, "expected string argument")),
+                .map_err(|e| Error::arg_parse(value, e)),
+            _ => Err(Error::structure_mismatch("expected string argument")),
         }
     }
 

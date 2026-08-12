@@ -50,10 +50,7 @@ impl<'ctx, T: SlashArg<'ctx>> SlashArgOption<'ctx> for T {
     ) -> Result<Self, Error<'ctx>> {
         match resolved {
             Some(o) => Self::extract(ctx, o),
-            None => Err(Error::structure_mismatch(
-                *ctx,
-                "a required parameter is missing",
-            )),
+            None => Err(Error::structure_mismatch("a required parameter is missing")),
         }
     }
 }

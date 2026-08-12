@@ -15,7 +15,7 @@ use crate::error::Error;
 use crate::model::{Command, CommandOptionData, Invoke, SubCommandData};
 
 type PreCommandFn = fn(Context<'_>) -> BoxFuture<'_, ()>;
-type OnErrorFn = fn(Error<'_>) -> BoxFuture<'_, ()>;
+type OnErrorFn = for<'a> fn(Context<'a>, Error<'a>) -> BoxFuture<'a, ()>;
 
 /// The command framework itself.
 ///
@@ -104,9 +104,9 @@ impl Framework {
     }
 
     #[cold]
-    async fn handle_error(&self, why: Error<'_>) {
+    async fn handle_error(&self, ctx: Context<'_>, why: Error<'_>) {
         match self.on_error {
-            Some(on_error) => on_error(why).await,
+            Some(on_error) => on_error(ctx, why).await,
             None => log::error!("Unhandled command error: {why}"),
         }
     }
@@ -140,7 +140,7 @@ impl Framework {
             Err(why) => {
                 let ctx_inner = ContextInner::empty(ctx);
                 let ctx = Context::new(interaction, &ctx_inner);
-                self.handle_error(Error::structure_mismatch(ctx, why)).await;
+                self.handle_error(ctx, Error::structure_mismatch(why)).await;
                 return;
             },
         };
@@ -148,7 +148,7 @@ impl Framework {
         let ctx_inner = ContextInner::with_options(ctx, options);
         let ctx = Context::new(interaction, &ctx_inner);
         if let Err(why) = self.run_command_or(ctx, command).await {
-            self.handle_error(why).await;
+            self.handle_error(ctx, why).await;
         }
     }
 
@@ -158,7 +158,7 @@ impl Framework {
             Err(why) => {
                 let ctx_inner = ContextInner::empty(ctx);
                 let ctx = Context::new(interaction, &ctx_inner);
-                self.handle_error(Error::structure_mismatch(ctx, why)).await;
+                self.handle_error(ctx, Error::structure_mismatch(why)).await;
                 return;
             },
         };
@@ -166,7 +166,7 @@ impl Framework {
         let ctx_inner = ContextInner::with_options(ctx, options);
         let ctx = Context::new(interaction, &ctx_inner);
         if let Err(why) = self.run_autocomplete_or(ctx, command).await {
-            self.handle_error(why).await;
+            self.handle_error(ctx, why).await;
         }
     }
 
@@ -183,19 +183,19 @@ impl Framework {
             (CommandType::ChatInput, Invoke::ChatInput(invoke)) => invoke(ctx).await,
             (CommandType::User, Invoke::User(invoke)) => {
                 let Some(ResolvedTarget::User(user, member)) = ctx.interaction.data.target() else {
-                    return Err(Error::structure_mismatch(ctx, "missing user target"));
+                    return Err(Error::structure_mismatch("missing user target"));
                 };
 
                 invoke(ctx, user, member).await
             },
             (CommandType::Message, Invoke::Message(invoke)) => {
                 let Some(ResolvedTarget::Message(message)) = ctx.interaction.data.target() else {
-                    return Err(Error::structure_mismatch(ctx, "missing message target"));
+                    return Err(Error::structure_mismatch("missing message target"));
                 };
 
                 invoke(ctx, message).await
             },
-            _ => Err(invoke_structure_mismatch(ctx, command.invoke)),
+            _ => Err(invoke_structure_mismatch(command.invoke)),
         }
     }
 
@@ -213,14 +213,12 @@ impl Framework {
 
         let Some(parameter) = command.parameters.iter().find(|p| p.name == name) else {
             return Err(Error::structure_mismatch(
-                ctx,
                 "unknown command autocomplete parameter",
             ));
         };
 
         let Some(autocomplete) = parameter.autocomplete else {
             return Err(Error::structure_mismatch(
-                ctx,
                 "expected autocompletable parameter",
             ));
         };
@@ -272,13 +270,13 @@ impl Framework {
 }
 
 #[cold]
-fn invoke_structure_mismatch(ctx: Context<'_>, invoke: Invoke) -> Error<'_> {
+fn invoke_structure_mismatch<'a>(invoke: Invoke) -> Error<'a> {
     let msg = match invoke {
         Invoke::ChatInput(_) => "expected chat input command",
         Invoke::User(_) => "expected user context command",
         Invoke::Message(_) => "expected message context command",
     };
-    Error::structure_mismatch(ctx, msg)
+    Error::structure_mismatch(msg)
 }
 
 /// Provides a set/map for commands that avoids having to clone command names to

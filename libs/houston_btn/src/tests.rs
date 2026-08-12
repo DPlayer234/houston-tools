@@ -23,14 +23,13 @@ fn ensure_compat() {
         }
     }
 
-    #[rustfmt::skip]
     // a steph-serialized version of `COMPAT_VAL`, including the action key
-    //
-    //                           u16::MAX  3usize    "hello world"
-    //                              |        |  16i32  |          -16i32
-    //                              |        |   |     |            |
-    //                          [----------][--][--][-------------][--]
-    const COMPAT_BUF: &[u8] = b"\xFF\xFF\x03\x03\x20\x0Bhello world\x1F";
+    const COMPAT_BUF: &[u8] =
+        // u16::MAX  3usize    "hello world"
+        //    |        |  16i32  |          -16i32
+        //    |        |   |     |            |
+        //[----------][--][--][-------------][--]
+        b"\xFF\xFF\x03\x03\x20\x0Bhello world\x1F";
     const COMPAT_BUF_STR: &str =
         "C\u{407ff}\u{2003}\u{5700b}\u{6746c}\u{7286f}\u{77a6f}\u{f6c6c}\u{10800}&";
 

@@ -32,7 +32,7 @@ macro_rules! make_autocomplete_choice {
 
         impl<'ctx> SlashArg<'ctx> for Ch<$Type> {
             fn extract(
-                ctx: &Context<'ctx>,
+                _ctx: &Context<'ctx>,
                 resolved: &ResolvedValue<'ctx>,
             ) -> Result<Self, Error<'ctx>> {
                 match resolved {
@@ -40,8 +40,8 @@ macro_rules! make_autocomplete_choice {
                         .ok()
                         .and_then(|i| <$Type>::ALL.get(i))
                         .map(|&f| Self(f))
-                        .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index")),
-                    _ => Err(Error::structure_mismatch(*ctx, "expected integer")),
+                        .ok_or_else(|| Error::arg_invalid("invalid argument index")),
+                    _ => Err(Error::structure_mismatch("expected integer")),
                 }
             }
 
@@ -156,13 +156,13 @@ pub async fn hull_or_team_type<'a>(
 }
 
 impl<'ctx> SlashArg<'ctx> for HullOrTeam {
-    fn extract(ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
+    fn extract(_ctx: &Context<'ctx>, resolved: &ResolvedValue<'ctx>) -> Result<Self, Error<'ctx>> {
         match *resolved {
             ResolvedValue::Integer(index) => usize::try_from(index)
                 .ok()
                 .and_then(Self::from_index)
-                .ok_or_else(|| Error::arg_invalid(*ctx, "invalid argument index")),
-            _ => Err(Error::structure_mismatch(*ctx, "expected integer")),
+                .ok_or_else(|| Error::arg_invalid("invalid argument index")),
+            _ => Err(Error::structure_mismatch("expected integer")),
         }
     }
 
