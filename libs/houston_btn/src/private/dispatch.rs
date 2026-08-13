@@ -4,6 +4,7 @@ use std::fmt;
 
 use houston_cmd::BoxFuture;
 use serde::Deserialize;
+use serenity::futures::future::lazy;
 
 use crate::{
     AnyContext, AnyInteraction, ButtonAction, ButtonContext, ButtonReply, ModalContext, Result,
@@ -62,7 +63,7 @@ fn on_modal(ctx: ModalContext<'_>, args: &dyn fmt::Debug) {
 // shared boxed future type for the outer error case
 #[cold]
 fn err_fut<'ctx>(why: anyhow::Error) -> BoxFuture<'ctx, Result> {
-    Box::pin(async move { Err(why) })
+    Box::pin(lazy(move |_| Err(why)))
 }
 
 /// Implements the [`ButtonValue`] trait.

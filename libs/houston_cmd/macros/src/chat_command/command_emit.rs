@@ -90,10 +90,10 @@ pub fn to_command_option_command(
                     #crate_::model::Invoke::ChatInput(|ctx| ::std::boxed::Box::pin(async move {
                         #( #param_quotes )*
 
-                        match #func_ident (ctx, #(#param_idents),*) #maybe_await {
-                            ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
-                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(e)),
-                        }
+                        ::std::result::Result::map_err(
+                            #func_ident (ctx, #(#param_idents),*) #maybe_await,
+                            #crate_::Error::command,
+                        )
                     }))
                 })
                 .parameters(::std::borrow::Cow::Borrowed(const { &[

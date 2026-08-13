@@ -17,6 +17,10 @@ const UNSENT: usize = 0;
 const DEFER: usize = 1;
 const SENT: usize = 2;
 
+/// Crate internal state for the context.
+///
+/// Present to avoid bloating the inline-size of the context struct since it
+/// gets copied around.
 pub struct ContextInner<'a> {
     pub state: &'a crate::EventHandler,
     pub serenity: &'a Context,
@@ -43,8 +47,8 @@ pub struct AnyContext<'a, I: ?Sized> {
 impl<I: fmt::Debug> fmt::Debug for AnyContext<'_, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AnyContext")
-            .field("interaction", self.interaction)
             .field("reply_state", &self.inner.reply_state)
+            .field("interaction", self.interaction)
             .finish_non_exhaustive()
     }
 }

@@ -115,10 +115,10 @@ fn to_command_option_command(
                     #crate_::model::Invoke:: #kind_variant (|ctx, #kind_args| ::std::boxed::Box::pin(async move {
                         let arg = <#arg_ty as #crate_:: #kind_trait <'_>>::extract(&ctx, #kind_args)?;
 
-                        match #func_ident (ctx, arg) #maybe_await {
-                            ::std::result::Result::Ok(()) => ::std::result::Result::Ok(()),
-                            ::std::result::Result::Err(e) => ::std::result::Result::Err(#crate_::Error::command(e)),
-                        }
+                        ::std::result::Result::map_err(
+                            #func_ident (ctx, arg) #maybe_await,
+                            #crate_::Error::command,
+                        )
                     }))
                 })
                 .build()

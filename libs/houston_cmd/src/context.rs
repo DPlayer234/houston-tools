@@ -30,18 +30,17 @@ pub struct Context<'a> {
 impl fmt::Debug for Context<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
-            .field("interaction", self.interaction)
             .field("reply_state", &self.inner.reply_state)
             .field("options", &self.inner.options)
+            .field("interaction", self.interaction)
             .finish_non_exhaustive()
     }
 }
 
 /// Crate internal state for the context.
 ///
-/// Present to avoid bloating the inline-size of the context struct. Plus, the
-/// `reply_state` field needs to be held by reference anyways, so the only extra
-/// indirection caused by this is for `options`.
+/// Present to avoid bloating the inline-size of the context struct since it
+/// gets copied around.
 pub struct ContextInner<'a> {
     pub serenity: &'a SerenityContext,
     pub reply_state: AtomicUsize,
