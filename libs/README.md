@@ -34,17 +34,17 @@ The main goal is to be reasonably short and somewhat easy to understand. Slices 
 
 Created because the `serde_bare` crate was last updated 3 years ago and it's dubious whether it even matches the spec anymore, so there are no real advantages to it anymore. Also that crate allocated memory unconditionally when the deserializer asks for a byte slice. Eh.
 
-No, I did not really read the BARE spec and the output likely isn't compatible. That's not a goal anyways.
+No, I did not really read the BARE spec and the output isn't compatible. That's not a goal anyways.
 
 ## `unity_read`
 
 Allows reading in UnityFS archives, enumerating their files, and objects.
 
-Note that some functionality is not generally applicable, e.g. image decoding and meshes are only implemented for a small subset of the functionality required to work with Azur Lane's data.
-
 Inspired and made by referencing <https://github.com/gameltb/io_unity> and <https://github.com/yuanyan3060/unity-rs> for file formats.
 
 After those libraries gave me trouble I wasn't expecting.
+
+Some functionality is provided in auxiliary crates nested within its folder and may not be generally applicable, e.g. image decoding and meshes are only implemented for a small subset of the functionality required to work with Azur Lane's data.
 
 ## `utils`
 
@@ -52,6 +52,7 @@ Yup. Essentially a collection of modules I didn't feel like were deserving of th
 
 Notable modules include:
 
+- `iter`: Extensions for the `Iterator` trait and similar helpers.
 - `str_as_data`: Provides ways to encode binary data as valid UTF-8 strings and convert those strings back into binary data.
 - `text`: Provides helper methods to work with displayed text.
 - `fuzzy`: Provides a collection that allows fuzzy text searching.

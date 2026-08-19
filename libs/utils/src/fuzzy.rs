@@ -387,7 +387,8 @@ impl<const MAX: usize> StorageBuilder<MAX> {
 
         #[expect(clippy::cast_possible_truncation)]
         for &(key, value) in &sorted {
-            let offset = if &**value == last_value {
+            let value = value.as_slice();
+            let offset = if value == last_value {
                 last_offset
             } else if let Some(offset) = find_subslice(&block, value) {
                 offset

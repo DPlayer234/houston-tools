@@ -266,7 +266,7 @@ fn emit_partial(args: &ModelArgs<'_>) -> TokenStream {
     let doc = format!("A partial [`{ty_name}`].");
     quote::quote! {
         #[doc = #doc]
-        #[derive(#crate_::private::serde::Serialize #(,#derive_partial)*)]
+        #[::std::derive(#crate_::private::serde::Serialize #(,#derive_partial)*)]
         #[serde(crate = #serde_crate)]
         #vis struct #partial_name #impl_gen #where_clause {
             #( #field_decls )*
@@ -365,7 +365,7 @@ fn emit_filter(args: &ModelArgs<'_>) -> TokenStream {
     let doc = format!("A filter builder for [`{ty_name}`].");
     quote::quote! {
         #[doc = #doc]
-        #[derive(#crate_::private::serde::Serialize #(, #derive_filter)*)]
+        #[::std::derive(#crate_::private::serde::Serialize #(, #derive_filter)*)]
         #[serde(crate = #serde_crate)]
         #vis struct #filter_name #impl_gen #where_clause {
             #( #field_decls )*
@@ -537,7 +537,7 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
     let doc = format!("Accessor struct for the BSON fields of [`{ty_name}`].");
     quote::quote! {
         #[doc = #doc]
-        #[derive(::std::fmt::Debug, ::std::clone::Clone, ::std::marker::Copy)]
+        #[::std::derive(::std::fmt::Debug, ::std::clone::Clone, ::std::marker::Copy)]
         #vis struct #fields_name(());
 
         impl #fields_name {
