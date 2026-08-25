@@ -273,6 +273,7 @@ pub type SkinWordsMapError = crate::private::thin_bmap::ThinBMapError<SkinWordsK
 // most `SkinWords` instances are for non-default skins that often lack about half the possible
 // entries. subsequently it saves memory to "pack" the fields that _are_ present into an array.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct SkinWordsMap(
     /// A list of key-value pairs sorted by the key.
     ThinBMap<SkinWordsKey, FixedString>,

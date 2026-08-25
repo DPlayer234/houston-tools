@@ -45,14 +45,11 @@ impl<K: ThinBMapKey, V> ThinBMap<K, V> {
 
         // ensure there are no duplicate keys provided. since it's already sorted by the
         // keys, comparing all pairs of adjacent keys is good enough to figure that out.
-        for window in value.windows(2) {
-            let [l, r] = window.as_array().expect("must be len 2");
-            if l.0 == r.0 {
-                return Err(ThinBMapError::DuplicateKey(l.0));
-            }
+        if let Some([l, _]) = value.array_windows().find(|[l, r]| l.0 == r.0) {
+            Err(ThinBMapError::DuplicateKey(l.0))
+        } else {
+            Ok(Self(value))
         }
-
-        Ok(Self(value))
     }
 
     /// The amount of lines stored.
