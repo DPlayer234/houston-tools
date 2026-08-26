@@ -79,7 +79,6 @@ impl<'a> CommandOptionResolver<'a> {
                     },
                     CommandDataOptionValue::Mentionable(id) => {
                         resolve_user(resolved, UserId::new(id.get()))
-                            .or_else(|| resolve_channel(resolved, GenericChannelId::new(id.get())))
                             .or_else(|| resolve_role(resolved, RoleId::new(id.get())))
                             .ok_or("mentionable could not be resolved")?
                     },
