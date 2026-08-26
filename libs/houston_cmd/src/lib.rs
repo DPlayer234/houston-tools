@@ -188,7 +188,7 @@ pub mod private;
 mod reply;
 
 pub use args::{
-    ChoiceArg, FromStrArg, MessageContextArg, ResolvedOption, SlashArg, UserContextArg,
+    ChoiceArg, FromStrArg, Mentionable, MessageContextArg, ResolvedOption, SlashArg, UserContextArg,
 };
 pub use context::Context;
 pub use error::Error;

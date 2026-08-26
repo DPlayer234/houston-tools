@@ -12,9 +12,11 @@ use crate::error::Error;
 use crate::model::Choice;
 
 mod impls;
+mod mentionable;
 mod resolver;
 mod str_arg;
 
+pub use mentionable::Mentionable;
 pub use resolver::CommandOptionResolver;
 pub use str_arg::FromStrArg;
 

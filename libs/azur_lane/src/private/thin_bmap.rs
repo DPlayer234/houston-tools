@@ -16,7 +16,7 @@ pub trait ThinBMapKey: Copy + Ord {
     fn name(self) -> &'static str;
 }
 
-/// A "thin" binary map.
+/// A "thin" binary-heap-based map.
 ///
 /// This is optimized for memory rather than access speed.
 #[derive(Clone)]
@@ -32,7 +32,7 @@ impl<K: ThinBMapKey, V> ThinBMap<K, V> {
         t.0
     }
 
-    /// Creates a new skin words map.
+    /// Creates a new thin map.
     ///
     /// This array is sorted by the key upon construction and does not need to
     /// be pre-sorted.
@@ -52,7 +52,7 @@ impl<K: ThinBMapKey, V> ThinBMap<K, V> {
         }
     }
 
-    /// The amount of lines stored.
+    /// The amount of key-value pairs stored.
     pub fn len(&self) -> usize {
         self.0.len().to_usize()
     }
@@ -62,7 +62,7 @@ impl<K: ThinBMapKey, V> ThinBMap<K, V> {
         self.0.is_empty()
     }
 
-    /// Gets the line for a specific key, if present.
+    /// Gets the value for a specific key, if present.
     pub fn get(&self, key: K) -> Option<&V> {
         let slice = self.0.as_slice();
         let index = slice.binary_search_by_key(&key, Self::key_fn).ok()?;
