@@ -230,6 +230,7 @@ fn fmt_resolved_options(options: &[ResolvedOption<'_>], f: &mut Formatter<'_>) -
 }
 
 fn fmt_resolved_option(value: &ResolvedValue<'_>, f: &mut Formatter<'_>) -> Result {
+    #[warn(clippy::wildcard_enum_match_arm)]
     match value {
         ResolvedValue::Boolean(v) => v.fmt(f),
         ResolvedValue::Integer(v) => v.fmt(f),
@@ -242,11 +243,16 @@ fn fmt_resolved_option(value: &ResolvedValue<'_>, f: &mut Formatter<'_>) -> Resu
         },
         ResolvedValue::Role(v) => f.write_str(&v.name),
         ResolvedValue::User(v, _) => f.write_str(&v.name),
+        ResolvedValue::Unresolved(_) => f.write_str("<unresolved>"),
+        ResolvedValue::Autocomplete { .. }
+        | ResolvedValue::SubCommand(_)
+        | ResolvedValue::SubCommandGroup(_) => f.write_str("<invalid>"),
         _ => f.write_str("<unknown>"),
     }
 }
 
 fn fmt_resolved_target(target: &ResolvedTarget<'_>, f: &mut Formatter<'_>) -> Result {
+    #[warn(clippy::wildcard_enum_match_arm)]
     match target {
         ResolvedTarget::User(v, _) => f.write_str(&v.name),
         ResolvedTarget::Message(v) => v.id.fmt(f),

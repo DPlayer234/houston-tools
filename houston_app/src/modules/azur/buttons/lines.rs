@@ -418,7 +418,7 @@ fn ship_couple_encourage_label(game_data: &GameData, opt: &CoupleEncourage) -> i
         CoupleCondition::Illustrator => {
             write!(f, "Sortie with {amount} more ships by the same illustrator")
         },
-        _ => {
+        CoupleCondition::Team | CoupleCondition::Unknown => {
             write!(f, "Unknown couple encourage")
         },
     })

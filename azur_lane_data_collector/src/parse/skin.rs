@@ -227,7 +227,7 @@ fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<CoupleEnco
             Some(3) => CoupleCondition::Faction(map(filter, convert_al::to_faction)),
             Some(4) => CoupleCondition::Illustrator,
             Some(5) => CoupleCondition::Team,
-            _ => CoupleCondition::Unknown,
+            Some(6..) => CoupleCondition::Unknown,
         },
     })
 }

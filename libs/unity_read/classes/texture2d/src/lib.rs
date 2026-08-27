@@ -169,7 +169,7 @@ mod decode {
             // to do that, we allocate a new buffer of u32s and copy it back later.
             let slice_u32 = match bytemuck::try_cast_slice_mut::<u8, u32>(&mut buffer) {
                 Ok(b) => b,
-                _ => buffer_u32.insert(vec![0u32; buffer.len() / size_of::<u32>()]),
+                Err(_) => buffer_u32.insert(vec![0u32; buffer.len() / size_of::<u32>()]),
             };
 
             decode(&self, slice_u32)?;

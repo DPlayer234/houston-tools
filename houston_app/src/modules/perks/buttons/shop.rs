@@ -180,7 +180,7 @@ impl View {
                 HumanDuration::new(st.duration),
                 active.until.short_date_time(),
             ),
-            _ => format!(
+            None => format!(
                 "**Cost:** {}{} for {}",
                 perks.cash_name,
                 st.cost,

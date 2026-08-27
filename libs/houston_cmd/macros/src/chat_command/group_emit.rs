@@ -192,6 +192,7 @@ fn use_include(item: &mut ItemUse) -> darling::Result<Option<Vec<TokenStream>>> 
 }
 
 fn item_vis(item: &Item) -> Option<&Visibility> {
+    #[warn(clippy::wildcard_enum_match_arm)]
     match item {
         Item::Const(item) => Some(&item.vis),
         Item::Enum(item) => Some(&item.vis),
@@ -208,6 +209,6 @@ fn item_vis(item: &Item) -> Option<&Visibility> {
         Item::Type(item) => Some(&item.vis),
         Item::Union(item) => Some(&item.vis),
         Item::Use(item) => Some(&item.vis),
-        _ => None,
+        Item::Verbatim(_) | _ => None,
     }
 }

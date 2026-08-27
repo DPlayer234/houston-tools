@@ -32,6 +32,7 @@ impl Eq for HEmoji {}
 
 impl Hash for HEmoji {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        #[warn(clippy::wildcard_enum_match_arm)]
         match self.as_emoji() {
             ReactionType::Custom { id, .. } => id.hash(state),
             ReactionType::Unicode(name) => name.hash(state),

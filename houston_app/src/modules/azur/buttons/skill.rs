@@ -383,7 +383,7 @@ fn get_skills_extra_summary(buf: &mut String, barrages: &[SkillBarrage]) {
                 );
                 write_aircraft_summary(buf, aircraft)
             }),
-            _ => false,
+            WeaponData::AntiAir(_) => false,
         }
     }
 
