@@ -31,8 +31,8 @@
 //! - `map`: map-like sequences, f.e. [`HashMap`](std::collections::HashMap)
 //! - `unit`: `()`, empty arrays, and unit structs
 //!
-//! When deserializing from a byte slice, deserializing borrowed slices is
-//! supported.
+//! When deserializing from a byte slice, deserializing borrowed `[u8]` and
+//! `str` slices is supported.
 //!
 //! The following things should be considered when attributing your types:
 //!
@@ -75,13 +75,14 @@
 //!
 //! - Adding fields to the end of a `struct`, if they are `#[serde(default)]`.
 //!   Note that you must attribute [`Option`] fields too.
-//! - Inlining a `tuple` into another `tuple`.
+//! - Inlining a `tuple` into another `tuple` (or vice versa).
 //! - Swapping out types with the same representation.
 //! - Adding new enum variants to the end.
 //! - Extending integer types (i.e. [`u16`] to [`u32`] is OK), unless the
 //!   original type is `byte`.
 //! - Replacing a type to a new-type wrapper around it or vice versa is
 //!   compatible.
+//! - Converting an [`Option<T>`] to a [`Vec<T>`] or other compatible list type.
 //!
 //! The following changes are format-incompatible:
 //!
@@ -134,6 +135,8 @@ mod read;
 pub mod ser;
 #[cfg(test)]
 mod tests;
+#[cfg(doc)]
+pub mod wire_format;
 
 pub use de::{Deserializer, from_reader, from_slice};
 pub use error::{Error, Result};
