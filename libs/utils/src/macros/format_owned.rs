@@ -13,7 +13,7 @@
 /// This macro returns a [`FromFn`](std::fmt::FromFn).
 #[macro_export]
 macro_rules! format_owned {
-    ([$($n:ident = $cap:expr),* $(,)?], $($t:tt)*) => {{
+    ([$($n:pat = $cap:expr),* $(,)?], $($t:tt)*) => {{
         $(let $n = $cap;)*
         ::std::fmt::from_fn(move |f| ::std::fmt::Formatter::write_fmt(f, ::std::format_args!($($t)*)))
     }};

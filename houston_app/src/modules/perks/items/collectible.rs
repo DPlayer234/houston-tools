@@ -26,6 +26,8 @@ impl Shape for Collectible {
                 .iter()
                 .filter(move |e| range.contains(&i64::from(e.0)));
 
+            log::info!("Granting collectible roles {roles:?} to {}.", args.user_id);
+
             for &(need, role) in roles {
                 args.ctx
                     .http

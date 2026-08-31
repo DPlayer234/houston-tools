@@ -379,7 +379,7 @@ impl View {
 button_value!(View, 10);
 impl ButtonReply for View {
     async fn reply(self, ctx: ButtonContext<'_>) -> Result {
-        let guild_id = ctx.guild_id().context("requires guild")?;
+        let guild_id = ctx.require_guild_id()?;
         let user_id = ctx.user().id;
 
         ctx.acknowledge().await?;

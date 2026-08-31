@@ -13,7 +13,7 @@ pub async fn self_role(
     role: u64,
 ) -> Result {
     let data = ctx.data_ref();
-    let member = ctx.member().context("requires guild")?;
+    let member = ctx.member().context("must be used in guild (no member)")?;
     let (group, role) =
         find_role_group(ctx, role).ok_or(HArgError::new_const("Unknown claimable role."))?;
 

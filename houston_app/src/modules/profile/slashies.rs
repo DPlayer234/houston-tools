@@ -216,7 +216,7 @@ async fn starboard_info(ctx: Context<'_>, member: SlashMember<'_>) -> Result<Opt
         let board = guild_config
             .boards
             .get(&entry.board)
-            .context("board not found in config")?;
+            .context("board not found in config (filter)")?;
 
         writeln!(
             description,

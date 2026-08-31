@@ -61,6 +61,7 @@ fn round_trip_unit() {
 #[test]
 fn round_trip_one_tuple() {
     assert_all_equal([
+        round_trip(&87654321u64),
         round_trip(&(87654321u64,)),
         round_trip(&[87654321u64]),
         round_trip(&NewType(87654321u64)),

@@ -62,9 +62,9 @@ struct WebhookClient {
 
 impl WebhookClient {
     fn new(url: &str) -> Result<Self> {
-        let url = url::Url::parse(url)?;
+        let url = url::Url::parse(url).context("webhook url is invalid")?;
         let (id, token) =
-            serenity::utils::parse_webhook(&url).context("cannot parse webhook url")?;
+            serenity::utils::parse_webhook(&url).context("cannot parse as webhook")?;
 
         let http = Http::without_token();
         let token = SecretString::new(Arc::from(token));

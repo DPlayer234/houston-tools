@@ -156,10 +156,18 @@ pub trait ContextExt<'a> {
     /// Gets the ref to the [`HBotData`] in the context.
     #[must_use]
     fn data_ref(self) -> &'a HBotData;
+
+    /// Gets the guild ID of the guild the command was invoked in or a
+    /// descriptive error if not in a guild.
+    fn require_guild_id(self) -> Result<GuildId>;
 }
 
 impl<'a, I: ?Sized + AnyInteraction> ContextExt<'a> for AnyContext<'a, I> {
     fn data_ref(self) -> &'a HBotData {
         self.serenity().data_ref::<HContextData>()
+    }
+
+    fn require_guild_id(self) -> Result<GuildId> {
+        self.guild_id().context("must be used in guild")
     }
 }

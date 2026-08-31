@@ -1,6 +1,7 @@
 use darling::{Error, FromAttributes as _, FromDeriveInput as _};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident};
+use syn::ext::IdentExt as _;
 use syn::{Data, Fields, FieldsNamed, GenericParam};
 
 use crate::args::{FieldArgs, FieldMeta, FieldSerdeMeta, ModelArgs, ModelMeta};
@@ -520,9 +521,9 @@ fn emit_fields(args: &ModelArgs<'_>) -> TokenStream {
 
     let field_methods = fields.iter().map(|field| {
         let FieldArgs { name, serde, .. } = field;
-        let rename = serde.rename.as_ref().unwrap_or(name).to_string();
-        let expr_name = "$".to_owned() + rename.strip_prefix("r#").unwrap_or(&rename);
-        let doc = format!("Gets the BSON `{name}` field.");
+        let mut expr_name = serde.rename.as_ref().unwrap_or(name).unraw().to_string();
+        let doc = format!("Gets the BSON `{expr_name}` field.");
+        expr_name.insert(0, '$');
 
         quote::quote! {
             #[doc = #doc]
