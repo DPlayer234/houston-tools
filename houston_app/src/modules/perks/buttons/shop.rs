@@ -309,19 +309,21 @@ impl View {
 
         let st = effect.price(perks).context("effect cannot be bought")?;
 
-        Wallet::collection(db)
-            .take_items(guild_id, user_id, &[(Item::Cash, st.cost.into())], perks)
-            .await?;
-
         let until = UtcDateTime::now()
             .checked_add(st.duration)
             .context("duration beyond the end of time")?;
 
+        Wallet::collection(db)
+            .take_items(guild_id, user_id, &[(Item::Cash, st.cost.into())], perks)
+            .await?;
+
+        log::info!("{user_id} bought perk {effect:?} in {guild_id}, until {until:?}.");
+
+        effect.enable(args, None).await?;
+
         ActivePerk::collection(db)
             .set_enabled(guild_id, user_id, effect, until)
             .await?;
-
-        effect.enable(args, None).await?;
 
         self.action = Action::ViewEffect(effect);
         self.view_effect(ctx, guild_id, user_id, effect).await

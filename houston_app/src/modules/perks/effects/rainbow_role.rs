@@ -28,7 +28,6 @@ impl Shape for RainbowRole {
             .await
             .context("could not add rainbow role")?;
 
-        clear_has_any_rainbow_role(role).await;
         Ok(())
     }
 
@@ -45,7 +44,6 @@ impl Shape for RainbowRole {
                 )
                 .await;
 
-            clear_has_any_rainbow_role(role).await;
             super::ok_allowed_discord_error(result).context("could not remove rainbow role")?;
         }
 
@@ -80,7 +78,7 @@ impl Shape for RainbowRole {
         let color = hsv_to_color(h, s, v);
 
         for (&guild, entry) in &rainbow.guilds {
-            if has_any_rainbow_role(ctx, guild, entry).await? {
+            if has_any_rainbow_role(ctx, guild).await? {
                 let edit = EditRole::new()
                     .colour(color)
                     .audit_log_reason("rainbow role cycle");
@@ -125,19 +123,7 @@ fn find_rainbow_role<'a>(args: &Args<'a>) -> Result<&'a RainbowRoleEntry, NoRain
         .ok_or(NoRainbowRole)
 }
 
-async fn has_any_rainbow_role(
-    ctx: &Context,
-    guild_id: GuildId,
-    entry: &RainbowRoleEntry,
-) -> Result<bool> {
-    // check cache first.
-    // keep the lock for this entire task to ensure temporal consistency of the
-    // cache when it's reset while this check is running but don't block.
-    let mut guard = entry.any_enabled.try_lock().ok();
-    if let Some(Some(exists)) = guard.as_deref_mut() {
-        return Ok(*exists);
-    }
-
+async fn has_any_rainbow_role(ctx: &Context, guild_id: GuildId) -> Result<bool> {
     let data = ctx.data_ref::<HContextData>();
     let db = data.database()?;
 
@@ -152,22 +138,7 @@ async fn has_any_rainbow_role(
         .context("failed to check whether a rainbow role is active")?
         .is_some();
 
-    // if we got the cache lock, update the value
-    if let Some(mut guard) = guard {
-        log::trace!("Caching whether a rainbow role is active in {guild_id}: {exists:?}");
-        *guard = Some(exists);
-    }
-
     Ok(exists)
-}
-
-// we don't set it to the caller's state because technically it could change the
-// state again between when the caller changes the state and when this function
-// runs.
-async fn clear_has_any_rainbow_role(entry: &RainbowRoleEntry) {
-    // actually blocking to get the lock is necessary for the cache to stay
-    // consistent and there shouldn't be much concurrency on this anyways.
-    *entry.any_enabled.lock().await = None;
 }
 
 #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
