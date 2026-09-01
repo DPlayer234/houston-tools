@@ -8,6 +8,7 @@ use utils::text::truncate;
 use super::AzurParseError;
 use crate::buttons::prelude::*;
 use crate::config::emoji;
+use crate::helper::discord::unicode_emoji;
 use crate::modules::azur::LazyData;
 
 /// View skill details of a ship or augment.
@@ -21,6 +22,9 @@ pub struct View<'v> {
     // this should honestly be in `ViewSource::Ship` but that's a pain
     #[builder(skip, default = None)]
     augment_index: Option<u8>,
+    #[builder(skip, default = false)]
+    #[serde(default)]
+    opsi: bool,
 }
 
 /// Where to load the skills from.
@@ -44,12 +48,16 @@ impl View<'_> {
         mut self,
         iterator: impl Iterator<Item = &'a Skill>,
         components: &mut ComponentVec<CreateContainerComponent<'a>>,
-    ) {
+    ) -> Option<CreateButton<'a>> {
+        let mut has_mode = false;
         components.push(CreateSeparator::new().divider(true));
 
         for (index, skill) in (0..5u8).zip(iterator) {
+            has_mode |= skill.description_opsi.is_some();
             self.append_skill(components, index, skill);
         }
+
+        has_mode.then(|| self.make_opsi_toggle())
     }
 
     /// Appends info for a skill to the `components`.
@@ -69,8 +77,17 @@ impl View<'_> {
             skill.buff_id
         );
 
+        let description = if self.opsi {
+            skill
+                .description_opsi
+                .as_ref()
+                .unwrap_or(&skill.description)
+        } else {
+            &skill.description
+        };
+
         components.push(CreateTextDisplay::new(label));
-        components.push(CreateTextDisplay::new(truncate(&skill.description, 1000)));
+        components.push(CreateTextDisplay::new(truncate(description, 1000)));
 
         if !skill.barrages.is_empty()
             || !skill.new_weapons.is_empty()
@@ -89,6 +106,20 @@ impl View<'_> {
         }
 
         components.push(CreateSeparator::new().divider(true));
+    }
+
+    fn make_opsi_toggle<'a>(&mut self) -> CreateButton<'a> {
+        let (new_state, label) = if self.opsi {
+            (false, "OpSi")
+        } else {
+            (true, "Default")
+        };
+
+        let custom_id = self.to_custom_id_with(|s| &mut s.opsi, new_state);
+        CreateButton::new(custom_id)
+            .style(ButtonStyle::Secondary)
+            .emoji(unicode_emoji("🌐"))
+            .label(label)
     }
 
     /// Modifies the create-reply with preresolved ship data.
@@ -114,10 +145,11 @@ impl View<'_> {
 
         let augments = azur.game_data().augments_by_ship_id(base_ship.group_id);
         if augments.len() != 0 {
-            nav.push(self.button_with_augment(None).label("Default"));
+            nav.push(self.button_with_augment(None).label("No Augment"));
         }
 
-        for (index, augment) in (0..4u8).zip(augments) {
+        // CMBK: only supports two unique augments
+        for (index, augment) in (0..3u8).zip(augments) {
             let index = Some(index);
             nav.push(
                 self.button_with_augment(index)
@@ -149,7 +181,7 @@ impl View<'_> {
         }
 
         // no need for `into_iter`, also avoids moving the entire ArrayVec
-        self.edit_with_skills(skills.iter().copied(), &mut components);
+        nav.extend(self.edit_with_skills(skills.iter().copied(), &mut components));
         components.push(CreateActionRow::buttons(nav));
 
         EditReply::clear().components_v2(components![
@@ -181,14 +213,14 @@ impl View<'_> {
         let mut components = ComponentVec::new();
         components.push(CreateTextDisplay::new(format!("### {name} [Skills]")));
 
-        let nav = CreateActionRow::buttons(vec![
+        let mut nav = vec![
             CreateButton::new(self.back.to_custom_id())
                 .emoji(emoji::back())
                 .label("Back"),
-        ]);
+        ];
 
-        self.edit_with_skills(skills, &mut components);
-        components.push(nav);
+        nav.extend(self.edit_with_skills(skills, &mut components));
+        components.push(CreateActionRow::buttons(nav));
 
         EditReply::clear().components_v2(components![
             CreateContainer::new(components).accent_color(color_rgb)

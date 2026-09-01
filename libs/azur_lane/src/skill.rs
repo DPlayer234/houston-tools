@@ -18,6 +18,9 @@ pub struct Skill {
     pub name: FixedString,
     /// The skill's description, with placeholders already replaced.
     pub description: FixedString,
+    /// The skill's description for Operation Siren.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description_opsi: Option<FixedString>,
     /// The category of this skill.
     pub category: SkillCategory,
     /// Barrages this skill can fire.

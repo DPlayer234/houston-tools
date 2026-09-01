@@ -19,10 +19,17 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
     let skill_benefit_template: LuaTable = pg
         .get("skill_benefit_template")
         .context("global pg.skill_benefit_template")?;
+    let skill_world_display: LuaTable = pg
+        .get("skill_world_display")
+        .context("global pg.skill_world_display")?;
 
     let skill: LuaTable = skill_data_template
         .get(skill_id)
         .with_context(context!("skill with id {skill_id}"))?;
+    let skill_world: Option<LuaTable> = skill_world_display
+        .get(skill_id)
+        .with_context(context!("skill_world_display with id {skill_id}"))?;
+
     let name: String = skill
         .get("name")
         .with_context(context!("name of skill with id {skill_id}"))?;
@@ -30,21 +37,21 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         .get("max_level")
         .with_context(context!("max_level of skill with id {skill_id}"))?;
 
-    let desc = skill
-        .get("desc")
-        .with_context(context!("desc of skill with id {skill_id}"))?;
-    let desc_add = skill
-        .get("desc_add")
-        .with_context(context!("desc_add of skill with id {skill_id}"))?;
-
-    let desc = resolve_skill_desc(desc, desc_add)
+    let desc = resolve_skill_desc(&skill)
         .with_context(context!("resolving desc of skill with id {skill_id}"))?;
+    let desc_opsi = skill_world
+        .map(|t| resolve_skill_desc(&t))
+        .transpose()
+        .with_context(context!(
+            "resolving desc (world) of skill with id {skill_id}"
+        ))?;
 
     let config = crate::model::config();
     if let Some(skill) = config.predefined_skills.get(&skill_id) {
         let mut skill = skill.clone();
         skill.name = name.into_fixed();
         skill.description = desc.into_fixed();
+        skill.description_opsi = desc_opsi.map(String::into_fixed);
 
         return Ok(skill);
     }
@@ -100,6 +107,7 @@ pub fn load_skill(lua: &Lua, skill_id: u32) -> LuaResult<Skill> {
         category,
         name: name.into_fixed(),
         description: desc.into_fixed(),
+        description_opsi: desc_opsi.map(String::into_fixed),
         barrages: context.barrages.into_fixed(),
         new_weapons: context.new_weapons.into_fixed(),
         cross_fleet_barrages: cross_context.barrages.into_fixed(),
@@ -114,7 +122,10 @@ pub fn load_skills(lua: &Lua, skill_ids: Vec<u32>) -> LuaResult<Vec<Skill>> {
         .collect()
 }
 
-fn resolve_skill_desc(desc: LuaBorrowedStr, desc_add: LuaTable) -> LuaResult<String> {
+fn resolve_skill_desc(table: &LuaTable) -> LuaResult<String> {
+    let desc: LuaBorrowedStr = table.get("desc")?;
+    let desc_add: LuaTable = table.get("desc_add")?;
+
     // `add` has nested structure where `add[slot][level]` is to a table where the
     // first element is the replacement text
 

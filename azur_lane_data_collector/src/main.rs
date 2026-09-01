@@ -226,6 +226,11 @@ fn lua_hackfix(lua: &Lua, (source_path,): (LuaBorrowedStr,)) -> LuaResult<LuaVal
         content = content.replace("end)()\n(", "end)();\n(");
     }
 
+    // yeah i don't know why it does this
+    if content.contains("]]]") {
+        content = content.replace("]]]", "] ]]");
+    }
+
     // pass the source path to emulate what `require` does
     let value = lua
         .load(content)
