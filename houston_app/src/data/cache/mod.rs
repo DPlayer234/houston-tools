@@ -125,10 +125,8 @@ impl Cache {
             return Some(Ccot::Channel(channel.clone()));
         }
 
-        guild
-            .threads
-            .get(&channel_id.expect_thread())
-            .map(|t| Ccot::Thread(t.clone()))
+        let thread = guild.threads.get(&channel_id.expect_thread())?;
+        Some(Ccot::Thread(thread.clone()))
     }
 
     /// Returns:
@@ -140,20 +138,19 @@ impl Cache {
         guild_id: GuildId,
         thread_id: ThreadId,
     ) -> Option<Option<CachedThread>> {
+        // in simple terms, the outer `Option` indicates a cache hit,
+        // and the inner `Option` whether that cache hit was a thread.
         let guild = self.guilds.get(&guild_id)?;
 
-        // to not cause a cache miss if this is called with a normal channel id when
-        // looking up from `GenericChannelId`, check the normal channels first
-        let as_channel_id = thread_id.widen().expect_channel();
-        if guild.channels.get(&as_channel_id).is_some() {
-            return Some(None);
-        }
-
+        // usually expect to use this on threads, so check this first
         if let Some(thread) = guild.threads.get(&thread_id) {
             return Some(Some(thread.clone()));
         }
 
-        None
+        // to not cause a cache miss if this is called with a normal channel id when
+        // looking up from `GenericChannelId`, check the normal channels first
+        let channel_id = thread_id.widen().expect_channel();
+        guild.channels.contains_key(&channel_id).then_some(None)
     }
 
     fn super_channel_(
