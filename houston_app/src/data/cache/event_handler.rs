@@ -52,7 +52,8 @@ impl Cache {
             && let Some(thread) = guild.threads.get(&thread_id)
             && thread.kind == ChannelType::PrivateThread
         {
-            guild.threads.remove(&thread_id);
+            let parent_id = thread.parent_id;
+            guild.remove_thread(parent_id, thread_id);
         }
     }
 }
