@@ -219,7 +219,7 @@ pub fn to_skill_category(num: u32) -> SkillCategory {
     match num {
         1 => SkillCategory::Offense,
         2 => SkillCategory::Defense,
-        _ => SkillCategory::Support,
+        3 | _ => SkillCategory::Support,
     }
 }
 
@@ -294,9 +294,10 @@ pub fn to_ammo_kind(num: u32) -> AmmoKind {
         5 => AmmoKind::AirToAir,
         6 => AmmoKind::Bomb,
         7 => AmmoKind::SAP,
-        8 => AmmoKind::Unknown8,
-        9 => AmmoKind::Unknown9,
-        _ => AmmoKind::Unknown,
+        8 => AmmoKind::Missile,
+        // 9 is unused. 10 is only used for saratoga META.
+        10 => AmmoKind::Laser,
+        9 | _ => AmmoKind::Unknown,
     }
 }
 

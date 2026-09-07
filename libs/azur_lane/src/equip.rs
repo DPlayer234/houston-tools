@@ -350,8 +350,9 @@ define_data_enum! {
         AirToAir("Air-to-Air", "Air."),
         Bomb("Bomb", "Bomb"),
         SAP("SAP", "SAP"),
-        Unknown8("8", "?"),
-        Unknown9("9", "?"),
+        Missile("Missile", "Mis."),
+        // most lasers use "Normal"
+        Laser("Laser", "Laser"),
         #[serde(other)]
         Unknown("?", "?"),
     }
