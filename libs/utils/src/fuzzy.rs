@@ -61,8 +61,12 @@ use crate::private::ptr::RawRef;
 // before then. for 64-bit systems, this panic would occur at over 16 GB
 // of allocated memory, and will likely run into an OOM.
 cfg_select! {
-    target_pointer_width = "16" => { type MatchIndex = u16; }
-    _ => { type MatchIndex = u32; }
+    target_pointer_width = "16" => {
+        type MatchIndex = u16;
+    },
+    _ => {
+        type MatchIndex = u32;
+    },
 }
 
 // amount of MatchIndex values that can be stored within a SmallVec without

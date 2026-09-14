@@ -9,10 +9,7 @@ use utils::text::WriteStr as _;
 use crate::slashies::prelude::*;
 
 /// Rolls some dice.
-#[chat_command(
-    contexts(Guild, BotDm, PrivateChannel),
-    integration_types(Guild, User)
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub async fn dice(
     ctx: Context<'_>,
     /// The sets of dice to roll, in a format like '2d6', separated by spaces.

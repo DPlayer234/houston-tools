@@ -6,10 +6,7 @@ mod ops;
 mod parse;
 
 /// Evaluates a mathematical equation. Warning: Floating point math.
-#[chat_command(
-    contexts(Guild, BotDm, PrivateChannel),
-    integration_types(Guild, User)
-)]
+#[chat_command(contexts(Guild, BotDm, PrivateChannel), integration_types(Guild, User))]
 pub async fn calc(
     ctx: Context<'_>,
     /// The expression to evaluate.
