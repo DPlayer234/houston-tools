@@ -134,6 +134,24 @@ pub trait IteratorExt: Iterator {
             },
         }
     }
+
+    /// Returns the single item in the iterator.
+    ///
+    /// Returns `None` if the iterator is empty or has more than one item.
+    ///
+    /// # Notes
+    ///
+    /// This is guaranteed to either advance the iterator once and return [`Some`] or do nothing and
+    /// return [`None`], _as long as the iterator's size hint is correct._
+    ///
+    /// If the size hint is incorrect, it may advance the iterator once and still return [`None`] or
+    /// return [`Some`] even though the iterator can yield more elements.
+    fn single_exact(&mut self) -> Option<Self::Item>
+    where
+        Self: ExactSizeIterator,
+    {
+        if self.len() == 1 { self.next() } else { None }
+    }
 }
 
 impl<I: ?Sized> IteratorExt for I where I: Iterator {}
@@ -175,6 +193,30 @@ mod tests {
     fn single_fail_too_long2_size_hint() {
         let iter = { &[1, 2, 3] }.iter();
         assert_eq!(iter.single(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_exact_success() {
+        let mut iter = { &[42] }.iter();
+        assert_eq!(iter.single_exact(), Some(&42));
+    }
+
+    #[test]
+    fn single_exact_fail_empty() {
+        let mut iter = { &[] }.iter();
+        assert_eq!(iter.single_exact(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_exact_fail_too_long1() {
+        let mut iter = { &[1, 2] }.iter();
+        assert_eq!(iter.single_exact(), None::<&i32>);
+    }
+
+    #[test]
+    fn single_exact_fail_too_long2() {
+        let mut iter = { &[1, 2, 3] }.iter();
+        assert_eq!(iter.single_exact(), None::<&i32>);
     }
 
     #[test]
