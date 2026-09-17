@@ -27,24 +27,28 @@ impl Filter for TargetFilter {
         let is_match = u8::from(is_match) * MATCH;
         let mode = self.config.mode as u8;
 
+        // for the match below since listing the variants explicitly optimizes better
+        const MISS1: u8 = TargetMode::AcceptMatch as u8;
+        const MISS2: u8 = TargetMode::RejectMatch as u8;
+
         // this relies on the bit-pattern assigned to `TargetMode`.
         // the matched-on values are equal to the mismatch variants' values and we toggle the
         // `MATCH` bit in `mode`, so
         // - on a match: toggles the `MATCH` bit; so if `mode` is a match variant, this unsets the
-        //   `MATCH` bit, resulting in `ACCEPT`/`REJECT`. otherwise, this results in an unchecked
-        //   value and the fallback branch is taken.
+        //   `MATCH` bit, resulting in `ACCEPT`/`REJECT`. otherwise, this results in a `MISS` value.
         // - on a mismatch: the value isn't changed; so if `mode` is a mismatch variant, it already
-        //   is `ACCEPT`/`REJECT`. otherwise, the value leads to the fallback branch.
+        //   is `ACCEPT`/`REJECT`. otherwise, the value is equal to a `MISS` value.
         match mode ^ is_match {
             ACCEPT => Response::Accept,
             REJECT => Response::Reject,
-            _ => Response::Neutral,
+            MISS1 | MISS2 => Response::Neutral,
+            _ => unreachable!(),
         }
     }
 }
 
-// `ACCEPT` as 0 and `REJECT` as 2 are chosen specifically to match the `Response` enum
-// this isn't relevant for the logic to work, it just optimizes _slightly_ nicer
+// `ACCEPT` as 0 and `REJECT` as 2 are chosen so `MATCH` can be 1
+// which optimizes a little better since `is_match` won't need a shift
 const REJECT: u8 = 2;
 const ACCEPT: u8 = 0;
 const MATCH: u8 = 1;
