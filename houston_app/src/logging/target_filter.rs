@@ -94,48 +94,24 @@ mod tests {
 
     fn check_case(mode: TargetMode, on_match: Response, on_mismatch: Response) {
         let case = (mode, &on_match, &on_mismatch);
-        let f = TargetFilter {
-            config: TargetFilterConfig {
-                target: "my_app".to_owned(),
-                mode,
-            },
+        let config = TargetFilterConfig {
+            target: "my_app".to_owned(),
+            mode,
         };
 
-        assert_eq!(
-            f.filter(&record("my_app")),
-            on_match,
-            "`my_app` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("my_app::util")),
-            on_match,
-            "`my_app::util` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("my_app::")),
-            on_match,
-            "`my_app::` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("my_app_nope")),
-            on_mismatch,
-            "`my_app_nope` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("some_lib")),
-            on_mismatch,
-            "`some_lib` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("some_lib::")),
-            on_mismatch,
-            "`some_lib::` in {case:?}"
-        );
-        assert_eq!(
-            f.filter(&record("some_lib::util")),
-            on_mismatch,
-            "`some_lib::util` in {case:?}"
-        );
+        let f = TargetFilter { config };
+
+        let check_subcase = |target, expect: &Response| {
+            assert_eq!(f.filter(&record(target)), *expect, "`{target}` in {case:?}");
+        };
+
+        check_subcase("my_app", &on_match);
+        check_subcase("my_app::util", &on_match);
+        check_subcase("my_app::", &on_match);
+        check_subcase("my_app_nope", &on_mismatch);
+        check_subcase("some_lib", &on_mismatch);
+        check_subcase("some_lib::", &on_mismatch);
+        check_subcase("some_lib::util", &on_mismatch);
     }
 
     #[test]
