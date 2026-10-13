@@ -3,7 +3,9 @@ use azur_lane::skin::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, ValidLength as _};
 
-use crate::intl_util::{FixedArrayExt as _, IntoFixed as _, IterExt as _, TryIterExt as _};
+use crate::intl_util::{
+    FixedArrayExt as _, IntoFixed as _, IterExt as _, TryIterExt as _, unwrap_lenient_u32_vec,
+};
 use crate::model::*;
 use crate::{context, convert_al};
 
@@ -196,9 +198,11 @@ pub fn to_main_screen(raw: Option<&str>) -> impl Iterator<Item = MainScreenLine>
 }
 
 fn load_couple_encourage(set: &SkinSet, table: LuaTable) -> LuaResult<CoupleEncourage> {
-    let filter: Vec<u32> = table
-        .get(1)
-        .with_context(context!("couple_encourage 1 for skin {}", set.skin_id))?;
+    let filter = unwrap_lenient_u32_vec(
+        table
+            .get(1)
+            .with_context(context!("couple_encourage 1 for skin {}", set.skin_id))?,
+    );
     let mode: Option<u32> = table
         .get(4)
         .with_context(context!("couple_encourage 4 for skin {}", set.skin_id))?;

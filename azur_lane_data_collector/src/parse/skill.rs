@@ -7,7 +7,7 @@ use azur_lane::skill::*;
 use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString};
 
-use crate::intl_util::{IntoFixed as _, IterExt as _, TryIterExt as _};
+use crate::intl_util::{IntoFixed as _, IterExt as _, LenientU32, TryIterExt as _};
 use crate::{context, convert_al};
 
 /// Loads a skill from the Lua state.
@@ -362,18 +362,22 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                     .get(barrage_id)
                     .with_context(context!("barrage template for id {barrage_id}"))?;
 
-                let senior_repeat: u32 = barrage
+                let senior_repeat: LenientU32 = barrage
                     .get("senior_repeat")
                     .with_context(context!("senior_repeat in barrage {barrage_id}"))?;
                 let primal_repeat: u32 = barrage
                     .get("primal_repeat")
                     .with_context(context!("primal_repeat in barrage {barrage_id}"))?;
 
-                amount += (senior_repeat + 1) * (primal_repeat + 1);
+                amount += (senior_repeat.0 + 1) * (primal_repeat + 1);
             }
 
-            let speed: f64 = aircraft.get("speed")?;
-            let dodge_limit: u32 = aircraft.get("dodge_limit")?;
+            let speed: f64 = aircraft
+                .get("speed")
+                .with_context(context!("speed in aircraft {weapon_id}"))?;
+            let dodge_limit: LenientU32 = aircraft
+                .get("dodge_limit")
+                .with_context(context!("dodge_limit in aircraft {weapon_id}"))?;
 
             let health = ShipStat::new()
                 .with_base(aircraft.get("max_hp")?)
@@ -393,7 +397,7 @@ pub fn load_weapon(lua: &Lua, weapon_id: u32) -> LuaResult<Option<Weapon>> {
                 amount,
                 speed,
                 health,
-                dodge_limit,
+                dodge_limit: dodge_limit.0,
                 weapons,
             })
         },
@@ -501,15 +505,15 @@ fn get_sub_barrage(
     let senior_delay: f64 = barrage
         .get("senior_delay")
         .with_context(context!("senior_delay in barrage {barrage_id}"))?;
-    let senior_repeat: u32 = barrage
+    let senior_repeat: LenientU32 = barrage
         .get("senior_repeat")
         .with_context(context!("senior_repeat in barrage {barrage_id}"))?;
     let primal_repeat: u32 = barrage
         .get("primal_repeat")
         .with_context(context!("primal_repeat in barrage {barrage_id}"))?;
 
-    let amount = (senior_repeat + 1) * (primal_repeat + 1) * parent_amount;
-    *salvo_time += f64::from(senior_repeat + 1) * senior_delay;
+    let amount = (senior_repeat.0 + 1) * (primal_repeat + 1) * parent_amount;
+    *salvo_time += f64::from(senior_repeat.0 + 1) * senior_delay;
 
     let mut flags = BulletFlags::IGNORE_DIVE;
     let mut shrapnel_parts = Vec::new();

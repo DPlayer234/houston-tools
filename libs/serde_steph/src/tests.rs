@@ -193,8 +193,8 @@ fn de_borrowed() {
 
     // is comparing addresses like this guaranteed to be stable?
     assert_eq!(
-        res.as_ptr().addr(),
-        slice[1..].as_ptr().addr(),
+        res.as_ptr(),
+        slice[1..].as_ptr(),
         "expected borrow from slice"
     );
 }

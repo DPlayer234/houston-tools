@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::mem::take;
 
+use mlua::prelude::*;
 use small_fixed_array::{FixedArray, FixedString, ValidLength};
 
 pub trait IntoFixed<LenT> {
@@ -89,4 +90,21 @@ impl<I: Iterator> IterExt for I {}
 impl<I: Iterator<Item = Result<T, E>>, T, E> TryIterExt for I {
     type Ok = T;
     type Err = E;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LenientU32(pub u32);
+
+impl FromLua for LenientU32 {
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    fn from_lua(value: LuaValue, lua: &Lua) -> LuaResult<Self> {
+        match value {
+            LuaValue::Number(v) => Ok(Self(v as u32)),
+            _ => u32::from_lua(value, lua).map(Self),
+        }
+    }
+}
+
+pub fn unwrap_lenient_u32_vec(v: Vec<LenientU32>) -> Vec<u32> {
+    v.into_iter().map(|LenientU32(v)| v).collect()
 }
