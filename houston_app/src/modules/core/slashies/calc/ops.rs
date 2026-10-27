@@ -1,13 +1,27 @@
-use super::parse::Token;
-use super::{MathError, Result};
+use winnow::combinator::{alt, cond, opt, terminated};
+use winnow::error::{ContextError, ErrMode};
+use winnow::prelude::*;
+use winnow::token::literal;
+
+fn separator(input: &mut &str) -> ModalResult<()> {
+    if input
+        .chars()
+        .next()
+        .is_none_or(|c| c.is_ascii_whitespace() || c.is_ascii_punctuation())
+    {
+        Ok(())
+    } else {
+        Err(ErrMode::Backtrack(ContextError::new()))
+    }
+}
 
 /// Helper macro to deduplicate code between different and within operator
 /// kinds.
 macro_rules! define_op_kind {
     {
         $(#[$attr:meta])*
-        enum $Op:ident $([$($g:tt)*])? ($($par:tt)*) -> $Res:ty {
-            $($name:ident $lit:pat => $fn:expr,)*
+        enum $Op:ident ($($par:tt)*) -> $Res:ty {
+            $($name:ident $($lit:literal)|* => $fn:expr,)*
         }
     } => {
         $(#[$attr])*
@@ -18,18 +32,22 @@ macro_rules! define_op_kind {
 
         impl $Op {
             /// Applies the operator to the given values.
-            pub fn apply $(<$($g)*>)? (self, $($par)*) -> $Res {
+            pub fn apply(self, $($par)*) -> $Res {
                 match self {
                     $( Self::$name => $fn, )*
                 }
             }
 
-            /// Tries to get an operator from a token.
-            pub fn from_token(t: Token<'_>) -> Option<Self> {
-                match t.text {
-                    $( $lit => Some(Self::$name), )*
-                    _ => None,
-                }
+            pub fn parser(input: &mut &str) -> ModalResult<Self> {
+                let needs_sep = opt(separator).parse_next(input)?.is_none();
+
+                terminated(
+                    alt(&mut [
+                        $( alt(&mut [$(literal($lit)),*][..]).value(Self::$name), )*
+                    ][..]),
+                    cond(needs_sep, separator)
+                )
+                .parse_next(input)
             }
         }
     };
@@ -115,35 +133,35 @@ fn factorial(mut value: f64) -> f64 {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum CallApplyError {
+    #[error("expected {0} arguments")]
+    IncorrectArgumentCount(usize),
+}
+
 define_op_kind! {
     /// A function to call.
-    enum CallOp['a](fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
+    enum CallOp(values: &[f64]) -> Result<f64, CallApplyError> {
         Log "log" => {
-            let &[a, b] = read_args(values, fn_name)?;
+            let &[a, b] = read_args(values)?;
             Ok(b.log(a))
         },
         Min "min" => Ok(fold_values(values, f64::min)),
         Max "max" => Ok(fold_values(values, f64::max)),
-        Atan2 "atan2" => atan2_checked(fn_name, values),
+        Atan2 "atan2" => atan2_checked(values),
     }
 }
 
-fn read_args<'v, 'n, const N: usize>(
-    values: &'v [f64],
-    fn_name: Token<'n>,
-) -> Result<'n, &'v [f64; N]> {
-    <&[f64; N]>::try_from(values).map_err(|_| MathError::InvalidParameterCount {
-        function: fn_name,
-        count: N,
-    })
+fn read_args<const N: usize>(values: &[f64]) -> Result<&[f64; N], CallApplyError> {
+    <&[f64; N]>::try_from(values).map_err(|_| CallApplyError::IncorrectArgumentCount(N))
 }
 
 fn fold_values(values: &[f64], f: impl FnMut(f64, f64) -> f64) -> f64 {
     values.iter().copied().reduce(f).unwrap_or(0.0)
 }
 
-fn atan2_checked<'a>(fn_name: Token<'a>, values: &[f64]) -> Result<'a, f64> {
-    let &[a, b] = read_args(values, fn_name)?;
+fn atan2_checked(values: &[f64]) -> Result<f64, CallApplyError> {
+    let &[a, b] = read_args(values)?;
     Ok(if a == 0.0 && b == 0.0 {
         f64::NAN
     } else {

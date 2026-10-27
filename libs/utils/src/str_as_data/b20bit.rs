@@ -6,12 +6,11 @@
 //!
 //! The exact format is as follows:
 //!
-//! - The prefix is added, based on the byte count modulo 5: `A` if it is 0, `B`
-//!   if is it 2 or 4, `C` if is 1 or 3.
-//! - The byte slice is chunked into 5-byte chunks. Each chunk is transformed
-//!   into a [`char`] pair as described below. The last chunk is padded with
-//!   null-bytes to become 5 bytes; if it was originally 2 or less bytes, only
-//!   the first [`char`] is added.
+//! - The prefix is added, based on the byte count modulo 5: `A` if it is 0, `B` if is it 2 or 4,
+//!   `C` if is 1 or 3.
+//! - The byte slice is chunked into 5-byte chunks. Each chunk is transformed into a [`char`] pair
+//!   as described below. The last chunk is padded with null-bytes to become 5 bytes; if it was
+//!   originally 2 or less bytes, only the first [`char`] is added.
 //! - The suffix is added: It is always `&`.
 //!
 //! Each 5 byte group will be encoded into [`char`] pairs via the following
@@ -19,10 +18,9 @@
 //!
 //! - Let the byte pattern be: `0x12, 0x34, 0x56, 0x78, 0x90`
 //! - The nibbles are rearranged into 2 codes as: `0x63412, 0x59078`
-//! - Each code is mapped to a [`char`]. For codes between `0x0` to `0xD7FF` the
-//!   [`char`] with the code point equal to the value is used; for codes between
-//!   `0xD800` to `0xFFFFF` the [`char`] with the code point equal to the value
-//!   plus `0x800` is used instead.
+//! - Each code is mapped to a [`char`]. For codes between `0x0` to `0xD7FF` the [`char`] with the
+//!   code point equal to the value is used; for codes between `0xD800` to `0xFFFFF` the [`char`]
+//!   with the code point equal to the value plus `0x800` is used instead.
 //! - This example would thefore encode to the string `\u{63C12}\u{59878}`.
 //!
 //! These rules ensure only valid unicode code points are in the output.
@@ -241,7 +239,7 @@ fn strip_input(s: &str) -> Result<(SkipLast, &str), Error> {
     }
 
     // SAFETY: `s` is derived from a `str`. removing ASCII characters must not
-    // invalidate leave the rest of the `str` as valid utf-8
+    // invalidate anything and leave the rest of the `str` as valid utf-8
     let s = unsafe { str::from_utf8_unchecked(s) };
     Ok((skip, s))
 }

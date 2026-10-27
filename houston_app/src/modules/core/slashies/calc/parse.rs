@@ -1,58 +1,17 @@
-use std::str::FromStr as _;
-use std::{fmt, iter, slice};
+use winnow::ModalResult;
+use winnow::ascii::{alpha1, alphanumeric0, digit1, multispace0};
+use winnow::combinator::{
+    alt, cut_err, delimited, empty, eof, fail, opt, peek, preceded, repeat, separated_pair,
+    terminated,
+};
+use winnow::error::{ContextError, ErrMode, ParseError, StrContext, StrContextValue};
+use winnow::prelude::*;
+use winnow::token::{literal, one_of};
 
 use super::ops::*;
-use super::{MathError, Result};
 
-/// A singular equation token, as returned by the tokenizer.
-#[derive(Debug, Clone, Copy)]
-pub struct Token<'a> {
-    /// The token's actual text.
-    pub text: &'a str,
-    /// The index within the tokenized full text.
-    pub token_index: usize,
-}
-
-impl<'a> Token<'a> {
-    /// Gets an object that can be used to print error information.
-    pub fn error_fmt(self) -> TokenErrorFmt<'a> {
-        TokenErrorFmt { token: self }
-    }
-}
-
-/// Checks whether an `Option<Token>` has the given text.
-macro_rules! matches_token {
-    ($e:expr, $p:pat) => {
-        match $e {
-            Some(Token { text: $p, .. }) => true,
-            _ => false,
-        }
-    };
-}
-
-pub struct TokenErrorFmt<'a> {
-    token: Token<'a>,
-}
-
-impl fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.text)
-    }
-}
-
-impl fmt::Display for TokenErrorFmt<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\n-# Position: {}", self.token.token_index + 1)
-    }
-}
-
-/// Type of a successful [`read_expr`].
-#[derive(Debug, Clone)]
-struct ExprSuccess<'a> {
-    /// The expression.
-    value: f64,
-    /// The token after the expression that terminated it.
-    terminator: Option<Token<'a>>,
+pub fn evaluate(input: &str) -> Result<f64, ParseError<&str, ContextError>> {
+    terminated(expr, eof.context(expected_desc("binary operator"))).parse(input)
 }
 
 /// Pair of a value and the following binary operator.
@@ -61,162 +20,90 @@ struct ValuePair {
     operator: Option<BinaryOp>,
 }
 
-/// A kind-of iterator for tokenizing.
-///
-/// This doesn't extend [`Iterator`] to reduce implementation code.
-pub trait Tokenizer<'a> {
-    /// Reads the next token, or [`None`] if exhausted.
-    fn next(&mut self) -> Option<Token<'a>>;
-
-    /// Peeks the next token, or [`None`] if exhausted.
-    fn peek(&mut self) -> Option<Token<'a>>;
-
-    /// Returns the last token returned by [`Tokenizer::next`].
-    fn last_token(&self) -> Option<Token<'a>>;
-
-    /// Returns a [`MathError::ExprExpected`] matching the last token.
-    fn expr_expected(&self) -> MathError<'a> {
-        MathError::ExprExpected(self.last_token())
-    }
+fn ch<'a>(literal: char) -> impl Parser<&'a str, char, ErrMode<ContextError>> {
+    literal.context(StrContext::Expected(literal.into()))
 }
 
-/// Returns an kind-of iterator to the tokens.
-pub fn tokenize(text: &str) -> impl Tokenizer<'_> {
-    // - split by whitespace
-    // - split each fragment by special characters, including them at the end of the
-    //   new fragments
-    // - split away the special characters also
-
-    fn is_special_char(c: u8) -> bool {
-        // Note: each of these must be an ASCII character
-        matches!(
-            c,
-            b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'(' | b')' | b',' | b'!'
-        )
-    }
-
-    /// # Safety
-    /// `bytes` must be valid UTF-8.
-    unsafe fn token_from_utf8(token_index: usize, bytes: &[u8]) -> Token<'_> {
-        debug_assert!(str::from_utf8(bytes).is_ok(), "bytes must be utf8");
-
-        // SAFETY: only splitting on ASCII characters
-        let text = unsafe { str::from_utf8_unchecked(bytes) };
-        Token { text, token_index }
-    }
-
-    let iter = text
-        .as_bytes()
-        .split(|c| c.is_ascii_whitespace())
-        .flat_map(|s| s.split_inclusive(|c| is_special_char(*c)))
-        .flat_map(|s| match s {
-            [rest @ .., last] if is_special_char(*last) => {
-                iter::once(rest).chain(Some(slice::from_ref(last)))
-            },
-            _ => iter::once(s).chain(None),
-        })
-        .filter(|s| !s.is_empty())
-        .enumerate()
-        // SAFETY: `str.as_bytes().split` on ascii whitespace must only return valid utf-8 chunks
-        .map(|(i, s)| unsafe { token_from_utf8(i, s) });
-
-    // this is only generic over `I` because we can't spell out the iterator name
-    // and i don't want to box the iterator to be able to return the value
-    struct TokenizerImpl<'a, I> {
-        most_recent: Option<Token<'a>>,
-        peeked: Option<Token<'a>>,
-        iter: I,
-    }
-
-    impl<'a, I> Tokenizer<'a> for TokenizerImpl<'a, I>
-    where
-        I: Iterator<Item = Token<'a>>,
-    {
-        fn next(&mut self) -> Option<Token<'a>> {
-            let value = self.peeked.take().or_else(|| self.iter.next());
-            if value.is_some() {
-                self.most_recent = value;
-            }
-
-            value
-        }
-
-        fn peek(&mut self) -> Option<Token<'a>> {
-            if self.peeked.is_none() {
-                self.peeked = self.iter.next();
-            }
-
-            self.peeked
-        }
-
-        fn last_token(&self) -> Option<Token<'a>> {
-            self.most_recent
-        }
-    }
-
-    TokenizerImpl {
-        most_recent: None,
-        peeked: None,
-        iter,
-    }
+fn expected_desc(desc: &'static str) -> StrContext {
+    StrContext::Expected(StrContextValue::Description(desc))
 }
 
-/// Reads an expression. This will consume `tokens` until the end.
-pub fn read_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
-    read_expr_with_terminator(tokens, |t| t.is_none()).map(|e| e.value)
-}
-
-/// Reads an expression. This will consume `tokens` until it matches
-/// `terminate_on` in a top-level binary-operator position.
-///
-/// If no more tokens are available before it finds the terminator, returns an
-/// error.
-fn read_expr_with_terminator<'a>(
-    tokens: &mut impl Tokenizer<'a>,
-    terminate_on: fn(Option<Token<'a>>) -> bool,
-) -> Result<'a, ExprSuccess<'a>> {
-    // this is the main place where this allocates. the other is function parameters
-    // the arrayvec crate could prevent that, but it might also need a lot of stack
-    // space do note that this function may be called recursively!
-    let mut pairs = Vec::new();
-    loop {
-        // read sub expressions until out of tokens
-        let value = read_sub_expr(tokens)?;
-        let token = tokens.next();
-
-        // if this a terminator, finish the expression and return it
-        if terminate_on(token) {
-            let value = if !pairs.is_empty() {
-                pairs.push(ValuePair {
-                    value,
-                    operator: None,
-                });
-                merge_expr_pairs(pairs)
-            } else {
-                value
-            };
-
-            // we're done!
-            return Ok(ExprSuccess {
-                value,
-                terminator: token,
+fn expr(input: &mut &str) -> ModalResult<f64> {
+    fn finalize_value((mut pairs, last): (Vec<ValuePair>, f64)) -> f64 {
+        if pairs.is_empty() {
+            last
+        } else {
+            pairs.push(ValuePair {
+                value: last,
+                operator: None,
             });
+            merge_expr_pairs(pairs)
+        }
+    }
+
+    fn value_pair(input: &mut &str) -> ModalResult<ValuePair> {
+        (sub_expr, BinaryOp::parser)
+            .map(|(value, op)| ValuePair {
+                value,
+                operator: Some(op),
+            })
+            .parse_next(input)
+    }
+
+    (repeat(0.., value_pair), sub_expr)
+        .map(finalize_value)
+        .parse_next(input)
+}
+
+fn unary_op_expr(input: &mut &str) -> ModalResult<f64> {
+    (UnaryOp::parser, cut_err(sub_expr))
+        .map(|(op, val)| op.apply(val))
+        .parse_next(input)
+}
+
+fn call_args(input: &mut &str) -> ModalResult<Vec<f64>> {
+    let mut end_at = opt(peek(')'));
+    if end_at.parse_next(input)?.is_some() {
+        return Ok(Vec::new());
+    }
+
+    let mut args = Vec::new();
+    loop {
+        let item = expr.parse_next(input)?;
+
+        args.push(item);
+        if end_at.parse_next(input)?.is_some() {
+            break Ok(args);
         }
 
-        let Some(operator) = token else {
-            // a non-terminating None is an error
-            return Err(tokens.expr_expected());
-        };
-
-        // expecting a binary operator here
-        let operator =
-            BinaryOp::from_token(operator).ok_or(MathError::InvalidBinaryOperator(operator))?;
-
-        pairs.push(ValuePair {
-            value,
-            operator: Some(operator),
-        });
+        _ = ','
+            .context(StrContext::Expected(','.into()))
+            .context(StrContext::Expected(')'.into()))
+            .parse_next(input)?;
     }
+}
+
+fn call_expr(input: &mut &str) -> ModalResult<f64> {
+    let syntax_check = (alpha1, alphanumeric0, multispace0, '(');
+    let call_parser = separated_pair(
+        CallOp::parser.context(StrContext::Label("function name")),
+        multispace0,
+        delimited(ch('('), call_args, ch(')')),
+    );
+
+    let (op, args) = preceded(peek(syntax_check), cut_err(call_parser)).parse_next(input)?;
+    cut_err(empty.try_map(|()| op.apply(&args))).parse_next(input)
+}
+
+fn float(input: &mut &str) -> ModalResult<f64> {
+    (
+        digit1,
+        opt(('.', cut_err(digit1))),
+        opt((one_of(('e', 'E')), opt(one_of(('+', '-'))), cut_err(digit1))),
+    )
+        .take()
+        .parse_to()
+        .parse_next(input)
 }
 
 /// Reads a "sub-expression", i.e. it gets the first expression without binary
@@ -224,85 +111,28 @@ fn read_expr_with_terminator<'a>(
 /// operators with their operand, or an identifier.
 ///
 /// If no more tokens are available, returns an error.
-fn read_sub_expr<'a>(tokens: &mut impl Tokenizer<'a>) -> Result<'a, f64> {
-    let Some(token) = tokens.next() else {
-        return Err(tokens.expr_expected());
-    };
-
+fn sub_expr(input: &mut &str) -> ModalResult<f64> {
     use std::f64::consts::{E, PI, TAU};
 
-    // this match *returns* for non-Expr branches
-    let expr = match token.text.as_bytes() {
-        // start of parenthesis around child-expression
-        b"(" => read_expr_with_terminator(tokens, |t| matches_token!(t, ")"))?.value,
-
-        // constants
-        b"pi" => PI,
-        b"e" => E,
-        b"tau" => TAU,
-
-        // anything starting with a digit is assumed to be a number
-        [b'0'..=b'9', ..] => {
-            f64::from_str(token.text).map_err(|_| MathError::InvalidNumber(token))?
-        },
-
-        // these shouldn't show up here
-        b"," | b")" => return Err(tokens.expr_expected()),
-
-        // lastly, also check for unary operators and functions
-        _ => {
-            if let Some(op) = UnaryOp::from_token(token) {
-                op.apply(read_sub_expr(tokens)?)
-            } else if let Some(call) = CallOp::from_token(token) {
-                read_call(tokens, Ok(call), token)?
-            } else if matches_token!(tokens.peek(), "(") {
-                read_call(tokens, Err(MathError::InvalidFunction(token)), token)?
-            } else if tokens.peek().is_some() {
-                return Err(MathError::InvalidUnaryOperator(token));
-            } else {
-                return Err(tokens.expr_expected());
-            }
-        },
-    };
-
-    if let Some(op) = tokens.peek().and_then(PostUnaryOp::from_token) {
-        tokens.next();
-        return Ok(op.apply(expr));
-    }
-
-    Ok(expr)
-}
-
-/// Reads the parameters for a function call and evaluates it.
-///
-/// This also checks that the next token is `(`.
-fn read_call<'a>(
-    tokens: &mut impl Tokenizer<'a>,
-    call_fn: Result<'a, CallOp>,
-    call_fn_token: Token<'a>,
-) -> Result<'a, f64> {
-    if !matches_token!(tokens.next(), "(") {
-        return Err(MathError::FunctionCallExpected(call_fn_token));
-    }
-
-    let terminate_on = |t| matches_token!(t, ")" | ",");
-    let mut params = Vec::new();
-
-    if matches_token!(tokens.peek(), ")") {
-        // empty argument list. pop `)`
-        tokens.next();
-    } else {
-        // otherwise terminate when we hit a close in a terminator position
-        loop {
-            let res = read_expr_with_terminator(tokens, terminate_on)?;
-            params.push(res.value);
-            if matches_token!(res.terminator, ")") {
-                break;
-            }
-        }
-    }
-
-    call_fn?.apply(call_fn_token, &params)
+    (
+        delimited(
+            multispace0,
+            alt((
+                delimited('(', cut_err(expr), cut_err(ch(')'))),
+                unary_op_expr,
+                call_expr,
+                float.context(StrContext::Label("incomplete number literal")),
+                literal("pi").value(PI),
+                literal("e").value(E),
+                literal("tau").value(TAU),
+                fail.context(expected_desc("expression")),
+            )),
+            multispace0,
+        ),
+        terminated(opt(PostUnaryOp::parser), multispace0),
+    )
+        .map(|(val, op)| op.map(|op| op.apply(val)).unwrap_or(val))
+        .parse_next(input)
 }
 
 /// Merges a list of expression pairs into a singular expression.
