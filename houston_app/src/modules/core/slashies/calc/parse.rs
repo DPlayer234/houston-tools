@@ -1,15 +1,16 @@
 use winnow::ModalResult;
 use winnow::ascii::{alpha1, alphanumeric0, digit1, multispace0};
 use winnow::combinator::{
-    alt, cut_err, delimited, empty, eof, fail, opt, peek, preceded, repeat, separated_pair,
-    terminated,
+    alt, cut_err, delimited, dispatch, empty, eof, fail, opt, peek, preceded, repeat,
+    separated_pair, terminated,
 };
 use winnow::error::{ContextError, ErrMode, ParseError, StrContext, StrContextValue};
 use winnow::prelude::*;
-use winnow::token::{literal, one_of};
+use winnow::token::one_of;
 
 use super::ops::*;
 
+/// Parses and evaluates an expression.
 pub fn evaluate(input: &str) -> Result<f64, ParseError<&str, ContextError>> {
     terminated(expr, eof.context(expected_desc("binary operator"))).parse(input)
 }
@@ -20,14 +21,19 @@ struct ValuePair {
     operator: Option<BinaryOp>,
 }
 
+/// Parses the literal, providing expected context.
 fn ch<'a>(literal: char) -> impl Parser<&'a str, char, ErrMode<ContextError>> {
     literal.context(StrContext::Expected(literal.into()))
 }
 
+/// Returns a [`StrContext::Expected`] with the given description.
 fn expected_desc(desc: &'static str) -> StrContext {
     StrContext::Expected(StrContextValue::Description(desc))
 }
 
+/// Parses a full expression.
+///
+/// `<sub_expr BinaryOp>* sub_expr`
 fn expr(input: &mut &str) -> ModalResult<f64> {
     fn finalize_value((mut pairs, last): (Vec<ValuePair>, f64)) -> f64 {
         if pairs.is_empty() {
@@ -55,12 +61,18 @@ fn expr(input: &mut &str) -> ModalResult<f64> {
         .parse_next(input)
 }
 
+/// Parses a unary operator expression.
+///
+/// `UnaryOp sub_expr`
 fn unary_op_expr(input: &mut &str) -> ModalResult<f64> {
     (UnaryOp::parser, cut_err(sub_expr))
         .map(|(op, val)| op.apply(val))
         .parse_next(input)
 }
 
+/// Parses function call arguments.
+///
+/// `expr <, expr>*`
 fn call_args(input: &mut &str) -> ModalResult<Vec<f64>> {
     let mut end_at = opt(peek(')'));
     if end_at.parse_next(input)?.is_some() {
@@ -83,6 +95,9 @@ fn call_args(input: &mut &str) -> ModalResult<Vec<f64>> {
     }
 }
 
+/// Parses a function call.
+///
+/// `CallOp "(" call_args ")"`
 fn call_expr(input: &mut &str) -> ModalResult<f64> {
     let syntax_check = (alpha1, alphanumeric0, multispace0, '(');
     let call_parser = separated_pair(
@@ -95,6 +110,9 @@ fn call_expr(input: &mut &str) -> ModalResult<f64> {
     cut_err(empty.try_map(|()| op.apply(&args))).parse_next(input)
 }
 
+/// Parses a floating-point number literal.
+///
+/// `digit1 [. digit1] [<"e" | "E"> [<"+" | "-">] digit1]`
 fn float(input: &mut &str) -> ModalResult<f64> {
     (
         digit1,
@@ -106,25 +124,38 @@ fn float(input: &mut &str) -> ModalResult<f64> {
         .parse_next(input)
 }
 
-/// Reads a "sub-expression", i.e. it gets the first expression without binary
-/// operators like `5` in `5 + 2`, an expression within parenthesis, unary
-/// operators with their operand, or an identifier.
+/// Parses a constant.
 ///
-/// If no more tokens are available, returns an error.
-fn sub_expr(input: &mut &str) -> ModalResult<f64> {
+/// `<"pi" | "e" | "tau">`
+fn constant(input: &mut &str) -> ModalResult<f64> {
     use std::f64::consts::{E, PI, TAU};
 
+    dispatch!((alpha1, alphanumeric0).take();
+        "pi" => empty.value(PI),
+        "e" => empty.value(E),
+        "tau" => empty.value(TAU),
+        _ => cut_err(fail),
+    )
+    .parse_next(input)
+}
+
+/// Parses a "sub-expression", i.e. it gets the first expression without binary
+/// operators like `5` in `5 + 2`, an expression within parenthesis, unary
+/// operators with their operand, function calls, or constants.
+///
+/// `< <"(" expr ")"> | unary_op_expr | call_expr | float | constant >`
+fn sub_expr(input: &mut &str) -> ModalResult<f64> {
     (
         delimited(
             multispace0,
+            // note: this is partially order-sensitive since most of the parsers here will cut_err
+            // when they internally decide that other parsers shouldn't apply
             alt((
-                delimited('(', cut_err(expr), cut_err(ch(')'))),
+                preceded('(', cut_err(terminated(expr, ch(')')))),
                 unary_op_expr,
                 call_expr,
                 float.context(StrContext::Label("incomplete number literal")),
-                literal("pi").value(PI),
-                literal("e").value(E),
-                literal("tau").value(TAU),
+                constant.context(StrContext::Label("constant")),
                 fail.context(expected_desc("expression")),
             )),
             multispace0,

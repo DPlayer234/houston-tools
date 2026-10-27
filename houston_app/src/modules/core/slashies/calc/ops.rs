@@ -18,6 +18,12 @@ fn separator(input: &mut &str) -> ModalResult<()> {
 /// Helper macro to deduplicate code between different and within operator
 /// kinds.
 macro_rules! define_op_kind {
+    {@doc_syntax $($lit:literal)*} => {
+        define_op_kind!(@doc_syntax_inner $($lit),*)
+    };
+    {@doc_syntax_inner $first:literal $(, $lit:literal)*} => {
+        concat!("`<\"", $first, "\"", $(" | \"", $lit, "\"",)* ">`")
+    };
     {
         $(#[$attr:meta])*
         enum $Op:ident ($($par:tt)*) -> $Res:ty {
@@ -38,6 +44,9 @@ macro_rules! define_op_kind {
                 }
             }
 
+            /// Parses the corresponding operator.
+            ///
+            #[doc = define_op_kind!(@doc_syntax $($($lit)*)*)]
             pub fn parser(input: &mut &str) -> ModalResult<Self> {
                 let needs_sep = opt(separator).parse_next(input)?.is_none();
 
