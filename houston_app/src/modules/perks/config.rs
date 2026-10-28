@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
+use jiff::civil::Date;
+use jiff::{SignedDuration, Timestamp};
 use serde_with::As;
 use serenity::small_fixed_array::{FixedArray, FixedString, ValidLength};
-use time::{Date, Duration, UtcDateTime};
 use tokio::sync::Mutex;
 
 use super::Item;
@@ -23,14 +24,14 @@ macro_rules! fsd {
 
 fsd!(default_cash_name = "$");
 
-fn default_check_interval() -> Duration {
+fn default_check_interval() -> SignedDuration {
     // 2 minutes is about the minimum safe interval for constant role updates
     // we go a little higher since we use this interval for other stuff too
-    const { Duration::minutes(3) }
+    const { SignedDuration::from_mins(3) }
 }
 
-fn default_last_check_datetime() -> Mutex<UtcDateTime> {
-    Mutex::new(UtcDateTime::MIN)
+fn default_last_check_timestamp() -> Mutex<Timestamp> {
+    Mutex::new(Timestamp::MIN)
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -38,22 +39,22 @@ pub struct Config {
     #[serde(default = "default_cash_name")]
     pub cash_name: FixedString<u8>,
     #[serde(with = "As::<DhmsDuration>", default = "default_check_interval")]
-    pub check_interval: Duration,
+    pub check_interval: SignedDuration,
     pub rainbow: Option<RainbowConfig>,
     pub pushpin: Option<PushpinConfig>,
     pub role_edit: Option<RoleEditConfig>,
     pub collectible: Option<CollectibleConfig>,
     pub birthday: Option<BirthdayConfig>,
 
-    #[serde(skip, default = "default_last_check_datetime")]
-    pub last_check: Mutex<UtcDateTime>,
+    #[serde(skip, default = "default_last_check_timestamp")]
+    pub last_check: Mutex<Timestamp>,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 pub struct EffectPrice {
     pub cost: u32,
     #[serde(with = "As::<DhmsDuration>")]
-    pub duration: Duration,
+    pub duration: SignedDuration,
 }
 
 fn default_item_amount() -> u32 {
@@ -135,14 +136,14 @@ pub struct CollectibleNotice {
     pub text: FixedString,
 }
 
-fn default_birthday_duration() -> Duration {
-    const { Duration::hours(24) }
+fn default_birthday_duration() -> SignedDuration {
+    const { SignedDuration::from_hours(24) }
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BirthdayConfig {
     #[serde(with = "As::<DhmsDuration>", default = "default_birthday_duration")]
-    pub duration: Duration,
+    pub duration: SignedDuration,
     pub regions: FixedArray<BirthdayRegionConfig>,
     #[serde(default, flatten)]
     pub guilds: IndexMap<GuildId, BirthdayGuildConfig>,
@@ -156,7 +157,7 @@ fn default_last_check_date() -> Mutex<Date> {
 pub struct BirthdayRegionConfig {
     pub name: FixedString<u8>,
     #[serde(with = "As::<DhmsDuration>", default)]
-    pub time_offset: Duration,
+    pub time_offset: SignedDuration,
 
     #[serde(skip, default = "default_last_check_date")]
     pub last_check: Mutex<Date>,

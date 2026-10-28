@@ -3,7 +3,7 @@
 use std::fmt::{Display, Formatter, Result, from_fn};
 
 use houston_cmd::ResolvedOption;
-use time::{OffsetDateTime, UtcDateTime};
+use jiff::Timestamp;
 
 use crate::prelude::*;
 
@@ -87,19 +87,10 @@ pub trait TimeMentionable {
     }
 }
 
-impl TimeMentionable for OffsetDateTime {
+impl TimeMentionable for Timestamp {
     fn mention(&self, format: char) -> TimeMention {
         TimeMention {
-            timestamp: self.unix_timestamp(),
-            format,
-        }
-    }
-}
-
-impl TimeMentionable for UtcDateTime {
-    fn mention(&self, format: char) -> TimeMention {
-        TimeMention {
-            timestamp: self.unix_timestamp(),
+            timestamp: self.as_second(),
             format,
         }
     }

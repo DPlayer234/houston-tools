@@ -17,7 +17,6 @@ impl super::Module for Module {
             slashies::dice::dice(),
             slashies::calc::calc(),
             slashies::quote::quote(),
-            slashies::timestamp::timestamp(),
             slashies::who::who(),
             slashies::who::who_context(),
             slashies::upload::upload(),

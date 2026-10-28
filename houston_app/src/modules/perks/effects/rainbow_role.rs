@@ -1,6 +1,8 @@
 use anyhow::Context as _;
 use bson_model::ModelDocument as _;
-use time::Time;
+use jiff::Timestamp;
+use jiff::civil::Time;
+use jiff::tz::TimeZone;
 
 use super::*;
 use crate::modules::perks::config::{RainbowConfig, RainbowRoleEntry};
@@ -50,7 +52,7 @@ impl Shape for RainbowRole {
         Ok(())
     }
 
-    async fn update(&self, ctx: &Context, _now: UtcDateTime) -> Result {
+    async fn update(&self, ctx: &Context, _now: Timestamp) -> Result {
         // in seconds; 36 loops per day
         const LOOP_TIME: i64 = 2400;
 
@@ -58,10 +60,11 @@ impl Shape for RainbowRole {
             return Ok(());
         };
 
-        let loop_sec = UtcDateTime::now()
+        let loop_sec = Timestamp::now()
+            .to_zoned(TimeZone::UTC)
             .time()
-            .duration_since(Time::MIDNIGHT)
-            .whole_seconds()
+            .duration_since(Time::MIN)
+            .as_secs()
             .rem_euclid(LOOP_TIME);
 
         let loop_rel = loop_sec as f32 / LOOP_TIME as f32;

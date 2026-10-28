@@ -1,6 +1,6 @@
 use bson::Document;
+use jiff::Timestamp;
 use serenity::prelude::*;
-use time::UtcDateTime;
 use utils::text::WriteStr as _;
 
 use crate::buttons::prelude::*;
@@ -308,10 +308,7 @@ impl View {
         }
 
         let st = effect.price(perks).context("effect cannot be bought")?;
-
-        let until = UtcDateTime::now()
-            .checked_add(st.duration)
-            .context("duration beyond the end of time")?;
+        let until = Timestamp::now().checked_add(st.duration)?;
 
         Wallet::collection(db)
             .take_items(guild_id, user_id, &[(Item::Cash, st.cost.into())], perks)

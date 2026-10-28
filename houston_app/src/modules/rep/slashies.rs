@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bson_model::Filter;
+use jiff::Timestamp;
 use rand::prelude::*;
-use time::UtcDateTime;
 
 use super::model;
 use crate::fmt::discord::TimeMentionable as _;
@@ -41,12 +41,12 @@ pub async fn rep(
 }
 
 // this code has a couple of frankly weird conditions:
-// - we don't want to defer too early in the failure case so the cooldown error
-//   isn't shown to everyone.
-// - we don't want to defer _at all_ in the success case so the rep message is
-//   the initial message, which is needed to actually trigger a notification.
-// - we can't wait too long to defer and/or send because that would time out the
-//   command interaction.
+// - we don't want to defer too early in the failure case so the cooldown error isn't shown to
+//   everyone.
+// - we don't want to defer _at all_ in the success case so the rep message is the initial message,
+//   which is needed to actually trigger a notification.
+// - we can't wait too long to defer and/or send because that would time out the command
+//   interaction.
 // - there are at least 3 required database operations.
 // so consider that when touching this.
 async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
@@ -70,10 +70,8 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
     let defer = async { ctx.defer(ephemeral.load(Ordering::Acquire)).await };
 
     let cooldown_check = async {
-        let now = UtcDateTime::now();
-        let next_cooldown_end = now
-            .checked_add(rep.cooldown)
-            .context("cooldown broke the end of time")?;
+        let now = Timestamp::now();
+        let next_cooldown_end = now.checked_add(rep.cooldown)?;
 
         // try to update the cooldown in the document.
         // this is performed as an upsert with a unique index over [user, guild].
@@ -162,7 +160,7 @@ async fn rep_core(ctx: Context<'_>, member: SlashMember<'_>) -> Result {
         .into_document()?;
 
     let update = model::Record::update()
-        .set_on_insert(|r| r.cooldown_ends(UtcDateTime::UNIX_EPOCH))
+        .set_on_insert(|r| r.cooldown_ends(Timestamp::UNIX_EPOCH))
         .inc(|r| r.received(1))
         .into_document()?;
 

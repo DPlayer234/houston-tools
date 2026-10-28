@@ -1,9 +1,11 @@
 use bson::doc;
 use houston_cmd::model::{Command, CommandOptionData};
+use jiff::Timestamp;
 use utils::text::WriteStr as _;
 
 use crate::fmt::StringExt as _;
 use crate::fmt::discord::TimeMentionable as _;
+use crate::helper::time::parse_dhms_duration;
 use crate::modules::perks::Config;
 use crate::modules::perks::effects::{Args, Effect};
 use crate::modules::perks::items::Item;
@@ -31,10 +33,6 @@ pub fn perk_admin(perks: &Config) -> Command {
     integration_types(Guild)
 )]
 mod root {
-    use time::UtcDateTime;
-
-    use crate::helper::time::parse_dhms_duration;
-
     /// Enables a perk for a member.
     #[sub_command]
     async fn enable(
@@ -56,9 +54,7 @@ mod root {
         let db = data.database()?;
         let args = Args::new(ctx.serenity(), guild_id, member.user.id);
 
-        let until = UtcDateTime::now()
-            .checked_add(duration)
-            .context("duration lasts beyond the end of time")?;
+        let until = Timestamp::now().checked_add(duration)?;
 
         ctx.defer_as(Ephemeral).await?;
         perk.enable(args, None).await?;

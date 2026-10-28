@@ -1,5 +1,4 @@
 use mongodb::options::ReturnDocument;
-use time::Month;
 
 use crate::buttons::ButtonValue as _;
 use crate::helper::contains_ignore_ascii_case;
@@ -44,7 +43,7 @@ pub mod birthday {
         let region = region.unwrap_or(0);
         _ = get_region(ctx, region)?;
 
-        let day_of_year = DayOfYear::from_md(month.convert(), day)
+        let day_of_year = DayOfYear::from_md(month.convert(), day.cast_signed())
             .ok_or(HArgError::new_const("That date is not valid."))?;
 
         let description = format!(
@@ -162,8 +161,9 @@ pub mod birthday {
 }
 
 #[derive(houston_cmd::ChoiceArg)]
+#[repr(i8)]
 enum EMonth {
-    January,
+    January = 1,
     February,
     March,
     April,
@@ -178,21 +178,8 @@ enum EMonth {
 }
 
 impl EMonth {
-    const fn convert(self) -> Month {
-        match self {
-            Self::January => Month::January,
-            Self::February => Month::February,
-            Self::March => Month::March,
-            Self::April => Month::April,
-            Self::May => Month::May,
-            Self::June => Month::June,
-            Self::July => Month::July,
-            Self::August => Month::August,
-            Self::September => Month::September,
-            Self::October => Month::October,
-            Self::November => Month::November,
-            Self::December => Month::December,
-        }
+    const fn convert(self) -> i8 {
+        self as i8
     }
 }
 

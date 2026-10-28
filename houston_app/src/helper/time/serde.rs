@@ -1,9 +1,9 @@
 use std::fmt;
 
+use jiff::SignedDuration;
 use serde::Deserializer;
 use serde::de::Error;
 use serde_with::DeserializeAs;
-use time::Duration;
 
 use super::parse_dhms_duration;
 
@@ -12,15 +12,15 @@ use super::parse_dhms_duration;
 /// This follows the same logic as the [`parse_dhms_duration`] function.
 pub enum DhmsDuration {}
 
-impl<'de> DeserializeAs<'de, Duration> for DhmsDuration {
-    fn deserialize_as<D>(deserializer: D) -> Result<Duration, D::Error>
+impl<'de> DeserializeAs<'de, SignedDuration> for DhmsDuration {
+    fn deserialize_as<D>(deserializer: D) -> Result<SignedDuration, D::Error>
     where
         D: Deserializer<'de>,
     {
         struct DhmsVisitor;
 
         impl serde::de::Visitor<'_> for DhmsVisitor {
-            type Value = Duration;
+            type Value = SignedDuration;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("duration string in hh:mm:ss format")

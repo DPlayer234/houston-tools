@@ -1,4 +1,5 @@
 use bson_model::Filter;
+use jiff::Timestamp;
 
 use super::DayOfYear;
 use super::effects::Effect;
@@ -36,8 +37,8 @@ pub struct ActivePerk {
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
-    #[serde(with = "As::<DateTimeBson>")]
-    pub until: UtcDateTime,
+    #[serde(with = "As::<FromJiff02Timestamp>")]
+    pub until: Timestamp,
     #[model(filter = false)]
     pub state: Option<Bson>,
 }
@@ -293,7 +294,7 @@ pub trait ActivePerkExt {
         guild_id: GuildId,
         user_id: UserId,
         effect: Effect,
-        until: UtcDateTime,
+        until: Timestamp,
     ) -> Result;
 
     async fn set_disabled(&self, guild_id: GuildId, user_id: UserId, effect: Effect) -> Result;
@@ -320,7 +321,7 @@ impl ActivePerkExt for Collection<ActivePerk> {
         guild_id: GuildId,
         user_id: UserId,
         effect: Effect,
-        until: UtcDateTime,
+        until: Timestamp,
     ) -> Result {
         let filter = active_perk_filter(guild_id, user_id, effect)?;
 

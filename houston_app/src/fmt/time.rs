@@ -1,20 +1,20 @@
 use std::fmt::{self, Write as _};
 
-use time::Duration;
+use jiff::SignedDuration;
 
 #[derive(Debug, Clone, Copy)]
 #[must_use]
-pub struct HumanDuration(Duration);
+pub struct HumanDuration(SignedDuration);
 
 impl HumanDuration {
-    pub fn new(duration: Duration) -> Self {
+    pub fn new(duration: SignedDuration) -> Self {
         Self(duration)
     }
 }
 
 impl fmt::Display for HumanDuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let left = self.0.whole_seconds();
+        let left = self.0.as_secs();
         if left < 0 {
             f.write_char('-')?;
         }
@@ -43,61 +43,61 @@ mod tests {
 
     #[test]
     fn seconds() {
-        let t = Duration::seconds(55);
+        let t = SignedDuration::from_secs(55);
         assert_eq!(HumanDuration(t).to_string(), "55 s");
     }
 
     #[test]
     fn seconds_neg() {
-        let t = Duration::seconds(-55);
+        let t = SignedDuration::from_secs(-55);
         assert_eq!(HumanDuration(t).to_string(), "-55 s");
     }
 
     #[test]
     fn minutes() {
-        let t = Duration::minutes(55);
+        let t = SignedDuration::from_mins(55);
         assert_eq!(HumanDuration(t).to_string(), "55 m");
     }
 
     #[test]
     fn minutes_neg() {
-        let t = Duration::minutes(-55);
+        let t = SignedDuration::from_mins(-55);
         assert_eq!(HumanDuration(t).to_string(), "-55 m");
     }
 
     #[test]
     fn hours() {
-        let t = Duration::hours(55);
+        let t = SignedDuration::from_hours(55);
         assert_eq!(HumanDuration(t).to_string(), "55 h");
     }
 
     #[test]
     fn hours_neg() {
-        let t = Duration::hours(-55);
+        let t = SignedDuration::from_hours(-55);
         assert_eq!(HumanDuration(t).to_string(), "-55 h");
     }
 
     #[test]
     fn hours_minutes() {
-        let t = Duration::minutes(261);
+        let t = SignedDuration::from_mins(261);
         assert_eq!(HumanDuration(t).to_string(), "4:21 h");
     }
 
     #[test]
     fn hours_minutes_neg() {
-        let t = Duration::minutes(-261);
+        let t = SignedDuration::from_mins(-261);
         assert_eq!(HumanDuration(t).to_string(), "-4:21 h");
     }
 
     #[test]
     fn hours_minutes_seconds() {
-        let t = Duration::seconds(3700);
+        let t = SignedDuration::from_secs(3700);
         assert_eq!(HumanDuration(t).to_string(), "1:01:40 h");
     }
 
     #[test]
     fn hours_minutes_seconds_neg() {
-        let t = Duration::seconds(-3700);
+        let t = SignedDuration::from_secs(-3700);
         assert_eq!(HumanDuration(t).to_string(), "-1:01:40 h");
     }
 }

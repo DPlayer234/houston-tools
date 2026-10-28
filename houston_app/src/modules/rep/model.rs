@@ -1,3 +1,5 @@
+use jiff::Timestamp;
+
 use crate::modules::model_prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ModelDocument)]
@@ -11,8 +13,8 @@ pub struct Record {
     pub guild: GuildId,
     #[serde(default)]
     pub received: i64,
-    #[serde(with = "As::<DateTimeBson>")]
-    pub cooldown_ends: UtcDateTime,
+    #[serde(with = "As::<FromJiff02Timestamp>")]
+    pub cooldown_ends: Timestamp,
 }
 
 fn name_unique(name: &str) -> IndexOptions {
