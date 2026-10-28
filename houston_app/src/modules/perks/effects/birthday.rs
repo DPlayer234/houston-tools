@@ -126,7 +126,7 @@ impl Shape for Birthday {
             // from the current date, consider the offset and calculate the end time
             let tomorrow = today
                 .to_datetime(Time::MIN)
-                .checked_add(region.time_offset)?
+                .checked_sub(region.time_offset)?
                 .checked_add(birthday.duration)?
                 .to_zoned(TimeZone::UTC)?
                 .timestamp();
