@@ -50,7 +50,7 @@ impl Cache {
     fn remove_thread_if_private(&self, guild_id: GuildId, thread_id: ThreadId) {
         if let Some(mut guild) = self.guilds.get_mut(&guild_id)
             && let Some(thread) = guild.threads.get(&thread_id)
-            && thread.kind == ChannelType::PrivateThread
+            && thread.private
         {
             let parent_id = thread.parent_id;
             guild.remove_thread(parent_id, thread_id);
@@ -114,7 +114,7 @@ impl Cache {
 
     fn update_thread_update(&self, value: &ThreadUpdateEvent) {
         let thread = CachedThread::from(&value.thread);
-        let mut guild = self.insert_guild(thread.guild_id);
+        let mut guild = self.insert_guild(value.thread.base.guild_id);
 
         // we only track active threads so remove archived ones
         if value.thread.thread_metadata.archived() {

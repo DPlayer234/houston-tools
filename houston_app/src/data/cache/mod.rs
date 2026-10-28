@@ -184,7 +184,9 @@ impl Cache {
                 warn_miss(stringify!($ccot), &$channel.base.name, $channel.id.get());
 
                 let c = <$Ty>::from(&$channel);
-                self.insert_guild(c.guild_id).$cache.insert(c.clone());
+                self.insert_guild($channel.base.guild_id)
+                    .$cache
+                    .insert(c.clone());
 
                 Ok(Ccot::$ccot(c))
             }};

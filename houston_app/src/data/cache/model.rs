@@ -9,9 +9,6 @@ use crate::prelude::*;
 #[must_use]
 pub struct CachedChannel {
     pub id: ChannelId,
-    #[expect(dead_code, reason = "parallel, useful for debugging")]
-    pub kind: ChannelType,
-    pub guild_id: GuildId,
     pub nsfw: bool,
 }
 
@@ -20,9 +17,8 @@ pub struct CachedChannel {
 #[must_use]
 pub struct CachedThread {
     pub id: ThreadId,
-    pub kind: ChannelType,
-    pub guild_id: GuildId,
     pub parent_id: ChannelId,
+    pub private: bool,
 }
 
 /// Cached Channel or Thread
@@ -65,8 +61,6 @@ impl From<&GuildChannel> for CachedChannel {
     fn from(value: &GuildChannel) -> Self {
         Self {
             id: value.id,
-            kind: value.base.kind,
-            guild_id: value.base.guild_id,
             nsfw: value.nsfw,
         }
     }
@@ -76,9 +70,8 @@ impl From<&GuildThread> for CachedThread {
     fn from(value: &GuildThread) -> Self {
         Self {
             id: value.id,
-            kind: value.base.kind,
-            guild_id: value.base.guild_id,
             parent_id: value.parent_id,
+            private: value.base.kind == ChannelType::PrivateThread,
         }
     }
 }
