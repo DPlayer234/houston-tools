@@ -3,15 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use super::*;
 
-macro_rules! to_custom_id_consistency {
-    ($test_name:ident, $make:expr) => {
-        #[test]
-        fn $test_name() {
-            check_consistency($make, &mut encoding::StackBuf::new());
-        }
-    };
-}
-
 fn check_consistency<'de, T>(value: T, buf: &'de mut encoding::StackBuf)
 where
     T: Serialize + Deserialize<'de> + ButtonValue,
@@ -32,55 +23,92 @@ where
     );
 }
 
-const TEST_NAV: Nav<'static> =
-    Nav::from_slice(include_bytes!("tests.rs").first_chunk::<100>().unwrap());
+fn random_vec() -> Vec<u8> {
+    use rand::prelude::*;
 
-to_custom_id_consistency!(
-    check_noop,
-    crate::modules::core::buttons::Noop::new(12345, 6789)
-);
-to_custom_id_consistency!(
-    check_to_page,
-    crate::modules::core::buttons::ToPage::new(TEST_NAV)
-);
+    let len = rand::rng().random_range(16..128);
+    let mut data = vec![0u8; len];
+    rand::rng().fill_bytes(&mut data);
+    data
+}
 
-to_custom_id_consistency!(
-    check_azur_ship,
-    crate::modules::azur::buttons::ship::View::builder()
-        .ship_id(9999)
-        .build()
-);
-to_custom_id_consistency!(
-    check_azur_augment,
-    crate::modules::azur::buttons::augment::View::builder()
-        .augment_id(9999)
-        .build()
-);
-to_custom_id_consistency!(check_azur_skill, {
+#[test]
+fn check_noop() {
+    check_consistency(
+        crate::modules::core::buttons::Noop::new(12345, 6789),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_to_page() {
+    check_consistency(
+        crate::modules::core::buttons::ToPage::new(Nav::from_slice(&random_vec())),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_azur_ship() {
+    check_consistency(
+        crate::modules::azur::buttons::ship::View::builder()
+            .ship_id(9999)
+            .build(),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_azur_augment() {
+    check_consistency(
+        crate::modules::azur::buttons::augment::View::builder()
+            .augment_id(9999)
+            .build(),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_azur_skill() {
     use crate::modules::azur::buttons::skill::*;
-    View::builder()
-        .source(ViewSource::Augment(1))
-        .back(TEST_NAV)
-        .build()
-});
-to_custom_id_consistency!(
-    check_azur_lines,
-    crate::modules::azur::buttons::lines::View::builder()
-        .ship_id(9999)
-        .back(TEST_NAV)
-        .build()
-);
-to_custom_id_consistency!(
-    check_azur_equip,
-    crate::modules::azur::buttons::equip::View::builder()
-        .equip_id(9999)
-        .build()
-);
 
-to_custom_id_consistency!(
-    check_perks_shop,
-    crate::modules::perks::buttons::shop::View::new()
-);
+    check_consistency(
+        View::builder()
+            .source(ViewSource::Augment(1))
+            .back(Nav::from_slice(&random_vec()))
+            .build(),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_azur_lines() {
+    check_consistency(
+        crate::modules::azur::buttons::lines::View::builder()
+            .ship_id(9999)
+            .back(Nav::from_slice(&random_vec()))
+            .build(),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_azur_equip() {
+    check_consistency(
+        crate::modules::azur::buttons::equip::View::builder()
+            .equip_id(9999)
+            .build(),
+        &mut encoding::StackBuf::new(),
+    );
+}
+
+#[test]
+fn check_perks_shop() {
+    check_consistency(
+        crate::modules::perks::buttons::shop::View::new(),
+        &mut encoding::StackBuf::new(),
+    );
+}
 
 #[test]
 fn eq_direct_to_custom_id() {

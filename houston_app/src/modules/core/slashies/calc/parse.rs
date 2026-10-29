@@ -61,6 +61,13 @@ fn expr(input: &mut &str) -> ModalResult<f64> {
         .parse_next(input)
 }
 
+/// Parses an expression surrounded by parenthesis.
+///
+/// `"(" expr ")"`
+fn parens_expr(input: &mut &str) -> ModalResult<f64> {
+    preceded('(', cut_err(terminated(expr, ch(')')))).parse_next(input)
+}
+
 /// Parses a unary operator expression.
 ///
 /// `UnaryOp sub_expr`
@@ -143,7 +150,7 @@ fn constant(input: &mut &str) -> ModalResult<f64> {
 /// operators like `5` in `5 + 2`, an expression within parenthesis, unary
 /// operators with their operand, function calls, or constants.
 ///
-/// `< <"(" expr ")"> | unary_op_expr | call_expr | float | constant >`
+/// `<parens_expr | unary_op_expr | call_expr | float | constant>`
 fn sub_expr(input: &mut &str) -> ModalResult<f64> {
     (
         delimited(
@@ -151,7 +158,7 @@ fn sub_expr(input: &mut &str) -> ModalResult<f64> {
             // note: this is partially order-sensitive since most of the parsers here will cut_err
             // when they internally decide that other parsers shouldn't apply
             alt((
-                preceded('(', cut_err(terminated(expr, ch(')')))),
+                parens_expr,
                 unary_op_expr,
                 call_expr,
                 float.context(StrContext::Label("incomplete number literal")),
@@ -162,7 +169,7 @@ fn sub_expr(input: &mut &str) -> ModalResult<f64> {
         ),
         terminated(opt(PostUnaryOp::parser), multispace0),
     )
-        .map(|(val, op)| op.map(|op| op.apply(val)).unwrap_or(val))
+        .map(|(val, op)| op.map_or(val, |op| op.apply(val)))
         .parse_next(input)
 }
 

@@ -319,8 +319,7 @@ impl ButtonReply for View<'_> {
 
                 let ship: &BaseShip = retrofit
                     .and_then(|i| base_ship.retrofits.get(usize::from(i)))
-                    .map(|r| &r.base)
-                    .unwrap_or(&base_ship.base);
+                    .map_or(&base_ship.base, |r| &r.base);
 
                 self.edit_with_ship(azur, ship, base_ship)
             },

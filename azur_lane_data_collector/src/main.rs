@@ -727,9 +727,9 @@ fn load_special_secretaries(
         .start();
 
     let make_secretary = |data| {
-        let equip = parse::secretary::load_special_secretary(lua, &data, server)?;
+        let secretary = parse::secretary::load_special_secretary(lua, &data, server)?;
         action.inc_amount();
-        Ok::<_, LuaError>(equip)
+        Ok::<_, LuaError>(secretary)
     };
 
     let mut ships = ships
