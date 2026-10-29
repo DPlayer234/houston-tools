@@ -1,5 +1,7 @@
 //! Helper macro to check preconditions, printing compiler warnings on failure.
-pub use crate::{none_or, ok_or, or, print_err, some_or};
+use std::fmt;
+
+pub use crate::{err, none_or, ok_or, or, some_or};
 
 /// Ensures that the condition is `true`, otherwise prints the
 /// specified warning and returns `()` from the current function.
@@ -53,19 +55,38 @@ macro_rules! none_or {
 
 /// To be used by [`Result::map_err`].
 ///
-/// Prints the provided message as a warning, then returns [`PrintErr`].
+/// Creates an [`Err`] and prints the message as a warning.
 ///
 /// While the other functions in the [`ensure`](self) module are intended to be
 /// transparent to the caller, this can be used when you explicitly want to
 /// handle the failure case.
 #[macro_export]
-macro_rules! print_err {
-    ($($t:tt)*) => {{
-        ::std::println!("cargo::warning={}", format_args!($($t)*));
-        $crate::ensure::PrintErr
-    }};
+macro_rules! err {
+    ($($t:tt)*) => {
+        $crate::ensure::Err::new(::std::format_args!($($t)*))
+    };
 }
 
-/// Unit error type created by [`print_err`].
-#[derive(Debug, Clone, Copy)]
-pub struct PrintErr;
+/// Error that has been printed as a warning.
+#[derive(Clone)]
+pub struct Err(String);
+
+impl Err {
+    /// Prints a warning and creates a new [`Err`] with that message.
+    pub fn new(args: fmt::Arguments<'_>) -> Self {
+        let value = args.to_string();
+        println!("cargo::warning={args}");
+        Self(value)
+    }
+
+    /// The error message.
+    pub fn message(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for Err {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.message(), f)
+    }
+}
