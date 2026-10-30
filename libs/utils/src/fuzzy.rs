@@ -217,7 +217,7 @@ impl<T, const MIN: usize, const MAX: usize> Search<T, MIN, MAX> {
 #[must_use]
 struct Storage<const MAX: usize = 4> {
     // safety invariant: every value here must be a valid range into `block`
-    map: HashMap<Segment<MAX>, BlockRange>,
+    map: HashMap<Segment<MAX>, BlockRange, foldhash::fast::FixedState>,
     block: Box<[MatchIndex]>,
 }
 
@@ -258,7 +258,9 @@ pub struct SearchBuilder<T, const MIN: usize = 2, const MAX: usize = 4> {
 }
 
 #[derive(Default, Debug, Clone)]
-struct StorageBuilder<const MAX: usize>(HashMap<Segment<MAX>, MatchVec>);
+struct StorageBuilder<const MAX: usize>(
+    HashMap<Segment<MAX>, MatchVec, foldhash::fast::RandomState>,
+);
 
 impl<T, const MIN: usize, const MAX: usize> SearchBuilder<T, MIN, MAX> {
     /// Creates a new empty search instance.
@@ -378,7 +380,7 @@ impl<const MAX: usize> StorageBuilder<MAX> {
 
         // the goal is to reuse as many "same" regions in the `block` as possible, which
         // is... uh... somewhat expensive. but saves memory in the end.
-        let mut map = HashMap::new();
+        let mut map = HashMap::default();
         let mut block = Vec::new();
 
         // equal "values" are sorted next to each other

@@ -156,7 +156,7 @@ pub trait Hooks: Send + Sync + 'static {
 /// Event handler for custom button menus.
 #[must_use]
 pub struct EventHandler {
-    actions: ExtractMap<usize, ButtonAction>,
+    actions: ExtractMap<usize, ButtonAction, foldhash::fast::RandomState>,
     hooks: Option<Box<dyn Hooks>>,
 }
 
@@ -171,7 +171,7 @@ impl EventHandler {
     ///
     /// Returns `Err` if any of the actions have the same key.
     pub fn new(actions: impl IntoIterator<Item = ButtonAction>) -> Result<Self> {
-        let mut map = ExtractMap::new();
+        let mut map = ExtractMap::default();
         for action in actions {
             let key = action.key;
             anyhow::ensure!(

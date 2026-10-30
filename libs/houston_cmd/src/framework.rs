@@ -282,7 +282,7 @@ fn invoke_structure_mismatch<'a>(invoke: Invoke) -> Error<'a> {
 /// Provides a set/map for commands that avoids having to clone command names to
 /// be used as the key of the map.
 mod command_set {
-    use std::hash::{Hash, Hasher, RandomState};
+    use std::hash::{Hash, Hasher};
 
     use hashbrown::{Equivalent, HashSet};
     use serenity::all::CommandType;
@@ -338,7 +338,7 @@ mod command_set {
 
     /// Semi-storage-specialized `HashMap<(CommandType, str), Command>`.
     #[derive(Debug, Default)]
-    pub struct CommandSet(HashSet<Item, RandomState>);
+    pub struct CommandSet(HashSet<Item, foldhash::fast::RandomState>);
 
     impl CommandSet {
         pub fn get(&self, key: Key<'_>) -> Option<&Command> {
