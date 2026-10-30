@@ -13,7 +13,7 @@ impl<'v> ToPage<'v> {
 
     pub fn get_page(interaction: &ModalInteraction) -> Result<u16> {
         houston_btn::modal_parser! {
-            required text page: u16,
+            required ParseInputText page: u16,
         }
 
         match parse(interaction) {
