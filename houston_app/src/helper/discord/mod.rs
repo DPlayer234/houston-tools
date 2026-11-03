@@ -50,26 +50,8 @@ pub fn is_user_message(message: &Message) -> bool {
     is_normal_message(message.kind) && is_user(&message.author)
 }
 
-pub trait WithPartial {
-    type Partial;
-}
-
-impl<'a, T: WithPartial> WithPartial for &'a T {
-    type Partial = &'a T::Partial;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Partial<T: WithPartial> {
-    Full(T),
-    Partial(T::Partial),
-}
-
-impl WithPartial for Member {
-    type Partial = PartialMember;
-}
-
 /// Marker type to use with [`serde_with`] in place of the ID type to
-/// serialize Discord IDs as fixed-length 8-byte values.
+/// serialize Discord IDs as fixed-length 8-byte arrays.
 pub enum IdBytes {}
 
 pub trait CastU64: From<u64> + Into<u64> + Copy {}
