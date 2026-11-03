@@ -1,13 +1,40 @@
 use houston_cmd::{Context, Error, SlashArg, UserContextArg};
 
-use crate::helper::discord::{Partial, guild_avatar_url};
+use crate::helper::discord::guild_avatar_url;
 use crate::prelude::*;
 
+/// Stores a user and optional member from a slash command.
 #[derive(Debug, Clone, Copy)]
 pub struct SlashUser<'a> {
     pub user: &'a User,
     pub member: Option<&'a PartialMember>,
-    guild_id: Option<GuildId>,
+    guild_id: GuildId,
+}
+
+impl<'a> SlashUser<'a> {
+    pub fn from_message(message: &'a Message) -> Self {
+        Self {
+            user: &message.author,
+            member: message.member.as_deref(),
+            guild_id: message.guild_id.unwrap_or_default(),
+        }
+    }
+
+    pub fn display_name(&self) -> &'a str {
+        self.member
+            .and_then(|member| member.nick.as_deref())
+            .unwrap_or_else(|| self.user.display_name())
+    }
+
+    pub fn face(&self) -> String {
+        if let Some(member) = self.member
+            && let Some(hash) = member.avatar.as_ref()
+        {
+            guild_avatar_url(self.user.id, self.guild_id, hash)
+        } else {
+            self.user.face()
+        }
+    }
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
@@ -16,7 +43,7 @@ impl<'ctx> SlashArg<'ctx> for SlashUser<'ctx> {
             ResolvedValue::User(user, member) => Ok(Self {
                 user,
                 member,
-                guild_id: ctx.guild_id(),
+                guild_id: ctx.guild_id().unwrap_or_default(),
             }),
             _ => Err(Error::structure_mismatch("expected User")),
         }
@@ -36,16 +63,77 @@ impl<'ctx> UserContextArg<'ctx> for SlashUser<'ctx> {
         Ok(Self {
             user,
             member,
-            guild_id: ctx.guild_id(),
+            guild_id: ctx.guild_id().unwrap_or_default(),
         })
     }
 }
 
+impl Mentionable for SlashUser<'_> {
+    fn mention(&self) -> Mention {
+        Mention::User(self.user.id)
+    }
+}
+
+/// Stores a user and member from a slash command.
 #[derive(Debug, Clone, Copy)]
 pub struct SlashMember<'a> {
     pub user: &'a User,
-    pub member: Partial<&'a Member>,
-    guild_id: GuildId,
+    member: MemberRef<'a>,
+}
+
+/// Stores a [`PartialMember`] or [`Member`] with a guild ID.
+#[derive(Debug, Clone, Copy)]
+enum MemberRef<'a> {
+    Full(&'a Member),
+    Partial(&'a PartialMember, GuildId),
+}
+
+impl<'a> MemberRef<'a> {
+    fn try_partial(
+        member: &'a PartialMember,
+        guild_id: Option<GuildId>,
+    ) -> Result<Self, Error<'a>> {
+        let guild_id = guild_id.ok_or_else(|| Error::arg_invalid("expected guild"))?;
+        Ok(Self::Partial(member, guild_id))
+    }
+}
+
+impl<'a> SlashMember<'a> {
+    pub fn from_ctx(ctx: Context<'a>) -> Result<Self> {
+        let member = ctx.member().context("member must be present")?;
+        Ok(Self {
+            user: ctx.user(),
+            member: MemberRef::Full(member),
+        })
+    }
+
+    pub fn nick(&self) -> Option<&'a str> {
+        match self.member {
+            MemberRef::Full(m) => m.nick.as_deref(),
+            MemberRef::Partial(m, _) => m.nick.as_deref(),
+        }
+    }
+
+    pub fn display_name(&self) -> &'a str {
+        self.nick().unwrap_or_else(|| self.user.display_name())
+    }
+
+    pub fn face(&self) -> String {
+        match &self.member {
+            MemberRef::Full(Member {
+                avatar: Some(hash),
+                guild_id,
+                ..
+            })
+            | MemberRef::Partial(
+                PartialMember {
+                    avatar: Some(hash), ..
+                },
+                guild_id,
+            ) => guild_avatar_url(self.user.id, *guild_id, hash),
+            _ => self.user.face(),
+        }
+    }
 }
 
 impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
@@ -54,8 +142,7 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
             ResolvedValue::User(user, Some(member)) => {
                 return Ok(Self {
                     user,
-                    member: Partial::Partial(member),
-                    guild_id: ctx.guild_id().unwrap_or_default(),
+                    member: MemberRef::try_partial(member, ctx.guild_id())?,
                 });
             },
             // delegate to this method to get the correct error
@@ -80,74 +167,8 @@ impl<'ctx> UserContextArg<'ctx> for SlashMember<'ctx> {
         let member = member.ok_or_else(|| Error::arg_invalid("unknown server member"))?;
         Ok(Self {
             user,
-            member: Partial::Partial(member),
-            guild_id: ctx.guild_id().unwrap_or_default(),
+            member: MemberRef::try_partial(member, ctx.guild_id())?,
         })
-    }
-}
-
-impl<'a> SlashUser<'a> {
-    pub fn from_message(message: &'a Message) -> Self {
-        Self {
-            user: &message.author,
-            member: message.member.as_deref(),
-            guild_id: message.guild_id,
-        }
-    }
-
-    pub fn display_name(&self) -> &'a str {
-        self.member
-            .and_then(|m| m.nick.as_deref())
-            .unwrap_or_else(|| self.user.display_name())
-    }
-
-    pub fn face(&self) -> String {
-        if let Some(hash) = self.member.and_then(|m| m.avatar.as_ref()) {
-            guild_avatar_url(self.user.id, self.guild_id.unwrap_or_default(), hash)
-        } else {
-            self.user.face()
-        }
-    }
-}
-
-impl<'a> SlashMember<'a> {
-    pub fn from_ctx(ctx: Context<'a>) -> Result<Self> {
-        let member = ctx.member().context("member must be present")?;
-        Ok(Self {
-            user: ctx.user(),
-            member: Partial::Full(member),
-            guild_id: member.guild_id,
-        })
-    }
-
-    pub fn nick(&self) -> Option<&'a str> {
-        match self.member {
-            Partial::Full(m) => m.nick.as_deref(),
-            Partial::Partial(m) => m.nick.as_deref(),
-        }
-    }
-
-    pub fn display_name(&self) -> &'a str {
-        self.nick().unwrap_or_else(|| self.user.display_name())
-    }
-
-    pub fn face(&self) -> String {
-        let hash = match self.member {
-            Partial::Full(m) => &m.avatar,
-            Partial::Partial(m) => &m.avatar,
-        };
-
-        if let Some(hash) = hash {
-            guild_avatar_url(self.user.id, self.guild_id, hash)
-        } else {
-            self.user.face()
-        }
-    }
-}
-
-impl Mentionable for SlashUser<'_> {
-    fn mention(&self) -> Mention {
-        Mention::User(self.user.id)
     }
 }
 
