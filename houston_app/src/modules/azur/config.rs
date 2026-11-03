@@ -31,9 +31,8 @@ pub struct Config {
     pub data_path: Arc<Path>,
     #[serde(default = "default_early_load")]
     pub early_load: bool,
-    #[serde(default)]
-    wiki_urls: Arc<WikiUrls>,
-    tier_list: Option<Arc<TierList>>,
+    #[serde(flatten)]
+    shared: Arc<ConfigShared>,
 
     /// Stores the lazy-loaded data.
     ///
@@ -41,6 +40,13 @@ pub struct Config {
     /// mapped to an error for callers outside this module.
     #[serde(skip)]
     lazy: OnceLock<Option<Box<LazyData>>>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ConfigShared {
+    #[serde(default)]
+    wiki_urls: WikiUrls,
+    tier_list: Option<TierList>,
 }
 
 impl Config {
@@ -67,8 +73,7 @@ impl Config {
     fn load_lazy_data(&self) -> Option<Box<LazyData>> {
         Some(Box::new(LazyData {
             game_data: self.load_game_data()?,
-            wiki_urls: Arc::clone(&self.wiki_urls),
-            tier_list: self.tier_list.clone(),
+            shared: Arc::clone(&self.shared),
         }))
     }
 
@@ -165,10 +170,7 @@ impl TierList {
 /// Lazily-loaded data based on the [`Config`].
 #[derive(Debug)]
 pub struct LazyData {
-    // if `Config` were to get more fields that need to be shared here, adjust `Config` to `Arc` a
-    // bundle of those fields and clone said `Arc` instead of one per field
-    wiki_urls: Arc<WikiUrls>,
-    tier_list: Option<Arc<TierList>>,
+    shared: Arc<ConfigShared>,
     // this is actually all that's lazy-loaded currently
     game_data: GameData,
 }
@@ -176,12 +178,12 @@ pub struct LazyData {
 impl LazyData {
     /// Gets a reference to the wiki URLs.
     pub fn wiki_urls(&self) -> &WikiUrls {
-        &self.wiki_urls
+        &self.shared.wiki_urls
     }
 
     /// Gets a reference to the tier list info.
     pub fn tier_list(&self) -> Option<&TierList> {
-        self.tier_list.as_deref()
+        self.shared.tier_list.as_ref()
     }
 
     /// Gets a reference to the game data.

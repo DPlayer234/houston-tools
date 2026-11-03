@@ -66,8 +66,8 @@ impl<'ctx> SlashArg<'ctx> for SlashMember<'ctx> {
         Err(Error::structure_mismatch("expected Member"))
     }
 
-    fn set_options(options: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
-        options.kind(CommandOptionType::User)
+    fn set_options(option: CreateCommandOption<'_>) -> CreateCommandOption<'_> {
+        option.kind(CommandOptionType::User)
     }
 }
 

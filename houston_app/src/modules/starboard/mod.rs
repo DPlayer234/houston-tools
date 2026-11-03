@@ -304,7 +304,7 @@ async fn reaction_add_inner(ctx: &Context, reaction: &Reaction) -> Result {
                 pin_message_to_board(ctx, &message, guild_id, guild_config, board).await?;
             }
         }
-    };
+    }
 
     if score_increase > 0 {
         // update the user's score if it has increased
