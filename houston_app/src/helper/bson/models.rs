@@ -68,9 +68,13 @@ async fn update_indices(
     collection: Collection<Document>,
     indices_fn: fn() -> Vec<IndexModel>,
 ) -> anyhow::Result<()> {
+    fn is_retry(err: &Error) -> bool {
+        matches!(*err.kind, ErrorKind::ServerSelection { .. })
+    }
+
     /// Whether to try to drop the index and recreate it. This just checks
     /// whether the command error kind is `86 (IndexKeySpecsConflict)`.
-    fn is_recreate(err: &Error) -> bool {
+    fn needs_recreate(err: &Error) -> bool {
         matches!(*err.kind, ErrorKind::Command(CommandError { code: 86, .. }))
     }
 
@@ -83,7 +87,7 @@ async fn update_indices(
         for index in indices_fn() {
             match collection.create_index(index.clone()).await {
                 Ok(_) => {},
-                Err(err) if is_recreate(&err) => {
+                Err(err) if needs_recreate(&err) => {
                     let name = match &index.options {
                         Some(IndexOptions {
                             name: Some(name), ..
@@ -100,24 +104,30 @@ async fn update_indices(
                         create.index_name
                     );
                 },
-                Err(err) => return Err(err.into()),
+                Err(err) => return Err(err).context("could not create index"),
             }
         }
 
         Ok(())
     }
 
-    let indices = indices_fn();
-    if indices.is_empty() {
-        return Ok(());
-    }
+    loop {
+        let indices = indices_fn();
+        if indices.is_empty() {
+            break Ok(());
+        }
 
-    // attempt to create all indices in bulk first
-    // this will usually succeed, so we can save some round-trips
-    // if we can attempt a recreate, try the indices individually
-    match collection.create_indexes(indices).await {
-        Ok(_) => Ok(()),
-        Err(err) if is_recreate(&err) => recreate_indices(collection, indices_fn).await,
-        Err(err) => Err(err).context("could not create indices"),
+        // attempt to create all indices in bulk first
+        // this will usually succeed, so we can save some round-trips
+        // if we can attempt a recreate, try the indices individually
+        break match collection.create_indexes(indices).await {
+            Ok(_) => Ok(()),
+            Err(err) if needs_recreate(&err) => recreate_indices(collection, indices_fn).await,
+            Err(err) if is_retry(&err) => {
+                log::error!("index creation failed (retrying): {err}");
+                continue;
+            },
+            Err(err) => Err(err).context("could not create indices"),
+        };
     }
 }

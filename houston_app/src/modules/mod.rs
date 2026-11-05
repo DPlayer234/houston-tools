@@ -107,6 +107,8 @@ pub trait Module: Sized {
     }
 
     /// Runs async startup code for this module.
+    ///
+    /// This may run while the bot is already accepting input.
     async fn startup(self, data: Arc<HBotData>) -> Result {
         _ = data;
         Ok(())
@@ -115,6 +117,9 @@ pub trait Module: Sized {
     /// Provides a function to call to initialize the database.
     ///
     /// This will generally create indices on related collections.
+    ///
+    /// This may run while the bot is already accepting input but other code will only receive
+    /// access to the database after it finishes.
     async fn db_init(self, data: Arc<HBotData>, db: mongodb::Database) -> Result {
         _ = data;
         _ = db;

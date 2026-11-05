@@ -146,19 +146,19 @@ impl HBotData {
         if let Some(uri) = &self.config().mongodb_uri {
             let client = mongodb::Client::with_uri_str(uri)
                 .await
-                .context("failed to connect to database cluster")?;
+                .context("failed to resolve database connection")?;
 
             let db = client
                 .default_database()
                 .context("no default database specified")?;
 
-            self.database
-                .set(db.clone())
-                .expect("can only connect to database once");
-
             for_each_module!(self.config(), |m| {
                 m.db_init(Arc::clone(&self), db.clone()).await?;
             });
+
+            self.database
+                .set(db)
+                .expect("can only connect to database once");
 
             log::info!("Connected to MongoDB.");
         }
