@@ -32,7 +32,7 @@ impl<'a> BoxedJoinFut<'a> {
             let join = join(last, fut).map(|((), ())| ());
             self.acc = Some(Box::pin(join));
         } else {
-            // if this is first future, we just box and store it
+            // if there isn't already a future, we just box this one and store it
             self.acc = Some(Box::pin(fut));
         }
     }

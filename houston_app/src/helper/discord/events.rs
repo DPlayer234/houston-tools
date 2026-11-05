@@ -12,15 +12,12 @@ pub trait PushEventHandler: Send + Sync + 'static {
     ///
     /// If the event is handled, the future will be pushed to the
     /// [`BoxedJoinFut`] parameter.
-    fn push_dispatch<'s, 'c, 'e, 'a>(
-        &'s self,
-        ctx: &'c Context,
-        event: &'e FullEvent,
+    fn push_dispatch<'a>(
+        &'a self,
+        ctx: &'a Context,
+        event: &'a FullEvent,
         fut: &mut BoxedJoinFut<'a>,
-    ) where
-        's: 'a,
-        'c: 'a,
-        'e: 'a;
+    );
 }
 
 /// An [`EventHandler`] that combines several [`PushEventHandler`]s.
@@ -61,17 +58,12 @@ macro_rules! impl_push_handler {
     // that rustfmt can format. in a sense, it's just a nicety.
     ($Type:ty, |$this:pat_param, $ctx:pat_param| match _ { $($pat:pat => $block:expr),* $(,)? }) => {
         impl $crate::helper::discord::events::PushEventHandler for $Type {
-            fn push_dispatch<'s, 'c, 'e, 'a>(
-                &'s self,
-                $ctx: &'c ::serenity::gateway::client::Context,
-                event: &'e ::serenity::model::event::FullEvent,
+            fn push_dispatch<'a>(
+                &'a self,
+                $ctx: &'a ::serenity::gateway::client::Context,
+                event: &'a ::serenity::model::event::FullEvent,
                 fut: &mut $crate::helper::futures::BoxedJoinFut<'a>,
-            )
-            where
-                's: 'a,
-                'c: 'a,
-                'e: 'a,
-            {
+            ) {
                 #[allow(clippy::let_underscore_untyped)]
                 let $this = self;
                 match event {
