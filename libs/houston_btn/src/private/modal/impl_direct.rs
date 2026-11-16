@@ -1,5 +1,3 @@
-use std::convert::Infallible;
-
 use arrayvec::ArrayVec;
 use serenity::model::application::{
     Checkbox, CheckboxGroup, CommandDataResolved, FileUpload, InputText, RadioGroup, SelectMenu,
@@ -13,7 +11,7 @@ use super::{FromField, ModalResult, marker};
 fn parse_map_exact<'a, I, T, const N: usize>(
     values: &'a [I],
     f: impl Fn(&'a I) -> Option<T>,
-) -> ModalResult<[T; N], Infallible> {
+) -> ModalResult<[T; N], !> {
     if let Ok(values) = <&[_; N]>::try_from(values) {
         values
             .iter()
@@ -29,12 +27,12 @@ fn parse_map_exact<'a, I, T, const N: usize>(
 fn parse_map_vec<I, T>(
     values: &[I],
     f: impl Fn(&I) -> Option<T>,
-) -> ModalResult<Vec<T>, Infallible> {
+) -> ModalResult<Vec<T>, !> {
     Option::into(values.iter().map(f).collect())
 }
 
 impl<'a> FromField<'a, marker::InputText> for &'a str {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a InputText,
@@ -45,7 +43,7 @@ impl<'a> FromField<'a, marker::InputText> for &'a str {
 }
 
 impl<'a, const N: usize> FromField<'a, marker::SelectMenu> for [&'a str; N] {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a SelectMenu,
@@ -56,7 +54,7 @@ impl<'a, const N: usize> FromField<'a, marker::SelectMenu> for [&'a str; N] {
 }
 
 impl<'a> FromField<'a, marker::SelectMenu> for Vec<&'a str> {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a SelectMenu,
@@ -69,7 +67,7 @@ impl<'a> FromField<'a, marker::SelectMenu> for Vec<&'a str> {
 macro_rules! impl_from_select_menu_resolved {
     ($Ty:ty, $data:ident, $select:expr) => {
         impl<'a, const N: usize> FromField<'a, marker::SelectMenu> for [$Ty; N] {
-            type Err = Infallible;
+            type Err = !;
 
             fn from_field(
                 field: &'a SelectMenu,
@@ -80,7 +78,7 @@ macro_rules! impl_from_select_menu_resolved {
         }
 
         impl<'a> FromField<'a, marker::SelectMenu> for Vec<$Ty> {
-            type Err = Infallible;
+            type Err = !;
 
             fn from_field(
                 field: &'a SelectMenu,
@@ -117,7 +115,7 @@ impl_from_select_menu_resolved!((User, PartialMember), data, |id| data
     .map(|(u, m)| (u.clone(), m.clone())));
 
 impl<'a, const N: usize> FromField<'a, marker::FileUpload> for [&'a Attachment; N] {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a FileUpload,
@@ -128,7 +126,7 @@ impl<'a, const N: usize> FromField<'a, marker::FileUpload> for [&'a Attachment; 
 }
 
 impl<'a, const N: usize> FromField<'a, marker::FileUpload> for [Attachment; N] {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a FileUpload,
@@ -139,7 +137,7 @@ impl<'a, const N: usize> FromField<'a, marker::FileUpload> for [Attachment; N] {
 }
 
 impl<'a> FromField<'a, marker::FileUpload> for Vec<&'a Attachment> {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a FileUpload,
@@ -150,7 +148,7 @@ impl<'a> FromField<'a, marker::FileUpload> for Vec<&'a Attachment> {
 }
 
 impl<'a> FromField<'a, marker::FileUpload> for Vec<Attachment> {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a FileUpload,
@@ -161,7 +159,7 @@ impl<'a> FromField<'a, marker::FileUpload> for Vec<Attachment> {
 }
 
 impl<'a> FromField<'a, marker::RadioGroup> for &'a str {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a RadioGroup,
@@ -172,7 +170,7 @@ impl<'a> FromField<'a, marker::RadioGroup> for &'a str {
 }
 
 impl<'a, const N: usize> FromField<'a, marker::CheckboxGroup> for [&'a str; N] {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a CheckboxGroup,
@@ -183,7 +181,7 @@ impl<'a, const N: usize> FromField<'a, marker::CheckboxGroup> for [&'a str; N] {
 }
 
 impl<'a> FromField<'a, marker::CheckboxGroup> for Vec<&'a str> {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a CheckboxGroup,
@@ -194,7 +192,7 @@ impl<'a> FromField<'a, marker::CheckboxGroup> for Vec<&'a str> {
 }
 
 impl<'a> FromField<'a, marker::Checkbox> for bool {
-    type Err = Infallible;
+    type Err = !;
 
     fn from_field(
         field: &'a Checkbox,

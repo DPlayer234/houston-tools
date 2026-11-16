@@ -1,7 +1,5 @@
 //! Private helpers for the [`crate::modal_parser`] macro.
 
-use std::convert::Infallible;
-
 use serenity::model::application::{CommandDataResolved, Label};
 
 mod impl_direct;
@@ -32,7 +30,7 @@ impl<T, E> From<Result<T, E>> for ModalResult<T, E> {
     }
 }
 
-impl<T> From<Option<T>> for ModalResult<T, Infallible> {
+impl<T> From<Option<T>> for ModalResult<T, !> {
     fn from(value: Option<T>) -> Self {
         match value {
             Some(t) => Self::Ok(t),

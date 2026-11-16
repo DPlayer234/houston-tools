@@ -193,7 +193,7 @@ impl Cache {
         }
 
         match channel {
-            Channel::Guild(channel) => handle!(channel, CachedChannel, channels, Channel),
+            Channel::GuildViewable(channel) => handle!(channel, CachedChannel, channels, Channel),
             Channel::GuildThread(thread) => handle!(thread, CachedThread, threads, Thread),
             _ => Err(ModelError::InvalidChannelType.into()),
         }

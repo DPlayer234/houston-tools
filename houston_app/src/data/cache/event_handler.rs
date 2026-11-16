@@ -67,29 +67,29 @@ impl Cache {
     }
 
     fn update_channel_create(&self, value: &ChannelCreateEvent) {
-        let mut guild = self.insert_guild(value.channel.base.guild_id);
+        let mut guild = self.insert_guild(value.channel.guild_id());
         guild.channels.insert((&value.channel).into());
     }
 
     fn update_channel_delete(&self, value: &ChannelDeleteEvent) {
-        if let Some(mut guild) = self.guilds.get_mut(&value.channel.base.guild_id) {
-            guild.channels.remove(&value.channel.id);
+        if let Some(mut guild) = self.guilds.get_mut(&value.channel.guild_id()) {
+            guild.channels.remove(&value.channel.id());
 
             // make sure to remove associated threads
             // they don't get their own delete event in this case
-            guild.remove_associated_threads(value.channel.id);
+            guild.remove_associated_threads(value.channel.id());
         }
     }
 
     fn update_channel_update(&self, value: &ChannelUpdateEvent) {
-        let mut guild = self.insert_guild(value.channel.base.guild_id);
+        let mut guild = self.insert_guild(value.channel.guild_id());
         guild.channels.insert((&value.channel).into());
     }
 
     fn update_guild_create(&self, value: &GuildCreateEvent) {
         // only available guilds will send a create
         let guild = CachedGuild::from(&value.guild);
-        self.guilds.insert(value.guild.id, guild);
+        self.guilds.insert(value.guild.id(), guild);
     }
 
     fn update_guild_delete(&self, value: &GuildDeleteEvent) {

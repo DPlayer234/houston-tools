@@ -69,6 +69,7 @@ impl View {
         }
 
         // by column
+        #[expect(clippy::needless_range_loop)]
         for x in 0..N {
             check!(self.board[x], WinLine::Column(x));
         }

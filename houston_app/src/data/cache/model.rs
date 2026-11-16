@@ -57,11 +57,38 @@ impl ExtractKey<ThreadId> for CachedThread {
     }
 }
 
+impl From<&MaybeObfuscated> for CachedChannel {
+    fn from(value: &MaybeObfuscated) -> Self {
+        match value {
+            MaybeObfuscated::Viewable(channel) => channel.into(),
+            MaybeObfuscated::Obfuscated(channel) => channel.into(),
+        }
+    }
+}
+
+impl From<GuildChannelRef<'_>> for CachedChannel {
+    fn from(value: GuildChannelRef<'_>) -> Self {
+        match value {
+            GuildChannelRef::Viewable(channel) => channel.into(),
+            GuildChannelRef::Obfuscated(channel) => channel.into(),
+        }
+    }
+}
+
 impl From<&GuildChannel> for CachedChannel {
     fn from(value: &GuildChannel) -> Self {
         Self {
             id: value.id,
             nsfw: value.nsfw,
+        }
+    }
+}
+
+impl From<&ObfuscatedChannel> for CachedChannel {
+    fn from(value: &ObfuscatedChannel) -> Self {
+        Self {
+            id: value.id,
+            nsfw: false,
         }
     }
 }
@@ -117,10 +144,25 @@ impl CachedGuild {
     }
 }
 
+impl From<&GuildCreateGuild> for CachedGuild {
+    fn from(value: &GuildCreateGuild) -> Self {
+        match value {
+            GuildCreateGuild::Available(guild) => guild.into(),
+            GuildCreateGuild::Unavailable(guild) => guild.into(),
+        }
+    }
+}
+
+impl From<&UnavailableGuild> for CachedGuild {
+    fn from(_value: &UnavailableGuild) -> Self {
+        Self::default()
+    }
+}
+
 impl From<&Guild> for CachedGuild {
     fn from(value: &Guild) -> Self {
         let mut output = Self {
-            channels: value.channels.iter().map(CachedChannel::from).collect(),
+            channels: value.channels().map(CachedChannel::from).collect(),
             threads: value.threads.iter().map(CachedThread::from).collect(),
             threads_in: HashMap::new(),
         };
