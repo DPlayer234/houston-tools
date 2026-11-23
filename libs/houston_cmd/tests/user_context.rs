@@ -1,4 +1,3 @@
-#![expect(unused_crate_dependencies)]
 use std::assert_matches;
 use std::borrow::Cow;
 
