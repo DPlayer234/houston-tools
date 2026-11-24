@@ -5,7 +5,7 @@
 use std::marker::PhantomData;
 
 use serde::de::{Error, Visitor};
-use serde::{Deserializer, Serializer};
+use serde::{Deserialize as _, Deserializer, Serialize as _, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
 use crate::helper::discord::CastU64;
@@ -73,6 +73,30 @@ impl<T: CastU64> Visitor<'_> for I64Visitor<T> {
         E: Error,
     {
         v.parse().map_err(E::custom).and_then(|v| self.visit_u64(v))
+    }
+}
+
+/// Serializes a [`jiff`] type as a [`bson::DateTime`].
+///
+/// Deserialization fails if the value is out-of-range for [`jiff`].
+pub enum JiffAsBsonDateTime {}
+
+impl SerializeAs<jiff::Timestamp> for JiffAsBsonDateTime {
+    fn serialize_as<S>(source: &jiff::Timestamp, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        bson::DateTime::from_millis(source.as_millisecond()).serialize(serializer)
+    }
+}
+
+impl<'de> DeserializeAs<'de, jiff::Timestamp> for JiffAsBsonDateTime {
+    fn deserialize_as<D>(deserializer: D) -> Result<jiff::Timestamp, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let datetime = bson::DateTime::deserialize(deserializer)?;
+        jiff::Timestamp::from_millisecond(datetime.timestamp_millis()).map_err(D::Error::custom)
     }
 }
 

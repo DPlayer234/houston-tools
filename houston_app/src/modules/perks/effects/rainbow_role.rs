@@ -61,7 +61,7 @@ impl Shape for RainbowRole {
         };
 
         let loop_sec = Timestamp::now()
-            .to_zoned(TimeZone::UTC)
+            .to_zoned_datetime(TimeZone::UTC)
             .time()
             .duration_since(Time::MIN)
             .as_secs()

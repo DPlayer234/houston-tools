@@ -43,6 +43,7 @@ pub fn to_faction(num: u32) -> Faction {
         114 => Faction::CollabDanmachi,
         115 => Faction::CollabDateALive,
         117 => Faction::CollabNier,
+        118 => Faction::CollabNigoriri,
         _ => Faction::Unknown,
     }
 }

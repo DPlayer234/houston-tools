@@ -37,7 +37,7 @@ pub struct ActivePerk {
     #[serde(with = "As::<IdBson>")]
     pub user: UserId,
     pub effect: Effect,
-    #[serde(with = "As::<FromJiff02Timestamp>")]
+    #[serde(with = "As::<JiffAsBsonDateTime>")]
     pub until: Timestamp,
     #[model(filter = false)]
     pub state: Option<Bson>,

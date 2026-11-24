@@ -115,7 +115,7 @@ impl Shape for Birthday {
             // calculate the correct date with the current time and offset
             let today = now
                 .checked_add(region.time_offset)?
-                .to_zoned(TimeZone::UTC)
+                .to_zoned_datetime(TimeZone::UTC)
                 .date();
 
             // don't repeat the check if we checked that day already
@@ -128,7 +128,7 @@ impl Shape for Birthday {
                 .to_datetime(Time::MIN)
                 .checked_sub(region.time_offset)?
                 .checked_add(birthday.duration)?
-                .to_zoned(TimeZone::UTC)?
+                .to_zoned_datetime(TimeZone::UTC)?
                 .timestamp();
 
             let db = data.database()?;

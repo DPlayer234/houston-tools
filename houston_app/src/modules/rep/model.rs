@@ -13,7 +13,7 @@ pub struct Record {
     pub guild: GuildId,
     #[serde(default)]
     pub received: i64,
-    #[serde(with = "As::<FromJiff02Timestamp>")]
+    #[serde(with = "As::<JiffAsBsonDateTime>")]
     pub cooldown_ends: Timestamp,
 }
 

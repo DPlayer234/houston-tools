@@ -32,7 +32,6 @@ mod prelude {
 mod model_prelude {
     pub use anyhow::Context as _;
     pub use bson::oid::ObjectId;
-    pub use bson::serde_helpers::datetime::FromJiff02Timestamp;
     pub use bson::{Bson, Document, doc};
     pub use bson_model::ModelDocument;
     pub use bson_model::Sort::Asc;
@@ -42,7 +41,7 @@ mod model_prelude {
     pub use serde_with::As;
     pub use serenity::model::id::*;
 
-    pub use crate::helper::bson::{IdBson, ModelCollection};
+    pub use crate::helper::bson::{IdBson, JiffAsBsonDateTime, ModelCollection};
     pub use crate::prelude::*;
 }
 

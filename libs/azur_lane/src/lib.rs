@@ -110,6 +110,7 @@ define_data_enum! {
         CollabDanmachi("Danmachi", None),
         CollabDateALive("Date A Live", None),
         CollabNier("NieR", None),
+        CollabNigoriri("2.5-Dimensional Seduction", None),
         #[serde(other)]
         Unknown("Unknown", None),
     }
